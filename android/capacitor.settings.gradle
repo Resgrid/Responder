@@ -59,8 +59,5 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 include ':capawesome-capacitor-badge'
 project(':capawesome-capacitor-badge').projectDir = new File('../node_modules/@capawesome/capacitor-badge/android')
 
-include ':mozartec-capacitor-microphone'
-project(':mozartec-capacitor-microphone').projectDir = new File('../node_modules/@mozartec/capacitor-microphone/android')
-
-include ':capacitor-plugin-headset'
-project(':capacitor-plugin-headset').projectDir = new File('../node_modules/capacitor-plugin-headset/android')
+include ':capacitor-plugin-resgrid'
+project(':capacitor-plugin-resgrid').projectDir = new File('../node_modules/capacitor-plugin-resgrid/android')

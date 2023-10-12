@@ -76,11 +76,7 @@
 		"classpath": "io.capawesome.capacitorjs.plugins.badge.BadgePlugin"
 	},
 	{
-		"pkg": "@mozartec/capacitor-microphone",
-		"classpath": "com.mozartec.capacitor.microphone.MicrophonePlugin"
-	},
-	{
-		"pkg": "capacitor-plugin-headset",
-		"classpath": "com.resgrid.plugins.headset.HeadsetPlugin"
+		"pkg": "capacitor-plugin-resgrid",
+		"classpath": "com.resgrid.plugins.resgrid.ResgridPlugin"
 	}
 ]
