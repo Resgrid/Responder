@@ -1,0 +1,105 @@
+ion-content {
+    ion-item {
+      ion-thumbnail {
+        img {
+          height: 60px;
+          width: 60px;
+          border-radius: 50%;
+        }
+      }
+      .name {
+        display: flex;
+        flex-direction: column;
+        .name_lbl {
+          margin-bottom: 5px;
+          font-family: "medium";
+        }
+        .prgrm_lbl {
+          font-size: 14px;
+        }
+      }
+      ion-button {
+        width: 70px;
+        height: 30px;
+      }
+    }
+    ion-row {
+      ion-col {
+        box-shadow: 1px 3px 10px var(--box-shadow-color);
+        --box-shadow-color: lightgray;
+        border-radius: 10px;
+        .data {
+          display: flex;
+          flex-direction: column;
+          text-align: center;
+          .frst_lbl {
+            font-size: 18px;
+            color: #92a3fd;
+          }
+          .scnd_lbl {
+            margin-top: 5px;
+            font-size: 12px;
+            margin-bottom: 5px;
+          }
+        }
+      }
+    }
+    .account {
+      box-shadow: 1px 3px 10px var(--box-shadow-color);
+      --box-shadow-color: lightgray;
+      padding: 10px;
+      margin-top: 1rem;
+      border-radius: 10px;
+      .head_lbl {
+        font-size: 18px;
+        font-family: "semi-bold";
+      }
+      .info {
+        ion-icon {
+          font-size: 20px;
+        }
+        ion-label {
+          font-size: 14px;
+        }
+      }
+    }
+    .nitification {
+      box-shadow: 1px 3px 10px var(--box-shadow-color);
+      --box-shadow-color: lightgray;
+      padding: 10px;
+      margin-top: 1rem;
+      border-radius: 10px;
+      .head_lbl {
+        font-size: 18px;
+        font-family: "semi-bold";
+      }
+      ion-item {
+        ion-icon {
+          font-size: 20px;
+        }
+        ion-label {
+          font-size: 14px;
+        }
+      }
+    }
+    .other {
+      box-shadow: 1px 3px 10px var(--box-shadow-color);
+      --box-shadow-color: lightgray;
+      padding: 10px;
+      margin-top: 1rem;
+      border-radius: 10px;
+      .head_lbl {
+        font-size: 18px;
+        font-family: "semi-bold";
+      }
+      ion-item {
+        ion-icon {
+          font-size: 20px;
+        }
+        ion-label {
+          font-size: 14px;
+        }
+      }
+    }
+  }
+  

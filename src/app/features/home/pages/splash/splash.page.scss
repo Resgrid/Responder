@@ -1,0 +1,24 @@
+
+
+@media screen and (max-width: 599px) {
+    .splash-image {
+        height: 100%; 
+        width: 100%; 
+        background-size: cover; 
+        background-repeat: no-repeat; 
+        background-position: center center; 
+        background-clip: content-box; 
+        background-image: url('/assets/images/splash-screen-02-01.png');
+    }
+}
+@media screen and (min-width: 600px) {
+    .splash-image {
+        height: 100%; 
+        width: 100%; 
+        background-size: cover; 
+        background-repeat: no-repeat; 
+        background-position: center center; 
+        background-clip: content-box; 
+        background-image: url('/assets/images/splash-screen-01-01.png');
+    }
+}

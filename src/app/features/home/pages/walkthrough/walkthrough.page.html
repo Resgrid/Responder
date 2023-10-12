@@ -1,0 +1,129 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="end">
+      <ion-button class="skip-walkthrough-button" fill="clear" (click)="skipWalkthrough()">skip</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <swiper-container class="walkthrough-slides" #swiperRef init="false">
+    <swiper-slide class="first-slide illustration-and-decoration-slide">
+      <ion-row class="slide-inner-row">
+        <ion-col class="illustration-col">
+          <app-aspect-ratio [ratio]="{w:915, h:849}" style="margin-top: 20px;">
+            <app-image-shell class="illustration-image" animation="spinner" [src]="'./assets/images/walkthrough/undraw_mobile_encryption_re_yw3o.svg'" [alt]="'walkthrough'"></app-image-shell>
+          </app-aspect-ratio>
+        </ion-col>
+        <ion-col class="decoration-col">
+          <!-- http://jxnblk.com/paths/?d=M0%200%20V5%20H5%20C25%205%2025%2020%2045%2020%20S65%205%2085%205%20H90%20V0%20Z -->
+          <svg class="vector-decoration" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" height="100px" width="100%" viewBox="0 0 90 20" style="enable-background:new 0 0 90 20;" xml:space="preserve" preserveAspectRatio="none">
+            <path d="M0 0 V5 H5 C25 5 25 20 45 20 S65 5 85 5 H90 V0 Z"/>
+          </svg>
+        </ion-col>
+        <ion-col class="info-col">
+          <div class="info-wrapper">
+            <h3 class="info-title">Resgrid is an Open-Source Dispatch & Management Solution</h3>
+            <p class="info-paragraph">
+              Resgrid is used by Emergency Management, First Responders, Businesses and other organizations to manage their calls, personnel and resources.
+            </p>
+            <p class="info-paragraph">
+              <b>Swipe to continue</b>
+            </p>
+          </div>
+        </ion-col>
+      </ion-row>
+    </swiper-slide>
+    <swiper-slide class="second-slide illustration-and-decoration-slide">
+      <ion-row class="slide-inner-row">
+        <ion-col class="illustration-col">
+          <app-aspect-ratio [ratio]="{w:1096, h:806}">
+            <app-image-shell class="illustration-image" animation="spinner" [src]="'./assets/images/walkthrough/undraw_engineering_team_a7n2.svg'" [alt]="'walkthrough'"></app-image-shell>
+          </app-aspect-ratio>
+        </ion-col>
+        <ion-col class="decoration-col">
+          <!-- http://jxnblk.com/paths/?d=M0%200%20L64%200%20L64%2024%20Q56%2024%2048%2016%20Q34%200%2022%2010%20Q10%2022%200%208%20Z -->
+          <svg class="vector-decoration" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" height="100px" width="100%" viewBox="0 0 64 24" style="enable-background:new 0 0 64 24;" xml:space="preserve" preserveAspectRatio="none">
+            <path d="M0 0 L64 0 L64 24 Q56 24 48 16 Q34 0 22 10 Q10 22 0 8 Z"/>
+          </svg>
+        </ion-col>
+        <ion-col class="info-col">
+          <div class="info-wrapper">
+            <h3 class="info-title">Resgrid Responder</h3>
+            <p class="info-paragraph">
+              This Responder app is intended to be used by personnel to interact with the department.
+            </p>
+            <p class="info-paragraph">
+              With the Responder app you can get dispatched to calls, respond to calls, get call information, send messages, set your status/staffing and more.
+            </p>
+            <p class="info-paragraph">
+              <b>Swipe to continue</b>
+            </p>
+          </div>
+        </ion-col>
+      </ion-row>
+    </swiper-slide>
+    <swiper-slide class="third-slide illustration-and-decoration-slide">
+      <ion-row class="slide-inner-row">
+        <ion-col class="illustration-col">
+          <app-aspect-ratio [ratio]="{w:918, h:703}" style="margin-top: 20px;">
+            <app-image-shell class="illustration-image" animation="spinner" [src]="'./assets/images/walkthrough/undraw_mobile_analytics_72sr.svg'" [alt]="'walkthrough'"></app-image-shell>
+          </app-aspect-ratio>
+        </ion-col>
+        <ion-col class="decoration-col">
+          <!-- http://jxnblk.com/paths/?d=M0%200%20V5%20H5%20C19%205%2025%2014%2032%2014%20S45%205%2059%205%20H64%20V0%20Z -->
+          <svg class="vector-decoration" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" height="100px" width="100%" viewBox="0 0 64 14" style="enable-background:new 0 0 64 24;" xml:space="preserve" preserveAspectRatio="none">
+            <path d="M0 0 V5 H5 C19 5 25 14 32 14 S45 5 59 5 H64 V0 Z"/>
+          </svg>
+        </ion-col>
+        <ion-col class="info-col">
+          <div class="info-wrapper">
+            <h3 class="info-title">We have other apps</h3>
+            <p class="info-paragraph">
+              If you need to have an app for your equipment, apparatuses or teams you can use the Resgrid Unit app for that.
+            </p>
+            <p class="info-paragraph">
+              We have dedicated apps for Dispatching, information display and more.
+            </p>
+            <p class="info-paragraph">
+              <b>Swipe to continue</b>
+            </p>
+          </div>
+        </ion-col>
+      </ion-row>
+    </swiper-slide>
+    <swiper-slide class="last-slide illustration-and-decoration-slide">
+      <ion-row class="slide-inner-row">
+        <ion-col class="illustration-col">
+          <app-aspect-ratio [ratio]="{w:924, h:819}" style="margin-top: 20px;">
+            <app-image-shell class="illustration-image" animation="spinner" [src]="'./assets/images/walkthrough/undraw_reminder_re_fe15.svg'" [alt]="'walkthrough'"></app-image-shell>
+          </app-aspect-ratio>
+        </ion-col>
+        <ion-col class="decoration-col">
+          <!-- http://jxnblk.com/paths/?d=M0%200%20L64%200%20L64%2010%20Q56%2024%2046%2012%20Q34%200%2026%208%20Q10%2022%200%208%20Z -->
+          <svg class="vector-decoration" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" height="100px" width="100%" viewBox="0 0 64 18" style="enable-background:new 0 0 64 24;" xml:space="preserve" preserveAspectRatio="none">
+            <path d="M0 0 L64 0 L64 10 Q56 24 46 12 Q34 0 26 8 Q10 22 0 8 Z"/>
+          </svg>
+        </ion-col>
+        <ion-col class="info-col">
+          <ion-row class="info-outer">
+            <ion-col>
+              <div class="info-wrapper">
+                <h3 class="info-title">It's time to start</h3>
+                <p class="info-paragraph">
+                  If you have an account, you can login now to get started, on the settings page click the "Login Information" button to enter your login credentials.
+                </p>
+              </div>
+            </ion-col>
+            <ion-col class="call-to-actions-wrapper">
+              <ion-button class="get-started-button" expand="block" [routerLink]="['/settings']">Login Now</ion-button>
+              <ion-row class="alt-call-to-action-row">
+                <span class="cta-leading-text"></span>
+              </ion-row>
+            </ion-col>
+          </ion-row>
+        </ion-col>
+      </ion-row>
+    </swiper-slide>
+  </swiper-container>
+</ion-content>

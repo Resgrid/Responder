@@ -1,0 +1,54 @@
+.bookings {
+  width: 94%;
+  margin-top: 20px;
+  margin-left: 10px;
+  box-shadow: 0px 0px 10px 0px grey;
+  border-radius: 5px;
+  overflow: hidden;
+
+  .call-name {
+    display: block;
+    font-size: 16px;
+    text-align: left;
+    overflow: hidden;
+  }
+
+  .call-nature {
+    display: block;
+    font-size: 12px;
+    color: gray;
+    text-align: left;
+  }
+
+  .call-number {
+    font-size: 12px;
+    white-space: nowrap;
+    color: gray;
+    text-align: right;
+  }
+
+  .call-address {
+    font-size: 12px;
+    text-align: left;
+  }
+
+  .call-priority {
+    display: block;
+    font-size: 16px;
+    text-align: right;
+    overflow: hidden;
+  }
+
+  .person-group {
+    display: block;
+    font-size: 14px;
+    text-align: left;
+  }
+
+  .date-time {
+    font-size: 12px;
+    display: block;
+    text-align: right;
+    color: var(--ion-color-primary);
+  }
+}

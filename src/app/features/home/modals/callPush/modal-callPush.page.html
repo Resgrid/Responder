@@ -1,0 +1,48 @@
+<ion-content [fullscreen]="true">
+  <ion-fab vertical="top" horizontal="end" slot="fixed">
+    <ion-fab-button
+      size="small"
+      color="light"
+      (click)="dismissModal()">
+      <ion-icon name="close-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+  <div class="container ion-padding">
+    <ion-grid style="margin-left: 10px; margin-right: 10px;">
+      <ion-row class="ion-padding-top">
+        <ion-col>
+            <h2>New Call: {{(pushData$ | async).title}}</h2>
+        </ion-col>
+      </ion-row>
+      <ion-row class="ion-padding-top">
+        <ion-col>
+            {{(pushData$ | async).body}}
+        </ion-col>
+      </ion-row>
+      <ion-row class="ion-padding-top">
+        <ion-col>
+            <ion-button
+              class="action-button"
+              expand="block"
+              fill="solid"
+              color="primary"
+              type="submit"
+              (click)="set()">
+              <span>View Call</span>
+            </ion-button>
+        </ion-col>
+        <ion-col>
+          <ion-button
+            class="action-button"
+            expand="block"
+            fill="solid"
+            color="secondary"
+            type="submit"
+            (click)="dismissModal()">
+            <span>Close</span>
+          </ion-button>
+      </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-content>

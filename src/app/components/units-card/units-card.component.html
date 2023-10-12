@@ -1,0 +1,28 @@
+<div class="bookings">
+  <ion-row style="padding-bottom: 10px; border-bottom: 1px solid lightgray;">
+    <ion-col size="12">
+      <ion-label class="person-name">{{unit.Name}}</ion-label>
+      <ion-label class="person-roles">
+        {{unit.Type}}
+      </ion-label>
+      <ion-label class="person-group">
+        {{unit.GroupName}}
+      </ion-label>
+    </ion-col>
+  </ion-row>
+  <ion-row style="padding: 10px; border-bottom: 1px solid lightgray;">
+    <ion-col size="6">
+      <ion-label class="person-roles">
+        Staffing
+      </ion-label>
+    </ion-col>
+    <ion-col size="6">
+      <ion-label class="person-roles">
+        Status
+      </ion-label>
+      <ion-label class="person-name" [style.color]="unit.CurrentStatusColor">{{unit.CurrentStatus}}</ion-label>
+      <ion-label class="date-time">{{getDate(unit.CurrentStatusTimestampUtc)}}</ion-label>
+      <ion-label class="date-time">{{getTimeago(unit.CurrentStatusTimestampUtc)}}</ion-label>
+    </ion-col>
+  </ion-row>
+</div>

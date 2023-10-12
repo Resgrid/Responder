@@ -1,0 +1,53 @@
+.bookings {
+  width: 94%;
+  margin-top: 20px;
+  margin-left: 10px;
+  box-shadow: 0px 0px 10px 0px grey;
+  border-radius: 5px;
+  overflow: hidden;
+
+  .user-image {
+    height: 50px;
+    width: 50px;
+    border-radius: 50%;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+
+  .personnel-grid-image {
+    float: left;
+    width: 50px;
+    margin-left: 0;
+    margin-right: 2px;
+    border-radius: 50%;
+  }
+
+  .person-name {
+    display: block;
+    font-size: 16px;
+    text-align: right;
+  }
+
+  .person-roles {
+    display: block;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    color: gray;
+    text-align: right;
+  }
+
+  .person-group {
+    display: block;
+    font-size: 14px;
+    text-align: right;
+  }
+
+  .date-time {
+    font-size: 12px;
+    display: block;
+    text-align: right;
+    color: var(--ion-color-primary);
+  }
+}

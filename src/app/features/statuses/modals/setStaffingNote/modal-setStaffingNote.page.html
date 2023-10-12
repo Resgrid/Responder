@@ -1,0 +1,24 @@
+<ion-content [fullscreen]="true">
+  <ion-fab vertical="top" horizontal="end" slot="fixed">
+    <ion-fab-button size="small" color="light" (click)="dismissModal()">
+      <ion-icon name="close-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+  <div class="container ion-padding">
+    <ion-grid style="margin-left: 10px; margin-right: 10px;">
+      <ion-row class="ion-padding-top">
+        <ion-col>
+          <form [formGroup]="noteForm" (ngSubmit)="setNote()">
+            <ion-item lines="none">
+              <ion-label class="input-label" position="stacked">Note</ion-label>
+              <ion-textarea placeholder="Enter staffing note note here..." formControlName="callNote" rows="5"></ion-textarea>
+            </ion-item>
+            <ion-button class="action-button" expand="block" fill="solid" color="primary" type="submit" [disabled]="!canSubmit()">
+              <span>Set Note</span>
+            </ion-button>
+          </form>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-content>

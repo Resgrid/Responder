@@ -1,0 +1,33 @@
+<ion-content [fullscreen]="true">
+  <ion-fab vertical="top" horizontal="end" slot="fixed">
+    <ion-fab-button
+      size="small"
+      color="light"
+      (click)="dismissModal()">
+      <ion-icon name="close-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+  <div class="container ion-padding">
+    <ion-grid style="margin-left: 10px; margin-right: 10px;">
+      <ion-row class="ion-padding-top">
+        <ion-col>
+            <ion-item lines="none" class="ion-no-padding">
+              <ion-label class="input-label" position="stacked">Destination</ion-label>
+              <ion-select placeholder="Choose Destination" [compareWith]="compareWith" [(ngModel)]="selectedDestination" interface="action-sheet">
+                <ion-select-option *ngFor="let destination of (statusesState$ | async).submitStatusDestinations;" [value]="destination">{{ destination.name }}</ion-select-option>
+              </ion-select>
+            </ion-item>
+            <ion-button
+              class="action-button"
+              expand="block"
+              fill="solid"
+              color="primary"
+              type="submit"
+              (click)="setDestination()">
+              <span>Set Destination</span>
+            </ion-button>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-content>

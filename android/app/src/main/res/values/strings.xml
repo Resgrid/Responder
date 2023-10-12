@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Resgrid Responder</string>
+    <string name="title_activity_main">Resgrid Responder</string>
+    <string name="package_name">wtdt.resgrid.andriod</string>
+    <string name="custom_url_scheme">wtdt.resgrid.andriod</string>
+		<string name="capacitor_background_geolocation_notification_channel_name">
+        Resgrid Responder
+    </string>
+		<string name="capacitor_background_geolocation_notification_icon">
+        mipmap/ic_launcher
+    </string>
+</resources>

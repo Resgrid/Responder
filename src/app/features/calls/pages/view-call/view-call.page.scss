@@ -1,0 +1,173 @@
+
+.more-button {
+  --border-radius: 0%;
+  --border-width: 0px;
+  --padding-start: 0px;
+  --padding-end: 0px;
+}
+
+.button-group {
+  .col {
+    &:first-child:not(:last-child) {
+      padding-right: 0;
+      .button {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
+    &:not(:first-child):not(:last-child) {
+      padding-right: 0;
+      padding-left: 0;
+      .button {
+        border-radius: 0;
+      }
+    }
+    &:last-child:not(:first-child) {
+      padding-left: 0;
+      .button {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+    }
+  }
+}
+
+.notifications-badge {
+  position: absolute;
+  top: -3px;
+  right: -18px;
+  border-radius: 100%;
+}
+
+.call-details {
+  padding-top: 5px;
+}
+.call-details .row {
+  padding: 15px 0;
+  border-top: solid 1px #eee;
+}
+.call-details .col {
+  padding: 0;
+}
+.call-details .col-100 {
+  width: 100%;
+}
+.call-details-breakline {
+  padding: 15px 0;
+  border-top: solid 1px #eee;
+}
+.call-details-breakline .call-details-label {
+  margin-bottom: 10px;
+}
+.call-details-label {
+  color: #777;
+  font-size: 13px;
+}
+.call-details-content {
+  font-size: 14px;
+  color: #000;
+  font-weight: 400;
+}
+.find-location {
+  padding: 10px 10px 0;
+}
+.find-location .button {
+  margin-bottom: 0;
+}
+.notopmargin {
+  margin-top: 0 !important;
+}
+.save-footer {
+  height: 64px;
+  background-color: rgba(255, 255, 255, 0.7);
+}
+.save-footer .button {
+  margin: 0 !important;
+}
+.l-map .scroll,
+.l-map .map-content {
+  height: 100%;
+}
+
+.list_div {
+  display: flex;
+  align-items: center;
+  .user_image {
+    height: 50px;
+    width: 50px;
+    border-radius: 100%;
+    background-position: top;
+    min-width: 50px;
+    min-height: 50px;
+  }
+
+  .detail {
+    padding-left: 15px;
+    width: 100%;
+    padding: 12px;
+    border-bottom: 1px solid lightgray;
+    margin-bottom: 5px;
+    position: relative;
+    .username {
+      font-weight: 600;
+      // font-size: 15px;
+      margin-bottom: 5px;
+    }
+
+    span {
+      display: flex;
+
+      ion-icon {
+        font-size: 18px;
+        margin-right: 10px;
+        color: gray;
+      }
+
+      .active {
+        color: #33b7f1;
+      }
+      .light {
+        color: gray;
+        font-size: 14px;
+      }
+
+      .time {
+        color: gray;
+        font-size: 13px;
+        position: absolute;
+        top: 16px;
+        right: 0;
+      }
+    }
+  }
+}
+
+.footer_div {
+  display: flex;
+  position: sticky; 
+  bottom: 0;
+  justify-content: space-between;
+  align-items: center;
+  background-color: dimgrey;
+
+  ion-input {
+    border-radius: 25px;
+    border: 1px solid lightgray;
+    --padding-start: 8px;
+    position: relative;
+  }
+}
+
+.chat_div{
+  position: relative;
+  margin-left: 5px;
+}
+
+.user_image{
+  height: 50px;
+  width: 50px;
+  border-radius: 100%;
+  background-position: top;
+  min-width: 50px;
+  min-height: 50px;
+}

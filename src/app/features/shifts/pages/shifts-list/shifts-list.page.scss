@@ -1,0 +1,200 @@
+@import "../../../../../../node_modules/angular-calendar/scss/angular-calendar.scss";
+@import "../../../../../theme/variables.scss";
+
+.dark-theme {
+	// First define some global color variables for your app, these are just for the demo, they can be anything you like
+	$bg-dark-primary: #1f262d;
+	$bg-dark-secondary: #394046;
+	$bg-active: #2c343a;
+	$text-color: #d5d6d7;
+	$border-color: rgba(0, 0, 0, 0.6);
+
+	// Call the calendar mixin with a sass color map of your theme. Every property is optional.
+	// For a list of all variables and how they are used,
+	// see https://github.com/mattlewis92/angular-calendar/tree/master/projects/angular-calendar/src/variables.scss
+	@include cal-theme(
+		(
+			bg-primary: $bg-dark-primary,
+			bg-secondary: $bg-dark-secondary,
+			weekend-color: indianred,
+			bg-active: $bg-active,
+			border-color: $border-color,
+			gray: $bg-dark-secondary,
+			today-bg: $bg-dark-secondary,
+			event-color-primary: $bg-dark-secondary,
+		)
+	);
+
+	// How to override a non themable property, this was copied from chrome -> inspect element -> styles panel
+	.cal-month-view .cal-day-cell.cal-out-month .cal-day-number {
+		opacity: 0.15;
+	}
+
+	// Everything else below is just themes the demo, it's probably not relevant to your app
+	background-color: $bg-dark-primary;
+	color: $text-color;
+
+	.card {
+		border-color: $border-color;
+	}
+
+	.card-header {
+		background-color: $bg-dark-secondary;
+	}
+
+	.card-body {
+		background-color: $bg-dark-primary;
+	}
+
+	.nav-tabs {
+		border-bottom-color: $border-color;
+	}
+
+	.nav-tabs .nav-link.active {
+		background-color: $bg-dark-primary;
+		color: $text-color;
+		border-color: $border-color;
+	}
+
+	.nav-tabs .nav-link:hover,
+	.nav-tabs .nav-link:focus {
+		border-color: $border-color;
+	}
+}
+
+.schedule-content {
+	//background-color: color($colors, background, base);
+
+	.schedule-segment {
+		padding: 14px 0px;
+		background-color: $white;
+		//@include element-shadow();
+
+		//@include segment-button-styles($theme-color-2);
+
+		.segment-button {
+			//@include segment-text-styles($white-d);
+		}
+	}
+
+	.schedule-list {
+		padding: 10px 5px;
+
+		.schedule-item {
+			padding: 5px;
+			background-color: transparent;
+			border: none;
+
+			.item-inner {
+				border: none;
+				padding: 0px;
+
+				ion-label {
+					margin: 0px;
+				}
+			}
+
+			.schedule-date {
+				color: $gray-600;
+				text-align: center;
+				padding: 0px 10px 0px 0px;
+				//@include align-self(center);
+
+				.schedule-day {
+					font-size: 3.2rem;
+					font-weight: 400;
+				}
+
+				.schedule-month {
+					font-size: 1.2rem;
+					font-weight: 500;
+					text-transform: uppercase;
+				}
+
+				.schedule-time {
+					font-size: 1.2rem;
+					font-weight: 500;
+				}
+			}
+
+			.schedule-data {
+				border-radius: 6px;
+				background-color: $white;
+				padding: 12px 14px;
+				//@include element-shadow();
+
+				.data-item {
+					//@include display(flex);
+					//@include align-items(center);
+					//@include justify-content(space-between);
+
+					.item-content {
+						flex: 0 0 90%;
+						max-width: 90%;
+						padding-right: 5px;
+
+						.item-title {
+							font-size: 1.6rem;
+							font-weight: 500;
+							letter-spacing: 0.2px;
+							//color: $theme-color-2;
+							margin-bottom: 12px;
+
+							&.one-line {
+								overflow: hidden;
+								text-overflow: ellipsis;
+								white-space: nowrap;
+							}
+						}
+
+						.item-description {
+							margin-bottom: 4px;
+							//@include display(flex);
+							//@include align-items(center);
+							//@include justify-content(space-between);
+
+							&:last-child {
+								margin: 0px;
+							}
+
+							.description-icon {
+								color: $gray-600;
+								flex: 0 0 12%;
+								max-width: 12%;
+								padding-right: 2px;
+								font-size: 2.1rem;
+								text-align: left;
+							}
+
+							.description-text {
+								flex: 0 0 88%;
+								max-width: 88%;
+								padding-left: 2px;
+								white-space: normal;
+								font-size: 1.2rem;
+								line-height: 1.4;
+								letter-spacing: 0.2px;
+								color: $gray-600;
+
+								&.one-line {
+									overflow: hidden;
+									text-overflow: ellipsis;
+									white-space: nowrap;
+								}
+							}
+						}
+					}
+
+					.item-icon {
+						flex: 0 0 10%;
+						max-width: 10%;
+						text-align: right;
+						//color: $theme-color-2;
+						font-size: 2.2em;
+						padding-left: 5px;
+					}
+				}
+			}
+		}
+	}
+}

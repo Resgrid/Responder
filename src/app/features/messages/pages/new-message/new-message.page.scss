@@ -1,0 +1,42 @@
+.email {
+	margin-bottom: 6px;
+   
+	ion-label {
+	  white-space: pre;
+	}
+   
+	.excerpt {
+	  padding-top: 4px;
+	}
+   
+	.date {
+	  font-size: small;
+	}
+  }
+   
+  ion-avatar {
+	width: 40px;
+	height: 40px;
+  }
+   
+  .email-circle {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	color: #e4e4e4;
+	text-transform: capitalize;
+	font-weight: 500;
+   
+	display: flex;
+	align-items: center;
+	justify-content: center;
+  }
+  
+  .user-image {
+    height: 50px;
+    width: 50px;
+    border-radius: 50%;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }

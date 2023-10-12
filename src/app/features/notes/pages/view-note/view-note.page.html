@@ -1,0 +1,46 @@
+<ion-content fullscreen="true">
+  <ion-fab vertical="top" horizontal="end" slot="fixed">
+    <ion-fab-button size="small" color="light" (click)="closeModal()">
+      <ion-icon name="close-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+  <div class="ion-padding">
+    <article>
+      <div class="callList">
+        <div>
+          <h5>
+            {{(notesState$ | async)?.viewNote?.Title}}
+          </h5>
+          <p [innerHTML]="(notesState$ | async)?.viewNote?.Category"></p>
+        </div>
+      </div>
+      <div padding>
+        <ion-segment [(ngModel)]="tabType" scrollable="true">
+          <ion-segment-button value="text">
+            Note Text
+          </ion-segment-button>
+          <ion-segment-button value="info">
+            Info
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <div [ngSwitch]="tabType" style="overflow-y: auto;">
+        <div *ngSwitchCase="'text'">
+          <span [innerHtml]="(notesState$ | async)?.viewNote?.Body"></span>
+        </div>
+
+        <ion-list *ngSwitchCase="'info'">
+          <ion-item>
+            <ion-label>
+              <h2>Created On</h2>
+              <p>{{(notesState$ | async)?.viewNote?.AddedOn}}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        
+      </div>
+    </article>
+  </div>
+</ion-content>

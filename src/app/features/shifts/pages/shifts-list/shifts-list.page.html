@@ -1,0 +1,74 @@
+<app-header [title]="'shiftsPage.title' | translate"></app-header>
+<ion-content [fullscreen]="true">
+  <div padding>
+    <ion-segment [(ngModel)]="tabType" scrollable="true" (ionChange)="segmentChanged($event)">
+      <ion-segment-button value="today">
+        {{ 'shiftsPage.todaySegment' | translate }}
+      </ion-segment-button>
+      <ion-segment-button value="shifts">
+        {{ 'shiftsPage.shiftsSegment' | translate }}
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <div [ngSwitch]="tabType" style="overflow-y: auto;">
+    <div *ngSwitchCase="'today'" class="essential-theme">
+      <cta-panel *ngIf="!(shiftsState$ | async).todayShifts || (shiftsState$ | async).todayShifts.length <= 0" [topIcon]="'information-circle'" [title]="'shiftsPage.noShiftsPanel.title' | translate"
+			  [details]="'shiftsPage.noShiftsPanel.details' | translate" [extraDetails]="'shiftsPage.noShiftsPanel.extraDetails' | translate"
+			  [btnLabel]="'shiftsPage.noShiftsPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
+        <ion-list class="is-list-colored" *ngIf="(shiftsState$ | async).todayShifts && (shiftsState$ | async).todayShifts.length > 0">
+          <ion-item class="is-item-category-success" *ngFor="let item of (shiftsState$ | async).todayShifts" (click)="viewDetail(item)">
+            <ion-label>
+              <p class="is-color-success">{{item.ShiftName}}</p>
+              <h2>{{item.ShiftName}}</h2>
+              <p>{{getFullDateTime(item.Start)}}</p>
+            </ion-label>
+            <div slot="end" class="is-list-colored-button-group">
+              <div class="ion-text-center">
+                <p class="ion-no-margin">{{getDateTime(item.Start)}} - {{getDateTime(item.End)}}</p>
+                <p class="ion-no-margin" class="is-color-primary">
+                  
+                </p>
+              </div>
+            </div>
+            <div slot="end" class="is-list-colored-button-group">
+              <ion-button fill="clear" class="ion-no-padding ion-align-self-center">
+                <ion-icon name="arrow-forward"></ion-icon>
+              </ion-button>
+            </div>
+          </ion-item>
+        </ion-list>
+    </div>
+
+    <div *ngSwitchCase="'shifts'" class="essential-theme">
+      <cta-panel *ngIf="!(shiftsState$ | async).shifts || (shiftsState$ | async).shifts.length <= 0" [topIcon]="'information-circle'" [title]="'shiftsPage.ctaPanel2.title' | translate"
+      [details]="'shiftsPage.ctaPanel2.details' | translate" [extraDetails]="'shiftsPage.ctaPanel2.extraDetails' | translate"
+      [btnLabel]="'shiftsPage.ctaPanel2.buttonLabel' | translate" [hideButton]="true"></cta-panel>
+
+      <ion-list *ngIf="(shiftsState$ | async).shifts && (shiftsState$ | async).shifts.length > 0">
+				<ion-card *ngFor="let shift of (shiftsState$ | async).shifts" (click)="viewShiftDetail(shift)">
+					<ion-card-header [style.background-color]="getBackgroundColorForShiftHeader(shift)">
+						<h2 class="box_textshadow"><b>{{shift.Name}}</b> ({{shift.Code}})</h2>
+					</ion-card-header>
+
+					<ion-card-content style="padding:4px;" [hidden]="shift.AssignmentType != 0">
+						<p>
+							<span class="subdued" style="padding-right: 10px;">{{shift.PersonnelCount}} Personnel</span>
+							<span class="subdued" style="padding-right: 10px;">{{shift.GroupCount}} Groups</span>
+							<!--<span class="subdued" style="padding-right: 10px;">Next Day <span am-time-ago="shift.NextDay"></span></span>-->
+							<span class="subdued" style="float:right;" ng-if="shift.InShift">In Shift</span>
+						</p>
+					</ion-card-content>
+
+					<ion-card-content style="padding:4px;" [hidden]="shift.AssignmentType != 1">
+						<p>
+							<span class="subdued" style="padding-right: 10px;">Signup Shift</span>
+							<span class="subdued" style="padding-right: 10px;">{{shift.GroupCount}} Groups</span>
+							<!--<span class="subdued" style="padding-right: 10px;">Next Day <span am-time-ago="shift.NextDay"></span></span>-->
+						</p>
+					</ion-card-content>
+				</ion-card>
+			</ion-list>
+    </div>
+  </div>
+</ion-content>

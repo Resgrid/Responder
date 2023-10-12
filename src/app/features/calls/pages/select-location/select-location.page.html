@@ -1,0 +1,29 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      {{'setLocationPage.title' | translate}}
+    </ion-title>
+    <ion-buttons slot="primary">
+      <ion-button (click)="closeModal()">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content [fullscreen]="true" class="essential-theme">
+    <div #callMap id="callMap" name="callMap"
+          style="height: 100% !important; width: 100% !important; overflow: hidden;"></div>
+</ion-content>
+<ion-footer>
+  <ion-grid class="is-grid ion-no-padding">
+    <ion-row>
+      <ion-col class="ion-no-padding">
+        <ion-list lines="none" class="ion-padding ion-no-margin is-list-buttons">
+          <ion-item color="primary" button detail="false" (click)="setLocation()">
+            <ion-label>{{'setLocationPage.setLocationButton' | translate}}</ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-footer>

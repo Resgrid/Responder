@@ -1,0 +1,104 @@
+<ion-app>
+  <ion-split-pane contentId="menu-content" when="false">
+    <ion-menu contentId="menu-content" class="app-sidemenu" (ionWillOpen)="menuOpened()">
+      <ion-header>
+        <ion-toolbar class="menuHeader">
+          <ion-row class="user-details-wrapper">
+            <ion-col size="4">
+              <app-aspect-ratio [ratio]="{w: 1, h: 1}">
+                <app-image-shell class="user-avatar" animation="spinner" [src]="getAvatarUrl((settingsState$ | async).user?.userId)"></app-image-shell>
+              </app-aspect-ratio>
+            </ion-col>
+            <ion-col class="user-info-wrapper" size="8">
+              <h3 class="user-name">{{(settingsState$ | async).user?.fullName}}</h3>
+              <h5 class="user-handle">{{(settingsState$ | async).user?.departmentName}}</h5>
+            </ion-col>
+          </ion-row>
+          <ion-row class="user-stats-wrapper user-details-wrapper">
+            <ion-col>
+              <ion-menu-toggle autoHide="true">
+                <a [routerLink]="['/messages/list']" class="user-stat-name">
+                  <span class="user-stat-value"></span>
+                  <span class="user-stat-name">Messages</span>
+                </a>
+              </ion-menu-toggle>
+            </ion-col>
+            <ion-col>
+              <ion-menu-toggle autoHide="true">
+                <a [routerLink]="['/settings/settings']" class="user-stat-name">Settings</a>
+              </ion-menu-toggle>
+            </ion-col>
+          </ion-row>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content>
+        <ion-list>
+          <ion-menu-toggle autoHide="true">
+            <ion-item [routerLink]="['/home/tabs/status']">
+              <ion-icon slot="start" name="flag"></ion-icon>
+              <ion-label>
+                Status
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/home/tabs/ptt']">
+              <ion-icon slot="start" name="mic"></ion-icon>
+              <ion-label>
+                PTT
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/home/tabs/people']">
+              <ion-icon slot="start" name="people"></ion-icon>
+              <ion-label>
+                People
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/home/tabs/units']">
+              <ion-icon slot="start" name="car"></ion-icon>
+              <ion-label>
+                Units
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/home/tabs/calls']">
+              <ion-icon slot="start" name="megaphone-outline"></ion-icon>
+              <ion-label>
+                Calls
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/protocols/list']">
+              <ion-icon slot="start" name="list-outline"></ion-icon>
+              <ion-label>
+                Protocols
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/mapping/map']">
+              <ion-icon slot="start" name="map"></ion-icon>
+              <ion-label>
+                Mapping
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/calendar/view']">
+              <ion-icon slot="start" name="calendar-outline"></ion-icon>
+              <ion-label>
+                Calendar
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/shifts/list']">
+              <ion-icon slot="start" name="briefcase-outline"></ion-icon>
+              <ion-label>
+                Shifts
+              </ion-label>
+            </ion-item>
+            <ion-item [routerLink]="['/notes/list']">
+              <ion-icon slot="start" name="clipboard-outline"></ion-icon>
+              <ion-label>
+                Notes
+              </ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+        </ion-list>
+        <app-voice-component></app-voice-component>
+      </ion-content>
+    </ion-menu>
+    <ion-router-outlet id="menu-content"></ion-router-outlet>
+  </ion-split-pane>
+</ion-app>

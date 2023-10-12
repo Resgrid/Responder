@@ -1,0 +1,7 @@
+{
+  "name": "Resgrid Responder",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

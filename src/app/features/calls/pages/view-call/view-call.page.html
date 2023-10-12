@@ -1,0 +1,269 @@
+<ion-content fullscreen="true">
+  <ion-fab vertical="top" horizontal="end" slot="fixed">
+    <ion-fab-button size="small" color="light" (click)="dismissModal()">
+      <ion-icon name="close-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+  <div class="ion-padding" *ngIf="(callsState$ | async)?.viewCallType === 'call'" class="more-button">
+    <article>
+      <div class="callList">
+        <div>
+          <h5>
+            <ion-button size="small" fill="clear" slot="icon-only" (click)="showOptions()">
+              <ion-icon name="ellipsis-vertical-outline"></ion-icon>
+            </ion-button>
+            {{(callsState$ | async)?.callToView?.Name}} 
+          </h5>
+          <p style="padding-left:4px;padding-right:4px;" [innerHTML]="(callsState$ | async)?.callToView?.Nature"></p>
+        </div>
+      </div>
+      <div style="height: 200px !important; width: 100% !important; overflow: hidden;"
+        [hidden]="(callsState$ | async)?.callToView?.Geolocation == null || (callsState$ | async)?.callToView?.Geolocation.length <= 0">
+        <div #viewCallMap id="viewCallMap" name="viewCallMap" data-tap-disabled="true"
+          style="height: 200px !important; width: 100% !important; overflow: hidden; pointer-events: none; touch-action: none;"></div>
+      </div>
+      <ion-grid class="button-group">
+        <ion-row>
+          <ion-col style="padding-left: 0px; padding-right: 0px; margin-left: 0px; margin-right: 0px;">
+            <ion-button expand="full" color="primary" (click)="navCallNotes()">Notes
+              <ion-badge color="primary" class="notifications-badge">{{(callsState$ | async) ?.callToView?.NotesCount}}</ion-badge>
+            </ion-button>
+          </ion-col>
+          <ion-col style="padding-left: 0px; padding-right: 0px; margin-left: 0px; margin-right: 0px;">
+            <ion-button expand="full" color="primary" (click)="navCallImages()">Images
+              <ion-badge color="primary" class="notifications-badge">{{(callsState$ | async)?.callToView?.ImgagesCount}}</ion-badge>
+            </ion-button>
+          </ion-col>
+          <ion-col style="padding-left: 0px; padding-right: 0px; margin-left: 0px; margin-right: 0px;">
+            <ion-button expand="full" color="primary" (click)="navCallFiles()">Files
+              <ion-badge color="primary" class="notifications-badge">{{(callsState$ | async)?.callToView?.FileCount}}</ion-badge>
+            </ion-button>
+          </ion-col>
+          <ion-col style="padding-left: 0px; padding-right: 0px; margin-left: 0px; margin-right: 0px;"
+            [hidden]="(callsState$ | async)?.callToView?.Geolocation == null || (callsState$ | async)?.callToView?.Geolocation.length <= 0">
+            <ion-button expand="full" color="secondary" (click)="route()">Route</ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+      <div [hidden]="(callsState$ | async)?.callToView?.AudioFileId?.length <= 0" style="width: 100%; text-align: center;">
+        <audio controls src="{{getDispatchUrl((callsState$ | async)?.callToView?.AudioFileId)}}" type="audio/mpeg">
+        </audio>
+      </div>
+      <div padding>
+        <ion-segment [(ngModel)]="tabType" scrollable="true">
+          <ion-segment-button value="data">
+            Data
+          </ion-segment-button>
+          <ion-segment-button value="contact">
+            Contact
+          </ion-segment-button>
+          <ion-segment-button value="protocols">
+            Protocols
+          </ion-segment-button>
+          <ion-segment-button value="dispatch">
+            Dispatch
+          </ion-segment-button>
+          <ion-segment-button value="activity">
+            Activity
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <div [ngSwitch]="tabType" style="overflow-y: auto;">
+        <ion-list *ngSwitchCase="'data'">
+          <ion-item>
+            <ion-label>
+              <h2>Priority</h2>
+              <p [style.color]="(callsState$ | async)?.callToViewPriority?.Color">{{(callsState$ | async)?.callToViewPriority?.Name}}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>Timestamp</h2>
+              <p>{{getFullDateTime((callsState$ | async)?.callToView?.LoggedOnUtc)}}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>Type</h2>
+              <p>{{(callsState$ | async)?.callToView?.Type}}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>Address</h2>
+              <p>{{(callsState$ | async)?.callToView?.Address}}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label class="ion-text-wrap">
+              <h2>Notes</h2>
+              <p [innerHtml]="(callsState$ | async)?.callToView?.Note"></p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <ion-list *ngSwitchCase="'contact'">
+          <ion-item>
+            <ion-label>
+              <h2>Reference Id</h2>
+              <p>{{(callsState$ | async)?.callToView?.ReferenceId}}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>External Id</h2>
+              <p>{{(callsState$ | async)?.callToView?.ExternalId}}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>Contact Name</h2>
+              <p>{{(callsState$ | async)?.callToView?.ContactName}}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>Contact Info</h2>
+              <p>{{(callsState$ | async)?.callToView?.ContactInfo}}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <ion-list *ngSwitchCase="'protocols'">
+          <ion-item *ngFor="let protocol of (callsState$ | async)?.callViewData?.Protocols">
+            <h4>{{protocol.Name}} ({{protocol.Code}})</h4>
+            <p>{{protocol.Description}}</p>
+            <p>{{protocol.ProtocolText}}</p>
+          </ion-item>
+        </ion-list>
+
+        <ion-list *ngSwitchCase="'dispatch'">
+          <ion-item *ngFor="let dispatch of (callsState$ | async)?.callViewData?.Dispatches">
+            <ion-label>
+              <h2>{{dispatch.Name}}</h2>
+              <p>{{dispatch.Group}} ({{dispatch.Type}})</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <div *ngSwitchCase="'activity'" style="overflow-y: auto;">
+          <ion-list>
+            <ion-item *ngFor="let activity of (callsState$ | async)?.callViewData?.Activity  | orderBy : '-Timestamp'">
+              <ion-label class="ion-text-wrap">
+                <ion-text color="primary">
+                  <h3>{{activity.Name}} ({{activity.Group}})</h3>
+                </ion-text>
+                <p><span [style.color]="activity.StatusColor">{{activity.StatusText}}</span> {{formatTimestamp(activity.Timestamp)}}</p>
+                <ion-text color="secondary">
+                  <h3>{{activity.Note}}</h3>
+                </ion-text>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </div>
+      </div>
+    </article>
+  </div>
+  <div style="margin-top: 5px; height: 84vh;" *ngIf="(callsState$ | async)?.viewCallType === 'notes'">
+    <span>
+      <h3 style="padding-left: 10px;">Call Notes</h3>
+    </span>
+    <div class="ion-padding" style="height: 94%;">
+      <perfect-scrollbar>
+        <div *ngIf="!(callsState$ | async).callNotes || (callsState$ | async).callNotes.length <= 0">
+          <cta-panel [topIcon]="'information-circle'" [title]="'callNotesPage.ctaPanel.title' | translate" [details]="'callNotesPage.ctaPanel.details' | translate"
+            [extraDetails]="'callNotesPage.ctaPanel.extraDetails' | translate" [btnLabel]="'callNotesPage.ctaPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
+        </div>
+        <div class="list_div" *ngFor="let note of (callsState$ | async).callNotes;">
+          <div class="user_image bg_image" [style.background-image]="'url(' + (getAvatarUrl(note.UserId)) + ')'"></div>
+          <div class="detail">
+            <ion-label class="username">{{note.FullName}}</ion-label>
+            <span>
+              <ion-label class="light">{{note.Note}}</ion-label>
+              <ion-label class="time">{{note.TimestampFormatted}}</ion-label>
+            </span>
+          </div>
+        </div>
+      </perfect-scrollbar>
+    </div>
+    <div style="display: inherit;" class="footer_div">
+      <form (ngSubmit)="saveNote()" [formGroup]="callNotesFormData">
+        <ion-grid>
+          <ion-row>
+            <ion-col size="10" size-lg>
+              <ion-input type="text" placeholder="Enter Note..." formControlName="message" [ngClass]="{'is-invalid': isSavingNote && callNotesFormData.errors}">
+              </ion-input>
+            </ion-col>
+            <ion-col size="2" size-sm>
+              <ion-button type="submit">
+                <ion-icon name="save-outline"></ion-icon>
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </form>
+    </div>
+  </div>
+  <div style="margin-top: 5px; height: 84vh;" *ngIf="(callsState$ | async)?.viewCallType === 'images'">
+    <span>
+      <h3 style="padding-left: 10px;">Call Images</h3>
+    </span>
+    <div class="ion-padding" style="height: 94%;" *ngIf="!images || images.length <= 0">
+      <cta-panel [topIcon]="'information-circle'" [title]="'callImagesPage.ctaPanel.title' | translate" [details]="'callImagesPage.ctaPanel.details' | translate"
+        [extraDetails]="'callImagesPage.ctaPanel.extraDetails' | translate" [btnLabel]="'callImagesPage.ctaPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
+    </div>
+    <div class="ion-padding" style="height: 94%;" *ngIf="images && images.length > 0">
+      <gallery id="mixedExample" [items]="images"></gallery>
+    </div>
+    <div style="display: inherit;" class="footer_div">
+      <ion-grid>
+        <ion-row>
+          <ion-col>
+            <ion-input type="text" placeholder="Image Note..." [(ngModel)]="imageNote"></ion-input>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col style="text-align: center;">
+            <ion-button (click)="uploadPhoto()">Upload Photo</ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </div>
+  </div>
+  <div class="ion-padding" style="margin-top: 5px; height: 84vh;" *ngIf="(callsState$ | async)?.viewCallType === 'files'">
+    <span>
+      <h3 style="padding-left: 10px;">Call Files</h3>
+    </span>
+    <div class="ion-padding" style="height: 94%;" *ngIf="!(callsState$ | async).callFiles || (callsState$ | async).callFiles.length <= 0">
+      <cta-panel [topIcon]="'information-circle'" [title]="'callFilesPage.ctaPanel.title' | translate" [details]="'callFilesPage.ctaPanel.details' | translate"
+        [extraDetails]="'callFilesPage.ctaPanel.extraDetails' | translate" [btnLabel]="'callFilesPage.ctaPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
+    </div>
+    <div class="ion-padding" style="height: 94%;" *ngIf="(callsState$ | async).callFiles && (callsState$ | async).callFiles.length > 0">
+      <perfect-scrollbar>
+        <ion-list>
+          <ion-item *ngFor="let file of (callsState$ | async).callFiles;" (click)="openFile(file)">
+            <ion-label>
+              <h2>{{file.Name}}</h2>
+              <p>{{file.FileName}}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </perfect-scrollbar>
+    </div>
+    <div style="display: inherit;" class="footer_div">
+      <form (ngSubmit)="uploadFile()" [formGroup]="callNotesFormData">
+        <ion-grid>
+          <ion-row>
+            <ion-col size="11">
+
+            </ion-col>
+            <ion-col>
+
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </form>
+    </div>
+  </div>
+</ion-content>

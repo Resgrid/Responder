@@ -1,0 +1,38 @@
+<app-header [title]="'appName' | translate"></app-header>
+<ion-content>
+  <ion-grid>
+    <ion-row style="margin-top: .1rem;">
+      <ion-col size="6">
+        <div class="data">
+          <ion-label class="frst_lbl" [style.color]="(homeState$ | async).currentStatusValue?.BColor">{{(homeState$ | async).currentStatusValue?.Text}}</ion-label>
+          <ion-label class="scnd_lbl">Status</ion-label>
+        </div>
+      </ion-col>
+
+      <ion-col size="6">
+        <div class="data">
+          <ion-label class="frst_lbl" [style.color]="(homeState$ | async).currentStaffingValue?.BColor">{{(homeState$ | async).currentStaffingValue?.Text}}</ion-label>
+          <ion-label class="scnd_lbl">Staffing</ion-label>
+        </div>
+      </ion-col>
+    </ion-row>
+    <ion-row style="margin-top: 1rem;">
+      <ion-col>
+        <ion-segment [(ngModel)]="activeSegment" scrollable="true">
+          <ion-segment-button value="status">
+            <ion-label>{{'statusPage.statusSegement' | translate}}</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="staffing">
+            <ion-label>{{'statusPage.staffingSegement' | translate}}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+        <div *ngIf="activeSegment === 'status'">
+          <app-action-lists></app-action-lists>
+        </div>
+        <div *ngIf="activeSegment === 'staffing'">
+          <app-staffing-lists></app-staffing-lists>
+        </div>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>
