@@ -6,7 +6,6 @@ import {
   numberToUUID,
 } from '@capacitor-community/bluetooth-le';
 import { ToastController } from '@ionic/angular';
-import { isTabSwitch } from '@ionic/angular/directives/navigation/stack-utils';
 import { Store } from '@ngrx/store';
 import { DepartmentVoiceChannelResultData } from '@resgrid/ngx-resgridlib';
 import { Observable, Subscription } from 'rxjs';
