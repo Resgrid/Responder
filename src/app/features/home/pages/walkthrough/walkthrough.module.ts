@@ -8,10 +8,12 @@ import { WalkthroughPage } from './walkthrough.page';
 import { TranslateModule } from '@ngx-translate/core';
 import { ShellModule } from 'src/app/shell/shell.module';
 import { register } from 'swiper/element/bundle';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
 register();
 
 @NgModule({
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   imports: [
     CommonModule,
     FormsModule,

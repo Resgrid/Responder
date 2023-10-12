@@ -42,6 +42,7 @@ import { MessagesModule } from './features/messages/messages.module';
 import { CacheProvider } from './providers/cache';
 import { ScrollDirective } from './directives/scroll.directive';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
 export function createTranslateLoader(http: HttpClient): any {
 	return new TranslateHttpLoader(http, './assets/i18n/', '.json');
@@ -57,6 +58,7 @@ const getBaseUrl = (): string => {
 };
 
 @NgModule({
+	schemas: [CUSTOM_ELEMENTS_SCHEMA],
 	declarations: [AppComponent, UnitCardComponent, StatusCardComponent, ScrollDirective],
 	imports: [
 		BrowserModule.withServerTransition({ appId: 'resgridResponder' }),
