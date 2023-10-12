@@ -47,7 +47,7 @@
     "@capawesome/capacitor-badge": "^5.0.0",
     "@ionic/angular": "^7.2.0",
     "@ionic/pwa-elements": "3.0.2",
-    "@ionic/storage-angular": "3.0.6",
+    "@ionic/storage-angular": "4.0.0",
     "@mapbox/maki": "7.1.0",
     "@microsoft/signalr": "5.0.10",
     "@ngrx/effects": "14.3.3",
