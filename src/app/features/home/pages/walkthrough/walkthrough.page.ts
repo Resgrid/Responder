@@ -9,7 +9,7 @@ import { Swiper } from 'swiper';
 	templateUrl: './walkthrough.page.html',
 	styleUrls: ['./styles/walkthrough.page.scss', './styles/walkthrough.shell.scss', './styles/walkthrough.responsive.scss'],
 })
-export class WalkthroughPage implements OnInit {
+export class WalkthroughPage {
 	@ViewChild('swiperRef', { static: true })
 	protected _swiperRef: ElementRef | undefined;
 	swiper?: Swiper;
