@@ -16,12 +16,12 @@
 	<br>
 	<ion-list>
 		<ion-item class="item-divider item-icon-right"><b>Information</b></ion-item>
-		<ion-item [hidden]="!(shiftsState$ | async).viewShiftDay?.SignedUp">
+		<ion-item *ngIf="(shiftsState$ | async).viewShiftDay?.SignedUp">
 			You are assigned/signed up to this shift.
 		</ion-item>
 	</ion-list>
 	<br>
-	<ion-list [hidden]="(shiftsState$ | async).viewShiftDay?.ShiftType !== 1">
+	<ion-list *ngIf="(shiftsState$ | async).viewShiftDay?.ShiftType == 1">
 		<ion-item class="item-divider item-icon-right"><b>Shift Needs</b></ion-item>
 		<ion-item *ngFor="let need of (shiftsState$ | async).viewShiftDay?.Needs">
 			{{need.GroupName}}
@@ -32,7 +32,7 @@
 					{{groupNeed.RoleName}} ({{groupNeed.Needed}})
 				</ion-item>
 				<br>
-				<button ion-button block color="primary" (click)="signup(need.GroupId)" [hidden]="(shiftsState$ | async).viewShiftDay?.SignedUp || !isInTheFuture((shiftsState$ | async).viewShiftDay)">Signup for Shift at {{need.GroupName}}</button>
+				<button ion-button block color="primary" (click)="signup(need.GroupId)" *ngIf="!(shiftsState$ | async).viewShiftDay?.SignedUp && isInTheFuture((shiftsState$ | async).viewShiftDay)">Signup for Shift at {{need.GroupName}}</button>
 			</ion-list>
 		</ion-item>
 	</ion-list>

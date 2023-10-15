@@ -36,9 +36,9 @@
           </ion-label>
 
           <div class="ion-text-right" style="z-index: 5;" slot="end">
-            <div class="date" [hidden]="m.Type != 0">{{'messagesPage.messageTypeLabel' | translate}}</div>
-            <div class="date" [hidden]="m.Type != 1">{{'messagesPage.callbackTypeLabel' | translate}}</div>
-            <div class="date" [hidden]="m.Type != 2">{{'messagesPage.pollTypeLabel' | translate}}</div>
+            <div class="date" *ngIf="m.Type == 0">{{'messagesPage.messageTypeLabel' | translate}}</div>
+            <div class="date" *ngIf="m.Type == 1">{{'messagesPage.callbackTypeLabel' | translate}}</div>
+            <div class="date" *ngIf="m.Type == 2">{{'messagesPage.pollTypeLabel' | translate}}</div>
             <p class="date">{{ m.SentOn | date:'dd. MMM YY' }}</p>
           </div>
 
@@ -78,7 +78,7 @@
       </ion-list>
     </div>
   </div>
-  <ion-fab vertical="bottom" horizontal="end" slot="fixed" [hidden]="!canCreateMessage()">
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="canCreateMessage()">
     <ion-fab-button (click)="newMessage()">
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>

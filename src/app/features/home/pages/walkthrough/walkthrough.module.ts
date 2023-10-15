@@ -13,21 +13,21 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 register();
 
 @NgModule({
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    ReactiveFormsModule,
-    RouterModule.forChild([
-      {
-        path: '',
-        component: WalkthroughPage
-      }
-    ]),
-    TranslateModule,
-        ShellModule
-  ],
-  declarations: [WalkthroughPage]
+	schemas: [CUSTOM_ELEMENTS_SCHEMA],
+	imports: [
+		CommonModule,
+		FormsModule,
+		IonicModule,
+		ReactiveFormsModule,
+		RouterModule.forChild([
+			{
+				path: '',
+				component: WalkthroughPage,
+			},
+		]),
+		TranslateModule,
+		ShellModule
+	],
+	declarations: [WalkthroughPage],
 })
 export class WalkthroughPageModule {}

@@ -30,6 +30,10 @@
 
 @import "./theme/essential/theme";
 
+@import "swiper/scss";
+@import "swiper/scss/navigation";
+@import "swiper/scss/pagination";
+
 .bg_image{
     background-position: center;
     background-size: cover;

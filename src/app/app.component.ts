@@ -25,11 +25,8 @@ import {
 } from '@angular/router';
 import { environment } from '../environments/environment';
 import { take } from 'rxjs/operators';
-import { register } from 'swiper/element/bundle';
 
 declare var cordova: any;
-
-register();
 
 @Component({
 	selector: 'app-root',

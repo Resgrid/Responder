@@ -3,7 +3,7 @@
     <ion-title>
       Resgrid {{'appName' | translate}}
     </ion-title>
-    <ion-buttons slot="start" [hidden]="!(settingsState$ | async).loggedIn">
+    <ion-buttons slot="start" *ngIf="(settingsState$ | async).loggedIn">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
   </ion-toolbar>
@@ -34,7 +34,7 @@
               <p>{{'settingsPage.loginInfoText' | translate}}</p>
             </ion-label>
           </ion-item>
-          <ion-item lines="none" [hidden]="!(settingsState$ | async).loggedIn" (click)="logOut()">
+          <ion-item lines="none" *ngIf="(settingsState$ | async).loggedIn" (click)="logOut()">
             <ion-avatar slot="start" class="red-bg">
               <ion-icon name="log-out-outline"></ion-icon>
             </ion-avatar>
@@ -76,7 +76,7 @@
             </ion-label>
             <ion-toggle item-end color="primary" [checked]="keepAlive$ | async" (ionChange)="setKeepAlive($event)"></ion-toggle>
           </ion-item>
-          <ion-item lines="none" [hidden]="true">
+          <ion-item lines="none">
             <ion-avatar slot="start" class="green-bg">
               <ion-icon name="location-outline"></ion-icon>
             </ion-avatar>
@@ -96,7 +96,7 @@
             </ion-label>
             <ion-toggle item-end color="primary" [checked]="backgroundGeolocationEnabled$ | async" (ionChange)="setBackgroundGeolocation($event)"></ion-toggle>
           </ion-item>
-          <ion-item lines="none" [hidden]="!(settingsState$ | async).loggedIn">
+          <ion-item lines="none" *ngIf="(settingsState$ | async).loggedIn">
             <ion-avatar slot="start" class="gray-bg">
               <ion-icon name="notifications-outline"></ion-icon>
             </ion-avatar>
@@ -159,24 +159,6 @@
             <ion-label>
               <h2>{{'settingsPage.clearCacheLabel' | translate}}</h2>
               <p>{{'settingsPage.clearCacheText' | translate}}</p>
-            </ion-label>
-          </ion-item>
-          <ion-item lines="none" (click)="reloadData()" [hidden]="true">
-            <ion-avatar slot="start" class="gray-bg">
-              <ion-icon name="information-outline"></ion-icon>
-            </ion-avatar>
-            <ion-label>
-              <h2>{{'settingsPage.reloadDataLabel' | translate}}</h2>
-              <p>{{'settingsPage.reloadDataText' | translate}}</p>
-            </ion-label>
-          </ion-item>
-          <ion-item lines="none" [hidden]="true">
-            <ion-avatar slot="start" class="yellow-bg">
-              <ion-icon name="lock-open-outline"></ion-icon>
-            </ion-avatar>
-            <ion-label>
-              <h2>{{'settingsPage.requestPermissionLabel' | translate}}</h2>
-              <p>{{'settingsPage.requestPermissionText' | translate}}</p>
             </ion-label>
           </ion-item>
         </ion-list>
