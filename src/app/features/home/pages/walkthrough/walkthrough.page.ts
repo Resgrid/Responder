@@ -16,8 +16,6 @@ export class WalkthroughPage implements OnInit {
 
 	constructor(public menuCtrl: MenuController, private storageProvider: StorageProvider, private router: Router) {}
 
-	ngOnInit() {}
-
 	ionViewDidEnter() {
 		//this.menuCtrl.swipeEnable(false, 'left');
 		this.menuCtrl.enable(false, 'main-menu');
@@ -26,10 +24,6 @@ export class WalkthroughPage implements OnInit {
 
 	ionViewDidLeave() {
 		this.menuCtrl.enable(true, 'main-menu');
-	}
-
-	ngAfterViewInit(): void {
-		//this._initSwiper();
 	}
 
 	private _initSwiper() {
@@ -54,20 +48,20 @@ export class WalkthroughPage implements OnInit {
 			//this.infinitLoad?.triggerOnScroll()
 
 			if (this.swiper.activeIndex === this.swiper.slides.length) {
-				this.storageProvider.setHasSeenWalkthrough();
+				//await this.storageProvider.setHasSeenWalkthrough();
 			}
 		});
 	}
 
-	goToSettings(): void {
-		this.storageProvider.setHasSeenWalkthrough();
+	async goToSettings() {
+		await this.storageProvider.setHasSeenWalkthrough();
 		this.router.navigate(['/settings']);
 	}
 
-	skipWalkthrough(): void {
+	async skipWalkthrough() {
 		// Skip to the last slide
 		if (this.swiper) {
-			this.storageProvider.setHasSeenWalkthrough();
+			await this.storageProvider.setHasSeenWalkthrough();
 			this.swiper.slideTo(this.swiper.slides.length - 1);
 		}
 	}
