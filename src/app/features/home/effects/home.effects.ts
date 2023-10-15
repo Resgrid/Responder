@@ -231,7 +231,7 @@ export class HomeEffects {
       ),
       concatLatestFrom(() => [this.store.select(selectHomeState), this.store.select(selectSettingsState)]),
       switchMap(([action, homeState, settingsState], index) => {
-        if (homeState) {
+        if (homeState && settingsState && settingsState.user) {
           let date = new Date();
           let doSend = true;
 

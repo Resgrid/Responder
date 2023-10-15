@@ -29,13 +29,13 @@
 
   </div>
 
-  <ion-item-divider style="padding-top: 24px;" [hidden]="(messagesState$ | async).viewMessage?.Type === 0 || !isInTheFuture((messagesState$ | async).viewMessage) || !canSignup((messagesState$ | async).viewMessage)">
+  <ion-item-divider style="padding-top: 24px;" *ngIf="(messagesState$ | async).viewMessage?.Type !== 0 && isInTheFuture((messagesState$ | async).viewMessage) && canSignup((messagesState$ | async).viewMessage)">
     <ion-label>
       {{'viewMessagePage.respondToMessage' | translate}}
     </ion-label>
   </ion-item-divider>
 
-  <div [hidden]="(messagesState$ | async).viewMessage?.Type === 0 || !isInTheFuture((messagesState$ | async).viewMessage) || !canSignup((messagesState$ | async).viewMessage)">
+  <div *ngIf="(messagesState$ | async).viewMessage?.Type !== 0 && isInTheFuture((messagesState$ | async).viewMessage) && canSignup((messagesState$ | async).viewMessage)">
     <ion-grid>
       <ion-row>
         <ion-col>
@@ -44,7 +44,7 @@
         </ion-col>
       </ion-row>
     </ion-grid>
-    <ion-grid class="button-group" [hidden]="(messagesState$ | async).viewMessage?.Type === 0">
+    <ion-grid class="button-group" *ngIf="(messagesState$ | async).viewMessage?.Type !== 0">
       <ion-row>
         <ion-col>
           <ion-button expand="full" fill="solid" color="success" (click)="setResponding(1)">
@@ -82,10 +82,10 @@
       </ion-label>
       <div slot="end">
         <ion-label>
-          <p class="is-list-item-start-buttons-end-title" [hidden]="!r.RespondedOn">{{r.Note}}</p>
-          <p [hidden]="r.Response != '1'" color="success">{{'viewMessagePage.respondToMessageYes' | translate}}</p>
-          <p [hidden]="r.Response != '3'" color="danger">{{'viewMessagePage.respondToMessageNo' | translate}}</p>
-          <p [hidden]="r.Response != '2'" color="secondary">{{'viewMessagePage.respondToMessageMaybe' | translate}}</p>
+          <p class="is-list-item-start-buttons-end-title" *ngIf="r.RespondedOn">{{r.Note}}</p>
+          <p *ngIf="r.Response == '1'" color="success">{{'viewMessagePage.respondToMessageYes' | translate}}</p>
+          <p *ngIf="r.Response == '3'" color="danger">{{'viewMessagePage.respondToMessageNo' | translate}}</p>
+          <p *ngIf="r.Response == '2'" color="secondary">{{'viewMessagePage.respondToMessageMaybe' | translate}}</p>
         </ion-label>
       </div>
     </ion-item>

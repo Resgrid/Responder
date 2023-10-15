@@ -51,7 +51,7 @@
 						<h2 class="box_textshadow"><b>{{shift.Name}}</b> ({{shift.Code}})</h2>
 					</ion-card-header>
 
-					<ion-card-content style="padding:4px;" [hidden]="shift.AssignmentType != 0">
+					<ion-card-content style="padding:4px;" *ngIf="shift.AssignmentType == 0">
 						<p>
 							<span class="subdued" style="padding-right: 10px;">{{shift.PersonnelCount}} Personnel</span>
 							<span class="subdued" style="padding-right: 10px;">{{shift.GroupCount}} Groups</span>
@@ -60,7 +60,7 @@
 						</p>
 					</ion-card-content>
 
-					<ion-card-content style="padding:4px;" [hidden]="shift.AssignmentType != 1">
+					<ion-card-content style="padding:4px;" *ngIf="shift.AssignmentType == 1">
 						<p>
 							<span class="subdued" style="padding-right: 10px;">Signup Shift</span>
 							<span class="subdued" style="padding-right: 10px;">{{shift.GroupCount}} Groups</span>

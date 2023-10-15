@@ -1,7 +1,7 @@
 <ion-tabs>
 
   <ion-tab-bar slot="bottom">
-    <ion-tab-button tab="status" [hidden]="!(settingsState$ | async).loggedIn">
+    <ion-tab-button tab="status" *ngIf="(settingsState$ | async).loggedIn">
       <ion-icon name="flag"></ion-icon>
       <ion-label>Status</ion-label>
     </ion-tab-button>
@@ -16,7 +16,7 @@
       <ion-label>Units</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="calls" [hidden]="!(settingsState$ | async).loggedIn">
+    <ion-tab-button tab="calls" *ngIf="(settingsState$ | async).loggedIn">
       <ion-icon name="megaphone-outline"></ion-icon>
       <ion-label>Calls</ion-label>
     </ion-tab-button>

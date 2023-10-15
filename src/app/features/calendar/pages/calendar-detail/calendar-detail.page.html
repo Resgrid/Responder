@@ -70,7 +70,7 @@
         </ion-item>
       </ion-item-group>
 
-      <ion-item-group [hidden]="getDate((calendarState$ | async).viewCalendarItem) < now() || !isRsvp((calendarState$ | async).viewCalendarItem) || (calendarState$ | async).viewCalendarItem.Attending">
+      <ion-item-group *ngIf="getDate((calendarState$ | async).viewCalendarItem) >= now() && isRsvp((calendarState$ | async).viewCalendarItem) && (calendarState$ | async).viewCalendarItem.Attending">
         <ion-item-divider>
           <ion-label>{{ 'calendarViewPage.signupLabel' | translate }}</ion-label>
         </ion-item-divider>
@@ -110,8 +110,8 @@
             <p>{{attendee.Note}}</p>
           </ion-label>
           <div slot="end" class="ion-no-margin">
-            <span [hidden]="attendee.AttendeeType != 1" style="color: green;">{{ 'calendarViewPage.attendingLabel' | translate }}</span>
-					  <span [hidden]="attendee.AttendeeType != 4" style="color: red;">{{ 'calendarViewPage.notAttendingLabel' | translate }}</span>
+            <span *ngIf="attendee.AttendeeType == 1" style="color: green;">{{ 'calendarViewPage.attendingLabel' | translate }}</span>
+					  <span *ngIf="attendee.AttendeeType == 4" style="color: red;">{{ 'calendarViewPage.notAttendingLabel' | translate }}</span>
           </div>
         </ion-item>
 			</ion-list>

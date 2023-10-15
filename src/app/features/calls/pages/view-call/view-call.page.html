@@ -18,7 +18,7 @@
         </div>
       </div>
       <div style="height: 200px !important; width: 100% !important; overflow: hidden;"
-        [hidden]="(callsState$ | async)?.callToView?.Geolocation == null || (callsState$ | async)?.callToView?.Geolocation.length <= 0">
+        *ngIf="(callsState$ | async)?.callToView?.Geolocation && (callsState$ | async)?.callToView?.Geolocation.length > 0">
         <div #viewCallMap id="viewCallMap" name="viewCallMap" data-tap-disabled="true"
           style="height: 200px !important; width: 100% !important; overflow: hidden; pointer-events: none; touch-action: none;"></div>
       </div>
@@ -40,12 +40,12 @@
             </ion-button>
           </ion-col>
           <ion-col style="padding-left: 0px; padding-right: 0px; margin-left: 0px; margin-right: 0px;"
-            [hidden]="(callsState$ | async)?.callToView?.Geolocation == null || (callsState$ | async)?.callToView?.Geolocation.length <= 0">
+            *ngIf="(callsState$ | async)?.callToView?.Geolocation && (callsState$ | async)?.callToView?.Geolocation.length > 0">
             <ion-button expand="full" color="secondary" (click)="route()">Route</ion-button>
           </ion-col>
         </ion-row>
       </ion-grid>
-      <div [hidden]="(callsState$ | async)?.callToView?.AudioFileId?.length <= 0" style="width: 100%; text-align: center;">
+      <div *ngIf="(callsState$ | async)?.callToView?.AudioFileId?.length > 0" style="width: 100%; text-align: center;">
         <audio controls src="{{getDispatchUrl((callsState$ | async)?.callToView?.AudioFileId)}}" type="audio/mpeg">
         </audio>
       </div>

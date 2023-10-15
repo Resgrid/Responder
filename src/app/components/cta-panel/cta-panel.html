@@ -9,5 +9,5 @@
     <ion-icon *ngIf="extraDetailsIcon" [name]="extraDetailsIcon" class="extra-details-icon"></ion-icon>
   </div>
 
-  <button [hidden]="hideButton" *ngIf="btnLabel" (click)="onCtaClick()" ion-button class="cta-button">{{btnLabel}}</button>
+  <button *ngIf="btnLabel || !hideButton" (click)="onCtaClick()" ion-button class="cta-button">{{btnLabel}}</button>
 </div>
