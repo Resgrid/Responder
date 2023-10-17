@@ -49,7 +49,7 @@
     <ion-list-header> {{'newCallPage.locationHeader' | translate}} </ion-list-header>
     <ion-item>
       <div padding>
-        <ion-segment [(ngModel)]="locationType">
+        <ion-segment [(ngModel)]="locationType" [scrollable]="true">
           <ion-segment-button value="address">
             Address
           </ion-segment-button>
