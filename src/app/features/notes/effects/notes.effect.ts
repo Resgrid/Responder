@@ -15,9 +15,10 @@ import {
 import { StorageProvider } from 'src/app/providers/storage';
 import * as _ from 'lodash';
 import { NotesState } from '../store/notes.store';
-import { of } from 'rxjs';
+import { from, of } from 'rxjs';
 import { ViewNotePage } from '../pages/view-note/view-notepage';
 import { LoadingProvider } from 'src/app/providers/loading';
+import { NewNotePage } from '../pages/new-note/new-note.page';
 
 @Injectable()
 export class NotesEffects {
@@ -55,7 +56,7 @@ export class NotesEffects {
 		)
 	);
 
-	viewPerson$ = createEffect(() =>
+	viewNote$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType<notesAction.ViewNote>(
 				notesAction.NotesActionTypes.VIEW_NOTE
@@ -65,6 +66,84 @@ export class NotesEffects {
 			),
 			map((action) => ({
 				type: notesAction.NotesActionTypes.VIEW_NOTE_DONE,
+			}))
+		)
+	);
+
+	saveNote$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType<notesAction.SaveNote>(
+				notesAction.NotesActionTypes.SAVE_NOTE
+			),
+			tap(() => this.loadingProvider.show()),
+			mergeMap((action) =>
+				this.notesProvider.saveNote(action.title, action.body, action.category, action.isAdminOnly, action.expiresOn).pipe(
+					map((data) => ({
+						type: notesAction.NotesActionTypes.SAVE_NOTE_SUCCESS,
+					})),
+					catchError(() =>
+						of({
+							type: notesAction.NotesActionTypes.SAVE_NOTE_FAIL,
+						})
+					)
+				)
+			)
+		)
+	);
+
+	saveNoteSuccess$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(notesAction.NotesActionTypes.SAVE_NOTE_SUCCESS),
+			switchMap(async (action) => this.closeModal()),
+      		switchMap(async (action) => this.loadingProvider.hide()),
+			map((data) => ({
+				type: notesAction.NotesActionTypes.LOAD_NOTES,
+			}))
+		)
+	);
+
+	saveNoteFail$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(notesAction.NotesActionTypes.SAVE_NOTE_FAIL),
+      		switchMap(async (action) => this.loadingProvider.hide()),
+			map((data) => ({
+				type: notesAction.NotesActionTypes.SAVE_NOTE_DONE,
+			}))
+		)
+	);
+
+	showNewNoteModal$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType<notesAction.ShowNewNoteModal>(
+				notesAction.NotesActionTypes.SHOW_NEW_NOTE_MODAL
+			),
+			tap(() => this.loadingProvider.show()),
+			mergeMap((action) =>
+				this.notesProvider.getNoteCategories().pipe(
+					map((data) => ({
+						type: notesAction.NotesActionTypes.SHOW_NEW_NOTE_MODAL_SUCCESS,
+						categories: data.Data,
+					})),
+					catchError(() =>
+						of({
+							type: notesAction.NotesActionTypes.LOAD_NOTES_FAIL,
+						})
+					)
+				)
+			)
+		)
+	);
+
+	showNewNoteModalSuccess$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(notesAction.NotesActionTypes.SHOW_NEW_NOTE_MODAL_SUCCESS),
+			exhaustMap((data) => this.runModal(NewNotePage, null, null, {
+				breakpoints: [0, 0.8],
+				initialBreakpoint: 0.8,
+			  })),
+      		switchMap(async (action) => this.loadingProvider.hide()),
+			map((data) => ({
+				type: notesAction.NotesActionTypes.SHOW_NEW_NOTE_MODAL_DONE,
 			}))
 		)
 	);
@@ -97,29 +176,30 @@ export class NotesEffects {
 		toast.present();
 	};
 
-	runModal = async (component, cssClass, properties) => {
+	runModal = async (component, cssClass, properties, opts = {}) => {
 		await this.closeModal();
 		await this.menuCtrl.close();
-
+	
 		if (!cssClass) {
-			cssClass = 'modal-container';
+		  cssClass = 'modal-container';
 		}
-
+	
 		this._modalRef = await this.modalController.create({
-			component: component,
-			cssClass: cssClass,
-			componentProps: {
-				info: properties,
-			},
+		  component: component,
+		  cssClass: cssClass,
+		  componentProps: properties,
+		  ...opts,
 		});
-
-		return this._modalRef.present();
-	};
-
-	closeModal = async () => {
-		if (this._modalRef) {
+	
+		return from(this._modalRef.present());
+	  };
+	
+	  closeModal = async () => {
+		try {
+		  //if (this._modalRef) {
 			await this.modalController.dismiss();
 			this._modalRef = null;
-		}
-	};
+		  //}
+		} catch (error) { }
+	  };
 }

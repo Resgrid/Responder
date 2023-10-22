@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 import { selectNotesState } from 'src/app/store';
 import { NotesState } from '../../store/notes.store';
 import * as NotesActions from '../../actions/notes.actions';
-import { NoteResultData } from '@resgrid/ngx-resgridlib';
+import { NoteResultData, SecurityService } from '@resgrid/ngx-resgridlib';
+import { MenuController } from '@ionic/angular';
 
 @Component({
 	selector: 'app-notes-list',
@@ -15,11 +16,16 @@ export class NotesListPage {
 	private searchTerm: string = '';
 	public notesState$: Observable<NotesState | null>;
 
-	constructor(private notesStore: Store<NotesState>, private cdr: ChangeDetectorRef) {
+	constructor(private notesStore: Store<NotesState>, 
+				private cdr: ChangeDetectorRef,
+				private securityService: SecurityService,
+				public menuCtrl: MenuController) {
 		this.notesState$ = this.notesStore.select(selectNotesState);
 	}
 
 	ionViewDidEnter() {
+		this.menuCtrl.enable(false);
+
 		this.load();
 	}
 
@@ -47,6 +53,14 @@ export class NotesListPage {
 		this.searchTerm = event.target.value;
 		this.cdr.detectChanges();
 	}
+
+	public newNote() {
+		this.notesStore.dispatch(new NotesActions.ShowNewNoteModal());
+	}
+
+	public canCreateNote() {
+		return this.securityService.canUserCreateNotes();
+	  }
 
 	public filterNotes(notes: NoteResultData[]) {
 		if (this.searchTerm) {

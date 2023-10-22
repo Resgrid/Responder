@@ -67,6 +67,10 @@
     "setStaffing": "Staffing",
     "message": "Message"
   },
+  "selectAudioStreamModal": {
+    "streamLabel": "Stream",
+    "setButton": "Play Audio Stream"
+  },
   "pttPage": {
     "title": "PTT",
     "ctaPanel": {
@@ -460,7 +464,10 @@
     "locationHeader": "Location",
     "dispatchHeader": "Who To Dispatch",
     "dispatchButton": "Create and Dispatch Call",
-    "recipientsLabel": "Dispatch"
+    "recipientsLabel": "Dispatch",
+    "latitudeLabel": "Latitude (Decimal Notiation)",
+    "longitudeLabel": "Longitude (Decimal Notiation)",
+    "googlePlusLabel": "Plus Code (Full Open Location Code)"
   },
   "editCallPage": {
     "title": "Edit Call",
@@ -478,7 +485,21 @@
     "dispatchHeader": "Who To Dispatch",
     "dispatchButton": "Update Call",
     "recipientsLabel": "Dispatch",
-    "redispatchLabel": "Re-Dispatch"
+    "redispatchLabel": "Re-Dispatch",
+    "latitudeLabel": "Latitude (Decimal Notiation)",
+    "longitudeLabel": "Longitude (Decimal Notiation)",
+    "googlePlusLabel": "Plus Code (Full Open Location Code)"
+  },
+  "newNotePage": {
+    "title": "New Note",
+    "addLabel": "Add",
+    "titleLabel": "Note Title",
+    "bodyLabel": "Note Body",
+    "saveButton": "Save Note",
+    "categoryLabel": "Note Category",
+    "expiresOnLabel": "Expires On",
+    "isAdminOnlyLabel": "Is Admin Only",
+    "doesNoteExpireLabel": "Does Note Expire"
   },
   "setLocationPage": {
     "title": "Set Location",
