@@ -94,7 +94,7 @@ export class NewCallPage {
           [newCallLocation.Latitude, newCallLocation.Longitude],
           {
             icon: new leaflet.icon({
-              iconUrl: '/assets/mapping/Call.png',
+              iconUrl: 'assets/images/mapping/Call.png',
               iconSize: [32, 37],
               iconAnchor: [16, 37],
             }),
@@ -309,7 +309,7 @@ export class NewCallPage {
 
         this.marker = leaflet.marker([position.Latitude, position.Longitude], {
           icon: new leaflet.icon({
-            iconUrl: '/assets/mapping/Call.png',
+            iconUrl: 'assets/images/mapping/Call.png',
             iconSize: [32, 37],
             iconAnchor: [16, 37],
           }),

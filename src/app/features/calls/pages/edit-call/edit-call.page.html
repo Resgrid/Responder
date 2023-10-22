@@ -47,8 +47,8 @@
     </ion-item>
     <ion-list-header> {{'editCallPage.locationHeader' | translate}} </ion-list-header>
     <ion-item>
-      <div padding>
-        <ion-segment [(ngModel)]="locationType" [scrollable]="true">
+      <ion-toolbar>
+        <ion-segment [(ngModel)]="locationType" scrollable>
           <ion-segment-button value="address">
             Address
           </ion-segment-button>
@@ -62,68 +62,70 @@
             Plus Code
           </ion-segment-button>
         </ion-segment>
-        <div [ngSwitch]="locationType">
-          <div *ngSwitchCase="'address'">
-            <ion-grid>
-              <ion-row>
-                <ion-col>
-                  <ion-item>
-                    <ion-input label="{{'newCallPage.addressLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="address"></ion-input>
-                  </ion-item>
-                </ion-col>
-                <ion-col>
-                  <ion-button size="small" color="secondary" (click)="findCoordinatesForAddress()">Search for Address</ion-button>
-                </ion-col>
-              </ion-row>
-            </ion-grid>
-          </div>
-          <div *ngSwitchCase="'gps'">
-            <ion-grid>
-              <ion-row>
-                <ion-col>
-                  <ion-item>
-                    <ion-input label="{{'newCallPage.latitudeLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="lat"></ion-input>
-                  </ion-item>
-                </ion-col>
-                <ion-col>
-                  <ion-item>
-                    <ion-input label="{{'newCallPage.longitudeLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="lon"></ion-input>
-                  </ion-item>
-                </ion-col>
-                <ion-col>
-                  <ion-button size="small" color="secondary" (click)="findCoordinates()">Find Coordinates</ion-button>
-                </ion-col>
-              </ion-row>
-            </ion-grid>
-          </div>
-          <div *ngSwitchCase="'w3w'">
-            <ion-grid>
-              <ion-row>
-                <ion-col>
-                  <ion-item>
-                    <ion-input label="{{'newCallPage.what3wordsLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="w3w"></ion-input>
-                  </ion-item>
-                </ion-col>
-                <ion-col>
-                  <ion-button size="small" color="secondary" (click)="findCoordinatesForW3W()">Search for w3w</ion-button>
-                </ion-col>
-              </ion-row>
-            </ion-grid>
-          </div>
-          <div *ngSwitchCase="'plus'">
-            <ion-grid>
-              <ion-row>
-                <ion-col>
-                  <ion-item>
-                    <ion-input label="{{'newCallPage.googlePlusLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="plus"></ion-input>
-                  </ion-item>
-                </ion-col>
-                <ion-col>
-                  <ion-button size="small" color="secondary" (click)="findCoordinatesForPlus()">Search for Plus Code</ion-button>
-                </ion-col>
-              </ion-row>
-            </ion-grid>
-          </div>
+      </ion-toolbar>
+    </ion-item>
+    <ion-item>
+      <div [ngSwitch]="locationType">
+        <div *ngSwitchCase="'address'">
+          <ion-grid>
+            <ion-row>
+              <ion-col>
+                <ion-item>
+                  <ion-input label="{{'newCallPage.addressLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="address"></ion-input>
+                </ion-item>
+              </ion-col>
+              <ion-col>
+                <ion-button size="small" color="secondary" (click)="findCoordinatesForAddress()">Search</ion-button>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </div>
+        <div *ngSwitchCase="'gps'">
+          <ion-grid>
+            <ion-row>
+              <ion-col>
+                <ion-item>
+                  <ion-input label="{{'newCallPage.latitudeLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="lat"></ion-input>
+                </ion-item>
+              </ion-col>
+              <ion-col>
+                <ion-item>
+                  <ion-input label="{{'newCallPage.longitudeLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="lon"></ion-input>
+                </ion-item>
+              </ion-col>
+              <ion-col>
+                <ion-button size="small" color="secondary" (click)="findCoordinates()">Find Coordinates</ion-button>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </div>
+        <div *ngSwitchCase="'w3w'">
+          <ion-grid>
+            <ion-row>
+              <ion-col>
+                <ion-item>
+                  <ion-input label="{{'newCallPage.what3wordsLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="w3w"></ion-input>
+                </ion-item>
+              </ion-col>
+              <ion-col>
+                <ion-button size="small" color="secondary" (click)="findCoordinatesForW3W()">Search</ion-button>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </div>
+        <div *ngSwitchCase="'plus'">
+          <ion-grid>
+            <ion-row>
+              <ion-col>
+                <ion-item>
+                  <ion-input label="{{'newCallPage.googlePlusLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="plus"></ion-input>
+                </ion-item>
+              </ion-col>
+              <ion-col>
+                <ion-button size="small" color="secondary" (click)="findCoordinatesForPlus()">Search</ion-button>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
         </div>
       </div>
     </ion-item>

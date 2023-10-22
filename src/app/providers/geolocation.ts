@@ -3,6 +3,7 @@ import { Platform } from '@ionic/angular';
 import {
   DeviceService,
   GetConfigResultData,
+  GpsLocation,
   SaveUnitLocationInput,
   UnitLocationService,
 } from '@resgrid/ngx-resgridlib';
@@ -41,6 +42,7 @@ export class GeolocationProvider {
   watchPositionId: string = null;
   backgroundWatcherId: string = null;
   private w3wKey: string = '';
+  private lastLocationUpdate: Date = null;
 
   private configData$: Observable<GetConfigResultData | null>;
   protected geocoder$: Observable<google.maps.Geocoder>;
@@ -172,7 +174,7 @@ export class GeolocationProvider {
       let unitId = await that.storageProvider.getActiveUnit();
 
       if (unitId && enableBackgroundGeolocation) {
-        this.backgroundWatcherId = await BackgroundGeolocation.addWatcher(
+        BackgroundGeolocation.addWatcher(
           {
             // If the "backgroundMessage" option is defined, the watcher will
             // provide location updates whether the app is in the background or the
@@ -199,16 +201,16 @@ export class GeolocationProvider {
             // Defaults to "false".
             stale: false,
 
-            // The minimum number of meter's between subsequent locations. Defaults
+            // The minimum number of meters between subsequent locations. Defaults
             // to 0.
-            distanceFilter: 20,
+            distanceFilter: 0
           },
           function callback(location, error) {
             if (error) {
               if (error.code === 'NOT_AUTHORIZED') {
                 if (
                   window.confirm(
-                    'This app needs your location, ' +
+                    'The Resgrid Responder app needs your location, ' +
                       'but does not have permission.\n\n' +
                       'Open settings now?'
                   )
@@ -225,6 +227,16 @@ export class GeolocationProvider {
 
             if (location) {
               let date = new Date();
+
+              if (that.lastLocationUpdate) {
+                let diff = date.getTime() - that.lastLocationUpdate.getTime();
+
+                if (diff < 60000) {
+                  return;
+                }
+              }
+
+              that.lastLocationUpdate = date;
 
               let input = new SaveUnitLocationInput();
               input.UnitId = unitId;
@@ -258,9 +270,18 @@ export class GeolocationProvider {
                   if (data) {
                   }
                 });
+
+                return console.log(location);
             }
           }
-        );
+        ).then(function after_the_watcher_has_been_added(watcher_id) {
+          // When a watcher is no longer needed, it should be removed by calling
+          // 'removeWatcher' with an object containing its ID.
+          //BackgroundGeolocation.removeWatcher({
+          //    id: watcher_id
+          //});
+          that.backgroundWatcherId = watcher_id;
+        });
       }
     }
   }
@@ -308,13 +329,15 @@ export class GeolocationProvider {
   public getCoordinatesFromPlusCode(plusCode: string): Observable<GeoLocation> {
     return new Observable((observer) => {
       try {
-        const decoded =  OpenLocationCode.decode(plusCode);
-        observer.next(new GeoLocation(decoded.latitudeCenter, decoded.longitudeCenter));
+        const decoded = OpenLocationCode.decode(plusCode);
+        observer.next(
+          new GeoLocation(decoded.latitudeCenter, decoded.longitudeCenter)
+        );
         observer.complete();
       } catch (error) {
         observer.error(error);
       }
-    })
+    });
   }
 }
 

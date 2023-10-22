@@ -103,7 +103,7 @@ export class SelectLocationPage {
     this.marker = leaflet
       .marker([position.Latitude, position.Longitude], {
         icon: new leaflet.icon({
-          iconUrl: '/assets/mapping/Call.png',
+          iconUrl: 'assets/images/mapping/Call.png',
           iconSize: [32, 37],
           iconAnchor: [16, 37],
         }),

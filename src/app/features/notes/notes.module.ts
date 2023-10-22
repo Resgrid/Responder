@@ -11,9 +11,11 @@ import { NgxResgridLibModule } from '@resgrid/ngx-resgridlib';
 import { TranslateModule } from '@ngx-translate/core';
 import { ShellModule } from 'src/app/shell/shell.module';
 import { NotesEffects } from './effects/notes.effect';
+import { NewNotePage } from './pages/new-note/new-note.page';
 
 @NgModule({
     declarations: [
+        NewNotePage
     ],
     imports: [
         IonicModule,
@@ -30,6 +32,7 @@ import { NotesEffects } from './effects/notes.effect';
     ],
     providers: [],
     exports: [
+        NewNotePage
     ]
 })
 export class NotesModule { }
