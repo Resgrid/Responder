@@ -7,6 +7,7 @@ const config: CapacitorConfig = {
   bundledWebRuntime: false,
   android: {
     allowMixedContent: true,
+    useLegacyBridge: true
   },
   server: {
     allowNavigation: [],
