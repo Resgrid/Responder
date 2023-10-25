@@ -106,34 +106,6 @@
             </ion-label>
             <ion-toggle item-end color="primary" [checked]="pushNotificationEnabled$ | async" (ionChange)="setPushNotification($event)"></ion-toggle>
           </ion-item>
-          <ion-item lines="none">
-            <ion-avatar slot="start" class="purple-bg">
-              <ion-icon name="headset-outline"></ion-icon>
-            </ion-avatar>
-            <ion-label>
-              <h2>{{'settingsPage.headsetLabel' | translate}}</h2>
-              <p>{{'settingsPage.headsetText' | translate}}</p>
-            </ion-label>
-            <ion-select item-end placeholder="Select One" (ngModelChange)="setHeadsetType($event)" [(ngModel)]="headSetType">
-              <ion-select-option value="-1">None</ion-select-option>
-              <ion-select-option value="0">Inrico & Aina</ion-select-option>
-            </ion-select>
-          </ion-item>
-          <ion-item lines="none" hidden="true" *ngIf="isIos() && headSetType != '-1'">
-            <ion-button expand="block" fill="solid" color="primary" (click)="connectBle()">Connect to Headset</ion-button>
-          </ion-item>
-          <ion-item lines="none">
-            <ion-avatar slot="start" class="pink-bg">
-              <ion-icon name="mic"></ion-icon>
-            </ion-avatar>
-            <ion-label>
-              <h2>{{'settingsPage.microphoneLabel' | translate}}</h2>
-              <p>{{'settingsPage.microphoneText' | translate}}</p>
-            </ion-label>
-            <ion-select item-end placeholder="Select One" (ngModelChange)="setMic($event)" [ngModel]="selectedMicrophone">
-              <ion-select-option *ngFor="let mic of microphones" [value]="mic.device">{{mic.label}}</ion-select-option>
-            </ion-select>
-          </ion-item>
         </ion-list>
       </ion-col>
     </ion-row>
