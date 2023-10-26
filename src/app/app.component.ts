@@ -18,6 +18,7 @@ import { Router, NavigationStart, Event as NavigationEvent } from '@angular/rout
 import { environment } from '../environments/environment';
 import { take } from 'rxjs/operators';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
 
 declare var cordova: any;
 
@@ -101,7 +102,9 @@ export class AppComponent {
 			}, 1000);
 
 			try {
-				await PushNotifications.removeAllDeliveredNotifications();
+				if ((Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios') && Capacitor.isPluginAvailable('PushNotifications')) {
+					await PushNotifications.removeAllDeliveredNotifications();
+				}
 			} catch (e) {
 				console.log(e);
 			}

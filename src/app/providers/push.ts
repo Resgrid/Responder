@@ -17,6 +17,7 @@ import * as HomeActions from '../features/home/actions/home.actions';
 import { PushData } from '../models/pushData';
 import { from } from 'rxjs';
 import { AudioProvider } from './audio';
+import { Capacitor } from '@capacitor/core';
 
 @Injectable({
 	providedIn: 'root',
@@ -34,7 +35,7 @@ export class PushProvider {
 	) {}
 
 	public async initPush(): Promise<void> {
-		if (this.platform.is('mobile')) {
+		if ((Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios') && Capacitor.isPluginAvailable('PushNotifications')) {
 			let enablePushNotifications =
 				await this.storageProvider.getEnablePushNotifications();
 			if (enablePushNotifications) {

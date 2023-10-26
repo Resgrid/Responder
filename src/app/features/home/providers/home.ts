@@ -29,6 +29,7 @@ import * as HomeActions from "../actions/home.actions";
 import { StorageProvider } from "src/app/providers/storage";
 import { environment } from "src/environments/environment";
 import { Platform } from "@ionic/angular";
+import { Capacitor } from "@capacitor/core";
 
 @Injectable({
   providedIn: "root",
@@ -110,7 +111,7 @@ export class HomeProvider {
           Groups: results.groups.Data,
           Config: results.config.Data,
           Rights: results.currentUserRights,
-          IsMobileApp: this.platform.is("ios") || this.platform.is("android"),
+          IsMobileApp: (Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios'),
         };
       })
     );
