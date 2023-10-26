@@ -5,7 +5,7 @@ import { selectPersonnelState } from 'src/app/store';
 import { PersonnelState } from '../../store/personnel.store';
 import * as PersonnelActions from "../../actions/personnel.actions";
 import { environment } from '../../../../../environments/environment';
-import { UtilsService } from '@resgrid/ngx-resgridlib';
+import { PersonnelInfoResultData, UtilsService } from '@resgrid/ngx-resgridlib';
 
 @Component({
   selector: 'app-home-view-person',
@@ -44,7 +44,15 @@ export class ViewPersonPage {
 			return roles.map((x) => x).join(', ');
 		}
 
-		return '';
+		return 'No Roles for User';
+	}
+
+  public getGroupString(person: PersonnelInfoResultData): string {
+		if (person && person.GroupName) {
+			return person.GroupName;
+		}
+
+		return 'User is not in a Group';
 	}
 
   public getAvatarUrl(userId: string) {

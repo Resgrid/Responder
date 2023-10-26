@@ -23,6 +23,7 @@ import { MenuController, ModalController, ToastController } from '@ionic/angular
 import { Resgrid, ResgridPluginStartOptions } from 'capacitor-plugin-resgrid';
 import { ModalAudioStreams } from '../modal/audio-streams/modal-audioStreams.page';
 import { environment } from 'src/environments/environment';
+import { Capacitor } from '@capacitor/core';
 
 @Injectable()
 export class VoiceEffects {
@@ -59,7 +60,11 @@ export class VoiceEffects {
                     });
                   }
 
-                  Resgrid.start(options);
+                  if ((Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios') && Capacitor.isPluginAvailable('Resgrid')) {
+                    Resgrid.start(options).then(function after_resgrid_plugin_start(data) {
+                      
+                    });
+                  }
 
                   // Disabling this for now. Need to figure out how to get the permissions to work.
                   //Resgrid.requestPermissions();

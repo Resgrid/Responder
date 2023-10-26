@@ -25,7 +25,7 @@
             <app-text-shell [data]="(personnelState$ | async).viewPersonInfo?.LastName"></app-text-shell>
           </h3>
           <h5 class="user-title">
-            <app-text-shell [data]="(personnelState$ | async).viewPersonInfo?.GroupName"></app-text-shell>
+            <app-text-shell [data]="getGroupString((personnelState$ | async).viewPersonInfo)"></app-text-shell>
           </h5>
         </ion-col>
       </ion-row>
