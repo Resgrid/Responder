@@ -68,18 +68,12 @@
     <ion-item>
       <div [ngSwitch]="locationType">
         <div *ngSwitchCase="'address'">
-          <ion-grid>
-            <ion-row>
-              <ion-col>
-                <ion-item>
-                  <ion-input label="{{'newCallPage.addressLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="address"></ion-input>
-                </ion-item>
-              </ion-col>
-              <ion-col>
-                <ion-button size="small" color="secondary" (click)="findCoordinatesForAddress()">Search</ion-button>
-              </ion-col>
-            </ion-row>
-          </ion-grid>
+          <ion-item>
+            <ion-input slot="start" label="{{'newCallPage.addressLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="address"></ion-input>
+            <ion-button color="secondary" size="default" (click)="findCoordinatesForAddress()">
+              <ion-icon slot="icon-only" name="search-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
         </div>
         <div *ngSwitchCase="'gps'">
           <ion-grid>
@@ -101,18 +95,12 @@
           </ion-grid>
         </div>
         <div *ngSwitchCase="'w3w'">
-          <ion-grid>
-            <ion-row>
-              <ion-col>
-                <ion-item>
-                  <ion-input label="{{'newCallPage.what3wordsLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="w3w"></ion-input>
-                </ion-item>
-              </ion-col>
-              <ion-col>
-                <ion-button size="small" color="secondary" (click)="findCoordinatesForW3W()">Search</ion-button>
-              </ion-col>
-            </ion-row>
-          </ion-grid>
+          <ion-item>
+            <ion-input label="{{'newCallPage.what3wordsLabel' | translate}}" labelPlacement="stacked" [(ngModel)]="w3w"></ion-input>
+            <ion-button color="secondary" size="default" (click)="findCoordinatesForW3W()">
+              <ion-icon slot="icon-only" name="search-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
         </div>
         <div *ngSwitchCase="'plus'">
           <ion-grid>
