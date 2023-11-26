@@ -49,7 +49,7 @@ export function createTranslateLoader(http: HttpClient): any {
 }
 
 const getBaseUrl = (): string => {
-	const storedValue = localStorage.getItem(`CapacitorStorage.serverAddress`);
+	const storedValue = localStorage.getItem('CapacitorStorage.serverAddress');
 
 	if (storedValue) {
 		return storedValue.trim();
