@@ -49,10 +49,10 @@ export function createTranslateLoader(http: HttpClient): any {
 }
 
 const getBaseUrl = (): string => {
-	const storedValue = localStorage.getItem(`RgRespApp.serverAddress`);
+	const storedValue = localStorage.getItem(`apacitorStorage.serverAddress`);
 
 	if (storedValue) {
-		return JSON.parse(storedValue).trim();
+		return storedValue.trim();
 	}
 	return environment.baseApiUrl;
 };
