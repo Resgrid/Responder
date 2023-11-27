@@ -51,7 +51,7 @@ export function createTranslateLoader(http: HttpClient): any {
 
 const getBaseUrl = (): string => {
 	Preferences?.get({ key: 'serverAddress' }).then( returned => {
-		localStorage.setItem(`CapacitorStorage.serverAddress`, returned['value']);
+		localStorage.setItem('CapacitorStorage.serverAddress', returned.value);
 	});
 
 	const storedValue = localStorage.getItem('CapacitorStorage.serverAddress');
