@@ -46,6 +46,7 @@ export class ModalServerInfoPage implements OnInit {
       this.store.dispatch(
         new SettingsActions.SetServerAddress(this.f.serverAddress.value.trim())
       );
+      localStorage.setItem('CapacitorStorage.serverAddress', this.f.serverAddress.value.trim());
     } else {
       console.log('invalid');
     }
