@@ -43,12 +43,17 @@ import { CacheProvider } from './providers/cache';
 import { ScrollDirective } from './directives/scroll.directive';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Preferences } from '@capacitor/preferences';
 
 export function createTranslateLoader(http: HttpClient): any {
 	return new TranslateHttpLoader(http, './assets/i18n/', '.json');
 }
 
 const getBaseUrl = (): string => {
+	Preferences?.get({ key: 'serverAddress' }).then( returned => {
+		localStorage.setItem(`CapacitorStorage.serverAddress`, returned['value']);
+	});
+
 	const storedValue = localStorage.getItem('CapacitorStorage.serverAddress');
 
 	if (storedValue) {
