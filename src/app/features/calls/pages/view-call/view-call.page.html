@@ -132,9 +132,15 @@
 
         <ion-list *ngSwitchCase="'protocols'">
           <ion-item *ngFor="let protocol of (callsState$ | async)?.callViewData?.Protocols">
-            <h4>{{protocol.Name}} ({{protocol.Code}})</h4>
-            <p>{{protocol.Description}}</p>
-            <p>{{protocol.ProtocolText}}</p>
+            <ion-label class="ion-text-wrap">
+              <ion-text color="primary">
+                <h3>{{protocol.Name}} ({{protocol.Code}})</h3>
+              </ion-text>
+              <p [innerHTML]="protocol.Description"></p>
+              <ion-text color="secondary" [innerHTML]="protocol.ProtocolText">
+
+              </ion-text>
+            </ion-label>
           </ion-item>
         </ion-list>
 
