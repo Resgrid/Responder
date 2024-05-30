@@ -215,6 +215,22 @@ export class StorageProvider {
     return true;
   }
 
+  public async setEnableRealtimeGeolocation(enableLocation: boolean): Promise<any> {
+    if (typeof(enableLocation) !== 'undefined') {
+      return await this.set('RGRespEnableLocation', enableLocation.toString());
+    }
+  }
+
+  public async getEnableRealtimeGeolocation(): Promise<boolean> {
+    let data = await this.get('RGRespEnableLocation');
+    if (data) {
+      let isSet = (data === 'true');
+      return isSet;
+    }
+
+    return true;
+  }
+
   public async getHasSeenWalkthrough(): Promise<boolean> {
     let data = await this.get('RGRespSeenWalkthrough');
     if (data) {
@@ -238,6 +254,7 @@ export class StorageProvider {
     const keepAlive = await this.getKeepAlive();
     const headsetType = await this.getHeadsetType();
     const backgroundGeolocation = await this.getEnableBackgroundGeolocation();
+    const realtimeGeolocation = await this.getEnableRealtimeGeolocation();
 
     return {
       loginData: loginData,
@@ -247,7 +264,8 @@ export class StorageProvider {
       themePreference: themePreference,
       keepAlive: keepAlive,
       headsetType: headsetType,
-      backgroundGeolocation: backgroundGeolocation
+      backgroundGeolocation: backgroundGeolocation,
+      realtimeGeolocation: realtimeGeolocation,
     };
   }
 }

@@ -8,6 +8,7 @@ export interface SettingsState {
     user: UserInfo;
     enablePushNotifications: boolean;
     enableBackgroundGeolocation: boolean;
+    enableRealtimeGeolocation: boolean;
     themePreference: number;
     keepAlive: boolean;
     headsetType: number;
@@ -22,6 +23,7 @@ export const initialState: SettingsState = {
     user: null,
     enablePushNotifications: true,
     enableBackgroundGeolocation: false,
+    enableRealtimeGeolocation: false,
     themePreference: -1,
     keepAlive: false,
     headsetType: -1,

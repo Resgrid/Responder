@@ -1,7 +1,6 @@
 import { enableProdMode } from '@angular/core';
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import * as Sentry from "@sentry/angular";
-import { Integrations } from '@sentry/tracing';
 import { AppModule } from './app/app.module';
 import { environment } from './environments/environment';
 
@@ -19,25 +18,20 @@ if (environment.loggingKey && environment.loggingKey !== 'LOGGINGKEY') {
     dsn: environment.loggingKey,
     release: environment.version,
     environment: environment.production ? 'prod' : 'dev',
-    // We ignore Server Errors. We have to define here since Angular
-    // http client uses setTimeout to detect http call progress.
-    // And when the call fails, it throws an exception inside that timeout
-    // that bubbles up higher to the main Angular's error handler.
-    ignoreErrors: [serverErrorsRegex],
     integrations: [
-      // Registers and configures the Tracing integration,
-      // which automatically instruments your application to monitor its
-      // performance, including custom Angular routing instrumentation
-      new Integrations.BrowserTracing({
-        tracingOrigins: ['localhost', 'https://api.resgrid.com/api', 'https://qaapi.resgrid.com/api'],
-        routingInstrumentation: Sentry.routingInstrumentation,
-      }),
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
     ],
-
-    // Set tracesSampleRate to 1.0 to capture 100%
-    // of transactions for performance monitoring.
-    // We recommend adjusting this value in production
+    ignoreErrors: [serverErrorsRegex],
     tracesSampleRate: environment.production ? 0.4 : 1.0,
+  
+    // Set `tracePropagationTargets` to control for which URLs distributed tracing should be enabled
+    tracePropagationTargets: ['localhost', 'https://api.resgrid.com/api', 'https://qaapi.resgrid.com/api'],
+  
+    // Capture Replay for 10% of all sessions,
+    // plus for 100% of sessions with an error
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
   });
 }
 

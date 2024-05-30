@@ -81,7 +81,7 @@ export class SetLoginDataAndNavigateToHome implements Action {
   readonly type = SettingActionTypes.SET_LOGINDATA_NAV_HOME;
   constructor(public user: UserInfo, public enablePushNotifications: boolean,
     public themePreference: number, public keepAlive: boolean, public headsetType: number,
-    public enableBackgroundGeolocation: boolean) {}
+    public enableBackgroundGeolocation: boolean, public enableRealtimeGeolocation: boolean) {}
 }
 
 export class SetServerAddress implements Action {
@@ -122,7 +122,7 @@ export class GetApplicationSettings implements Action {
 export class SetApplicationSettings implements Action {
   readonly type = SettingActionTypes.SET_APP_SETTINGS;
   constructor(public enablePushNotifications: boolean, public themePreference: number, public keepAlive: boolean,
-    public headsetType: number, public selectedMic: string, public enableBackgroundGeolocation: boolean) {}
+    public headsetType: number, public selectedMic: string, public enableBackgroundGeolocation: boolean, public enableRealtimeGeolocation: boolean) {}
 }
 
 export class RegisterPush implements Action {

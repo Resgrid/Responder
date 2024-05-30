@@ -3,7 +3,6 @@ import {
 	Actions,
 	concatLatestFrom,
 	createEffect,
-	Effect,
 	ofType,
 } from '@ngrx/effects';
 import {

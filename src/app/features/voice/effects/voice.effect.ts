@@ -4,7 +4,6 @@ import {
   Actions,
   concatLatestFrom,
   createEffect,
-  Effect,
   ofType,
 } from '@ngrx/effects';
 import { catchError, concatMap, exhaustMap, map, mergeMap, switchMap, tap } from 'rxjs/operators';
@@ -140,23 +139,21 @@ export class VoiceEffects {
     { dispatch: false }
   );
 
-  @Effect({ dispatch: false })
-  setActiveChannel$: Observable<Action> = this.actions$.pipe(
-    ofType<voiceAction.SetActiveChannel>(
-      voiceAction.VoiceActionTypes.SET_ACTIVECHANNEL
-    ),
+  setActiveChannel$ = createEffect(() => this.actions$.pipe(
+    ofType<voiceAction.SetActiveChannel>(voiceAction.VoiceActionTypes.SET_ACTIVECHANNEL),
     concatLatestFrom(() => [
       this.homeStore.select(selectHomeState),
       this.settingsStore.select(selectSettingsState),
     ]),
-    exhaustMap(([action, homeState, settingsState], index) =>
+    mergeMap(([action, homeState, settingsState], index) =>
       of(action).pipe(
         concatMap((data) => {
-            Resgrid.showModal();
-            return of(data);
-        })
+          Resgrid.showModal();
+          return of(data);
+      })
       )
-    )
+    )),
+    { dispatch: false }
   );
 
   voipCallStartTransmitting$ = createEffect(() =>

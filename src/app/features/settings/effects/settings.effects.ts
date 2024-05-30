@@ -33,6 +33,7 @@ import { BluetoothProvider } from 'src/app/providers/bluetooth';
 import { CacheProvider } from 'src/app/providers/cache';
 import { GeolocationProvider } from 'src/app/providers/geolocation';
 import * as Sentry from "@sentry/angular";
+import { EHOSTUNREACH } from 'constants';
 
 @Injectable()
 export class SettingsEffects {
@@ -182,7 +183,8 @@ export class SettingsEffects {
 										themePreference: data[0].themePreference,
 										keepAlive: data[0].keepAlive,
 										headsetType: data[0].headsetType,
-										enableBackgroundGeolocation: data[0].backgroundGeolocation
+										enableBackgroundGeolocation: data[0].backgroundGeolocation,
+										enableRealtimeGeolocation: data[0].realtimeGeolocation
 									};
 								} else {
 									return {
@@ -345,6 +347,8 @@ export class SettingsEffects {
 					from(this.storageProvider.getThemePreference()),
 					from(this.storageProvider.getHeadsetType()),
 					from(this.storageProvider.getSelectedMic()),
+					from(this.storageProvider.getEnableRealtimeGeolocation()),
+					from(this.storageProvider.getEnableBackgroundGeolocation()),
 				]).pipe(
 					map((result) => ({
 						type: settingsAction.SettingActionTypes.SET_APP_SETTINGS,
@@ -353,6 +357,8 @@ export class SettingsEffects {
 						themePreference: result[2],
 						headsetType: result[3],
 						selectedMic: result[4],
+						enableRealtimeGeolocation: result[5],
+						enableBackgroundGeolocation: result[6],
 					}))
 				)
 			)
@@ -501,6 +507,22 @@ export class SettingsEffects {
 		  ),
 		{ dispatch: false }
 	  );
+
+	saveRealtimeGeolocationSetting$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType<settingsAction.SaveRealtimeLocationSetting>(
+				settingsAction.SettingActionTypes.SAVE_REALTIME_LOCATION_SETTING
+			),
+			switchMap((action) =>
+				this.storageProvider.setEnableRealtimeGeolocation(action.enableRealtimeLocationUpdates)
+			),
+			map((data) => {
+				return {
+					type: settingsAction.SettingActionTypes.DONE,
+				};
+			})
+		)
+	);
 
 	done$ = createEffect(
 		() => this.actions$.pipe(ofType(settingsAction.SettingActionTypes.DONE)),
