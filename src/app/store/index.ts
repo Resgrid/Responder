@@ -67,6 +67,10 @@ export const selectBackgroundGeolocationState = createSelector(
   settingsReducers.getBackgroundGeolocationState
 );
 
+export const selectRealtimeGeolocationState = createSelector(
+  selectSettingsState,
+  settingsReducers.getRealtimeGeolocationState
+);
 
 export const selectHomeState = createFeatureSelector<HomeState>('homeModule');
 

@@ -7,7 +7,8 @@ import * as HomeActions from '../../../../features/home/actions/home.actions';
 import { Observable, Subscription } from 'rxjs';
 import { HomeState } from '../../../home/store/home.store';
 import { selectHeadsetType, selectHomeState, selectKeepAliveState, selectThemePreferenceState,
-   selectPushNotificationState, selectSelectedMic, selectSettingsState, selectBackgroundGeolocationState } from 'src/app/store';
+   selectPushNotificationState, selectSelectedMic, selectSettingsState, selectBackgroundGeolocationState, 
+   selectRealtimeGeolocationState} from 'src/app/store';
 import { BluetoothProvider } from 'src/app/providers/bluetooth';
 import { SubSink } from 'subsink';
 import { SleepProvider } from 'src/app/providers/sleep';
@@ -27,6 +28,7 @@ export class SettingsPage implements OnInit {
   public themePreference$: Observable<number | null>;
   public keepAlive$: Observable<boolean | null>;
   public backgroundGeolocationEnabled$: Observable<boolean | null>;
+  public realtimeGeolocationEnabled$: Observable<boolean | null>;
   public pushNotificationEnabled: boolean = false;
   public themePreference: string = '-1';
   public keepAliveEnabled: boolean = false;
@@ -54,6 +56,7 @@ export class SettingsPage implements OnInit {
     this.pushNotificationEnabled$ = this.store.select(selectPushNotificationState);
     this.keepAlive$ = this.store.select(selectKeepAliveState);
     this.backgroundGeolocationEnabled$ = this.store.select(selectBackgroundGeolocationState);
+    this.realtimeGeolocationEnabled$ = this.store.select(selectRealtimeGeolocationState);
   }
 
   ngOnInit() {
@@ -181,7 +184,7 @@ export class SettingsPage implements OnInit {
 
   public setSendLocationUpdates(event) {
     this.store.dispatch(
-      new SettingsActions.SaveEnableBackgroundGeolocationSetting(event.detail.checked)
+      new SettingsActions.SaveRealtimeLocationSetting(event.detail.checked)
     );
   }
 

@@ -84,7 +84,7 @@
               <h2>{{'settingsPage.locationUpdatesLabel' | translate}}</h2>
               <p>{{'settingsPage.locationUpdatesText' | translate}}</p>
             </ion-label>
-            <ion-toggle item-end color="primary" [checked]="backgroundGeolocationEnabled$ | async" (ionChange)="setSendLocationUpdates($event)"></ion-toggle>
+            <ion-toggle item-end color="primary" [checked]="realtimeGeolocationEnabled$ | async" (ionChange)="setSendLocationUpdates($event)"></ion-toggle>
           </ion-item>
           <ion-item lines="none">
             <ion-avatar slot="start" class="red-bg">

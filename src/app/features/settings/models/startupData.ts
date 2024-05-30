@@ -9,4 +9,5 @@ export class StartupData  {
     public headsetType: number = -1;
     public activeCallId: string = '';
     public backgroundGeolocation: boolean = false;
+    public realtimeGeolocation: boolean = false;
 }
