@@ -21,7 +21,6 @@ import {
 	CallFilesService,
 	CallNotesService,
 	CallsService,
-	KazooVoiceService,
 	MessagesService,
 	SaveUnitStatusInput,
 	UnitStatusService,

@@ -56,7 +56,7 @@
     "@ngrx/store-devtools": "14.3.3",
     "@ngx-translate/core": "14.0.0",
     "@ngx-translate/http-loader": "6.0.0",
-    "@resgrid/ngx-resgridlib": "^1.3.29",
+    "@resgrid/ngx-resgridlib": "^1.3.33",
     "@sentry/angular": "^7.75.1",
     "@sentry/tracing": "^7.75.1",
     "@turf/turf": "6.5.0",

@@ -44,6 +44,7 @@ import { ScrollDirective } from './directives/scroll.directive';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
+import { ModuleStorageProvider } from './providers/moduleStorage';
 
 export function createTranslateLoader(http: HttpClient): any {
 	return new TranslateHttpLoader(http, './assets/i18n/', '.json');
@@ -56,7 +57,8 @@ const getBaseUrl = (): string => {
 
 	const storedValue = localStorage.getItem('CapacitorStorage.serverAddress');
 
-	if (storedValue) {
+	if (storedValue && storedValue.trim() !== '' && storedValue.trim() !== 'undefined' && storedValue.trim() !== 'null'){
+		console.log('Using stored server address: ' + storedValue.trim());
 		return storedValue.trim();
 	}
 	return environment.baseApiUrl;
@@ -81,7 +83,8 @@ const getBaseUrl = (): string => {
             realtimeGeolocationHubName: environment.realtimeGeolocationHubName,
             logLevel: environment.logLevel,
             isMobileApp: true,
-            cacheProvider: new CacheProvider()
+            cacheProvider: new CacheProvider(),
+			storageProvider: new ModuleStorageProvider()
         }),
 		StoreModule.forRoot(reducers, { metaReducers }),
 		EffectsModule.forRoot([]),

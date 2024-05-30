@@ -29,7 +29,7 @@ if (environment.loggingKey && environment.loggingKey !== 'LOGGINGKEY') {
       // which automatically instruments your application to monitor its
       // performance, including custom Angular routing instrumentation
       new Integrations.BrowserTracing({
-        tracingOrigins: ['localhost', 'https://api.resgrid.com/api'],
+        tracingOrigins: ['localhost', 'https://api.resgrid.com/api', 'https://qaapi.resgrid.com/api'],
         routingInstrumentation: Sentry.routingInstrumentation,
       }),
     ],
@@ -37,7 +37,7 @@ if (environment.loggingKey && environment.loggingKey !== 'LOGGINGKEY') {
     // Set tracesSampleRate to 1.0 to capture 100%
     // of transactions for performance monitoring.
     // We recommend adjusting this value in production
-    tracesSampleRate: 0.2,
+    tracesSampleRate: environment.production ? 0.4 : 1.0,
   });
 }
 
