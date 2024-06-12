@@ -23,6 +23,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CloseCallPage } from './pages/close-call/close-call.page';
 import { EditCallPage } from './pages/edit-call/edit-call.page';
 import { SelectDispatchesEditPage } from './pages/select-dispatches-edit/select-dispatches-edit.page';
+import { ModalCallNotesPage } from './modals/notes-modal/modal-notes.page';
 
 @NgModule({
     imports: [
@@ -48,7 +49,8 @@ import { SelectDispatchesEditPage } from './pages/select-dispatches-edit/select-
         SelectDispatchesPage,
         CloseCallPage,
         EditCallPage,
-        SelectDispatchesEditPage
+        SelectDispatchesEditPage,
+        ModalCallNotesPage
     ]
 })
 export class CallsModule {}

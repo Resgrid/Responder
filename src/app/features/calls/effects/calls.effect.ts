@@ -40,6 +40,7 @@ import { AlertProvider } from 'src/app/providers/alert';
 import { EditCallPage } from '../pages/edit-call/edit-call.page';
 import { SelectDispatchesEditPage } from '../pages/select-dispatches-edit/select-dispatches-edit.page';
 import { GeolocationProvider } from 'src/app/providers/geolocation';
+import { ModalCallNotesPage } from '../modals/notes-modal/modal-notes.page';
 
 @Injectable()
 export class CallsEffects {
@@ -134,6 +135,7 @@ export class CallsEffects {
 			ofType<callActions.ShowCallNotesModal>(
 				callActions.CallsActionTypes.SHOW_CALLNOTES
 			),
+			tap(() => this.loadingProvider.show()),
 			mergeMap((action) =>
 				this.callNotesProvider.getCallNotes(action.callId).pipe(
 					map((data) => ({
@@ -143,6 +145,33 @@ export class CallsEffects {
 				)
 			)
 		)
+	);
+
+	showCallNotesModal$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(callActions.CallsActionTypes.OPEN_CALLNOTES),
+			switchMap(() =>
+				this.runModal(
+					ModalCallNotesPage,
+					'modal-container-full',
+					null,
+					'CallsFeatureCallNotesModal'
+				)
+			),
+			switchMap(() => this.loadingProvider.hide()),
+			map((data) => ({
+				type: callActions.CallsActionTypes.DONE,
+			}))
+		)
+	);
+
+	dismissCallNotesModal$ = createEffect(
+		() =>
+			this.actions$.pipe(
+				ofType(callActions.CallsActionTypes.CLOSE_CALLNOTES),
+				exhaustMap((data) => this.closeModal('CallsFeatureCallNotesModal'))
+			),
+		{ dispatch: false }
 	);
 
 	saveCallNote$ = createEffect(() =>
