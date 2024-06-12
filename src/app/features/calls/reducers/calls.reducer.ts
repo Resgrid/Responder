@@ -60,7 +60,6 @@ export function reducer(state: CallsState = initialState, action: CallActionsUni
 			return {
 				...state,
 				callNotes: action.payload,
-				viewCallType: 'notes',
 			};
 		case CallsActionTypes.SET_VIEW_CALL_MODAL:
 			return {

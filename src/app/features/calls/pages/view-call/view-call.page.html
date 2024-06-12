@@ -171,46 +171,6 @@
       </div>
     </article>
   </div>
-  <div style="margin-top: 5px; height: 84vh;" *ngIf="(callsState$ | async)?.viewCallType === 'notes'">
-    <span>
-      <h3 style="padding-left: 10px;">Call Notes</h3>
-    </span>
-    <div class="ion-padding" style="height: 94%;">
-      <perfect-scrollbar>
-        <div *ngIf="!(callsState$ | async).callNotes || (callsState$ | async).callNotes.length <= 0">
-          <cta-panel [topIcon]="'information-circle'" [title]="'callNotesPage.ctaPanel.title' | translate" [details]="'callNotesPage.ctaPanel.details' | translate"
-            [extraDetails]="'callNotesPage.ctaPanel.extraDetails' | translate" [btnLabel]="'callNotesPage.ctaPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
-        </div>
-        <div class="list_div" *ngFor="let note of (callsState$ | async).callNotes;">
-          <div class="user_image bg_image" [style.background-image]="'url(' + (getAvatarUrl(note.UserId)) + ')'"></div>
-          <div class="detail">
-            <ion-label class="username">{{note.FullName}}</ion-label>
-            <span>
-              <ion-label class="light">{{note.Note}}</ion-label>
-              <ion-label class="time">{{note.TimestampFormatted}}</ion-label>
-            </span>
-          </div>
-        </div>
-      </perfect-scrollbar>
-    </div>
-    <div style="display: inherit;" class="footer_div">
-      <form (ngSubmit)="saveNote()" [formGroup]="callNotesFormData">
-        <ion-grid>
-          <ion-row>
-            <ion-col size="10" size-lg>
-              <ion-input type="text" placeholder="Enter Note..." formControlName="message" [ngClass]="{'is-invalid': isSavingNote && callNotesFormData.errors}">
-              </ion-input>
-            </ion-col>
-            <ion-col size="2" size-sm>
-              <ion-button type="submit">
-                <ion-icon name="save-outline"></ion-icon>
-              </ion-button>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </form>
-    </div>
-  </div>
   <div style="margin-top: 5px; height: 84vh;" *ngIf="(callsState$ | async)?.viewCallType === 'images'">
     <span>
       <h3 style="padding-left: 10px;">Call Images</h3>
