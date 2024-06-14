@@ -9,23 +9,21 @@
       <h3 style="padding-left: 10px;">Call Notes</h3>
     </span>
     <div class="ion-padding" style="height: 94%;">
-      <perfect-scrollbar>
-        <div *ngIf="!(callsState$ | async).callNotes || (callsState$ | async).callNotes.length <= 0">
-          <cta-panel [topIcon]="'information-circle'" [title]="'callNotesPage.ctaPanel.title' | translate" [details]="'callNotesPage.ctaPanel.details' | translate"
-            [extraDetails]="'callNotesPage.ctaPanel.extraDetails' | translate" [btnLabel]="'callNotesPage.ctaPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
-        </div>
+      <div *ngIf="!(callsState$ | async).callNotes || (callsState$ | async).callNotes.length <= 0">
+        <cta-panel [topIcon]="'information-circle'" [title]="'callNotesPage.ctaPanel.title' | translate" [details]="'callNotesPage.ctaPanel.details' | translate"
+          [extraDetails]="'callNotesPage.ctaPanel.extraDetails' | translate" [btnLabel]="'callNotesPage.ctaPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
+      </div>
 
-        <div class="list_div" *ngFor="let note of (callsState$ | async).callNotes;">
-          <!--<img class="user_image bg_image" [src]="getAvatarUrl(note.UserId)" onerror="this.onerror=null;this.src='assets/images/defaultProfile.png';">-->
-          <div class="detail">
-            <ion-label class="username">{{note.FullName}}</ion-label>
-            <span>
-              <ion-label class="light">{{note.Note}}</ion-label>
-              <ion-label class="time">{{note.TimestampFormatted}}</ion-label>
-            </span>
-          </div>
+      <div class="list_div" *ngFor="let note of (callsState$ | async).callNotes;">
+        <!--<img class="user_image bg_image" [src]="getAvatarUrl(note.UserId)" onerror="this.onerror=null;this.src='assets/images/defaultProfile.png';">-->
+        <div class="detail">
+          <ion-label class="username">{{note.FullName}}</ion-label>
+          <span>
+            <ion-label class="light">{{note.Note}}</ion-label>
+            <ion-label class="time">{{note.TimestampFormatted}}</ion-label>
+          </span>
         </div>
-      </perfect-scrollbar>
+      </div>
     </div>
   </div>
 </ion-content>
