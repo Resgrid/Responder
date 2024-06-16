@@ -24,8 +24,6 @@ export class NotesListPage {
 	}
 
 	ionViewDidEnter() {
-		this.menuCtrl.enable(false);
-
 		this.load();
 	}
 
