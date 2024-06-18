@@ -1,6 +1,6 @@
 import { isPlatformServer } from '@angular/common';
-import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
-import { makeStateKey, TransferState } from '@angular/platform-browser';
+import { Inject, Injectable, PLATFORM_ID, makeStateKey, TransferState } from '@angular/core';
+
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
