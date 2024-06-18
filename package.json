@@ -45,7 +45,7 @@
     "@capacitor/splash-screen": "^5.0.0",
     "@capacitor/status-bar": "^5.0.0",
     "@capawesome/capacitor-badge": "^5.0.0",
-    "@ionic/angular": "^7.2.0",
+    "@ionic/angular": "^8.2.2",
     "@ionic/pwa-elements": "3.0.2",
     "@ionic/storage-angular": "3.0.6",
     "@mapbox/maki": "7.1.0",
