@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
 	  namespace  "wtdt.resgrid.andriod"
-    compileSdkVersion rootProject.ext.compileSdkVersion
+    compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "wtdt.resgrid.andriod"
         minSdkVersion rootProject.ext.minSdkVersion

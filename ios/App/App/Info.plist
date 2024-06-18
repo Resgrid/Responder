@@ -65,8 +65,6 @@
 	<string>Contacts used for push to talk and calling</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Location is used for personnel tracking</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Location is used for personnel tracking</string>
 	<key>NSLocationUsageDescription</key>
 	<string>Location is used for personnel tracking</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
