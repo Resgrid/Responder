@@ -206,7 +206,6 @@
         [extraDetails]="'callFilesPage.ctaPanel.extraDetails' | translate" [btnLabel]="'callFilesPage.ctaPanel.buttonLabel' | translate" [hideButton]="true"></cta-panel>
     </div>
     <div class="ion-padding" style="height: 94%;" *ngIf="(callsState$ | async).callFiles && (callsState$ | async).callFiles.length > 0">
-      <perfect-scrollbar>
         <ion-list>
           <ion-item *ngFor="let file of (callsState$ | async).callFiles;" (click)="openFile(file)">
             <ion-label>
@@ -215,7 +214,6 @@
             </ion-label>
           </ion-item>
         </ion-list>
-      </perfect-scrollbar>
     </div>
     <div style="display: inherit;" class="footer_div">
       <form (ngSubmit)="uploadFile()" [formGroup]="callNotesFormData">
