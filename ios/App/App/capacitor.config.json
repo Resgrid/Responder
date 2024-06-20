@@ -25,5 +25,27 @@
 			"persist": false,
 			"autoClear": true
 		}
-	}
+	},
+	"packageClassList": [
+		"BackgroundGeolocation",
+		"BluetoothLe",
+		"FileOpenerPlugin",
+		"KeepAwakePlugin",
+		"CapacitorSQLitePlugin",
+		"AppPlugin",
+		"CAPCameraPlugin",
+		"DevicePlugin",
+		"FilesystemPlugin",
+		"GeolocationPlugin",
+		"HapticsPlugin",
+		"KeyboardPlugin",
+		"LocalNotificationsPlugin",
+		"CAPNetworkPlugin",
+		"PreferencesPlugin",
+		"PushNotificationsPlugin",
+		"SplashScreenPlugin",
+		"StatusBarPlugin",
+		"BadgePlugin",
+		"ResgridPlugin"
+	]
 }
