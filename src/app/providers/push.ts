@@ -4,7 +4,7 @@ import {
 	Token,
 	ActionPerformed,
 	PushNotificationSchema,
-} from '@capacitor/push-notifications';
+} from '@resgrid/push-notifications';
 import { Router } from '@angular/router';
 import { Platform } from '@ionic/angular';
 import { StorageProvider } from './storage';

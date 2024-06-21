@@ -17,7 +17,7 @@ import * as SettingsActions from './features/settings/actions/settings.actions';
 import { Router, NavigationStart, Event as NavigationEvent } from '@angular/router';
 import { environment } from '../environments/environment';
 import { take } from 'rxjs/operators';
-import { PushNotifications } from '@capacitor/push-notifications';
+import { PushNotifications } from '@resgrid/push-notifications';
 import { Capacitor } from '@capacitor/core';
 
 declare var cordova: any;
