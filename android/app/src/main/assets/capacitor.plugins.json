@@ -48,20 +48,12 @@
 		"classpath": "com.capacitorjs.plugins.keyboard.KeyboardPlugin"
 	},
 	{
-		"pkg": "@resgrid/local-notifications",
-		"classpath": "com.capacitorjs.plugins.localnotifications.LocalNotificationsPlugin"
-	},
-	{
 		"pkg": "@capacitor/network",
 		"classpath": "com.capacitorjs.plugins.network.NetworkPlugin"
 	},
 	{
 		"pkg": "@capacitor/preferences",
 		"classpath": "com.capacitorjs.plugins.preferences.PreferencesPlugin"
-	},
-	{
-		"pkg": "@resgrid/push-notifications",
-		"classpath": "com.capacitorjs.plugins.pushnotifications.PushNotificationsPlugin"
 	},
 	{
 		"pkg": "@capacitor/splash-screen",
@@ -74,6 +66,14 @@
 	{
 		"pkg": "@capawesome/capacitor-badge",
 		"classpath": "io.capawesome.capacitorjs.plugins.badge.BadgePlugin"
+	},
+	{
+		"pkg": "@resgrid/local-notifications",
+		"classpath": "com.capacitorjs.plugins.localnotifications.LocalNotificationsPlugin"
+	},
+	{
+		"pkg": "@resgrid/push-notifications",
+		"classpath": "com.capacitorjs.plugins.pushnotifications.PushNotificationsPlugin"
 	},
 	{
 		"pkg": "capacitor-plugin-resgrid",

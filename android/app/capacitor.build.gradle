@@ -21,13 +21,13 @@ dependencies {
     implementation project(':capacitor-geolocation')
     implementation project(':capacitor-haptics')
     implementation project(':capacitor-keyboard')
-    implementation project(':resgrid-local-notifications')
     implementation project(':capacitor-network')
     implementation project(':capacitor-preferences')
-    implementation project(':resgrid-push-notifications')
     implementation project(':capacitor-splash-screen')
     implementation project(':capacitor-status-bar')
     implementation project(':capawesome-capacitor-badge')
+    implementation project(':resgrid-local-notifications')
+    implementation project(':resgrid-push-notifications')
     implementation project(':capacitor-plugin-resgrid')
 
 }

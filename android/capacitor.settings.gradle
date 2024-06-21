@@ -38,17 +38,11 @@ project(':capacitor-haptics').projectDir = new File('../node_modules/@capacitor/
 include ':capacitor-keyboard'
 project(':capacitor-keyboard').projectDir = new File('../node_modules/@capacitor/keyboard/android')
 
-include ':resgrid-local-notifications'
-project(':resgrid-local-notifications').projectDir = new File('../node_modules/@resgrid/local-notifications/android')
-
 include ':capacitor-network'
 project(':capacitor-network').projectDir = new File('../node_modules/@capacitor/network/android')
 
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/@capacitor/preferences/android')
-
-include ':resgrid-push-notifications'
-project(':resgrid-push-notifications').projectDir = new File('../node_modules/@resgrid/push-notifications/android')
 
 include ':capacitor-splash-screen'
 project(':capacitor-splash-screen').projectDir = new File('../node_modules/@capacitor/splash-screen/android')
@@ -58,6 +52,12 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 
 include ':capawesome-capacitor-badge'
 project(':capawesome-capacitor-badge').projectDir = new File('../node_modules/@capawesome/capacitor-badge/android')
+
+include ':resgrid-local-notifications'
+project(':resgrid-local-notifications').projectDir = new File('../node_modules/@resgrid/local-notifications/android')
+
+include ':resgrid-push-notifications'
+project(':resgrid-push-notifications').projectDir = new File('../node_modules/@resgrid/push-notifications/android')
 
 include ':capacitor-plugin-resgrid'
 project(':capacitor-plugin-resgrid').projectDir = new File('../node_modules/capacitor-plugin-resgrid/android')
