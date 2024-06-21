@@ -39,13 +39,13 @@
 		"GeolocationPlugin",
 		"HapticsPlugin",
 		"KeyboardPlugin",
-		"LocalNotificationsPlugin",
 		"CAPNetworkPlugin",
 		"PreferencesPlugin",
-		"PushNotificationsPlugin",
 		"SplashScreenPlugin",
 		"StatusBarPlugin",
 		"BadgePlugin",
+		"LocalNotificationsPlugin",
+		"PushNotificationsPlugin",
 		"ResgridPlugin"
 	]
 }

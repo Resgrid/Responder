@@ -23,13 +23,13 @@ def capacitor_pods
   pod 'CapacitorGeolocation', :path => '../../node_modules/@capacitor/geolocation'
   pod 'CapacitorHaptics', :path => '../../node_modules/@capacitor/haptics'
   pod 'CapacitorKeyboard', :path => '../../node_modules/@capacitor/keyboard'
-  pod 'ResgridLocalNotifications', :path => '../../node_modules/@resgrid/local-notifications'
   pod 'CapacitorNetwork', :path => '../../node_modules/@capacitor/network'
   pod 'CapacitorPreferences', :path => '../../node_modules/@capacitor/preferences'
-  pod 'ResgridPushNotifications', :path => '../../node_modules/@resgrid/push-notifications'
   pod 'CapacitorSplashScreen', :path => '../../node_modules/@capacitor/splash-screen'
   pod 'CapacitorStatusBar', :path => '../../node_modules/@capacitor/status-bar'
   pod 'CapawesomeCapacitorBadge', :path => '../../node_modules/@capawesome/capacitor-badge'
+  pod 'ResgridLocalNotifications', :path => '../../node_modules/@resgrid/local-notifications'
+  pod 'ResgridPushNotifications', :path => '../../node_modules/@resgrid/push-notifications'
   pod 'CapacitorPluginResgrid', :path => '../../node_modules/capacitor-plugin-resgrid'
 end
 
