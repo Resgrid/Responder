@@ -29,6 +29,12 @@
     text-align: right;
   }
 
+  .person-statustext {
+    display: block;
+    font-size: 16px;
+    text-align: left;
+  }
+
   .person-roles {
     display: block;
     font-size: 12px;
@@ -36,6 +42,15 @@
     overflow: hidden;
     color: gray;
     text-align: right;
+  }
+
+  .person-status {
+    display: block;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    color: gray;
+    text-align: left;
   }
 
   .person-group {
@@ -47,7 +62,7 @@
   .date-time {
     font-size: 12px;
     display: block;
-    text-align: right;
+    text-align: left;
     color: var(--ion-color-primary);
   }
 }
