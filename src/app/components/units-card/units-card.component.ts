@@ -1,8 +1,9 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { UnitInfoResultData, UtilsService } from '@resgrid/ngx-resgridlib';
 import { environment } from '../../../environments/environment';
 
 @Component({
+	changeDetection: ChangeDetectionStrategy.OnPush,
 	selector: 'app-units-card',
 	templateUrl: './units-card.component.html',
 	styleUrls: ['./units-card.component.scss'],

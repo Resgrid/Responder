@@ -1,7 +1,8 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CallPriorityResultData, CallResultData, UtilsService } from '@resgrid/ngx-resgridlib';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-call-card',
   templateUrl: './call-card.component.html',
   styleUrls: ['./call-card.component.scss'],
