@@ -10,7 +10,7 @@
   .call-name {
     display: block;
     font-size: 16px;
-    text-align: left;
+    text-align: right;
     overflow: hidden;
   }
 
@@ -25,7 +25,7 @@
     font-size: 12px;
     white-space: nowrap;
     color: gray;
-    text-align: right;
+    text-align: left;
   }
 
   .call-address {
@@ -36,7 +36,7 @@
   .call-priority {
     display: block;
     font-size: 16px;
-    text-align: right;
+    text-align: left;
     overflow: hidden;
   }
 
@@ -46,10 +46,10 @@
     text-align: left;
   }
 
-  .date-time {
+  .call-date-time {
     font-size: 12px;
     display: block;
-    text-align: right;
+    text-align: left;
     color: var(--ion-color-primary);
   }
 }
