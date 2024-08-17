@@ -25,8 +25,8 @@ export class ModalAboutPage implements OnInit {
 
   ngOnInit() {
     this.storageService.getServerAddress().then(serverAddress => { 
-      if (serverAddress) {
-        this.serverAddress = serverAddress;
+      if (serverAddress && serverAddress.trim() !== '' && serverAddress.trim() !== 'undefined' && serverAddress.trim() !== 'null') {
+        this.serverAddress = serverAddress.trim();
       } else {
         this.serverAddress = 'https://api.resgrid.com';
       }

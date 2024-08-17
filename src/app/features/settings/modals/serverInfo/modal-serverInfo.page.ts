@@ -30,9 +30,9 @@ export class ModalServerInfoPage implements OnInit {
     });
 
     this.storageService.getServerAddress().then(serverAddress => { 
-      if (serverAddress) {
-        this.serverForm.controls['serverAddress'].setValue(serverAddress);
-        this.serverForm.controls['serverAddress'].patchValue(serverAddress);
+      if (serverAddress && serverAddress.trim() !== '' && serverAddress.trim() !== 'undefined' && serverAddress.trim() !== 'null') {
+        this.serverForm.controls['serverAddress'].setValue(serverAddress.trim());
+        this.serverForm.controls['serverAddress'].patchValue(serverAddress.trim());
       }
     });
   }
