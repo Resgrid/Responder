@@ -55,7 +55,7 @@
     "@ngx-translate/core": "14.0.0",
     "@ngx-translate/http-loader": "6.0.0",
     "@resgrid/local-notifications": "^1.0.4",
-    "@resgrid/ngx-resgridlib": "^1.3.34",
+    "@resgrid/ngx-resgridlib": "^1.3.35",
     "@resgrid/push-notifications": "^1.0.5",
     "@sentry/angular": "^8.7.0",
     "@sentry/tracing": "^7.114.0",
