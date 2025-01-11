@@ -4,9 +4,9 @@
 
 export const environment = {
   production: false,
-  baseApiUrl: window["env"]["baseApiUrl"] || 'https://qaapi.resgrid.com',
+  baseApiUrl: window["env"]["baseApiUrl"] || 'https://sjapi.resgrid.dev',
   resgridApiUrl: window["env"]["resgridApiUrl"] || '/api/v4',
-  channelUrl: window["env"]["channelUrl"] || 'https://qaevents.resgrid.com/',
+  channelUrl: window["env"]["channelUrl"] || 'https://sjevents.resgrid.dev/',
   channelHubName: window["env"]["channelHubName"] || 'eventingHub',
   realtimeGeolocationHubName: window["env"]["realtimeGeolocationHubName"] || 'geolocationHub',
   logLevel: window["env"]["logLevel"] || 0,

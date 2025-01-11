@@ -2,9 +2,9 @@
     window['env'] = window['env'] || {};
   
     // Environment variables
-    window['env']['baseApiUrl'] = 'https://qaapi.resgrid.com';
+    window['env']['baseApiUrl'] = 'https://sjapi.resgrid.dev';
     window['env']['resgridApiUrl'] = '/api/v4';
-    window['env']['channelUrl'] = 'https://qaevents.resgrid.com/';
+    window['env']['channelUrl'] = 'https://sjevents.resgrid.dev/';
     window['env']['channelHubName'] = 'eventingHub';
     window['env']['realtimeGeolocationHubName'] = 'geolocationHub';
     window['env']['logLevel'] = '0';

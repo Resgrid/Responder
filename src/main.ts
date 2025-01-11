@@ -20,7 +20,9 @@ if (environment.loggingKey && environment.loggingKey !== 'LOGGINGKEY') {
     environment: environment.production ? 'prod' : 'dev',
     integrations: [
       Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
+      Sentry.replayIntegration({
+        maskAllText: false
+      }),
     ],
     ignoreErrors: [serverErrorsRegex],
     tracesSampleRate: environment.production ? 0.4 : 1.0,
@@ -31,7 +33,7 @@ if (environment.loggingKey && environment.loggingKey !== 'LOGGINGKEY') {
     // Capture Replay for 10% of all sessions,
     // plus for 100% of sessions with an error
     replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    replaysOnErrorSampleRate: 1.0
   });
 }
 
