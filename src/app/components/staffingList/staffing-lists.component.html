@@ -1,4 +1,0 @@
-<div>
-  <ion-button expand="full" style="margin-top:15px;--background:{{status.BColor}};" *ngFor="let status of (homeState$ | async)?.activeStaffing;" (click)="submitStatus(status)">
-    {{status.Text}}</ion-button>
-</div>
