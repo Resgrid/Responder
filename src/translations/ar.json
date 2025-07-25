@@ -504,6 +504,21 @@
 	"onboarding": {
 		"message": "مرحبًا بك في تطبيق obytes"
 	},
+	"personnel": {
+		"details": {
+			"close": "إغلاق",
+			"contact": "معلومات الاتصال",
+			"group": "المجموعة",
+			"roles": "الأدوار",
+			"staffing": "التوظيف",
+			"status": "الحالة الحالية",
+			"title": "تفاصيل العاملين"
+		},
+		"empty": "لم يتم العثور على عاملين",
+		"emptyDescription": "لا يوجد عاملين يطابقون معايير البحث الخاصة بك أو لا توجد بيانات عاملين متاحة.",
+		"search": "البحث في العاملين...",
+		"title": "العاملين"
+	},
 	"protocols": {
 		"details": {
 			"close": "إغلاق",
@@ -593,12 +608,13 @@
 		"contacts": "جهات الاتصال",
 		"map": "الخريطة",
 		"notes": "الملاحظات",
+		"personnel": "العاملين",
 		"protocols": "البروتوكولات",
 		"settings": "الإعدادات",
 		"home": "الرئيسية",
 		"messages": "الرسائل",
-		"calendar": "التقويم",
-		"shifts": "النوبات"
+		"shifts": "النوبات",
+		"units": "الوحدات"
 	},
 	"messages": {
 		"title": "الرسائل",
@@ -706,6 +722,23 @@
 		"error": {
 			"no_user_id": "معرف المستخدم غير متاح"
 		}
+	},
+	"units": {
+		"title": "الوحدات",
+		"search": "البحث في الوحدات...",
+		"empty": "لم يتم العثور على وحدات",
+		"emptyDescription": "لا توجد وحدات متاحة في قسمك",
+		"group": "المجموعة",
+		"location": "الموقع",
+		"coordinates": "الإحداثيات",
+		"vehicleInfo": "معلومات المركبة",
+		"plateNumber": "رقم اللوحة",
+		"vin": "رقم الهيكل",
+		"features": "المميزات",
+		"fourWheelDrive": "دفع رباعي",
+		"specialPermit": "تصريح خاص",
+		"notes": "الملاحظات",
+		"lastUpdate": "آخر تحديث"
 	},
 	"shifts": {
 		"all_shifts": "كل النوبات",

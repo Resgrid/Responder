@@ -504,6 +504,21 @@
 	"onboarding": {
 		"message": "Bienvenido al sitio de la aplicación obytes"
 	},
+	"personnel": {
+		"details": {
+			"close": "Cerrar",
+			"contact": "Información de Contacto",
+			"group": "Grupo",
+			"roles": "Roles",
+			"staffing": "Dotación",
+			"status": "Estado Actual",
+			"title": "Detalles del Personal"
+		},
+		"empty": "No se encontró personal",
+		"emptyDescription": "Ningún personal coincide con sus criterios de búsqueda o no hay datos de personal disponibles.",
+		"search": "Buscar personal...",
+		"title": "Personal"
+	},
 	"protocols": {
 		"details": {
 			"close": "Cerrar",
@@ -593,12 +608,13 @@
 		"contacts": "Contactos",
 		"map": "Mapa",
 		"notes": "Notas",
+		"personnel": "Personal",
 		"protocols": "Protocolos",
 		"settings": "Configuración",
 		"home": "Inicio",
 		"messages": "Mensajes",
-		"calendar": "Calendario",
-		"shifts": "Turnos"
+		"shifts": "Turnos",
+		"units": "Unidades"
 	},
 	"messages": {
 		"title": "Mensajes",
@@ -706,6 +722,23 @@
 		"error": {
 			"no_user_id": "ID de usuario no disponible"
 		}
+	},
+	"units": {
+		"title": "Unidades",
+		"search": "Buscar unidades...",
+		"empty": "No se encontraron unidades",
+		"emptyDescription": "No hay unidades disponibles en tu departamento",
+		"group": "Grupo",
+		"location": "Ubicación",
+		"coordinates": "Coordenadas",
+		"vehicleInfo": "Información del vehículo",
+		"plateNumber": "Número de placa",
+		"vin": "VIN",
+		"features": "Características",
+		"fourWheelDrive": "4WD",
+		"specialPermit": "Permiso especial",
+		"notes": "Notas",
+		"lastUpdate": "Última actualización"
 	},
 	"shifts": {
 		"all_shifts": "Todos los Turnos",

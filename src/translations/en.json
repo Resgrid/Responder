@@ -512,6 +512,21 @@
 	"onboarding": {
 		"message": "Welcome to obytes app site"
 	},
+	"personnel": {
+		"details": {
+			"close": "Close",
+			"contact": "Contact Information",
+			"group": "Group",
+			"roles": "Roles",
+			"staffing": "Staffing",
+			"status": "Current Status",
+			"title": "Personnel Details"
+		},
+		"empty": "No personnel found",
+		"emptyDescription": "No personnel match your search criteria or no personnel data is available.",
+		"search": "Search personnel...",
+		"title": "Personnel"
+	},
 	"protocols": {
 		"details": {
 			"close": "Close",
@@ -601,12 +616,13 @@
 		"contacts": "Contacts",
 		"map": "Map",
 		"notes": "Notes",
+		"personnel": "Personnel",
 		"protocols": "Protocols",
 		"settings": "Settings",
 		"home": "Home",
 		"messages": "Messages",
-		"calendar": "Calendar",
-		"shifts": "Shifts"
+		"shifts": "Shifts",
+		"units": "Units"
 	},
 	"messages": {
 		"title": "Messages",
@@ -714,6 +730,23 @@
 		"error": {
 			"no_user_id": "User ID not available"
 		}
+	},
+	"units": {
+		"title": "Units",
+		"search": "Search units...",
+		"empty": "No units found",
+		"emptyDescription": "No units are available in your department",
+		"group": "Group",
+		"location": "Location",
+		"coordinates": "Coordinates",
+		"vehicleInfo": "Vehicle Information",
+		"plateNumber": "Plate Number",
+		"vin": "VIN",
+		"features": "Features",
+		"fourWheelDrive": "4WD",
+		"specialPermit": "Special Permit",
+		"notes": "Notes",
+		"lastUpdate": "Last Updated"
 	},
 	"shifts": {
 		"all_shifts": "All Shifts",

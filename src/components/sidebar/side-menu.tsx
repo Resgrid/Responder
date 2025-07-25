@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarCheck, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Map, Megaphone, Mic, Notebook, Settings, User } from 'lucide-react-native';
+import { Calendar, CalendarCheck, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map, Megaphone, Mic, Notebook, Settings, User } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +49,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
     {
       id: 'messages',
       title: t('tabs.messages'),
-      icon: Megaphone,
+      icon: Mail,
       route: '/(app)/messages',
       testID: 'side-menu-messages',
     },

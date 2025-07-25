@@ -3,7 +3,7 @@
 import { NovuProvider } from '@novu/react-native';
 import { Redirect, SplashScreen, Tabs } from 'expo-router';
 import { size } from 'lodash';
-import { Clock, Contact, ListTree, Mail, Map, Megaphone, Menu, Notebook, Settings } from 'lucide-react-native';
+import { Contact, ListTree, Mail, Map, Megaphone, Menu, Notebook, Truck, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -28,6 +28,7 @@ import { usePushNotifications } from '@/services/push-notification';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCalendarStore } from '@/stores/calendar/store';
 import { useCallsStore } from '@/stores/calls/store';
+import { usePersonnelStore } from '@/stores/personnel/store';
 import { useRolesStore } from '@/stores/roles/store';
 import { securityStore } from '@/stores/security/store';
 import { useShiftsStore } from '@/stores/shifts/store';
@@ -101,6 +102,7 @@ export default function TabLayout() {
       await useCallsStore.getState().init();
       await useCalendarStore.getState().init();
       await useShiftsStore.getState().init();
+      await usePersonnelStore.getState().init();
       await securityStore.getState().getRights();
 
       await useSignalRStore.getState().connectUpdateHub();
@@ -258,12 +260,12 @@ export default function TabLayout() {
             }}
           >
             <Tabs.Screen
-              name="index"
+              name="home"
               options={{
                 title: t('tabs.map'),
                 tabBarIcon: ({ color }) => <Icon as={Map} stroke={color} className="text-primary-500 dark:text-primary-400" />,
                 headerLeft: () => <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />,
-                tabBarButtonTestID: 'map-tab',
+                tabBarButtonTestID: 'home-tab',
                 headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
               }}
             />
@@ -280,67 +282,24 @@ export default function TabLayout() {
             />
 
             <Tabs.Screen
-              name="contacts"
+              name="personnel"
               options={{
-                title: t('tabs.contacts'),
+                title: t('tabs.personnel', 'Personnel'),
                 headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Contact} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                tabBarButtonTestID: 'contacts-tab',
+                tabBarIcon: ({ color }) => <Icon as={Users} stroke={color} className="text-primary-500 dark:text-primary-400" />,
+                tabBarButtonTestID: 'personnel-tab',
                 headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
               }}
             />
 
             <Tabs.Screen
-              name="messages"
+              name="units"
               options={{
-                title: t('tabs.messages'),
+                title: t('tabs.units', 'Units'),
                 headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Mail} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                tabBarButtonTestID: 'messages-tab',
+                tabBarIcon: ({ color }) => <Icon as={Truck} stroke={color} className="text-primary-500 dark:text-primary-400" />,
+                tabBarButtonTestID: 'units-tab',
                 headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="notes"
-              options={{
-                title: t('tabs.notes'),
-                headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Notebook} stroke={color} />,
-                tabBarButtonTestID: 'notes-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="protocols"
-              options={{
-                title: t('tabs.protocols'),
-                headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={ListTree} stroke={color} />,
-                tabBarButtonTestID: 'protocols-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="shifts"
-              options={{
-                title: t('tabs.shifts'),
-                headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Clock} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                tabBarButtonTestID: 'shifts-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="settings"
-              options={{
-                title: t('tabs.settings'),
-                headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Settings} stroke={color} />,
-                tabBarButtonTestID: 'settings-tab',
               }}
             />
           </Tabs>

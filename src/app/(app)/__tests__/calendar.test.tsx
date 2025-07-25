@@ -10,6 +10,20 @@ jest.mock('react-i18next', () => ({
   useTranslation: jest.fn(),
 }));
 
+// Mock expo-router components
+jest.mock('expo-router', () => ({
+  Stack: {
+    Screen: ({ children, ...props }: any) => {
+      const React = require('react');
+      const { View } = require('react-native');
+      return React.createElement(View, { testID: 'stack-screen', ...props }, children);
+    },
+  },
+  useNavigation: jest.fn(() => ({})),
+  useRouter: jest.fn(() => ({})),
+  useLocalSearchParams: jest.fn(() => ({})),
+}));
+
 // Mock the calendar store
 jest.mock('@/stores/calendar/store', () => ({
   useCalendarStore: jest.fn(),
@@ -37,6 +51,14 @@ jest.mock('@/components/ui/heading', () => ({
 
 jest.mock('@/components/ui/text', () => ({
   Text: require('react-native').Text,
+}));
+
+jest.mock('@/components/ui/hstack', () => ({
+  HStack: require('react-native').View,
+}));
+
+jest.mock('@/components/ui/vstack', () => ({
+  VStack: require('react-native').View,
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -82,33 +104,38 @@ jest.mock('@/components/calendar/calendar-item-details-sheet', () => ({
 
 // Mock other components
 jest.mock('@/components/common/loading', () => ({
-  Loading: ({ message }: any) => {
+  Loading: ({ text }: any) => {
     const React = require('react');
     const { View, Text } = require('react-native');
     return React.createElement(View, { testID: "loading" },
-      React.createElement(Text, {}, message)
+      React.createElement(Text, {}, text)
     );
   },
 }));
 
 jest.mock('@/components/common/zero-state', () => ({
-  ZeroState: ({ title, description, actionLabel, onAction }: any) => {
+  __esModule: true,
+  default: ({ heading, description, children, isError }: any) => {
     const React = require('react');
-    const { View, Text, TouchableOpacity } = require('react-native');
+    const { View, Text } = require('react-native');
+
+    // If there are children, clone them with testID
+    const childrenWithTestId = children ? React.cloneElement(children, {
+      key: "children",
+      testID: "retry-button"
+    }) : null;
+
     return React.createElement(View, { testID: "zero-state" }, [
-      React.createElement(Text, { key: "title" }, title),
+      React.createElement(Text, { key: "heading" }, heading),
       React.createElement(Text, { key: "description" }, description),
-      actionLabel && React.createElement(TouchableOpacity, {
-        key: "retry-button",
-        testID: "retry-button",
-        onPress: onAction
-      }, React.createElement(Text, {}, actionLabel))
+      childrenWithTestId
     ].filter(Boolean));
   },
 }));
 
 const mockT = jest.fn((key: string, options?: any) => {
   const translations: Record<string, string> = {
+    'calendar.title': 'Calendar',
     'calendar.tabs.today': 'Today',
     'calendar.tabs.upcoming': 'Upcoming',
     'calendar.tabs.calendar': 'Calendar',
