@@ -28,14 +28,7 @@ export const MessageDetailsSheet: React.FC = () => {
   const [responseText, setResponseText] = useState('');
   const [responseNote, setResponseNote] = useState('');
 
-  const {
-    selectedMessage,
-    isDetailsOpen,
-    isLoading,
-    closeDetails,
-    deleteMessages,
-    respondToMessage,
-  } = useMessagesStore();
+  const { selectedMessage, isDetailsOpen, isLoading, closeDetails, deleteMessages, respondToMessage } = useMessagesStore();
 
   if (!selectedMessage) return null;
 
@@ -76,24 +69,20 @@ export const MessageDetailsSheet: React.FC = () => {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      t('messages.delete_confirmation_title'),
-      t('messages.delete_single_confirmation_message'),
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
+    Alert.alert(t('messages.delete_confirmation_title'), t('messages.delete_single_confirmation_message'), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('common.confirm'),
+        style: 'destructive',
+        onPress: async () => {
+          await deleteMessages([selectedMessage.MessageId]);
+          closeDetails();
         },
-        {
-          text: t('common.confirm'),
-          style: 'destructive',
-          onPress: async () => {
-            await deleteMessages([selectedMessage.MessageId]);
-            closeDetails();
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleRespond = async () => {
@@ -128,21 +117,13 @@ export const MessageDetailsSheet: React.FC = () => {
         </ActionsheetDragIndicatorWrapper>
 
         {/* Header */}
-        <VStack space="sm" className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <VStack space="sm" className="border-b border-gray-200 p-4 dark:border-gray-700">
           <HStack space="sm" className="items-center justify-between">
-            <HStack space="sm" className="items-center flex-1">
-              <Box className="p-2 rounded-full bg-primary-100 dark:bg-primary-900">
-                {selectedMessage.Responded ? (
-                  <MailOpen size={20} color="#6366F1" />
-                ) : (
-                  <Mail size={20} color="#6366F1" />
-                )}
-              </Box>
+            <HStack space="sm" className="flex-1 items-center">
+              <Box className="rounded-full bg-primary-100 p-2 dark:bg-primary-900">{selectedMessage.Responded ? <MailOpen size={20} color="#6366F1" /> : <Mail size={20} color="#6366F1" />}</Box>
 
               <VStack className="flex-1">
-                <Text className="font-bold text-lg">
-                  {selectedMessage.Subject || t('messages.no_subject')}
-                </Text>
+                <Text className="text-lg font-bold">{selectedMessage.Subject || t('messages.no_subject')}</Text>
                 <HStack space="xs" className="items-center">
                   <Text className="text-sm text-gray-600 dark:text-gray-300">
                     {t('messages.from')}: {selectedMessage.SendingName || t('common.unknown_user')}
@@ -153,25 +134,16 @@ export const MessageDetailsSheet: React.FC = () => {
 
             <HStack space="sm">
               {canRespond && !isResponding && (
-                <Pressable
-                  className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900"
-                  onPress={() => setIsResponding(true)}
-                >
+                <Pressable className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900" onPress={() => setIsResponding(true)}>
                   <Reply size={20} color="#3B82F6" />
                 </Pressable>
               )}
 
-              <Pressable
-                className="p-2 rounded-lg bg-red-100 dark:bg-red-900"
-                onPress={handleDelete}
-              >
+              <Pressable className="rounded-lg bg-red-100 p-2 dark:bg-red-900" onPress={handleDelete}>
                 <Trash2 size={20} color="#EF4444" />
               </Pressable>
 
-              <Pressable
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"
-                onPress={closeDetails}
-              >
+              <Pressable className="rounded-lg bg-gray-100 p-2 dark:bg-gray-700" onPress={closeDetails}>
                 <X size={20} color="currentColor" />
               </Pressable>
             </HStack>
@@ -181,33 +153,25 @@ export const MessageDetailsSheet: React.FC = () => {
           <HStack space="sm" className="items-center justify-between">
             <HStack space="sm" className="items-center">
               <Badge variant="solid" className={getMessageTypeBadgeColor(selectedMessage.Type)}>
-                <Text className="text-white text-xs">
-                  {getMessageTypeLabel(selectedMessage.Type)}
-                </Text>
+                <Text className="text-xs text-white">{getMessageTypeLabel(selectedMessage.Type)}</Text>
               </Badge>
 
               {selectedMessage.Responded && (
                 <Badge variant="outline" className="border-green-500">
-                  <Text className="text-green-600 text-xs">
-                    {t('messages.responded')}
-                  </Text>
+                  <Text className="text-xs text-green-600">{t('messages.responded')}</Text>
                 </Badge>
               )}
 
               {isExpired && (
                 <Badge variant="outline" className="border-red-500">
-                  <Text className="text-red-600 text-xs">
-                    {t('messages.expired')}
-                  </Text>
+                  <Text className="text-xs text-red-600">{t('messages.expired')}</Text>
                 </Badge>
               )}
             </HStack>
 
             <HStack space="xs" className="items-center">
               <Clock size={12} color="#6B7280" />
-              <Text className="text-xs text-gray-500">
-                {formatMessageDate(selectedMessage.SentOnUtc || selectedMessage.SentOn)}
-              </Text>
+              <Text className="text-xs text-gray-500">{formatMessageDate(selectedMessage.SentOnUtc || selectedMessage.SentOn)}</Text>
             </HStack>
           </HStack>
         </VStack>
@@ -217,10 +181,8 @@ export const MessageDetailsSheet: React.FC = () => {
             {/* Message Body */}
             <VStack space="sm">
               <Text className="font-semibold">{t('messages.message_content')}</Text>
-              <Box className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
-                <Text className="text-gray-800 dark:text-gray-200">
-                  {selectedMessage.Body || t('messages.no_content')}
-                </Text>
+              <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                <Text className="text-gray-800 dark:text-gray-200">{selectedMessage.Body || t('messages.no_content')}</Text>
               </Box>
             </VStack>
 
@@ -228,9 +190,7 @@ export const MessageDetailsSheet: React.FC = () => {
             {selectedMessage.ExpiredOn && (
               <VStack space="sm">
                 <Text className="font-semibold">{t('messages.expires_on')}</Text>
-                <Text className="text-gray-600 dark:text-gray-300">
-                  {formatMessageDate(selectedMessage.ExpiredOn)}
-                </Text>
+                <Text className="text-gray-600 dark:text-gray-300">{formatMessageDate(selectedMessage.ExpiredOn)}</Text>
               </VStack>
             )}
 
@@ -242,11 +202,9 @@ export const MessageDetailsSheet: React.FC = () => {
                 </Text>
                 <VStack space="xs">
                   {selectedMessage.Recipients.map((recipient, index) => (
-                    <HStack key={index} space="sm" className="items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+                    <HStack key={index} space="sm" className="items-center rounded-lg bg-gray-50 p-2 dark:bg-gray-700">
                       <Avatar size="sm">
-                        <AvatarFallbackText>
-                          {recipient.Name?.charAt(0) || 'U'}
-                        </AvatarFallbackText>
+                        <AvatarFallbackText>{recipient.Name?.charAt(0) || 'U'}</AvatarFallbackText>
                       </Avatar>
 
                       <VStack className="flex-1">
@@ -280,22 +238,14 @@ export const MessageDetailsSheet: React.FC = () => {
                 <VStack space="sm">
                   <Text className="text-sm font-medium">{t('messages.response')}</Text>
                   <Input variant="outline">
-                    <InputField
-                      placeholder={t('messages.enter_response')}
-                      value={responseText}
-                      onChangeText={setResponseText}
-                    />
+                    <InputField placeholder={t('messages.enter_response')} value={responseText} onChangeText={setResponseText} />
                   </Input>
                 </VStack>
 
                 <VStack space="sm">
                   <Text className="text-sm font-medium">{t('messages.note_optional')}</Text>
                   <Textarea>
-                    <TextareaInput
-                      placeholder={t('messages.enter_note')}
-                      value={responseNote}
-                      onChangeText={setResponseNote}
-                    />
+                    <TextareaInput placeholder={t('messages.enter_note')} value={responseNote} onChangeText={setResponseNote} />
                   </Textarea>
                 </VStack>
 
@@ -311,15 +261,8 @@ export const MessageDetailsSheet: React.FC = () => {
                     <ButtonText>{t('common.cancel')}</ButtonText>
                   </Button>
 
-                  <Button
-                    variant="solid"
-                    className="bg-primary-600"
-                    onPress={handleRespond}
-                    disabled={isLoading || !responseText.trim()}
-                  >
-                    <ButtonText>
-                      {isLoading ? t('messages.responding') : t('messages.send_response')}
-                    </ButtonText>
+                  <Button variant="solid" className="bg-primary-600" onPress={handleRespond} disabled={isLoading || !responseText.trim()}>
+                    <ButtonText>{isLoading ? t('messages.responding') : t('messages.send_response')}</ButtonText>
                   </Button>
                 </HStack>
               </VStack>
@@ -329,4 +272,4 @@ export const MessageDetailsSheet: React.FC = () => {
       </ActionsheetContent>
     </Actionsheet>
   );
-}; 
+};

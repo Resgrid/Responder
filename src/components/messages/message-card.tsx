@@ -21,13 +21,7 @@ interface MessageCardProps {
   showCheckbox?: boolean;
 }
 
-export const MessageCard: React.FC<MessageCardProps> = ({
-  message,
-  onPress,
-  onLongPress,
-  isSelected = false,
-  showCheckbox = false,
-}) => {
+export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLongPress, isSelected = false, showCheckbox = false }) => {
   const { t } = useTranslation();
 
   const formatMessageDate = (dateString: string) => {
@@ -81,7 +75,7 @@ export const MessageCard: React.FC<MessageCardProps> = ({
       role="button"
       testID="message-card"
       className={`
-        mx-4 mb-2 p-4 rounded-lg border 
+        mx-4 mb-2 rounded-lg border p-4 
         ${isSelected ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700'}
         ${isExpired ? 'opacity-60' : ''}
         bg-white dark:bg-gray-800
@@ -90,43 +84,31 @@ export const MessageCard: React.FC<MessageCardProps> = ({
       <VStack space="sm">
         {/* Header Row */}
         <HStack space="sm" className="items-center justify-between">
-          <HStack space="sm" className="items-center flex-1">
+          <HStack space="sm" className="flex-1 items-center">
             {showCheckbox && (
               <Checkbox
                 value={isSelected}
-                onChange={() => { }} // Handled by parent
+                onChange={() => {}} // Handled by parent
                 aria-label={t('messages.select_message')}
               />
             )}
 
             {/* Message Status Icon */}
-            <Box className="p-1">
-              {isRead ? (
-                <MailOpen size={16} color="#6366F1" />
-              ) : (
-                <Mail size={16} color="#6366F1" />
-              )}
-            </Box>
+            <Box className="p-1">{isRead ? <MailOpen size={16} color="#6366F1" /> : <Mail size={16} color="#6366F1" />}</Box>
 
             {/* Sender Info */}
             <VStack className="flex-1">
-              <Text className={`font-medium ${!isRead ? 'font-bold' : ''}`}>
-                {message.SendingName || t('common.unknown_user')}
-              </Text>
+              <Text className={`font-medium ${!isRead ? 'font-bold' : ''}`}>{message.SendingName || t('common.unknown_user')}</Text>
               <HStack space="xs" className="items-center">
                 <Clock size={12} color="#6B7280" />
-                <Text className="text-xs text-gray-500">
-                  {formatMessageDate(message.SentOnUtc || message.SentOn)}
-                </Text>
+                <Text className="text-xs text-gray-500">{formatMessageDate(message.SentOnUtc || message.SentOn)}</Text>
               </HStack>
             </VStack>
           </HStack>
 
           {/* Message Type Badge */}
           <Badge variant="solid" className={getMessageTypeBadgeColor(message.Type)}>
-            <Text className="text-white text-xs">
-              {getMessageTypeLabel(message.Type)}
-            </Text>
+            <Text className="text-xs text-white">{getMessageTypeLabel(message.Type)}</Text>
           </Badge>
         </HStack>
 
@@ -145,18 +127,14 @@ export const MessageCard: React.FC<MessageCardProps> = ({
           {/* Response Status */}
           {message.Responded && (
             <Badge variant="outline" className="border-green-500">
-              <Text className="text-green-600 text-xs">
-                {t('messages.responded')}
-              </Text>
+              <Text className="text-xs text-green-600">{t('messages.responded')}</Text>
             </Badge>
           )}
 
           {/* Expiration Warning */}
           {isExpired && (
             <Badge variant="outline" className="border-red-500">
-              <Text className="text-red-600 text-xs">
-                {t('messages.expired')}
-              </Text>
+              <Text className="text-xs text-red-600">{t('messages.expired')}</Text>
             </Badge>
           )}
 
@@ -164,13 +142,11 @@ export const MessageCard: React.FC<MessageCardProps> = ({
           {message.Recipients && message.Recipients.length > 0 && (
             <HStack space="xs" className="items-center">
               <User size={12} color="#6B7280" />
-              <Text className="text-xs text-gray-500">
-                {t('messages.recipients_count', { count: message.Recipients.length })}
-              </Text>
+              <Text className="text-xs text-gray-500">{t('messages.recipients_count', { count: message.Recipients.length })}</Text>
             </HStack>
           )}
         </HStack>
       </VStack>
     </Pressable>
   );
-}; 
+};

@@ -13,15 +13,15 @@
  * we use dotenv to load the correct variables from the .env file based on the APP_ENV variable (default is development)
  * APP_ENV is passed as an inline variable while executing the command, for example: APP_ENV=staging pnpm build:android
  */
-const z = require("zod");
+const z = require('zod');
 
-const packageJSON = require("./package.json");
-const path = require("path");
-const APP_ENV = process.env.APP_ENV ?? "development";
+const packageJSON = require('./package.json');
+const path = require('path');
+const APP_ENV = process.env.APP_ENV ?? 'development';
 const envPath = path.resolve(__dirname, `.env.${APP_ENV}`);
 
-require("dotenv").config({
-	path: envPath,
+require('dotenv').config({
+  path: envPath,
 });
 
 /**
@@ -34,12 +34,12 @@ require("dotenv").config({
 
 // TODO: Replace these values with your own
 
-const BUNDLE_ID = "com.wavetech.Resgrid"; // ios bundle id
-const PACKAGE = "wtdt.resgrid.andriod"; // android package name
-const NAME = "Resgrid Responder"; // app name
-const EXPO_ACCOUNT_OWNER = "resgrid"; // expo account owner
-const EAS_PROJECT_ID = "026d4a74-f01d-41db-ae57-67f8c65a5f79"; // eas project id
-const SCHEME = "ResgridRespond"; // app scheme
+const BUNDLE_ID = 'com.wavetech.Resgrid'; // ios bundle id
+const PACKAGE = 'wtdt.resgrid.andriod'; // android package name
+const NAME = 'Resgrid Responder'; // app name
+const EXPO_ACCOUNT_OWNER = 'resgrid'; // expo account owner
+const EAS_PROJECT_ID = '026d4a74-f01d-41db-ae57-67f8c65a5f79'; // eas project id
+const SCHEME = 'ResgridRespond'; // app scheme
 
 /**
  * We declare a function withEnvSuffix that will add a suffix to the variable name based on the APP_ENV
@@ -49,7 +49,7 @@ const SCHEME = "ResgridRespond"; // app scheme
  */
 
 const withEnvSuffix = (name) => {
-	return APP_ENV === "production" ? name : `${name}.${APP_ENV}`;
+  return APP_ENV === 'production' ? name : `${name}.${APP_ENV}`;
 };
 
 /**
@@ -71,73 +71,73 @@ const withEnvSuffix = (name) => {
  */
 
 const client = z.object({
-	APP_ENV: z.enum(["development", "staging", "internal", "production"]),
-	NAME: z.string(),
-	SCHEME: z.string(),
-	BUNDLE_ID: z.string(),
-	PACKAGE: z.string(),
-	VERSION: z.string(),
-	ANDROID_VERSION_CODE: z.number(),
+  APP_ENV: z.enum(['development', 'staging', 'internal', 'production']),
+  NAME: z.string(),
+  SCHEME: z.string(),
+  BUNDLE_ID: z.string(),
+  PACKAGE: z.string(),
+  VERSION: z.string(),
+  ANDROID_VERSION_CODE: z.number(),
 
-	// ADD YOUR CLIENT ENV VARS HERE
-	BASE_API_URL: z.string(),
-	API_VERSION: z.string(),
-	RESGRID_API_URL: z.string(),
-	CHANNEL_API_URL: z.string(),
-	CHANNEL_HUB_NAME: z.string(),
-	REALTIME_GEO_HUB_NAME: z.string(),
-	LOGGING_KEY: z.string(),
-	APP_KEY: z.string(),
-	RESPOND_MAPBOX_PUBKEY: z.string(),
-	RESPOND_MAPBOX_DLKEY: z.string(),
-	IS_MOBILE_APP: z.boolean(),
-	SENTRY_DSN: z.string(),
-	POSTHOG_API_KEY: z.string(),
-	POSTHOG_HOST: z.string(),
+  // ADD YOUR CLIENT ENV VARS HERE
+  BASE_API_URL: z.string(),
+  API_VERSION: z.string(),
+  RESGRID_API_URL: z.string(),
+  CHANNEL_API_URL: z.string(),
+  CHANNEL_HUB_NAME: z.string(),
+  REALTIME_GEO_HUB_NAME: z.string(),
+  LOGGING_KEY: z.string(),
+  APP_KEY: z.string(),
+  RESPOND_MAPBOX_PUBKEY: z.string(),
+  RESPOND_MAPBOX_DLKEY: z.string(),
+  IS_MOBILE_APP: z.boolean(),
+  SENTRY_DSN: z.string(),
+  POSTHOG_API_KEY: z.string(),
+  POSTHOG_HOST: z.string(),
 });
 
 const buildTime = z.object({
-	EXPO_ACCOUNT_OWNER: z.string(),
-	EAS_PROJECT_ID: z.string(),
-	// ADD YOUR BUILD TIME ENV VARS HERE
+  EXPO_ACCOUNT_OWNER: z.string(),
+  EAS_PROJECT_ID: z.string(),
+  // ADD YOUR BUILD TIME ENV VARS HERE
 });
 
 /**
  * @type {Record<keyof z.infer<typeof client> , unknown>}
  */
 const _clientEnv = {
-	APP_ENV,
-	NAME: NAME,
-	SCHEME: SCHEME,
-	BUNDLE_ID: withEnvSuffix(BUNDLE_ID),
-	PACKAGE: withEnvSuffix(PACKAGE),
-	VERSION: packageJSON.version,
-	ANDROID_VERSION_CODE: parseInt(packageJSON.versionCode),
+  APP_ENV,
+  NAME: NAME,
+  SCHEME: SCHEME,
+  BUNDLE_ID: withEnvSuffix(BUNDLE_ID),
+  PACKAGE: withEnvSuffix(PACKAGE),
+  VERSION: packageJSON.version,
+  ANDROID_VERSION_CODE: parseInt(packageJSON.versionCode),
 
-	// ADD YOUR ENV VARS HERE TOO
-	BASE_API_URL: process.env.RESPOND_BASE_API_URL || "https://qaapi.resgrid.dev",
-	API_VERSION: process.env.RESPOND_API_VERSION || "v4",
-	RESGRID_API_URL: process.env.RESPOND_RESGRID_API_URL || "/api/v4",
-	CHANNEL_API_URL: process.env.RESPOND_CHANNEL_API_URL || "https://qaevents.resgrid.dev/",
-	CHANNEL_HUB_NAME: process.env.RESPOND_CHANNEL_HUB_NAME || "eventingHub",
-	REALTIME_GEO_HUB_NAME: process.env.RESPOND_REALTIME_GEO_HUB_NAME || "geolocationHub",
-	LOGGING_KEY: process.env.RESPOND_LOGGING_KEY || "",
-	APP_KEY: process.env.RESPOND_APP_KEY || "",
-	IS_MOBILE_APP: true, // or whatever default you want
-	RESPOND_MAPBOX_PUBKEY: process.env.RESPOND_MAPBOX_PUBKEY || "",
-	RESPOND_MAPBOX_DLKEY: process.env.RESPOND_MAPBOX_DLKEY || "",
-	SENTRY_DSN: process.env.RESPOND_SENTRY_DSN || "",
-	POSTHOG_API_KEY: process.env.POSTHOG_API_KEY || "",
-	POSTHOG_HOST: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+  // ADD YOUR ENV VARS HERE TOO
+  BASE_API_URL: process.env.RESPOND_BASE_API_URL || 'https://qaapi.resgrid.dev',
+  API_VERSION: process.env.RESPOND_API_VERSION || 'v4',
+  RESGRID_API_URL: process.env.RESPOND_RESGRID_API_URL || '/api/v4',
+  CHANNEL_API_URL: process.env.RESPOND_CHANNEL_API_URL || 'https://qaevents.resgrid.dev/',
+  CHANNEL_HUB_NAME: process.env.RESPOND_CHANNEL_HUB_NAME || 'eventingHub',
+  REALTIME_GEO_HUB_NAME: process.env.RESPOND_REALTIME_GEO_HUB_NAME || 'geolocationHub',
+  LOGGING_KEY: process.env.RESPOND_LOGGING_KEY || '',
+  APP_KEY: process.env.RESPOND_APP_KEY || '',
+  IS_MOBILE_APP: true, // or whatever default you want
+  RESPOND_MAPBOX_PUBKEY: process.env.RESPOND_MAPBOX_PUBKEY || '',
+  RESPOND_MAPBOX_DLKEY: process.env.RESPOND_MAPBOX_DLKEY || '',
+  SENTRY_DSN: process.env.RESPOND_SENTRY_DSN || '',
+  POSTHOG_API_KEY: process.env.POSTHOG_API_KEY || '',
+  POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
 };
 
 /**
  * @type {Record<keyof z.infer<typeof buildTime> , unknown>}
  */
 const _buildTimeEnv = {
-	EXPO_ACCOUNT_OWNER,
-	EAS_PROJECT_ID,
-	// ADD YOUR ENV VARS HERE TOO
+  EXPO_ACCOUNT_OWNER,
+  EAS_PROJECT_ID,
+  // ADD YOUR ENV VARS HERE TOO
 };
 
 /**
@@ -147,29 +147,29 @@ const _buildTimeEnv = {
  * If the validation passes we export the merged and parsed env variables to be used in the app.config.ts file as well as a ClientEnv object to be used in the client-side code
  **/
 const _env = {
-	..._clientEnv,
-	..._buildTimeEnv,
+  ..._clientEnv,
+  ..._buildTimeEnv,
 };
 
 const merged = buildTime.merge(client);
 const parsed = merged.safeParse(_env);
 
 if (parsed.success === false) {
-	console.error(
-		"❌ Invalid environment variables:",
-		parsed.error.flatten().fieldErrors,
+  console.error(
+    '❌ Invalid environment variables:',
+    parsed.error.flatten().fieldErrors,
 
-		`\n❌ Missing variables in .env.${APP_ENV} file, Make sure all required variables are defined in the .env.${APP_ENV} file.`,
-		`\n💡 Tip: If you recently updated the .env.${APP_ENV} file and the error still persists, try restarting the server with the -c flag to clear the cache.`,
-	);
-	throw new Error("Invalid environment variables, Check terminal for more details ");
+    `\n❌ Missing variables in .env.${APP_ENV} file, Make sure all required variables are defined in the .env.${APP_ENV} file.`,
+    `\n💡 Tip: If you recently updated the .env.${APP_ENV} file and the error still persists, try restarting the server with the -c flag to clear the cache.`
+  );
+  throw new Error('Invalid environment variables, Check terminal for more details ');
 }
 
 const Env = parsed.data;
 const ClientEnv = client.parse(_clientEnv);
 
 module.exports = {
-	Env,
-	ClientEnv,
-	withEnvSuffix,
+  Env,
+  ClientEnv,
+  withEnvSuffix,
 };

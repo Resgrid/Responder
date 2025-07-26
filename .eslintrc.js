@@ -44,6 +44,7 @@ module.exports = {
         caughtErrorsIgnorePattern: '^_',
       },
     ],
+    'no-tabs': 'off',
   },
   overrides: [
     // Configuration for  translations files (i18next)

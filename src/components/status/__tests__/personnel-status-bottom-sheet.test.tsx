@@ -87,6 +87,13 @@ jest.mock('@/components/ui/text', () => ({
   },
 }));
 
+jest.mock('@/components/ui/spinner', () => ({
+  Spinner: ({ size, ...props }: any) => {
+    const { View } = require('react-native');
+    return <View testID="loading-spinner" {...props} />;
+  },
+}));
+
 jest.mock('@/components/ui/input', () => ({
   Input: ({ children, ...props }: any) => {
     const { View } = require('react-native');
@@ -157,18 +164,33 @@ describe('PersonnelStatusBottomSheet', () => {
     isOpen: false,
     currentStep: 'select-responding-to' as const,
     selectedCall: null,
+    selectedGroup: null,
     selectedStatus: null,
+    responseType: 'none' as const,
+    selectedTab: 'calls' as const,
     note: '',
     respondingTo: '',
     isLoading: false,
+    groups: [] as any[],
+    isLoadingGroups: false,
     setCurrentStep: jest.fn(),
     setSelectedCall: jest.fn(),
+    setSelectedGroup: jest.fn(),
+    setResponseType: jest.fn(),
+    setSelectedTab: jest.fn(),
     setNote: jest.fn(),
     setRespondingTo: jest.fn(),
+    fetchGroups: jest.fn(),
     nextStep: jest.fn(),
     previousStep: jest.fn(),
     submitStatus: jest.fn(),
     reset: jest.fn(),
+  };
+
+  const mockCallsStore = {
+    calls: [] as any[],
+    isLoading: false,
+    fetchCalls: jest.fn(),
   };
 
   const mockCalls = [
@@ -186,6 +208,23 @@ describe('PersonnelStatusBottomSheet', () => {
     },
   ];
 
+  const mockGroups = [
+    {
+      GroupId: '1',
+      Name: 'Station 1',
+      Address: '100 Fire Station Rd',
+      GroupType: 'Fire Station',
+      TypeId: 1,
+    },
+    {
+      GroupId: '2',
+      Name: 'Station 2',
+      Address: '200 Fire Station Ave',
+      GroupType: 'Fire Station',
+      TypeId: 1,
+    },
+  ];
+
   const mockStatus = {
     Id: 1,
     Text: 'Available',
@@ -200,11 +239,13 @@ describe('PersonnelStatusBottomSheet', () => {
     });
 
     mockUseCallsStore.mockReturnValue({
+      ...mockCallsStore,
       calls: mockCalls,
     });
 
     mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
       ...mockStore,
+      groups: mockGroups,
     });
   });
 
@@ -224,6 +265,7 @@ describe('PersonnelStatusBottomSheet', () => {
         isOpen: true,
         selectedStatus: mockStatus,
         currentStep: 'select-responding-to',
+        groups: mockGroups,
       });
     });
 
@@ -232,17 +274,24 @@ describe('PersonnelStatusBottomSheet', () => {
 
       expect(screen.getByText('common.step 1 common.of 3')).toBeTruthy();
       expect(screen.getByText('personnel.status.select_responding_to')).toBeTruthy();
-      expect(screen.getByText('personnel.status.select_call_to_respond_to')).toBeTruthy();
+      expect(screen.getByText('personnel.status.select_destination')).toBeTruthy();
     });
 
-    it('should render "no call selected" option', () => {
+    it('should render "no destination" option', () => {
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('calls.no_call_selected')).toBeTruthy();
+      expect(screen.getByText('personnel.status.no_destination')).toBeTruthy();
       expect(screen.getByText('personnel.status.general_status')).toBeTruthy();
     });
 
-    it('should render available calls', () => {
+    it('should render tabs for calls and stations', () => {
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('personnel.status.calls_tab')).toBeTruthy();
+      expect(screen.getByText('personnel.status.stations_tab')).toBeTruthy();
+    });
+
+    it('should render available calls in calls tab', () => {
       render(<PersonnelStatusBottomSheet />);
 
       expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
@@ -251,24 +300,59 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(screen.getByText('456 Test Ave')).toBeTruthy();
     });
 
-    it('should handle call selection', () => {
-      const mockSetSelectedCall = jest.fn();
-      const mockSetRespondingTo = jest.fn();
+    it('should render available stations when stations tab is selected', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        selectedTab: 'stations',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('Station 1')).toBeTruthy();
+      expect(screen.getByText('100 Fire Station Rd')).toBeTruthy();
+      expect(screen.getAllByText('Fire Station')).toHaveLength(2);
+      expect(screen.getByText('Station 2')).toBeTruthy();
+      expect(screen.getByText('200 Fire Station Ave')).toBeTruthy();
+    });
+
+    it('should handle tab switching', () => {
+      const mockSetSelectedTab = jest.fn();
 
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
         ...mockStore,
         isOpen: true,
         selectedStatus: mockStatus,
         currentStep: 'select-responding-to',
-        setSelectedCall: mockSetSelectedCall,
-        setRespondingTo: mockSetRespondingTo,
+        setSelectedTab: mockSetSelectedTab,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
 
-      // Note: Since we're using RadioGroup, we need to test the onChange behavior
-      // The actual selection behavior would be tested through integration tests
-      expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
+      fireEvent.press(screen.getByText('personnel.status.stations_tab'));
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('stations');
+    });
+
+    it('should handle no destination selection', () => {
+      const mockSetResponseType = jest.fn();
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        setResponseType: mockSetResponseType,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      fireEvent.press(screen.getByText('personnel.status.no_destination'));
+      expect(mockSetResponseType).toHaveBeenCalledWith('none');
     });
 
     it('should show next button', () => {
@@ -286,6 +370,7 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'select-responding-to',
         nextStep: mockNextStep,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -296,12 +381,46 @@ describe('PersonnelStatusBottomSheet', () => {
 
     it('should render "no calls available" when no calls exist', () => {
       mockUseCallsStore.mockReturnValue({
+        ...mockCallsStore,
         calls: [],
+        isLoading: false,
       });
 
       render(<PersonnelStatusBottomSheet />);
 
       expect(screen.getByText('calls.no_calls_available')).toBeTruthy();
+    });
+
+    it('should render "no stations available" when no stations exist and stations tab is selected', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        selectedTab: 'stations',
+        groups: [],
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('personnel.status.no_stations_available')).toBeTruthy();
+    });
+
+    it('should show loading spinner when loading stations', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        selectedTab: 'stations',
+        groups: [],
+        isLoadingGroups: true,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByTestId('loading-spinner')).toBeTruthy();
+      expect(screen.getByText('personnel.status.loading_stations')).toBeTruthy();
     });
   });
 
@@ -313,8 +432,10 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'add-note',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         respondingTo: 'CALL-001',
         note: '',
+        groups: mockGroups,
       });
     });
 
@@ -328,15 +449,47 @@ describe('PersonnelStatusBottomSheet', () => {
     it('should display selected call info', () => {
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('personnel.status.selected_call:')).toBeTruthy();
+      expect(screen.getByText('personnel.status.selected_destination:')).toBeTruthy();
       expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
     });
 
-    it('should render responding to input', () => {
+    it('should display selected station info when station is selected', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'add-note',
+        selectedGroup: mockGroups[0],
+        responseType: 'station',
+        respondingTo: '1',
+        note: '',
+        groups: mockGroups,
+      });
+
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('personnel.status.responding_to (common.optional):')).toBeTruthy();
-      expect(screen.getByPlaceholderText('personnel.status.responding_to_placeholder')).toBeTruthy();
+      expect(screen.getByText('personnel.status.selected_destination:')).toBeTruthy();
+      expect(screen.getByText('Station 1')).toBeTruthy();
+    });
+
+    it('should display no destination when none is selected', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'add-note',
+        selectedCall: null,
+        selectedGroup: null,
+        responseType: 'none',
+        respondingTo: '',
+        note: '',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('personnel.status.selected_destination:')).toBeTruthy();
+      expect(screen.getByText('personnel.status.no_destination')).toBeTruthy();
     });
 
     it('should render note textarea', () => {
@@ -344,26 +497,6 @@ describe('PersonnelStatusBottomSheet', () => {
 
       expect(screen.getByText('personnel.status.note (common.optional):')).toBeTruthy();
       expect(screen.getByPlaceholderText('personnel.status.note_placeholder')).toBeTruthy();
-    });
-
-    it('should handle responding to input change', () => {
-      const mockSetRespondingTo = jest.fn();
-
-      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'add-note',
-        selectedCall: mockCalls[0],
-        setRespondingTo: mockSetRespondingTo,
-      });
-
-      render(<PersonnelStatusBottomSheet />);
-
-      const input = screen.getByPlaceholderText('personnel.status.responding_to_placeholder');
-      fireEvent.changeText(input, 'Test responding to');
-
-      expect(mockSetRespondingTo).toHaveBeenCalledWith('Test responding to');
     });
 
     it('should handle note input change', () => {
@@ -375,7 +508,9 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'add-note',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         setNote: mockSetNote,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -402,7 +537,9 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'add-note',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         previousStep: mockPreviousStep,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -420,9 +557,11 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'confirm',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         respondingTo: 'Test responding to',
         note: 'Test note',
         isLoading: false,
+        groups: mockGroups,
       });
     });
 
@@ -434,7 +573,7 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(screen.getByText('personnel.status.review_and_confirm')).toBeTruthy();
     });
 
-    it('should display review information', () => {
+    it('should display review information for call', () => {
       render(<PersonnelStatusBottomSheet />);
 
       expect(screen.getByText('personnel.status.status:')).toBeTruthy();
@@ -447,6 +586,28 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(screen.getByText('Test note')).toBeTruthy();
     });
 
+    it('should display review information for station', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'confirm',
+        selectedGroup: mockGroups[0],
+        responseType: 'station',
+        respondingTo: 'Test responding to',
+        note: 'Test note',
+        isLoading: false,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('personnel.status.status:')).toBeTruthy();
+      expect(screen.getByText('Available')).toBeTruthy();
+      expect(screen.getByText('personnel.status.responding_to:')).toBeTruthy();
+      expect(screen.getByText('Station 1')).toBeTruthy();
+    });
+
     it('should not show custom responding to when empty', () => {
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
         ...mockStore,
@@ -454,8 +615,10 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'confirm',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         respondingTo: '',
         note: 'Test note',
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -470,8 +633,10 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'confirm',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         respondingTo: 'Test responding to',
         note: '',
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -495,7 +660,9 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'confirm',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         submitStatus: mockSubmitStatus,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -511,7 +678,9 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'confirm',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         isLoading: true,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -526,7 +695,9 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'confirm',
         selectedCall: mockCalls[0],
+        responseType: 'call',
         isLoading: true,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -541,9 +712,8 @@ describe('PersonnelStatusBottomSheet', () => {
   });
 
   describe('auto-selection behavior', () => {
-    it('should auto-select active call when available', () => {
+    it('should auto-select active call when available and no destination is selected', () => {
       const mockSetSelectedCall = jest.fn();
-      const mockSetRespondingTo = jest.fn();
       const activeCall = mockCalls[0];
 
       mockUseCoreStore.mockReturnValue({
@@ -555,9 +725,9 @@ describe('PersonnelStatusBottomSheet', () => {
         isOpen: true,
         selectedStatus: mockStatus,
         currentStep: 'select-responding-to',
-        selectedCall: null,
+        responseType: 'none',
         setSelectedCall: mockSetSelectedCall,
-        setRespondingTo: mockSetRespondingTo,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
@@ -565,6 +735,125 @@ describe('PersonnelStatusBottomSheet', () => {
       // Note: The useEffect auto-selection would be tested in integration tests
       // Here we just verify the component renders correctly
       expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
+    });
+  });
+
+  describe('fetchCalls and fetchGroups behavior', () => {
+    it('should call fetchCalls and fetchGroups when bottom sheet opens', () => {
+      const mockFetchCalls = jest.fn();
+      const mockFetchGroups = jest.fn();
+
+      mockUseCallsStore.mockReturnValue({
+        ...mockCallsStore,
+        calls: mockCalls,
+        fetchCalls: mockFetchCalls,
+      });
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        fetchGroups: mockFetchGroups,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(mockFetchCalls).toHaveBeenCalled();
+      expect(mockFetchGroups).toHaveBeenCalled();
+    });
+
+    it('should not call fetchCalls and fetchGroups when bottom sheet is closed', () => {
+      const mockFetchCalls = jest.fn();
+      const mockFetchGroups = jest.fn();
+
+      mockUseCallsStore.mockReturnValue({
+        ...mockCallsStore,
+        calls: mockCalls,
+        fetchCalls: mockFetchCalls,
+      });
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: false,
+        selectedStatus: mockStatus,
+        fetchGroups: mockFetchGroups,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(mockFetchCalls).not.toHaveBeenCalled();
+      expect(mockFetchGroups).not.toHaveBeenCalled();
+    });
+
+    it('should display loading spinner when fetching calls', () => {
+      mockUseCallsStore.mockReturnValue({
+        ...mockCallsStore,
+        calls: [],
+        isLoading: true,
+        fetchCalls: jest.fn(),
+      });
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByTestId('loading-spinner')).toBeTruthy();
+      expect(screen.getByText('calls.loading_calls')).toBeTruthy();
+    });
+
+    it('should hide loading spinner and show calls when loading is complete', () => {
+      mockUseCallsStore.mockReturnValue({
+        ...mockCallsStore,
+        calls: mockCalls,
+        isLoading: false,
+        fetchCalls: jest.fn(),
+      });
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.queryByTestId('loading-spinner')).toBeNull();
+      expect(screen.queryByText('calls.loading_calls')).toBeNull();
+      expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
+      expect(screen.getByText('CALL-002 - Test Call 2')).toBeTruthy();
+    });
+
+    it('should show loading spinner instead of "no calls available" message when loading', () => {
+      mockUseCallsStore.mockReturnValue({
+        ...mockCallsStore,
+        calls: [],
+        isLoading: true,
+        fetchCalls: jest.fn(),
+      });
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByTestId('loading-spinner')).toBeTruthy();
+      expect(screen.queryByText('calls.no_calls_available')).toBeNull();
     });
   });
 
@@ -577,6 +866,7 @@ describe('PersonnelStatusBottomSheet', () => {
         isOpen: true,
         selectedStatus: mockStatus,
         reset: mockReset,
+        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);

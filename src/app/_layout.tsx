@@ -22,6 +22,7 @@ import { APIProvider } from '@/api';
 import { PostHogProviderWrapper } from '@/components/common/posthog-provider';
 import { LiveKitBottomSheet } from '@/components/livekit';
 import { PersonnelStatusBottomSheet } from '@/components/status/personnel-status-bottom-sheet';
+import { ToastContainer } from '@/components/toast/toast-container';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { loadKeepAliveState } from '@/lib/hooks/use-keep-alive';
 import { loadSelectedTheme } from '@/lib/hooks/use-selected-theme';
@@ -40,7 +41,8 @@ export const unstable_settings = {
 
 // Construct a new integration instance. This is needed to communicate between the integration and React
 const navigationIntegration = Sentry.reactNavigationIntegration({
-  enableTimeToInitialDisplay: !isRunningInExpoGo(),
+  // Disable enableTimeToInitialDisplay to prevent fallback timestamp errors
+  enableTimeToInitialDisplay: false,
 });
 
 Sentry.init({
@@ -52,6 +54,14 @@ Sentry.init({
     navigationIntegration,
   ],
   enableNativeFramesTracking: !isRunningInExpoGo(), // Tracks slow and frozen frames in the application
+  // Add additional options to prevent timing issues
+  beforeSendTransaction(event) {
+    // Filter out problematic navigation transactions that might cause timestamp errors
+    if (event.contexts?.trace?.op === 'navigation' && !event.contexts?.trace?.data?.route) {
+      return null;
+    }
+    return event;
+  },
 });
 
 registerGlobals();
@@ -76,6 +86,8 @@ if (!deviceUuid) {
 LogBox.ignoreLogs([
   //Mapbox errors
   'Mapbox [error] ViewTagResolver | view:',
+  // Ignore Sentry fallback timestamp warnings in development
+  'Sentry Logger [error]: Failed to receive any fallback timestamp',
 ]);
 
 function RootLayout() {
@@ -83,8 +95,19 @@ function RootLayout() {
   const ref = useNavigationContainerRef();
 
   useEffect(() => {
+    // Register navigation container with better error handling
     if (ref?.current) {
-      navigationIntegration.registerNavigationContainer(ref);
+      try {
+        navigationIntegration.registerNavigationContainer(ref);
+        logger.info({
+          message: 'Sentry navigation integration registered successfully',
+        });
+      } catch (error) {
+        logger.warn({
+          message: 'Failed to register Sentry navigation integration',
+          context: { error },
+        });
+      }
     }
 
     // Clear the badge count on app startup
@@ -153,6 +176,7 @@ function Providers({ children }: { children: React.ReactNode }) {
             <LiveKitBottomSheet />
             <PersonnelStatusBottomSheet />
             <FlashMessage position="top" />
+            <ToastContainer />
           </BottomSheetModalProvider>
         </ThemeProvider>
       </GluestackUIProvider>

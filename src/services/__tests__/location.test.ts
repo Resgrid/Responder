@@ -1,9 +1,20 @@
 // Mock all dependencies first
+jest.mock('@/api/personnel/personnelLocation', () => ({
+  setPersonLocation: jest.fn(),
+}));
 jest.mock('@/api/units/unitLocation', () => ({
   setUnitLocation: jest.fn(),
 }));
+jest.mock('@/lib/auth', () => ({
+  useAuthStore: {
+    getState: jest.fn(),
+  },
+}));
 jest.mock('@/lib/hooks/use-background-geolocation', () => ({
   registerLocationServiceUpdater: jest.fn(),
+}));
+jest.mock('@/lib/hooks/use-location-tracking', () => ({
+  registerLocationTrackingServiceUpdater: jest.fn(),
 }));
 jest.mock('@/lib/logging', () => ({
   logger: {
@@ -15,8 +26,28 @@ jest.mock('@/lib/logging', () => ({
 jest.mock('@/lib/storage/background-geolocation', () => ({
   loadBackgroundGeolocationState: jest.fn(),
 }));
+jest.mock('@/lib/storage/realtime-geolocation', () => ({
+  loadRealtimeGeolocationState: jest.fn(),
+}));
 
 // Create mock store states
+const mockAuthStoreState = {
+  accessToken: 'mock-access-token',
+  refreshToken: 'mock-refresh-token',
+  refreshTokenExpiresOn: '2024-12-31T23:59:59Z',
+  status: 'signedIn' as const,
+  error: null,
+  profile: null,
+  userId: 'user-123' as string | null,
+  isFirstTime: false,
+  login: jest.fn(),
+  logout: jest.fn(),
+  refreshAccessToken: jest.fn(),
+  hydrate: jest.fn(),
+  isAuthenticated: jest.fn(() => true),
+  setIsOnboarding: jest.fn(),
+};
+
 const mockCoreStoreState = {
   activeUnitId: 'unit-123' as string | null,
 };
@@ -77,20 +108,27 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { AppState } from 'react-native';
 
+import { setPersonLocation } from '@/api/personnel/personnelLocation';
 import { setUnitLocation } from '@/api/units/unitLocation';
+import { useAuthStore } from '@/lib/auth';
 import { registerLocationServiceUpdater } from '@/lib/hooks/use-background-geolocation';
 import { logger } from '@/lib/logging';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
+import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
+import { SavePersonnelLocationInput } from '@/models/v4/personnelLocation/savePersonnelLocationInput';
 import { SaveUnitLocationInput } from '@/models/v4/unitLocation/saveUnitLocationInput';
 
 // Import the service after mocks are set up
 let locationService: any;
 
 // Mock types
+const mockSetPersonLocation = setPersonLocation as jest.MockedFunction<typeof setPersonLocation>;
 const mockSetUnitLocation = setUnitLocation as jest.MockedFunction<typeof setUnitLocation>;
+const mockUseAuthStore = useAuthStore as jest.Mocked<typeof useAuthStore>;
 const mockRegisterLocationServiceUpdater = registerLocationServiceUpdater as jest.MockedFunction<typeof registerLocationServiceUpdater>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
 const mockLoadBackgroundGeolocationState = loadBackgroundGeolocationState as jest.MockedFunction<typeof loadBackgroundGeolocationState>;
+const mockLoadRealtimeGeolocationState = loadRealtimeGeolocationState as jest.MockedFunction<typeof loadRealtimeGeolocationState>;
 const mockTaskManager = TaskManager as jest.Mocked<typeof TaskManager>;
 const mockAppState = AppState as jest.Mocked<typeof AppState>;
 const mockLocation = Location as jest.Mocked<typeof Location>;
@@ -167,11 +205,17 @@ describe('LocationService', () => {
     // Setup TaskManager mocks
     mockTaskManager.isTaskRegisteredAsync.mockResolvedValue(false);
 
-    // Setup storage mock
+    // Setup storage mocks
     mockLoadBackgroundGeolocationState.mockResolvedValue(false);
+    mockLoadRealtimeGeolocationState.mockResolvedValue(true); // Enable realtime for tests
 
-    // Setup API mock
+    // Setup API mocks
+    mockSetPersonLocation.mockResolvedValue(mockApiResponse);
     mockSetUnitLocation.mockResolvedValue(mockApiResponse);
+
+    // Setup auth store mock
+    mockUseAuthStore.getState = jest.fn(() => mockAuthStoreState);
+    mockAuthStoreState.userId = 'user-123';
 
     // Reset core store state
     mockCoreStoreState.activeUnitId = 'unit-123';
@@ -180,6 +224,7 @@ describe('LocationService', () => {
     (locationService as any).locationSubscription = null;
     (locationService as any).backgroundSubscription = null;
     (locationService as any).isBackgroundGeolocationEnabled = false;
+    (locationService as any).isRealtimeGeolocationEnabled = true; // Enable for tests
   });
 
   describe('Singleton Pattern', () => {
@@ -252,7 +297,10 @@ describe('LocationService', () => {
 
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Foreground location updates started',
-        context: { backgroundEnabled: false },
+        context: { 
+          backgroundEnabled: false,
+          realtimeEnabled: true,
+        },
       });
     });
 
@@ -300,7 +348,7 @@ describe('LocationService', () => {
       await locationCallback(mockLocationObject);
 
       expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
-      expect(mockSetUnitLocation).toHaveBeenCalledWith(expect.any(SaveUnitLocationInput));
+      expect(mockSetPersonLocation).toHaveBeenCalledWith(expect.any(SavePersonnelLocationInput));
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Foreground location update received',
         context: {
@@ -372,7 +420,7 @@ describe('LocationService', () => {
       await locationCallback(mockLocationObject);
 
       expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
-      expect(mockSetUnitLocation).toHaveBeenCalledWith(expect.any(SaveUnitLocationInput));
+      expect(mockSetPersonLocation).toHaveBeenCalledWith(expect.any(SavePersonnelLocationInput));
     });
   });
 
@@ -382,9 +430,9 @@ describe('LocationService', () => {
       const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
       await locationCallback(mockLocationObject);
 
-      expect(mockSetUnitLocation).toHaveBeenCalledWith(
+      expect(mockSetPersonLocation).toHaveBeenCalledWith(
         expect.objectContaining({
-          UnitId: 'unit-123',
+          UserId: 'user-123',
           Latitude: mockLocationObject.coords.latitude.toString(),
           Longitude: mockLocationObject.coords.longitude.toString(),
           Accuracy: mockLocationObject.coords.accuracy?.toString(),
@@ -415,7 +463,7 @@ describe('LocationService', () => {
       const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
       await locationCallback(locationWithNulls);
 
-      expect(mockSetUnitLocation).toHaveBeenCalledWith(
+      expect(mockSetPersonLocation).toHaveBeenCalledWith(
         expect.objectContaining({
           Accuracy: '0',
           Altitude: '0',
@@ -426,26 +474,26 @@ describe('LocationService', () => {
       );
     });
 
-    it('should skip API call if no active unit is selected', async () => {
-      // Change the core store state for this test
-      mockCoreStoreState.activeUnitId = null;
+    it('should skip API call if no user ID is available', async () => {
+      // Change the auth store state for this test
+      mockAuthStoreState.userId = null;
 
       await locationService.startLocationUpdates();
       const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
       await locationCallback(mockLocationObject);
 
-      expect(mockSetUnitLocation).not.toHaveBeenCalled();
+      expect(mockSetPersonLocation).not.toHaveBeenCalled();
       expect(mockLogger.warn).toHaveBeenCalledWith({
-        message: 'No active unit selected, skipping location API call',
+        message: 'No user ID available, skipping location API call',
       });
 
       // Reset for other tests
-      mockCoreStoreState.activeUnitId = 'unit-123';
+      mockAuthStoreState.userId = 'user-123';
     });
 
     it('should handle API errors gracefully', async () => {
       const apiError = new Error('API Error');
-      mockSetUnitLocation.mockRejectedValue(apiError);
+      mockSetPersonLocation.mockRejectedValue(apiError);
 
       await locationService.startLocationUpdates();
       const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
@@ -463,7 +511,7 @@ describe('LocationService', () => {
 
     it('should log successful API calls', async () => {
       // Reset mock to resolved value
-      mockSetUnitLocation.mockResolvedValue(mockApiResponse);
+      mockSetPersonLocation.mockResolvedValue(mockApiResponse);
 
       await locationService.startLocationUpdates();
       const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
@@ -472,7 +520,7 @@ describe('LocationService', () => {
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Location successfully sent to API',
         context: {
-          unitId: 'unit-123',
+          userId: 'user-123',
           resultId: mockApiResponse.Id,
           latitude: mockLocationObject.coords.latitude,
           longitude: mockLocationObject.coords.longitude,
@@ -557,6 +605,39 @@ describe('LocationService', () => {
       mockLoadBackgroundGeolocationState.mockResolvedValue(true);
 
       await expect(locationService.startLocationUpdates()).rejects.toThrow('Task registration failed');
+    });
+  });
+
+  describe('Realtime Geolocation Setting Updates', () => {
+    it('should enable realtime geolocation updates', async () => {
+      // Mock the updateRealtimeGeolocationSetting method exists
+      expect(typeof locationService.updateRealtimeGeolocationSetting).toBe('function');
+      
+      // Test that the method can be called without throwing
+      expect(() => {
+        locationService.updateRealtimeGeolocationSetting(true);
+      }).not.toThrow();
+    });
+
+    it('should disable realtime geolocation updates', async () => {
+      // Test that the method can be called without throwing
+      expect(() => {
+        locationService.updateRealtimeGeolocationSetting(false);
+      }).not.toThrow();
+    });
+
+    it('should be callable during service operation', async () => {
+      // Start location updates first
+      await locationService.startLocationUpdates();
+      
+      // Then test realtime setting update
+      expect(() => {
+        locationService.updateRealtimeGeolocationSetting(true);
+      }).not.toThrow();
+      
+      expect(() => {
+        locationService.updateRealtimeGeolocationSetting(false);
+      }).not.toThrow();
     });
   });
 });

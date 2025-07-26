@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarCheck, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map, Megaphone, Mic, Notebook, Settings, User } from 'lucide-react-native';
+import { Calendar, CalendarCheck, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map, Megaphone, Mic, Notebook, Settings, Truck, User, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,8 +13,10 @@ import { ScrollView } from '@/components/ui/scroll-view';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAuthStore } from '@/lib/auth';
+import { getAvatarUrl } from '@/lib/utils';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
+import { securityStore, useSecurityStore } from '@/stores/security/store';
 
 import { AudioStreamBottomSheet } from '../audio-stream/audio-stream-bottom-sheet';
 
@@ -37,13 +39,15 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
   const { profile, logout } = useAuthStore();
   const { isConnected, setIsBottomSheetVisible, toggleMicrophone } = useLiveKitStore();
   const { currentStream, isPlaying, setIsBottomSheetVisible: setAudioStreamBottomSheetVisible } = useAudioStreamStore();
+  const { departmentCode } = useSecurityStore();
+  const securityStoreState = securityStore();
 
   const menuItems: MenuItem[] = [
     {
       id: 'home',
       title: t('tabs.home'),
       icon: Home,
-      route: '/(app)/',
+      route: '/(app)/home',
       testID: 'side-menu-home',
     },
     {
@@ -123,26 +127,30 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
       .join('');
   };
 
+  // Get user display name and department name from security store
+  const displayName = securityStoreState.rights?.FullName || profile?.name || t('common.unknown_user');
+  const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
+
   const isDark = colorScheme === 'dark';
 
   return (
     <Box className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} testID="side-menu-container">
-      <ScrollView className="flex-1">
+      <ScrollView className="mt-4 flex-1">
         <VStack space="md" className="flex-1 p-4">
           {/* Profile Section */}
           <Box className={`rounded-xl p-3 ${isDark ? 'border border-gray-700 bg-gray-800' : 'border border-gray-200 bg-gray-50'}`} testID="side-menu-profile">
             <HStack space="md" className="items-center">
               <Avatar size="lg" className="border-2 border-primary-500">
-                <AvatarFallbackText className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{getInitials(profile?.name)}</AvatarFallbackText>
-                {/* AvatarImage can be added here when profile image URL is available */}
+                <AvatarFallbackText className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{getInitials(displayName)}</AvatarFallbackText>
+                {profile?.sub && <AvatarImage source={{ uri: getAvatarUrl(profile.sub) }} alt={`${displayName} avatar`} />}
               </Avatar>
 
               <VStack space="xs" className="flex-1">
                 <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`} testID="side-menu-profile-name" numberOfLines={1}>
-                  {profile?.name || t('common.unknown_user')}
+                  {displayName}
                 </Text>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`} testID="side-menu-profile-id">
-                  ID: {profile?.sub?.slice(-8) || '--------'}
+                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`} testID="side-menu-profile-department">
+                  {departmentName}
                 </Text>
               </VStack>
             </HStack>
@@ -165,12 +173,12 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
                 }
               }}
               className={`flex-1 rounded-lg border px-3 py-2 ${isConnected
-                ? isDark
-                  ? 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
-                  : 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
-                : isDark
-                  ? 'border-green-600 bg-transparent hover:bg-green-900/20 active:bg-green-900/30'
-                  : 'border-green-600 bg-transparent hover:bg-green-50 active:bg-green-100'
+                  ? isDark
+                    ? 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
+                    : 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
+                  : isDark
+                    ? 'border-green-600 bg-transparent hover:bg-green-900/20 active:bg-green-900/30'
+                    : 'border-green-600 bg-transparent hover:bg-green-50 active:bg-green-100'
                 }`}
               testID="side-menu-ptt-button"
               style={({ pressed }) => [
@@ -194,12 +202,12 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
                 setAudioStreamBottomSheetVisible(true);
               }}
               className={`flex-1 rounded-lg border px-3 py-2 ${currentStream && isPlaying
-                ? isDark
-                  ? 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-                  : 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-                : isDark
-                  ? 'border-blue-600 bg-transparent hover:bg-blue-900/20 active:bg-blue-900/30'
-                  : 'border-blue-600 bg-transparent hover:bg-blue-50 active:bg-blue-100'
+                  ? isDark
+                    ? 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+                    : 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+                  : isDark
+                    ? 'border-blue-600 bg-transparent hover:bg-blue-900/20 active:bg-blue-900/30'
+                    : 'border-blue-600 bg-transparent hover:bg-blue-50 active:bg-blue-100'
                 }`}
               testID="side-menu-audio-button"
               style={({ pressed }) => [

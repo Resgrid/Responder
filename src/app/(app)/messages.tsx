@@ -4,24 +4,24 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
+import { Loading } from '@/components/common/loading';
+import ZeroState from '@/components/common/zero-state';
+import { ComposeMessageSheet } from '@/components/messages/compose-message-sheet';
 import { MessageCard } from '@/components/messages/message-card';
 import { MessageDetailsSheet } from '@/components/messages/message-details-sheet';
-import { ComposeMessageSheet } from '@/components/messages/compose-message-sheet';
-import ZeroState from '@/components/common/zero-state';
-import { Loading } from '@/components/common/loading';
 import { View } from '@/components/ui';
+import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetItem, ActionsheetItemText } from '@/components/ui/actionsheet';
 import { Badge } from '@/components/ui/badge';
 import { Button, ButtonText } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FlatList } from '@/components/ui/flat-list';
 import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetItem, ActionsheetItemText } from '@/components/ui/actionsheet';
-import { useMessagesStore, type MessageFilter } from '@/stores/messages/store';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
+import { type MessageFilter, useMessagesStore } from '@/stores/messages/store';
 
 export default function MessagesScreen() {
   const { t } = useTranslation();
@@ -78,24 +78,20 @@ export default function MessagesScreen() {
     const selectedMessages = Array.from(selectedForDeletion);
     if (selectedMessages.length === 0) return;
 
-    Alert.alert(
-      t('messages.delete_confirmation_title'),
-      t('messages.delete_confirmation_message', { count: selectedMessages.length }),
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
+    Alert.alert(t('messages.delete_confirmation_title'), t('messages.delete_confirmation_message', { count: selectedMessages.length }), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('common.confirm'),
+        style: 'destructive',
+        onPress: async () => {
+          await deleteMessages(selectedMessages);
+          setIsSelectionMode(false);
         },
-        {
-          text: t('common.confirm'),
-          style: 'destructive',
-          onPress: async () => {
-            await deleteMessages(selectedMessages);
-            setIsSelectionMode(false);
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const exitSelectionMode = () => {
@@ -118,35 +114,28 @@ export default function MessagesScreen() {
     const { messages } = useMessagesStore.getState();
     switch (filter) {
       case 'inbox':
-        return messages.filter(msg => !msg.IsSystem).length;
+        return messages.filter((msg) => !msg.IsSystem).length;
       case 'sent':
-        return messages.filter(msg => msg.IsSystem).length;
+        return messages.filter((msg) => msg.IsSystem).length;
       default:
         return messages.length;
     }
   };
 
   const renderHeader = () => (
-    <VStack space="sm" className="p-4 bg-white dark:bg-gray-900">
+    <VStack space="sm" className="bg-white p-4 dark:bg-gray-900">
       {/* Search Bar */}
       <HStack space="sm" className="items-center">
         <View className="flex-1">
           <Input variant="outline" className="flex-1">
-            <InputField
-              placeholder={t('messages.search_placeholder')}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+            <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={setSearchQuery} />
           </Input>
         </View>
-        <Pressable
-          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600"
-          onPress={() => setIsFilterMenuOpen(true)}
-        >
+        <Pressable className="rounded-lg border border-gray-300 p-2 dark:border-gray-600" onPress={() => setIsFilterMenuOpen(true)}>
           <HStack space="xs" className="items-center">
             <Text className="text-sm font-medium">{getFilterLabel(currentFilter)}</Text>
             <Badge variant="solid" className="bg-primary-500">
-              <Text className="text-white text-xs">{getFilterCount(currentFilter)}</Text>
+              <Text className="text-xs text-white">{getFilterCount(currentFilter)}</Text>
             </Badge>
             <ChevronDown size={16} color="currentColor" />
           </HStack>
@@ -160,31 +149,17 @@ export default function MessagesScreen() {
             <Pressable onPress={exitSelectionMode} className="p-2">
               <X size={20} color="currentColor" />
             </Pressable>
-            <Text className="font-medium">
-              {t('messages.selected_count', { count: selectedForDeletion.size })}
-            </Text>
+            <Text className="font-medium">{t('messages.selected_count', { count: selectedForDeletion.size })}</Text>
           </HStack>
 
           <HStack space="sm">
-            <Button
-              size="sm"
-              variant="outline"
-              onPress={selectAllVisibleMessages}
-            >
+            <Button size="sm" variant="outline" onPress={selectAllVisibleMessages}>
               <ButtonText>{t('messages.select_all')}</ButtonText>
             </Button>
 
-            <Button
-              size="sm"
-              variant="solid"
-              className="bg-red-500"
-              onPress={handleDeleteSelected}
-              disabled={!hasSelectedMessages() || isDeleting}
-            >
+            <Button size="sm" variant="solid" className="bg-red-500" onPress={handleDeleteSelected} disabled={!hasSelectedMessages() || isDeleting}>
               <Trash2 size={16} color="white" />
-              <ButtonText className="text-white ml-1">
-                {isDeleting ? t('common.deleting') : t('common.delete')}
-              </ButtonText>
+              <ButtonText className="ml-1 text-white">{isDeleting ? t('common.deleting') : t('common.delete')}</ButtonText>
             </Button>
           </HStack>
         </HStack>
@@ -195,14 +170,9 @@ export default function MessagesScreen() {
             {t('messages.title')} ({filteredMessages.length})
           </Text>
 
-          <Button
-            size="sm"
-            variant="solid"
-            className="bg-primary-600"
-            onPress={openCompose}
-          >
+          <Button size="sm" variant="solid" className="bg-primary-600" onPress={openCompose}>
             <MessageSquarePlus size={16} color="white" />
-            <ButtonText className="text-white ml-1">{t('messages.compose')}</ButtonText>
+            <ButtonText className="ml-1 text-white">{t('messages.compose')}</ButtonText>
           </Button>
         </HStack>
       )}
@@ -210,13 +180,7 @@ export default function MessagesScreen() {
   );
 
   const renderMessage = ({ item }: { item: MessageResultData }) => (
-    <MessageCard
-      message={item}
-      onPress={() => handleMessagePress(item)}
-      onLongPress={() => handleLongPress(item)}
-      isSelected={selectedForDeletion.has(item.MessageId)}
-      showCheckbox={isSelectionMode}
-    />
+    <MessageCard message={item} onPress={() => handleMessagePress(item)} onLongPress={() => handleLongPress(item)} isSelected={selectedForDeletion.has(item.MessageId)} showCheckbox={isSelectionMode} />
   );
 
   if (isLoading && filteredMessages.length === 0) {
@@ -229,32 +193,19 @@ export default function MessagesScreen() {
 
       {error ? (
         <View className="p-4">
-          <Text className="text-red-500 text-center">{error}</Text>
+          <Text className="text-center text-red-500">{error}</Text>
           <Button onPress={fetchMessages} className="mt-2">
             <ButtonText>{t('common.retry')}</ButtonText>
           </Button>
         </View>
       ) : filteredMessages.length === 0 ? (
-        <ZeroState
-          heading={t('messages.no_messages')}
-          description={t('messages.no_messages_description')}
-          icon={Mail}
-          iconSize={64}
-          iconColor="#9CA3AF"
-        >
+        <ZeroState heading={t('messages.no_messages')} description={t('messages.no_messages_description')} icon={Mail} iconSize={64} iconColor="#9CA3AF">
           <Button onPress={openCompose} className="bg-primary-600">
             <ButtonText>{t('messages.send_first_message')}</ButtonText>
           </Button>
         </ZeroState>
       ) : (
-        <FlatList
-          data={filteredMessages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.MessageId}
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 16 }}
-          showsVerticalScrollIndicator={false}
-        />
+        <FlatList data={filteredMessages} renderItem={renderMessage} keyExtractor={(item) => item.MessageId} className="flex-1" contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false} />
       )}
 
       {/* Filter Action Sheet */}
@@ -267,10 +218,10 @@ export default function MessagesScreen() {
               setIsFilterMenuOpen(false);
             }}
           >
-            <HStack space="sm" className="items-center justify-between w-full">
+            <HStack space="sm" className="w-full items-center justify-between">
               <ActionsheetItemText>{t('messages.all_messages')}</ActionsheetItemText>
               <Badge variant="solid" className="bg-gray-500">
-                <Text className="text-white text-xs">{getFilterCount('all')}</Text>
+                <Text className="text-xs text-white">{getFilterCount('all')}</Text>
               </Badge>
             </HStack>
           </ActionsheetItem>
@@ -281,10 +232,10 @@ export default function MessagesScreen() {
               setIsFilterMenuOpen(false);
             }}
           >
-            <HStack space="sm" className="items-center justify-between w-full">
+            <HStack space="sm" className="w-full items-center justify-between">
               <ActionsheetItemText>{t('messages.inbox')}</ActionsheetItemText>
               <Badge variant="solid" className="bg-blue-500">
-                <Text className="text-white text-xs">{getFilterCount('inbox')}</Text>
+                <Text className="text-xs text-white">{getFilterCount('inbox')}</Text>
               </Badge>
             </HStack>
           </ActionsheetItem>
@@ -295,10 +246,10 @@ export default function MessagesScreen() {
               setIsFilterMenuOpen(false);
             }}
           >
-            <HStack space="sm" className="items-center justify-between w-full">
+            <HStack space="sm" className="w-full items-center justify-between">
               <ActionsheetItemText>{t('messages.sent')}</ActionsheetItemText>
               <Badge variant="solid" className="bg-green-500">
-                <Text className="text-white text-xs">{getFilterCount('sent')}</Text>
+                <Text className="text-xs text-white">{getFilterCount('sent')}</Text>
               </Badge>
             </HStack>
           </ActionsheetItem>
@@ -312,4 +263,4 @@ export default function MessagesScreen() {
       <ComposeMessageSheet />
     </View>
   );
-} 
+}

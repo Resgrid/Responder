@@ -3,7 +3,7 @@
 import { NovuProvider } from '@novu/react-native';
 import { Redirect, SplashScreen, Tabs } from 'expo-router';
 import { size } from 'lodash';
-import { Contact, ListTree, Mail, Map, Megaphone, Menu, Notebook, Truck, Users } from 'lucide-react-native';
+import { Contact, Home, ListTree, Mail, Map, Megaphone, Menu, Notebook, Truck, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -98,15 +98,14 @@ export default function TabLayout() {
     try {
       // Initialize core app data
       await useCoreStore.getState().init();
-      await useRolesStore.getState().init();
       await useCallsStore.getState().init();
-      await useCalendarStore.getState().init();
-      await useShiftsStore.getState().init();
-      await usePersonnelStore.getState().init();
+      //await useCalendarStore.getState().init();
+      //await useShiftsStore.getState().init();
+      //await usePersonnelStore.getState().init();
       await securityStore.getState().getRights();
 
-      await useSignalRStore.getState().connectUpdateHub();
-      await useSignalRStore.getState().connectGeolocationHub();
+      //await useSignalRStore.getState().connectUpdateHub();
+      //await useSignalRStore.getState().connectGeolocationHub();
 
       hasInitialized.current = true;
 
@@ -227,7 +226,7 @@ export default function TabLayout() {
             <DrawerBackdrop onPress={() => setIsOpen(false)} />
             <DrawerContent className="w-4/5 bg-white p-1 dark:bg-gray-900">
               <DrawerBody>
-                <SideMenu />
+                <SideMenu onNavigate={() => setIsOpen(false)} />
               </DrawerBody>
               <DrawerFooter>
                 <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
@@ -243,7 +242,7 @@ export default function TabLayout() {
           <Tabs
             screenOptions={{
               headerShown: true,
-              tabBarShowLabel: true,
+              tabBarShowLabel: false,
               tabBarIconStyle: {
                 width: 24,
                 height: 24,
@@ -253,52 +252,17 @@ export default function TabLayout() {
                 fontWeight: '500',
               },
               tabBarStyle: {
-                paddingBottom: 5,
-                paddingTop: 5,
-                height: isLandscape ? 65 : 60,
+                display: 'none', // Hide tab bar since we only have one tab
               },
             }}
           >
             <Tabs.Screen
               name="home"
               options={{
-                title: t('tabs.map'),
-                tabBarIcon: ({ color }) => <Icon as={Map} stroke={color} className="text-primary-500 dark:text-primary-400" />,
+                title: t('tabs.home'),
+                tabBarIcon: ({ color }) => <Icon as={Home} stroke={color} className="text-primary-500 dark:text-primary-400" />,
                 headerLeft: () => <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />,
                 tabBarButtonTestID: 'home-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="calls"
-              options={{
-                title: t('tabs.calls'),
-                headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Megaphone} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                tabBarButtonTestID: 'calls-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="personnel"
-              options={{
-                title: t('tabs.personnel', 'Personnel'),
-                headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Users} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                tabBarButtonTestID: 'personnel-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="units"
-              options={{
-                title: t('tabs.units', 'Units'),
-                headerShown: true,
-                tabBarIcon: ({ color }) => <Icon as={Truck} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                tabBarButtonTestID: 'units-tab',
                 headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
               }}
             />

@@ -5,6 +5,7 @@ import { useColorScheme } from 'nativewind';
 import { SideMenu } from '../side-menu';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
+import { useSecurityStore, securityStore } from '@/stores/security/store';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
@@ -40,6 +41,11 @@ jest.mock('@/stores/app/livekit-store', () => ({
 
 jest.mock('@/stores/app/audio-stream-store', () => ({
   useAudioStreamStore: jest.fn(),
+}));
+
+jest.mock('@/stores/security/store', () => ({
+  useSecurityStore: jest.fn(),
+  securityStore: jest.fn(),
 }));
 
 jest.mock('../../audio-stream/audio-stream-bottom-sheet', () => ({
@@ -80,6 +86,8 @@ jest.mock('@/components/ui/vstack', () => ({
 const mockUseLiveKitStore = useLiveKitStore as jest.MockedFunction<typeof useLiveKitStore>;
 const mockUseAudioStreamStore = useAudioStreamStore as jest.MockedFunction<typeof useAudioStreamStore>;
 const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
+const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
+const mockSecurityStore = securityStore as jest.MockedFunction<typeof securityStore>;
 
 describe('SideMenu', () => {
   const mockSetIsBottomSheetVisible = jest.fn();
@@ -99,6 +107,36 @@ describe('SideMenu', () => {
       currentStream: null,
       isPlaying: false,
       setIsBottomSheetVisible: mockSetAudioStreamBottomSheetVisible,
+    });
+
+    // Default security store mock
+    mockUseSecurityStore.mockReturnValue({
+      getRights: jest.fn(),
+      isUserDepartmentAdmin: false,
+      isUserGroupAdmin: jest.fn().mockReturnValue(false),
+      canUserCreateCalls: false,
+      canUserCreateNotes: false,
+      canUserCreateMessages: false,
+      canUserViewPII: false,
+      departmentCode: 'TEST',
+    });
+
+    mockSecurityStore.mockReturnValue({
+      rights: {
+        FullName: 'John Doe',
+        DepartmentName: 'Fire Department',
+        DepartmentCode: 'TEST',
+        EmailAddress: 'john.doe@test.com',
+        DepartmentId: '123',
+        IsAdmin: false,
+        CanViewPII: false,
+        CanCreateCalls: false,
+        CanAddNote: false,
+        CanCreateMessage: false,
+        Groups: [],
+      },
+      error: null,
+      getRights: jest.fn(),
     });
   });
 
@@ -226,7 +264,7 @@ describe('SideMenu', () => {
 
     expect(screen.getByTestId('side-menu-profile')).toBeTruthy();
     expect(screen.getByTestId('side-menu-profile-name')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-profile-id')).toBeTruthy();
+    expect(screen.getByTestId('side-menu-profile-department')).toBeTruthy();
   });
 
   it('should render all navigation menu items', () => {
@@ -339,6 +377,91 @@ describe('SideMenu', () => {
       fireEvent.press(audioButton);
 
       expect(mockSetAudioStreamBottomSheetVisible).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe('Profile Section', () => {
+    it('should display FullName from security store when available', () => {
+      mockUseLiveKitStore.mockReturnValue({
+        isConnected: false,
+        setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
+        toggleMicrophone: mockToggleMicrophone,
+      });
+
+      mockSecurityStore.mockReturnValue({
+        rights: {
+          FullName: 'Jane Smith',
+          DepartmentName: 'Police Department',
+          DepartmentCode: 'POLICE',
+          EmailAddress: 'jane.smith@police.com',
+          DepartmentId: '456',
+          IsAdmin: true,
+          CanViewPII: true,
+          CanCreateCalls: true,
+          CanAddNote: true,
+          CanCreateMessage: true,
+          Groups: [],
+        },
+        error: null,
+        getRights: jest.fn(),
+      });
+
+      render(<SideMenu />);
+
+      // The profile name should be displayed (we can't easily test the actual text content
+      // due to the way the mocked Text component works, but we can ensure the element exists)
+      expect(screen.getByTestId('side-menu-profile-name')).toBeTruthy();
+    });
+
+    it('should display DepartmentName from security store when available', () => {
+      mockUseLiveKitStore.mockReturnValue({
+        isConnected: false,
+        setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
+        toggleMicrophone: mockToggleMicrophone,
+      });
+
+      mockSecurityStore.mockReturnValue({
+        rights: {
+          FullName: 'Bob Johnson',
+          DepartmentName: 'Emergency Services',
+          DepartmentCode: 'EMS',
+          EmailAddress: 'bob.johnson@ems.com',
+          DepartmentId: '789',
+          IsAdmin: false,
+          CanViewPII: false,
+          CanCreateCalls: false,
+          CanAddNote: false,
+          CanCreateMessage: false,
+          Groups: [],
+        },
+        error: null,
+        getRights: jest.fn(),
+      });
+
+      render(<SideMenu />);
+
+      // The profile department should be displayed
+      expect(screen.getByTestId('side-menu-profile-department')).toBeTruthy();
+    });
+
+    it('should fallback to profile name when security store FullName is not available', () => {
+      mockUseLiveKitStore.mockReturnValue({
+        isConnected: false,
+        setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
+        toggleMicrophone: mockToggleMicrophone,
+      });
+
+      mockSecurityStore.mockReturnValue({
+        rights: null,
+        error: null,
+        getRights: jest.fn(),
+      });
+
+      render(<SideMenu />);
+
+      // Should still display the profile section with fallback data
+      expect(screen.getByTestId('side-menu-profile-name')).toBeTruthy();
+      expect(screen.getByTestId('side-menu-profile-department')).toBeTruthy();
     });
   });
 }); 

@@ -3,9 +3,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, useWindowDimensions } from 'react-native';
 
+import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
 import { useDispatchStore } from '@/stores/dispatch/store';
 import { useMessagesStore } from '@/stores/messages/store';
-import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper, ActionsheetItem, ActionsheetItemText } from '../ui/actionsheet';
 import { Avatar, AvatarFallbackText } from '../ui/avatar';
@@ -35,20 +35,9 @@ export const ComposeMessageSheet: React.FC = () => {
   const [isRecipientsSheetOpen, setIsRecipientsSheetOpen] = useState(false);
   const [currentRecipientTab, setCurrentRecipientTab] = useState<'personnel' | 'groups' | 'roles' | 'units'>('personnel');
 
-  const {
-    recipients,
-    isComposeOpen,
-    isSending,
-    isRecipientsLoading,
-    closeCompose,
-    sendNewMessage,
-    fetchRecipients,
-  } = useMessagesStore();
+  const { recipients, isComposeOpen, isSending, isRecipientsLoading, closeCompose, sendNewMessage, fetchRecipients } = useMessagesStore();
 
-  const {
-    data: dispatchData,
-    fetchDispatchData,
-  } = useDispatchStore();
+  const { data: dispatchData, fetchDispatchData } = useDispatchStore();
 
   // Fetch recipients when compose opens
   useEffect(() => {
@@ -88,16 +77,11 @@ export const ComposeMessageSheet: React.FC = () => {
     }
 
     // Convert selected recipients to API format
-    const recipientsList = Array.from(selectedRecipients).map(id => {
+    const recipientsList = Array.from(selectedRecipients).map((id) => {
       // Find recipient in all categories
-      const allRecipients = [
-        ...dispatchData.users,
-        ...dispatchData.groups,
-        ...dispatchData.roles,
-        ...dispatchData.units,
-      ];
+      const allRecipients = [...dispatchData.users, ...dispatchData.groups, ...dispatchData.roles, ...dispatchData.units];
 
-      const recipient = allRecipients.find(r => r.Id === id);
+      const recipient = allRecipients.find((r) => r.Id === id);
 
       return {
         id: id,
@@ -159,15 +143,10 @@ export const ComposeMessageSheet: React.FC = () => {
   };
 
   const getSelectedRecipientsNames = () => {
-    const allRecipients = [
-      ...dispatchData.users,
-      ...dispatchData.groups,
-      ...dispatchData.roles,
-      ...dispatchData.units,
-    ];
+    const allRecipients = [...dispatchData.users, ...dispatchData.groups, ...dispatchData.roles, ...dispatchData.units];
 
     return Array.from(selectedRecipients)
-      .map(id => allRecipients.find(r => r.Id === id)?.Name)
+      .map((id) => allRecipients.find((r) => r.Id === id)?.Name)
       .filter(Boolean)
       .join(', ');
   };
@@ -175,21 +154,11 @@ export const ComposeMessageSheet: React.FC = () => {
   const renderRecipientList = (recipients: any[], type: string) => (
     <VStack space="xs">
       {recipients.map((recipient) => (
-        <HStack
-          key={recipient.Id}
-          space="sm"
-          className="items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700"
-        >
-          <Checkbox
-            value={selectedRecipients.has(recipient.Id)}
-            onChange={() => toggleRecipient(recipient.Id)}
-            aria-label={`Select ${recipient.Name}`}
-          />
+        <HStack key={recipient.Id} space="sm" className="items-center rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+          <Checkbox value={selectedRecipients.has(recipient.Id)} onChange={() => toggleRecipient(recipient.Id)} aria-label={`Select ${recipient.Name}`} />
 
           <Avatar size="sm">
-            <AvatarFallbackText>
-              {recipient.Name?.charAt(0) || 'U'}
-            </AvatarFallbackText>
+            <AvatarFallbackText>{recipient.Name?.charAt(0) || 'U'}</AvatarFallbackText>
           </Avatar>
 
           <VStack className="flex-1">
@@ -210,32 +179,22 @@ export const ComposeMessageSheet: React.FC = () => {
         </ActionsheetDragIndicatorWrapper>
 
         {/* Header */}
-        <VStack space="sm" className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <VStack space="sm" className="border-b border-gray-200 p-4 dark:border-gray-700">
           <HStack space="sm" className="items-center justify-between">
             <HStack space="sm" className="items-center">
-              <Box className="p-2 rounded-full bg-primary-100 dark:bg-primary-900">
+              <Box className="rounded-full bg-primary-100 p-2 dark:bg-primary-900">
                 <Send size={20} color="#6366F1" />
               </Box>
-              <Text className="font-bold text-lg">{t('messages.compose_new_message')}</Text>
+              <Text className="text-lg font-bold">{t('messages.compose_new_message')}</Text>
             </HStack>
 
             <HStack space="sm">
-              <Button
-                variant="solid"
-                className="bg-primary-600"
-                onPress={handleSend}
-                disabled={isSending || !subject.trim() || !body.trim() || selectedRecipients.size === 0}
-              >
+              <Button variant="solid" className="bg-primary-600" onPress={handleSend} disabled={isSending || !subject.trim() || !body.trim() || selectedRecipients.size === 0}>
                 <Send size={16} color="white" />
-                <ButtonText className="text-white ml-1">
-                  {isSending ? t('messages.sending') : t('messages.send')}
-                </ButtonText>
+                <ButtonText className="ml-1 text-white">{isSending ? t('messages.sending') : t('messages.send')}</ButtonText>
               </Button>
 
-              <Pressable
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"
-                onPress={handleClose}
-              >
+              <Pressable className="rounded-lg bg-gray-100 p-2 dark:bg-gray-700" onPress={handleClose}>
                 <X size={20} color="currentColor" />
               </Pressable>
             </HStack>
@@ -247,10 +206,7 @@ export const ComposeMessageSheet: React.FC = () => {
             {/* Message Type */}
             <VStack space="sm">
               <Text className="font-semibold">{t('messages.message_type')}</Text>
-              <Select
-                selectedValue={messageType.toString()}
-                onValueChange={(value) => setMessageType(parseInt(value))}
-              >
+              <Select selectedValue={messageType.toString()} onValueChange={(value) => setMessageType(parseInt(value))}>
                 <SelectTrigger variant="outline" size="md">
                   <SelectInput placeholder={t('messages.select_message_type')} />
                 </SelectTrigger>
@@ -272,11 +228,7 @@ export const ComposeMessageSheet: React.FC = () => {
             <VStack space="sm">
               <Text className="font-semibold">{t('messages.subject')}</Text>
               <Input variant="outline">
-                <InputField
-                  placeholder={t('messages.enter_subject')}
-                  value={subject}
-                  onChangeText={setSubject}
-                />
+                <InputField placeholder={t('messages.enter_subject')} value={subject} onChangeText={setSubject} />
               </Input>
             </VStack>
 
@@ -284,13 +236,7 @@ export const ComposeMessageSheet: React.FC = () => {
             <VStack space="sm">
               <Text className="font-semibold">{t('messages.message_body')}</Text>
               <Textarea>
-                <TextareaInput
-                  placeholder={t('messages.enter_message_body')}
-                  value={body}
-                  onChangeText={setBody}
-                  multiline
-                  numberOfLines={6}
-                />
+                <TextareaInput placeholder={t('messages.enter_message_body')} value={body} onChangeText={setBody} multiline numberOfLines={6} />
               </Textarea>
             </VStack>
 
@@ -298,33 +244,19 @@ export const ComposeMessageSheet: React.FC = () => {
             <VStack space="sm">
               <Text className="font-semibold">{t('messages.expiration_date_optional')}</Text>
               <Input variant="outline">
-                <InputField
-                  placeholder={t('messages.enter_expiration_date')}
-                  value={expirationDate}
-                  onChangeText={setExpirationDate}
-                />
+                <InputField placeholder={t('messages.enter_expiration_date')} value={expirationDate} onChangeText={setExpirationDate} />
               </Input>
-              <Text className="text-xs text-gray-500">
-                {t('messages.expiration_date_format')}
-              </Text>
+              <Text className="text-xs text-gray-500">{t('messages.expiration_date_format')}</Text>
             </VStack>
 
             {/* Recipients */}
             <VStack space="sm">
               <Text className="font-semibold">{t('messages.recipients')}</Text>
 
-              <Pressable
-                className="p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700"
-                onPress={() => setIsRecipientsSheetOpen(true)}
-              >
+              <Pressable className="rounded-lg border border-gray-300 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700" onPress={() => setIsRecipientsSheetOpen(true)}>
                 <HStack space="sm" className="items-center justify-between">
                   <VStack className="flex-1">
-                    <Text className="font-medium">
-                      {selectedRecipients.size > 0
-                        ? t('messages.recipients_selected', { count: selectedRecipients.size })
-                        : t('messages.select_recipients')
-                      }
-                    </Text>
+                    <Text className="font-medium">{selectedRecipients.size > 0 ? t('messages.recipients_selected', { count: selectedRecipients.size }) : t('messages.select_recipients')}</Text>
                     {selectedRecipients.size > 0 && (
                       <Text className="text-sm text-gray-600 dark:text-gray-300" numberOfLines={2}>
                         {getSelectedRecipientsNames()}
@@ -347,13 +279,10 @@ export const ComposeMessageSheet: React.FC = () => {
             </ActionsheetDragIndicatorWrapper>
 
             {/* Recipients Header */}
-            <VStack space="sm" className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <VStack space="sm" className="border-b border-gray-200 p-4 dark:border-gray-700">
               <HStack space="sm" className="items-center justify-between">
-                <Text className="font-bold text-lg">{t('messages.select_recipients')}</Text>
-                <Button
-                  variant="outline"
-                  onPress={() => setIsRecipientsSheetOpen(false)}
-                >
+                <Text className="text-lg font-bold">{t('messages.select_recipients')}</Text>
+                <Button variant="outline" onPress={() => setIsRecipientsSheetOpen(false)}>
                   <ButtonText>{t('common.done')}</ButtonText>
                 </Button>
               </HStack>
@@ -361,28 +290,14 @@ export const ComposeMessageSheet: React.FC = () => {
               {/* Tabs */}
               <HStack space="sm">
                 {['personnel', 'groups', 'roles', 'units'].map((tab) => (
-                  <Pressable
-                    key={tab}
-                    className={`px-3 py-2 rounded-lg ${currentRecipientTab === tab
-                        ? 'bg-primary-500'
-                        : 'bg-gray-200 dark:bg-gray-600'
-                      }`}
-                    onPress={() => setCurrentRecipientTab(tab as any)}
-                  >
-                    <Text className={`text-sm font-medium ${currentRecipientTab === tab
-                        ? 'text-white'
-                        : 'text-gray-700 dark:text-gray-300'
-                      }`}>
-                      {t(`calls.${tab}`)}
-                    </Text>
+                  <Pressable key={tab} className={`rounded-lg px-3 py-2 ${currentRecipientTab === tab ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-600'}`} onPress={() => setCurrentRecipientTab(tab as any)}>
+                    <Text className={`text-sm font-medium ${currentRecipientTab === tab ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t(`calls.${tab}`)}</Text>
                   </Pressable>
                 ))}
               </HStack>
 
               {/* Selected Count */}
-              <Text className="text-sm text-gray-600 dark:text-gray-300">
-                {t('messages.recipients_selected', { count: selectedRecipients.size })}
-              </Text>
+              <Text className="text-sm text-gray-600 dark:text-gray-300">{t('messages.recipients_selected', { count: selectedRecipients.size })}</Text>
             </VStack>
 
             <ScrollView className="flex-1 p-4">
@@ -396,4 +311,4 @@ export const ComposeMessageSheet: React.FC = () => {
       </ActionsheetContent>
     </Actionsheet>
   );
-}; 
+};

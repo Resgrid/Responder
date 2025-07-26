@@ -12,27 +12,27 @@ const savePersonStaffingsApi = createApiEndpoint('/PersonnelStaffing/SavePersons
 const getAllPersonnelStaffingsApi = createApiEndpoint('/Statuses/GetAllStaffingsForPersonnel');
 
 export const getCurrentPersonStaffing = async (userId: string) => {
-	const response = await getCurrentPersonStaffingApi.get<GetCurrentStaffingResult>({
-		userId: userId,
-	});
-	return response.data;
+  const response = await getCurrentPersonStaffingApi.get<GetCurrentStaffingResult>({
+    userId: userId,
+  });
+  return response.data;
 };
 
 export const savePersonStaffing = async (data: SavePersonStaffingInput) => {
-	const response = await savePersonStaffingApi.post<SavePersonStaffingResult>({
-		...data,
-	});
-	return response.data;
+  const response = await savePersonStaffingApi.post<SavePersonStaffingResult>({
+    ...data,
+  });
+  return response.data;
 };
 
 export const savePersonStaffings = async (data: SavePersonsStaffingsInput) => {
-	const response = await savePersonStaffingsApi.post<SavePersonsStaffingsResult>({
-		...data,
-	});
-	return response.data;
+  const response = await savePersonStaffingsApi.post<SavePersonsStaffingsResult>({
+    ...data,
+  });
+  return response.data;
 };
 
 export const getAllPersonnelStaffings = async () => {
-	const response = await getAllPersonnelStaffingsApi.get<StatusesResult>();
-	return response.data;
+  const response = await getAllPersonnelStaffingsApi.get<StatusesResult>();
+  return response.data;
 };

@@ -14,75 +14,75 @@ import { useHomeStore } from '@/stores/home/home-store';
 import { useToastStore } from '@/stores/toast/store';
 
 export const StaffingButtons: React.FC = () => {
-	const { t } = useTranslation();
-	const { isLoadingOptions, fetchCurrentUserInfo } = useHomeStore();
-	const { activeStaffing } = useCoreStore();
-	const showToast = useToastStore((state) => state.showToast);
-	const { userId } = useAuthStore();
-	const [isLoading, setIsLoading] = React.useState(false);
+  const { t } = useTranslation();
+  const { isLoadingOptions, fetchCurrentUserInfo } = useHomeStore();
+  const { activeStaffing } = useCoreStore();
+  const showToast = useToastStore((state) => state.showToast);
+  const { userId } = useAuthStore();
+  const [isLoading, setIsLoading] = React.useState(false);
 
-	const handleStaffingPress = async (staffingType: string) => {
-		if (!userId) {
-			showToast('error', t('home.error.no_user_id'));
-			return;
-		}
+  const handleStaffingPress = async (staffingType: string) => {
+    if (!userId) {
+      showToast('error', t('home.error.no_user_id'));
+      return;
+    }
 
-		setIsLoading(true);
-		try {
-			const staffing = new SavePersonStaffingInput();
-			const date = new Date();
+    setIsLoading(true);
+    try {
+      const staffing = new SavePersonStaffingInput();
+      const date = new Date();
 
-			staffing.UserId = userId;
-			staffing.Type = staffingType;
-			staffing.Timestamp = date.toISOString();
-			staffing.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
-			staffing.Note = '';
-			staffing.EventId = '';
+      staffing.UserId = userId;
+      staffing.Type = staffingType;
+      staffing.Timestamp = date.toISOString();
+      staffing.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
+      staffing.Note = '';
+      staffing.EventId = '';
 
-			await savePersonnelStaffing(staffing);
+      await savePersonnelStaffing(staffing);
 
-			// Refresh user info to show updated staffing
-			await fetchCurrentUserInfo();
+      // Refresh user info to show updated staffing
+      await fetchCurrentUserInfo();
 
-			showToast('success', t('home.staffing.updated_successfully'));
-		} catch (error) {
-			showToast('error', t('home.staffing.update_failed'));
-		} finally {
-			setIsLoading(false);
-		}
-	};
+      showToast('success', t('home.staffing.updated_successfully'));
+    } catch (error) {
+      showToast('error', t('home.staffing.update_failed'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-	if (isLoadingOptions) {
-		return <Loading />;
-	}
+  if (isLoadingOptions) {
+    return <Loading />;
+  }
 
-	if (activeStaffing?.length === 0) {
-		return (
-			<VStack className="p-4">
-				<Text className="text-center text-gray-500">{t('home.staffing.no_options_available')}</Text>
-			</VStack>
-		);
-	}
+  if (activeStaffing?.length === 0) {
+    return (
+      <VStack className="p-4">
+        <Text className="text-center text-gray-500">{t('home.staffing.no_options_available')}</Text>
+      </VStack>
+    );
+  }
 
-	return (
-		<VStack space="sm" className="p-4" testID="staffing-buttons">
-			{activeStaffing?.map((staffing) => (
-				<Button
-					key={staffing.Id}
-					variant="solid"
-					className="w-full justify-center px-3 py-2"
-					action="primary"
-					size="lg"
-					style={{
-						backgroundColor: staffing.BColor,
-					}}
-					onPress={() => handleStaffingPress(staffing.Id.toString())}
-					isDisabled={isLoading}
-					testID={`staffing-button-${staffing.Id}`}
-				>
-					<ButtonText style={{ color: invertColor(staffing.BColor, true) }}>{staffing.Text}</ButtonText>
-				</Button>
-			))}
-		</VStack>
-	);
+  return (
+    <VStack space="sm" className="p-4" testID="staffing-buttons">
+      {activeStaffing?.map((staffing) => (
+        <Button
+          key={staffing.Id}
+          variant="solid"
+          className="w-full justify-center px-3 py-2"
+          action="primary"
+          size="lg"
+          style={{
+            backgroundColor: staffing.BColor,
+          }}
+          onPress={() => handleStaffingPress(staffing.Id.toString())}
+          isDisabled={isLoading}
+          testID={`staffing-button-${staffing.Id}`}
+        >
+          <ButtonText style={{ color: invertColor(staffing.BColor, true) }}>{staffing.Text}</ButtonText>
+        </Button>
+      ))}
+    </VStack>
+  );
 };

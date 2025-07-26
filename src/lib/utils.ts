@@ -2,6 +2,8 @@ import { Linking } from 'react-native';
 import { Platform } from 'react-native';
 import type { StoreApi, UseBoundStore } from 'zustand';
 
+import { Env } from './env';
+
 export function openLinkInBrowser(url: string) {
   Linking.canOpenURL(url).then((canOpen) => canOpen && Linking.openURL(url));
 }
@@ -33,6 +35,10 @@ export function onSortOptions(a: any, b: any) {
   }
 
   return 0;
+}
+
+export function getAvatarUrl(userId: string) {
+  return Env.BASE_API_URL + Env.RESGRID_API_URL + '/Avatars/Get?id=' + userId;
 }
 
 export function invertColor(hex: string, bw: boolean): string {

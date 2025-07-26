@@ -5,12 +5,12 @@ import { FlatList, RefreshControl, View } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
-import { UnitCard } from '@/components/units/unit-card';
-import { UnitDetailsSheet } from '@/components/units/unit-details-sheet';
 import { Box } from '@/components/ui/box';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { Input } from '@/components/ui/input';
 import { InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { UnitCard } from '@/components/units/unit-card';
+import { UnitDetailsSheet } from '@/components/units/unit-details-sheet';
 import { useUnitsStore } from '@/stores/units/store';
 
 export default function Units() {
@@ -79,4 +79,4 @@ export default function Units() {
       </View>
     </>
   );
-} 
+}

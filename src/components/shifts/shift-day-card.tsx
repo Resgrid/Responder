@@ -1,17 +1,16 @@
+import { format, parseISO } from 'date-fns';
+import { AlertCircle, CheckCircle, Clock, Users } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { format, parseISO } from 'date-fns';
 
 import { View } from '@/components/ui';
-import { Text } from '@/components/ui/text';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { HStack } from '@/components/ui/hstack';
-import { VStack } from '@/components/ui/vstack';
-import { Pressable } from '@/components/ui/pressable';
-import { Clock, Users, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
-
+import { Pressable } from '@/components/ui/pressable';
+import { Text } from '@/components/ui/text';
+import { VStack } from '@/components/ui/vstack';
 import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
 
 interface ShiftDayCardProps {
@@ -45,11 +44,16 @@ export const ShiftDayCard: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress })
   };
 
   const getTotalNeeds = () => {
-    return shiftDay.Needs?.reduce((total, group) => {
-      return total + (group.GroupNeeds?.reduce((groupTotal, role) => {
-        return groupTotal + (role.Needed || 0);
-      }, 0) || 0);
-    }, 0) || 0;
+    return (
+      shiftDay.Needs?.reduce((total, group) => {
+        return (
+          total +
+          (group.GroupNeeds?.reduce((groupTotal, role) => {
+            return groupTotal + (role.Needed || 0);
+          }, 0) || 0)
+        );
+      }, 0) || 0
+    );
   };
 
   const getShiftTypeText = (shiftType: number) => {
@@ -68,44 +72,28 @@ export const ShiftDayCard: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress })
 
   return (
     <Pressable onPress={onPress} className="mb-3">
-      <Card className="bg-white dark:bg-gray-800 shadow-sm">
+      <Card className="bg-white shadow-sm dark:bg-gray-800">
         <CardContent className="p-4">
           <VStack className="space-y-3">
             {/* Header */}
-            <HStack className="justify-between items-start">
-              <VStack className="flex-1 mr-3">
-                <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {shiftDay.ShiftName}
-                </Text>
-                <Text className="text-sm text-gray-600 dark:text-gray-400">
-                  {formatDate(shiftDay.ShiftDay)}
-                </Text>
+            <HStack className="items-start justify-between">
+              <VStack className="mr-3 flex-1">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-white">{shiftDay.ShiftName}</Text>
+                <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDate(shiftDay.ShiftDay)}</Text>
               </VStack>
 
               {shiftDay.SignedUp ? (
-                <Badge className="bg-green-100 dark:bg-green-900 border-green-200 dark:border-green-700">
+                <Badge className="border-green-200 bg-green-100 dark:border-green-700 dark:bg-green-900">
                   <HStack className="items-center space-x-1">
-                    <Icon
-                      as={CheckCircle}
-                      size={12}
-                      className="text-green-600 dark:text-green-400"
-                    />
-                    <Text className="text-green-800 dark:text-green-200 text-xs font-medium">
-                      {t('shifts.signed_up')}
-                    </Text>
+                    <Icon as={CheckCircle} size={12} className="text-green-600 dark:text-green-400" />
+                    <Text className="text-xs font-medium text-green-800 dark:text-green-200">{t('shifts.signed_up')}</Text>
                   </HStack>
                 </Badge>
               ) : (
-                <Badge className="bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-700">
+                <Badge className="border-orange-200 bg-orange-100 dark:border-orange-700 dark:bg-orange-900">
                   <HStack className="items-center space-x-1">
-                    <Icon
-                      as={AlertCircle}
-                      size={12}
-                      className="text-orange-600 dark:text-orange-400"
-                    />
-                    <Text className="text-orange-800 dark:text-orange-200 text-xs font-medium">
-                      {t('shifts.signup')}
-                    </Text>
+                    <Icon as={AlertCircle} size={12} className="text-orange-600 dark:text-orange-400" />
+                    <Text className="text-xs font-medium text-orange-800 dark:text-orange-200">{t('shifts.signup')}</Text>
                   </HStack>
                 </Badge>
               )}
@@ -113,11 +101,7 @@ export const ShiftDayCard: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress })
 
             {/* Time Range */}
             <HStack className="items-center space-x-2">
-              <Icon
-                as={Clock}
-                size={16}
-                className="text-gray-500 dark:text-gray-400"
-              />
+              <Icon as={Clock} size={16} className="text-gray-500 dark:text-gray-400" />
               <Text className="text-sm text-gray-600 dark:text-gray-400">
                 {formatTime(shiftDay.Start)} - {formatTime(shiftDay.End)}
               </Text>
@@ -126,27 +110,21 @@ export const ShiftDayCard: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress })
             {/* Stats Row */}
             <HStack className="justify-between">
               <HStack className="items-center space-x-1">
-                <Icon
-                  as={Users}
-                  size={16}
-                  className="text-blue-500"
-                />
+                <Icon as={Users} size={16} className="text-blue-500" />
                 <Text className="text-sm text-gray-600 dark:text-gray-400">
                   {getTotalSignups()}/{getTotalNeeds()} {t('shifts.signups')}
                 </Text>
               </HStack>
 
-              <Badge className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                <Text className="text-gray-700 dark:text-gray-300 text-xs">
-                  {getShiftTypeText(shiftDay.ShiftType)}
-                </Text>
+              <Badge className="border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
+                <Text className="text-xs text-gray-700 dark:text-gray-300">{getShiftTypeText(shiftDay.ShiftType)}</Text>
               </Badge>
             </HStack>
 
             {/* Progress Bar */}
-            <View className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <View className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
               <View
-                className="bg-primary-600 h-2 rounded-full"
+                className="h-2 rounded-full bg-primary-600"
                 style={{
                   width: `${getTotalNeeds() > 0 ? (getTotalSignups() / getTotalNeeds()) * 100 : 0}%`,
                 }}
@@ -157,4 +135,4 @@ export const ShiftDayCard: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress })
       </Card>
     </Pressable>
   );
-}; 
+};

@@ -64,7 +64,9 @@ export const UnitDetailsSheet: React.FC = () => {
               {selectedUnit.GroupName && (
                 <HStack space="xs" className="items-center">
                   <Icon as={Users} size={18} className="text-gray-600 dark:text-gray-400" />
-                  <Text className="text-gray-700 dark:text-gray-300">{t('units.group')}: {selectedUnit.GroupName}</Text>
+                  <Text className="text-gray-700 dark:text-gray-300">
+                    {t('units.group')}: {selectedUnit.GroupName}
+                  </Text>
                 </HStack>
               )}
 
@@ -99,7 +101,9 @@ export const UnitDetailsSheet: React.FC = () => {
                   {selectedUnit.Vin && (
                     <HStack className="justify-between">
                       <Text className="text-sm text-gray-600 dark:text-gray-400">{t('units.vin')}:</Text>
-                      <Text className="text-sm text-gray-800 dark:text-gray-200" numberOfLines={1}>{selectedUnit.Vin}</Text>
+                      <Text className="text-sm text-gray-800 dark:text-gray-200" numberOfLines={1}>
+                        {selectedUnit.Vin}
+                      </Text>
                     </HStack>
                   )}
                 </VStack>
@@ -149,4 +153,4 @@ export const UnitDetailsSheet: React.FC = () => {
       </ActionsheetContent>
     </Actionsheet>
   );
-}; 
+};

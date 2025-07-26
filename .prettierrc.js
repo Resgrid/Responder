@@ -4,6 +4,7 @@ const config = {
     endOfLine: 'auto',
     trailingComma: 'es5',
     printWidth: 220,
+    useTabs: false,
   };
   
   module.exports = config;

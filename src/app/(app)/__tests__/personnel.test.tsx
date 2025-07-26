@@ -4,7 +4,7 @@ import React from 'react';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { usePersonnelStore } from '@/stores/personnel/store';
 
-import Personnel from '../personnel';
+import Personnel from '../home/personnel';
 
 // Mock components
 jest.mock('@/components/common/loading', () => ({

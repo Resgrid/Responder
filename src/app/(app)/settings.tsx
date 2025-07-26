@@ -10,6 +10,7 @@ import { Item } from '@/components/settings/item';
 import { KeepAliveItem } from '@/components/settings/keep-alive-item';
 import { LanguageItem } from '@/components/settings/language-item';
 import { LoginInfoBottomSheet } from '@/components/settings/login-info-bottom-sheet';
+import { RealtimeGeolocationItem } from '@/components/settings/realtime-geolocation-item';
 import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { ThemeItem } from '@/components/settings/theme-item';
 import { ToggleItem } from '@/components/settings/toggle-item';
@@ -78,7 +79,6 @@ export default function Settings() {
             <VStack space="sm">
               <Item text={t('settings.server')} value={getBaseApiUrl()} onPress={() => setShowServerUrl(true)} textStyle="text-info-600" />
               <Item text={t('settings.login_info')} onPress={() => setShowLoginInfo(true)} textStyle="text-info-600" />
-              <Item text={t('settings.active_unit')} value={activeUnitName} onPress={() => setShowUnitSelection(true)} textStyle="text-info-600" />
               <Item text={t('settings.logout')} onPress={signOut} textStyle="text-error-600" />
             </VStack>
           </Card>
@@ -90,6 +90,7 @@ export default function Settings() {
               <ThemeItem />
               <LanguageItem />
               <KeepAliveItem />
+              <RealtimeGeolocationItem />
               <BackgroundGeolocationItem />
               <BluetoothDeviceItem />
             </VStack>

@@ -1,5 +1,35 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
+
+// Mock React Native first, before any other imports
+jest.mock('react-native', () => {
+  const MockedRN = {
+    View: 'View',
+    Text: 'Text',
+    Pressable: 'Pressable',
+    ScrollView: 'ScrollView',
+    useWindowDimensions: jest.fn(),
+    StyleSheet: {
+      create: jest.fn((styles) => styles),
+    },
+    NativeModules: {
+      SettingsManager: {},
+      PlatformConstants: {
+        forceTouchAvailable: false,
+      },
+    },
+    TurboModuleRegistry: {
+      getEnforcing: jest.fn(() => ({})),
+    },
+    Platform: {
+      OS: 'ios',
+      select: jest.fn((options) => options.ios),
+    },
+  };
+  return MockedRN;
+});
+
+// Mock other dependencies
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'nativewind';
 import { useWindowDimensions, View, Text as RNText } from 'react-native';
@@ -14,15 +44,6 @@ jest.mock('react-i18next', () => ({
 // Mock nativewind useColorScheme
 jest.mock('nativewind', () => ({
   useColorScheme: jest.fn(),
-}));
-
-// Mock useWindowDimensions
-jest.mock('react-native', () => ({
-  ...jest.requireActual('react-native'),
-  useWindowDimensions: jest.fn(),
-  StyleSheet: {
-    create: jest.fn((styles) => styles),
-  },
 }));
 
 // Mock Lucide icons
@@ -152,9 +173,9 @@ describe('SharedTabs', () => {
 
   describe('Basic Rendering', () => {
     it('renders correctly with basic tabs', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} />);
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} />);
 
-      expect(getByTestId('box')).toBeTruthy();
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders all tab titles', () => {
@@ -236,7 +257,7 @@ describe('SharedTabs', () => {
         {
           key: 'home',
           title: 'Home',
-          content: <div>Home Content</div>,
+          content: <View testID="home-content"><RNText>Home Content</RNText></View>,
           badge: 0,
         },
       ];
@@ -252,52 +273,52 @@ describe('SharedTabs', () => {
 
   describe('Variants', () => {
     it('renders with default variant', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} variant="default" />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} variant="default" />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders with pills variant', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} variant="pills" />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} variant="pills" />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders with underlined variant', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} variant="underlined" />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} variant="underlined" />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders with segmented variant', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} variant="segmented" />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} variant="segmented" />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
   });
 
   describe('Sizes', () => {
     it('renders with small size', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} size="sm" />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} size="sm" />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders with medium size', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} size="md" />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} size="md" />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders with large size', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} size="lg" />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} size="lg" />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
   });
 
   describe('Scrollable Mode', () => {
     it('renders with scrollable mode enabled by default', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders with scrollable mode disabled', () => {
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} scrollable={false} />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} scrollable={false} />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
   });
 
@@ -309,8 +330,8 @@ describe('SharedTabs', () => {
         toggleColorScheme: jest.fn(),
       });
 
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders correctly in light mode', () => {
@@ -320,8 +341,8 @@ describe('SharedTabs', () => {
         toggleColorScheme: jest.fn(),
       });
 
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
   });
 
@@ -334,8 +355,8 @@ describe('SharedTabs', () => {
         fontScale: 1,
       });
 
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('renders correctly in landscape mode', () => {
@@ -346,8 +367,8 @@ describe('SharedTabs', () => {
         fontScale: 1,
       });
 
-      const { getByTestId } = render(<SharedTabs tabs={sampleTabs} />);
-      expect(getByTestId('box')).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={sampleTabs} />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
   });
 
@@ -364,8 +385,8 @@ describe('SharedTabs', () => {
       const tabsWithNodeTitles: TabItem[] = [
         {
           key: 'home',
-          title: <div testID="custom-title">Custom Title</div>,
-          content: <div>Home Content</div>,
+          title: <View testID="custom-title"><RNText>Custom Title</RNText></View>,
+          content: <View testID="home-content"><RNText>Home Content</RNText></View>,
         },
       ];
 
@@ -409,8 +430,8 @@ describe('SharedTabs', () => {
 
   describe('Edge Cases', () => {
     it('handles empty tabs array', () => {
-      const { container } = render(<SharedTabs tabs={[]} />);
-      expect(container).toBeTruthy();
+      const { getAllByTestId } = render(<SharedTabs tabs={[]} />);
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
 
     it('handles single tab', () => {
@@ -418,7 +439,7 @@ describe('SharedTabs', () => {
         {
           key: 'only',
           title: 'Only Tab',
-          content: <div testID="only-content">Only Content</div>,
+          content: <View testID="only-content"><RNText>Only Content</RNText></View>,
         },
       ];
 
@@ -427,10 +448,10 @@ describe('SharedTabs', () => {
     });
 
     it('handles invalid initial index gracefully', () => {
-      const { container } = render(
+      const { getAllByTestId } = render(
         <SharedTabs tabs={sampleTabs} initialIndex={10} />
       );
-      expect(container).toBeTruthy();
+      expect(getAllByTestId('box').length).toBeGreaterThan(0);
     });
   });
 

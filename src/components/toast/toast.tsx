@@ -6,29 +6,6 @@ import { VStack } from '@/components/ui/vstack';
 import { type ToastType, useToastStore } from '../../stores/toast/store';
 import { Toast, ToastDescription, ToastTitle } from '../ui/toast';
 
-const toastStyles = {
-  info: {
-    bg: '$info700',
-    borderColor: '$info800',
-  },
-  success: {
-    bg: '$success700',
-    borderColor: '$success800',
-  },
-  warning: {
-    bg: '$warning700',
-    borderColor: '$warning800',
-  },
-  error: {
-    bg: '$error700',
-    borderColor: '$error800',
-  },
-  muted: {
-    bg: '$muted700',
-    borderColor: '$muted800',
-  },
-};
-
 export const ToastMessage: React.FC<{
   //id: string;
   type: ToastType;
@@ -39,10 +16,10 @@ export const ToastMessage: React.FC<{
   const { t } = useTranslation();
 
   return (
-    <Toast className="mx-4 rounded-lg border" style={toastStyles[type]} action={type}>
+    <Toast className="mx-4 rounded-lg border" action={type}>
       <VStack space="xs">
-        {title && <ToastTitle className="font-medium text-white">{t(title)}</ToastTitle>}
-        <ToastDescription className="text-white">{t(message)}</ToastDescription>
+        {title && <ToastTitle className="font-medium">{t(title)}</ToastTitle>}
+        <ToastDescription>{t(message)}</ToastDescription>
       </VStack>
     </Toast>
   );

@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { TouchableOpacity, StyleSheet } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
-import { View, VStack, HStack } from '@/components/ui';
-import { Text } from '@/components/ui/text';
-import { Heading } from '@/components/ui/heading';
+import { HStack, View, VStack } from '@/components/ui';
 import { Button } from '@/components/ui/button';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { useCalendarStore } from '@/stores/calendar/store';
 
 interface CalendarViewProps {
@@ -25,10 +25,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-    onMonthChange(
-      startOfMonth.toISOString().split('T')[0],
-      endOfMonth.toISOString().split('T')[0]
-    );
+    onMonthChange(startOfMonth.toISOString().split('T')[0], endOfMonth.toISOString().split('T')[0]);
   }, [currentDate, onMonthChange]);
 
   const getDaysInMonth = (date: Date) => {
@@ -80,7 +77,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => {
+    setCurrentDate((prev) => {
       const newDate = new Date(prev);
       if (direction === 'prev') {
         newDate.setMonth(prev.getMonth() - 1);
@@ -94,7 +91,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
   const getMonthYearText = () => {
     return currentDate.toLocaleDateString([], {
       month: 'long',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
@@ -108,31 +105,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
     const isTodayDate = isToday(date);
 
     return (
-      <TouchableOpacity
-        key={index}
-        style={[
-          styles.dayCell,
-          isTodayDate && styles.todayCell,
-          isSelected && styles.selectedCell,
-        ]}
-        onPress={() => handleDatePress(date)}
-      >
-        <Text
-          className={`text-center text-sm font-medium ${isSelected
-              ? 'text-white'
-              : isTodayDate
-                ? 'text-primary-600 dark:text-primary-400'
-                : 'text-gray-900 dark:text-white'
-            }`}
-        >
-          {date.getDate()}
-        </Text>
-        {hasEvents && (
-          <View style={[
-            styles.eventDot,
-            isSelected && styles.selectedEventDot
-          ]} />
-        )}
+      <TouchableOpacity key={index} style={[styles.dayCell, isTodayDate && styles.todayCell, isSelected && styles.selectedCell]} onPress={() => handleDatePress(date)}>
+        <Text className={`text-center text-sm font-medium ${isSelected ? 'text-white' : isTodayDate ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>{date.getDate()}</Text>
+        {hasEvents && <View style={[styles.eventDot, isSelected && styles.selectedEventDot]} />}
       </TouchableOpacity>
     );
   };
@@ -140,15 +115,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
   const days = getDaysInMonth(currentDate);
 
   return (
-    <VStack className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+    <VStack className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
       {/* Month Navigation */}
-      <HStack className="justify-between items-center px-4 py-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => navigateMonth('prev')}
-          className="p-2"
-        >
+      <HStack className="items-center justify-between px-4 py-3">
+        <Button variant="ghost" size="sm" onPress={() => navigateMonth('prev')} className="p-2">
           <ChevronLeft size={20} color="currentColor" />
         </Button>
 
@@ -156,23 +126,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
           {getMonthYearText()}
         </Heading>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => navigateMonth('next')}
-          className="p-2"
-        >
+        <Button variant="ghost" size="sm" onPress={() => navigateMonth('next')} className="p-2">
           <ChevronRight size={20} color="currentColor" />
         </Button>
       </HStack>
 
       {/* Days of Week Header */}
-      <HStack className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+      <HStack className="border-b border-gray-100 px-4 py-2 dark:border-gray-700">
         {DAYS_OF_WEEK.map((day) => (
           <View key={day} style={styles.dayHeader}>
-            <Text className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
-              {t(`calendar.daysOfWeek.${day.toLowerCase()}`)}
-            </Text>
+            <Text className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400">{t(`calendar.daysOfWeek.${day.toLowerCase()}`)}</Text>
           </View>
         ))}
       </HStack>
@@ -180,11 +143,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
       {/* Calendar Grid */}
       <View className="px-4 pb-4">
         {Array.from({ length: Math.ceil(days.length / 7) }, (_, weekIndex) => (
-          <HStack key={weekIndex}>
-            {days.slice(weekIndex * 7, weekIndex * 7 + 7).map((date, dayIndex) =>
-              renderDay(date, weekIndex * 7 + dayIndex)
-            )}
-          </HStack>
+          <HStack key={weekIndex}>{days.slice(weekIndex * 7, weekIndex * 7 + 7).map((date, dayIndex) => renderDay(date, weekIndex * 7 + dayIndex))}</HStack>
         ))}
       </View>
     </VStack>
@@ -222,4 +181,4 @@ const styles = StyleSheet.create({
   selectedEventDot: {
     backgroundColor: '#FFFFFF',
   },
-}); 
+});

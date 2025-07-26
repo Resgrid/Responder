@@ -57,19 +57,13 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
           {/* Status and Staffing Badges */}
           <HStack className="mt-2 flex-wrap">
             {personnel.Status ? (
-              <Badge
-                className="mb-1 mr-1"
-                style={{ backgroundColor: personnel.StatusColor || '#3B82F6' }}
-              >
+              <Badge className="mb-1 mr-1" style={{ backgroundColor: personnel.StatusColor || '#3B82F6' }}>
                 <Text className="text-xs text-white">{personnel.Status}</Text>
               </Badge>
             ) : null}
 
             {personnel.Staffing ? (
-              <Badge
-                className="mb-1 mr-1"
-                style={{ backgroundColor: personnel.StaffingColor || '#10B981' }}
-              >
+              <Badge className="mb-1 mr-1" style={{ backgroundColor: personnel.StaffingColor || '#10B981' }}>
                 <Text className="text-xs text-white">{personnel.Staffing}</Text>
               </Badge>
             ) : null}
@@ -92,13 +86,9 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
           ) : null}
 
           {/* Last Status Update */}
-          {personnel.StatusTimestamp ? (
-            <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Status: {formatDateForDisplay(parseDateISOString(personnel.StatusTimestamp), 'yyyy-MM-dd HH:mm Z')}
-            </Text>
-          ) : null}
+          {personnel.StatusTimestamp ? <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">Status: {formatDateForDisplay(parseDateISOString(personnel.StatusTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text> : null}
         </VStack>
       </Box>
     </Pressable>
   );
-}; 
+};

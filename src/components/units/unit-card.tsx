@@ -29,14 +29,10 @@ export const UnitCard: React.FC<UnitCardProps> = ({ unit, onPress }) => {
                 {unit.Name}
               </Text>
             </HStack>
-            {hasLocation && (
-              <Icon as={MapPin} size={16} className="text-green-600 dark:text-green-400" />
-            )}
+            {hasLocation && <Icon as={MapPin} size={16} className="text-green-600 dark:text-green-400" />}
           </HStack>
 
-          {unit.Type && (
-            <Text className="text-sm text-gray-600 dark:text-gray-300">{unit.Type}</Text>
-          )}
+          {unit.Type && <Text className="text-sm text-gray-600 dark:text-gray-300">{unit.Type}</Text>}
 
           <HStack className="mt-2 flex-wrap items-center" space="xs">
             {unit.GroupName && (
@@ -73,4 +69,4 @@ export const UnitCard: React.FC<UnitCardProps> = ({ unit, onPress }) => {
       </Box>
     </Pressable>
   );
-}; 
+};

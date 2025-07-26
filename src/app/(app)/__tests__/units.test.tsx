@@ -130,7 +130,7 @@ jest.mock('@/components/ui/focus-aware-status-bar', () => ({
   FocusAwareStatusBar: () => null,
 }));
 
-import Units from '../units';
+import Units from '../home/units';
 
 // Mock data
 const mockUnits: UnitResultData[] = [
