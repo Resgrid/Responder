@@ -7,6 +7,8 @@ import { StaffingButtons } from '@/components/home/staffing-buttons';
 import { StatusButtons } from '@/components/home/status-buttons';
 import { UserStaffingCard } from '@/components/home/user-staffing-card';
 import { UserStatusCard } from '@/components/home/user-status-card';
+import { StaffingBottomSheet } from '@/components/staffing/staffing-bottom-sheet';
+import { PersonnelStatusBottomSheet } from '@/components/status/personnel-status-bottom-sheet';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
@@ -36,28 +38,32 @@ export default function HomeDashboard() {
   ];
 
   return (
-    <VStack className="size-full flex-1" testID="home-dashboard-container">
-      <FocusAwareStatusBar />
+    <>
+      <VStack className="size-full flex-1" testID="home-dashboard-container">
+        <FocusAwareStatusBar />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Department Statistics */}
-        {/*<DepartmentStats />*/}
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* Department Statistics */}
+          {/*<DepartmentStats />*/}
 
-        {/* User Status and Staffing Cards */}
-        <HStack space="md" className="p-4">
-          <VStack className="flex-1">
-            <UserStatusCard />
+          {/* User Status and Staffing Cards */}
+          <HStack space="md" className="p-4">
+            <VStack className="flex-1">
+              <UserStatusCard />
+            </VStack>
+            <VStack className="flex-1">
+              <UserStaffingCard />
+            </VStack>
+          </HStack>
+
+          {/* Status/Staffing Tabs */}
+          <VStack className="flex-1 px-4 pb-4">
+            <SharedTabs tabs={tabs} variant="segmented" size="md" scrollable={false} />
           </VStack>
-          <VStack className="flex-1">
-            <UserStaffingCard />
-          </VStack>
-        </HStack>
-
-        {/* Status/Staffing Tabs */}
-        <VStack className="flex-1 px-4 pb-4">
-          <SharedTabs tabs={tabs} variant="segmented" size="md" scrollable={false} />
-        </VStack>
-      </ScrollView>
-    </VStack>
+        </ScrollView>
+      </VStack>
+      <PersonnelStatusBottomSheet />
+      <StaffingBottomSheet />
+    </>
   );
 }

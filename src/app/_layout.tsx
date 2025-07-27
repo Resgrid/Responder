@@ -21,6 +21,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { APIProvider } from '@/api';
 import { PostHogProviderWrapper } from '@/components/common/posthog-provider';
 import { LiveKitBottomSheet } from '@/components/livekit';
+import { StaffingBottomSheet } from '@/components/staffing/staffing-bottom-sheet';
 import { PersonnelStatusBottomSheet } from '@/components/status/personnel-status-bottom-sheet';
 import { ToastContainer } from '@/components/toast/toast-container';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
@@ -174,7 +175,6 @@ function Providers({ children }: { children: React.ReactNode }) {
           <BottomSheetModalProvider>
             {children}
             <LiveKitBottomSheet />
-            <PersonnelStatusBottomSheet />
             <FlashMessage position="top" />
             <ToastContainer />
           </BottomSheetModalProvider>

@@ -1,9 +1,10 @@
 import React from 'react';
 import { useMMKVBoolean } from 'react-native-mmkv';
 
+import { useSignalRStore } from '@/stores/signalr/signalr-store';
+
 import { logger } from '../logging';
 import { storage } from '../storage';
-import { useSignalRStore } from '@/stores/signalr/signalr-store';
 
 const REALTIME_GEOLOCATION_STORAGE_KEY = 'realtime-geolocation-enabled';
 

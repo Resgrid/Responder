@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { translate } from '@/lib/i18n/utils';
 import { invertColor } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useStaffingBottomSheetStore } from '@/stores/staffing/staffing-bottom-sheet-store';
@@ -18,11 +19,23 @@ import { Textarea, TextareaInput } from '../ui/textarea';
 import { VStack } from '../ui/vstack';
 
 export const StaffingBottomSheet = () => {
-  const { t } = useTranslation();
+  const { t, ready } = useTranslation();
   const { isOpen, currentStep, selectedStaffing, note, isLoading, setCurrentStep, setSelectedStaffing, setNote, nextStep, previousStep, submitStaffing, reset } = useStaffingBottomSheetStore();
 
   const { activeStaffing } = useCoreStore();
   const { colorScheme } = useColorScheme();
+
+  // Create a safe translation function that falls back to the direct translate function
+  const safeT = React.useCallback(
+    (key: string, options?: any): string => {
+      if (ready) {
+        return String(t(key, options));
+      }
+      // Fallback to the direct translate function if not ready
+      return String(translate(key as any, options) || key);
+    },
+    [t, ready]
+  );
 
   const handleClose = () => {
     reset();
@@ -50,13 +63,13 @@ export const StaffingBottomSheet = () => {
   const getStepTitle = () => {
     switch (currentStep) {
       case 'select-staffing':
-        return t('staffing.select_staffing_level');
+        return t('home.staffing.select_staffing_level');
       case 'add-note':
-        return t('staffing.add_note');
+        return t('home.staffing.add_note');
       case 'confirm':
-        return t('staffing.confirm_staffing', { staffing: selectedStaffing?.Text });
+        return t('home.staffing.confirm_staffing', { staffing: selectedStaffing?.Text });
       default:
-        return t('staffing.set_staffing');
+        return t('home.staffing.set_staffing');
     }
   };
 
@@ -78,6 +91,9 @@ export const StaffingBottomSheet = () => {
       case 'select-staffing':
         return selectedStaffing !== null;
       case 'add-note':
+        if (selectedStaffing?.Note === 2) {
+          return note.trim().length > 0; // Note is not optional, but if provided, it must not be empty
+        }
         return true; // Note is optional
       case 'confirm':
         return true;
@@ -108,7 +124,7 @@ export const StaffingBottomSheet = () => {
 
           {currentStep === 'select-staffing' && (
             <VStack space="md" className="w-full">
-              <Text className="mb-2 font-medium">{t('staffing.select_staffing_level_description')}</Text>
+              <Text className="mb-2 font-medium">{safeT('home.staffing.select_staffing_level_description')}</Text>
 
               <ScrollView className="max-h-[400px]">
                 <RadioGroup value={selectedStaffing?.Id.toString() || ''} onChange={handleStaffingSelect}>
@@ -125,20 +141,19 @@ export const StaffingBottomSheet = () => {
                                 {staffing.Text}
                               </Text>
                             </HStack>
-                            {staffing.DetailedDescription && <Text className="mt-1 text-sm text-gray-600 dark:text-gray-400">{staffing.DetailedDescription}</Text>}
                           </VStack>
                         </RadioLabel>
                       </Radio>
                     ))
                   ) : (
-                    <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('staffing.no_staffing_options')}</Text>
+                    <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{safeT('home.staffing.no_staffing_options')}</Text>
                   )}
                 </RadioGroup>
               </ScrollView>
 
               <HStack space="sm" className="mt-4 justify-end">
                 <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="bg-blue-600">
-                  <ButtonText>{t('common.next')}</ButtonText>
+                  <ButtonText>{safeT('common.next')}</ButtonText>
                   <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
                 </Button>
               </HStack>
@@ -148,7 +163,7 @@ export const StaffingBottomSheet = () => {
           {currentStep === 'add-note' && (
             <VStack space="md" className="w-full">
               <VStack space="sm">
-                <Text className="font-medium">{t('staffing.selected_staffing')}:</Text>
+                <Text className="font-medium">{safeT('home.staffing.selected_staffing')}:</Text>
                 <HStack space="sm" className="items-center">
                   <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: invertColor(selectedStaffing?.BColor || '#000000', true) }}>
                     {selectedStaffing?.Text}
@@ -158,20 +173,20 @@ export const StaffingBottomSheet = () => {
 
               <VStack space="sm">
                 <Text className="font-medium">
-                  {t('staffing.note')} ({t('common.optional')}):
+                  {safeT('home.staffing.note')} ({safeT('common.optional')}):
                 </Text>
                 <Textarea size="md" className="min-h-[100px] w-full">
-                  <TextareaInput placeholder={t('staffing.note_placeholder')} value={note} onChangeText={setNote} />
+                  <TextareaInput placeholder={safeT('home.staffing.note_placeholder')} value={note} onChangeText={setNote} />
                 </Textarea>
               </VStack>
 
               <HStack space="sm" className="mt-4 justify-between">
                 <Button variant="outline" onPress={handlePrevious} className="flex-1">
                   <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-                  <ButtonText>{t('common.previous')}</ButtonText>
+                  <ButtonText>{safeT('common.previous')}</ButtonText>
                 </Button>
                 <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                  <ButtonText>{t('common.next')}</ButtonText>
+                  <ButtonText>{safeT('common.next')}</ButtonText>
                   <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
                 </Button>
               </HStack>
@@ -180,11 +195,11 @@ export const StaffingBottomSheet = () => {
 
           {currentStep === 'confirm' && (
             <VStack space="md" className="w-full">
-              <Text className="mb-4 text-center text-lg font-semibold">{t('staffing.review_and_confirm')}</Text>
+              <Text className="mb-4 text-center text-lg font-semibold">{safeT('home.staffing.review_and_confirm')}</Text>
 
               <VStack space="sm" className="rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
                 <VStack space="xs">
-                  <Text className="font-medium">{t('staffing.staffing_level')}:</Text>
+                  <Text className="font-medium">{safeT('home.staffing.staffing_level')}:</Text>
                   <HStack space="sm" className="items-center">
                     <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: invertColor(selectedStaffing?.BColor || '#000000', true) }}>
                       {selectedStaffing?.Text}
@@ -194,7 +209,7 @@ export const StaffingBottomSheet = () => {
 
                 {note && (
                   <VStack space="xs">
-                    <Text className="font-medium">{t('staffing.note')}:</Text>
+                    <Text className="font-medium">{safeT('home.staffing.note')}:</Text>
                     <Text className="text-sm">{note}</Text>
                   </VStack>
                 )}
@@ -203,10 +218,10 @@ export const StaffingBottomSheet = () => {
               <HStack space="sm" className="mt-4 justify-between">
                 <Button variant="outline" onPress={handlePrevious} className="flex-1" isDisabled={isLoading}>
                   <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-                  <ButtonText>{t('common.previous')}</ButtonText>
+                  <ButtonText>{safeT('common.previous')}</ButtonText>
                 </Button>
                 <Button onPress={handleSubmit} isDisabled={isLoading} className="flex-1 bg-green-600">
-                  <ButtonText>{isLoading ? t('common.submitting') : t('common.submit')}</ButtonText>
+                  <ButtonText>{isLoading ? safeT('common.submitting') : safeT('common.submit')}</ButtonText>
                 </Button>
               </HStack>
             </VStack>

@@ -39,6 +39,7 @@ jest.mock('react-i18next', () => ({
       };
       return translations[key] || key;
     },
+    ready: true, // Add ready property for the test
   }),
 }));
 

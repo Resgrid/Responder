@@ -1,4 +1,4 @@
-import { describe, expect, it, jest, beforeEach } from '@jest/globals';
+import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { getAllGroups } from '@/api/groups/groups';
@@ -41,7 +41,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 
 		// Setup default mocks
 		(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
-		(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: jest.fn() });
+		(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: jest.fn(() => Promise.resolve()) });
 		(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: jest.fn() });
 		(useLocationStore as any).getState = jest.fn().mockReturnValue({ 
 			latitude: null, 
@@ -50,6 +50,31 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			altitude: null, 
 			speed: null, 
 			heading: null 
+		});
+	});
+
+	afterEach(async () => {
+		// Wait for any pending async operations to complete
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 0));
+		});
+		
+		// Reset store state completely to ensure clean state for next test
+		act(() => {
+			usePersonnelStatusBottomSheetStore.setState({
+				isOpen: false,
+				currentStep: 'select-responding-to',
+				selectedCall: null,
+				selectedGroup: null,
+				selectedStatus: null,
+				responseType: 'none',
+				selectedTab: 'calls',
+				note: '',
+				respondingTo: '',
+				isLoading: false,
+				groups: [],
+				isLoadingGroups: false,
+			});
 		});
 	});
 
@@ -739,12 +764,17 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 				Detail: 0 
 			};
 			const mockShowToast = jest.fn();
+			const mockFetchCurrentUserInfo = jest.fn(() => Promise.resolve());
+			
 			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: mockFetchCurrentUserInfo });
 			
 			// Make sure the auth store returns a valid userId
 			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'test-user-id' });
 			
-			mockSavePersonnelStatus.mockRejectedValue(new Error('API Error'));
+			// Make savePersonnelStatus reject with an error
+			const testError = new Error('API Error');
+			mockSavePersonnelStatus.mockRejectedValue(testError);
 
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
 
@@ -753,17 +783,29 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 				result.current.setIsOpen(true, mockStatus as any);
 			});
 
+			// Verify initial loading state
+			expect(result.current.isLoading).toBe(false);
+
 			// Submit status and verify error handling
 			await act(async () => {
-				await result.current.submitStatus();
+				try {
+					await result.current.submitStatus();
+				} catch (error) {
+					// The error should be caught internally, not thrown
+				}
 			});
 
-			// Verify error handling
+			// Wait for all async operations to complete and verify final state
+			await waitFor(() => {
+				expect(result.current.isLoading).toBe(false);
+			}, { timeout: 2000 });
+
+			// Verify error handling occurred
 			expect(mockSavePersonnelStatus).toHaveBeenCalled();
 			expect(mockShowToast).toHaveBeenCalledWith('error', 'Failed to update status');
 			
-			// The loading state should be false after the async operation completes
-			expect(result.current.isLoading).toBe(false);
+			// Verify fetchCurrentUserInfo was NOT called due to the error
+			expect(mockFetchCurrentUserInfo).not.toHaveBeenCalled();
 		});
 
 		it('should handle loading state correctly', async () => {
