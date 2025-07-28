@@ -7,8 +7,10 @@ import { type UnitResultData } from '@/models/v4/units/unitResultData';
 const mockUnitsStore = {
   units: [],
   searchQuery: '',
+  selectedFilters: [],
   setSearchQuery: jest.fn(),
   selectUnit: jest.fn(),
+  openFilterSheet: jest.fn(),
   isLoading: false,
   fetchUnits: jest.fn(),
 };
@@ -280,5 +282,43 @@ describe('Units', () => {
     });
 
     expect(() => rerender(<Units />)).not.toThrow();
+  });
+
+  it('should call openFilterSheet when filter button is pressed', () => {
+    Object.assign(mockUnitsStore, {
+      units: mockUnits,
+      isLoading: false,
+    });
+
+    render(<Units />);
+
+    const filterButton = screen.getByTestId('filter-button');
+    fireEvent.press(filterButton);
+
+    expect(mockUnitsStore.openFilterSheet).toHaveBeenCalledTimes(1);
+  });
+
+  it('should show filter badge when filters are selected', () => {
+    Object.assign(mockUnitsStore, {
+      units: mockUnits,
+      selectedFilters: ['group1', 'group2'],
+      isLoading: false,
+    });
+
+    render(<Units />);
+
+    expect(screen.getByText('2')).toBeTruthy();
+  });
+
+  it('should not show filter badge when no filters are selected', () => {
+    Object.assign(mockUnitsStore, {
+      units: mockUnits,
+      selectedFilters: [],
+      isLoading: false,
+    });
+
+    render(<Units />);
+
+    expect(screen.queryByText('0')).toBeNull();
   });
 }); 

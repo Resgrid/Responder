@@ -56,6 +56,15 @@ jest.mock('@/components/personnel/personnel-details-sheet', () => ({
   },
 }));
 
+jest.mock('@/components/personnel/personnel-filter-sheet', () => ({
+  PersonnelFilterSheet: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+
+    return React.createElement(Text, {}, 'PersonnelFilterSheet');
+  },
+}));
+
 // Mock FocusAwareStatusBar
 jest.mock('@/components/ui/focus-aware-status-bar', () => ({
   FocusAwareStatusBar: () => null,
@@ -85,6 +94,7 @@ describe('Personnel Page', () => {
   const mockFetchPersonnel = jest.fn();
   const mockSetSearchQuery = jest.fn();
   const mockSelectPersonnel = jest.fn();
+  const mockOpenFilterSheet = jest.fn();
 
   const mockPersonnelData: PersonnelInfoResultData[] = [
     {
@@ -158,10 +168,12 @@ describe('Personnel Page', () => {
   const defaultStoreState = {
     personnel: [],
     searchQuery: '',
+    selectedFilters: [],
     setSearchQuery: mockSetSearchQuery,
     selectPersonnel: mockSelectPersonnel,
     isLoading: false,
     fetchPersonnel: mockFetchPersonnel,
+    openFilterSheet: mockOpenFilterSheet,
   };
 
   beforeEach(() => {
@@ -666,6 +678,51 @@ describe('Personnel Page', () => {
       render(<Personnel />);
 
       expect(screen.getByTestId('zero-state')).toBeTruthy();
+    });
+  });
+
+  describe('Filter Functionality', () => {
+    it('should render filter button', () => {
+      render(<Personnel />);
+
+      expect(screen.getByTestId('filter-button')).toBeTruthy();
+    });
+
+    it('should call openFilterSheet when filter button is pressed', () => {
+      render(<Personnel />);
+
+      const filterButton = screen.getByTestId('filter-button');
+      fireEvent.press(filterButton);
+
+      expect(mockOpenFilterSheet).toHaveBeenCalledTimes(1);
+    });
+
+    it('should display filter count badge when filters are selected', () => {
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedFilters: ['filter1', 'filter2'],
+      } as any);
+
+      render(<Personnel />);
+
+      expect(screen.getByText('2')).toBeTruthy();
+    });
+
+    it('should not display filter count badge when no filters are selected', () => {
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedFilters: [],
+      } as any);
+
+      render(<Personnel />);
+
+      expect(screen.queryByText('0')).toBeFalsy();
+    });
+
+    it('should render PersonnelFilterSheet component', () => {
+      render(<Personnel />);
+
+      expect(screen.getByText('PersonnelFilterSheet')).toBeTruthy();
     });
   });
 }); 

@@ -231,6 +231,7 @@
     "call_location": "Call Location",
     "call_number": "Call Number",
     "call_priority": "Call Priority",
+    "personnel": "People",
     "confirm_deselect_message": "Are you sure you want to deselect the current active call?",
     "confirm_deselect_title": "Deselect Active Call",
     "contact_info": "Contact Info",
@@ -543,7 +544,7 @@
     "all_messages": "All Messages",
     "body_required": "Message body is required",
     "compose": "Compose",
-    "compose_new_message": "Compose New Message",
+    "compose_new_message": "New Message",
     "date_unknown": "Date unknown",
     "delete_confirmation_message": "Are you sure you want to delete {{count}} message(s)?",
     "delete_confirmation_title": "Delete Messages",
@@ -593,6 +594,7 @@
     "subject": "Subject",
     "subject_required": "Subject is required",
     "title": "Messages",
+    "people": "People",
     "types": {
       "alert": "Alert",
       "message": "Message",
@@ -622,6 +624,15 @@
     "message": "Welcome to obytes app site"
   },
   "personnel": {
+    "empty": "No personnel found",
+    "emptyDescription": "No personnel match your search criteria or no personnel data is available.",
+    "search": "Search personnel...",
+    "filter": {
+      "title": "Filter Personnel",
+      "description": "Select filters to refine the personnel list. Changes are automatically applied.",
+      "empty": "No filter options available",
+      "emptyDescription": "Filter options will appear here when available."
+    },
     "status": {
       "add_note": "Add Note",
       "calls_tab": "Calls",

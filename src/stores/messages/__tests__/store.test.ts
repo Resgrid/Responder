@@ -414,5 +414,96 @@ describe('MessagesStore', () => {
 
 			expect(result.current.hasSelectedMessages()).toBe(true);
 		});
+
+		it('should deduplicate messages when combining inbox and sent in getFilteredMessages', () => {
+			const { result } = renderHook(() => useMessagesStore());
+
+			const duplicateMessage: MessageResultData = {
+				MessageId: '1',
+				Subject: 'Duplicate Message',
+				SendingName: 'John Doe',
+				SendingUserId: 'user1',
+				Body: 'This message appears in both inbox and sent',
+				SentOn: '2023-01-01T10:00:00Z',
+				SentOnUtc: '2023-01-01T10:00:00Z',
+				Type: 0,
+				ExpiredOn: '',
+				Responded: false,
+				Note: '',
+				RespondedOn: '',
+				ResponseType: '',
+				IsSystem: false,
+				Recipients: [],
+			};
+
+			const uniqueMessage: MessageResultData = {
+				MessageId: '2',
+				Subject: 'Unique Message',
+				SendingName: 'Jane Doe',
+				SendingUserId: 'user2',
+				Body: 'This is a unique message',
+				SentOn: '2023-01-02T10:00:00Z',
+				SentOnUtc: '2023-01-02T10:00:00Z',
+				Type: 0,
+				ExpiredOn: '',
+				Responded: false,
+				Note: '',
+				RespondedOn: '',
+				ResponseType: '',
+				IsSystem: false,
+				Recipients: [],
+			};
+
+			act(() => {
+				result.current.setCurrentFilter('all');
+				useMessagesStore.setState({
+					inboxMessages: [duplicateMessage, uniqueMessage],
+					sentMessages: [duplicateMessage], // Same message appears in both arrays
+				});
+			});
+
+			const filtered = result.current.getFilteredMessages();
+			expect(filtered).toHaveLength(2); // Should only have 2 unique messages
+			expect(filtered.map(m => m.MessageId)).toEqual(expect.arrayContaining(['1', '2']));
+			
+			// Verify no duplicates exist
+			const messageIds = filtered.map(m => m.MessageId);
+			const uniqueIds = [...new Set(messageIds)];
+			expect(messageIds).toHaveLength(uniqueIds.length);
+		});
+
+		it('should deduplicate messages in getSelectedMessages', () => {
+			const { result } = renderHook(() => useMessagesStore());
+
+			const duplicateMessage: MessageResultData = {
+				MessageId: '1',
+				Subject: 'Duplicate Message',
+				SendingName: 'John Doe',
+				SendingUserId: 'user1',
+				Body: 'This message appears in both inbox and sent',
+				SentOn: '2023-01-01T10:00:00Z',
+				SentOnUtc: '2023-01-01T10:00:00Z',
+				Type: 0,
+				ExpiredOn: '',
+				Responded: false,
+				Note: '',
+				RespondedOn: '',
+				ResponseType: '',
+				IsSystem: false,
+				Recipients: [],
+			};
+
+			act(() => {
+				useMessagesStore.setState({
+					inboxMessages: [duplicateMessage],
+					sentMessages: [duplicateMessage], // Same message in both arrays
+					selectedForDeletion: new Set(['1']),
+				});
+			});
+
+			const selected = result.current.getSelectedMessages();
+			expect(selected).toHaveLength(1); // Should only return one instance
+			expect(selected[0].MessageId).toBe('1');
+		});
 	});
 });

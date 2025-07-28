@@ -1,23 +1,28 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { ChevronDown, Mail, MailOpen, MessageSquarePlus, MoreVertical, Search, Trash2, X } from 'lucide-react-native';
+import { router, Stack } from 'expo-router';
+import { ChevronDown, Mail, MailOpen, Menu, MessageSquarePlus, MoreVertical, Search, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
+import { Alert, useWindowDimensions } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import { ComposeMessageSheet } from '@/components/messages/compose-message-sheet';
 import { MessageCard } from '@/components/messages/message-card';
 import { MessageDetailsSheet } from '@/components/messages/message-details-sheet';
-import { View } from '@/components/ui';
+import { SideMenu } from '@/components/sidebar/side-menu';
+import { FocusAwareStatusBar, View } from '@/components/ui';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetItem, ActionsheetItemText } from '@/components/ui/actionsheet';
 import { Badge } from '@/components/ui/badge';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer';
+import { Fab, FabIcon } from '@/components/ui/fab';
 import { FlatList } from '@/components/ui/flat-list';
 import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
+import { SafeAreaView } from '@/components/ui/safe-area-view';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
@@ -25,8 +30,11 @@ import { type MessageFilter, useMessagesStore } from '@/stores/messages/store';
 
 export default function MessagesScreen() {
   const { t } = useTranslation();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
 
   const {
     isLoading,
@@ -40,7 +48,8 @@ export default function MessagesScreen() {
     setSearchQuery,
     setCurrentFilter,
     selectMessage,
-    fetchMessages,
+    fetchInboxMessages,
+    fetchSentMessages,
     getFilteredMessages,
     hasSelectedMessages,
     clearSelection,
@@ -55,8 +64,16 @@ export default function MessagesScreen() {
   // Fetch messages when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      fetchMessages();
-    }, [fetchMessages])
+      if (currentFilter === 'sent') {
+        fetchSentMessages();
+      } else if (currentFilter === 'inbox') {
+        fetchInboxMessages();
+      } else {
+        // For 'all', fetch both inbox and sent messages
+        fetchInboxMessages();
+        fetchSentMessages();
+      }
+    }, [fetchInboxMessages, fetchSentMessages, currentFilter])
   );
 
   const handleMessagePress = (message: MessageResultData) => {
@@ -111,73 +128,16 @@ export default function MessagesScreen() {
   };
 
   const getFilterCount = (filter: MessageFilter) => {
-    const { messages } = useMessagesStore.getState();
+    const { inboxMessages, sentMessages } = useMessagesStore.getState();
     switch (filter) {
       case 'inbox':
-        return messages.filter((msg) => !msg.IsSystem).length;
+        return inboxMessages.length;
       case 'sent':
-        return messages.filter((msg) => msg.IsSystem).length;
+        return sentMessages.length;
       default:
-        return messages.length;
+        return inboxMessages.length + sentMessages.length;
     }
   };
-
-  const renderHeader = () => (
-    <VStack space="sm" className="bg-white p-4 dark:bg-gray-900">
-      {/* Search Bar */}
-      <HStack space="sm" className="items-center">
-        <View className="flex-1">
-          <Input variant="outline" className="flex-1">
-            <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={setSearchQuery} />
-          </Input>
-        </View>
-        <Pressable className="rounded-lg border border-gray-300 p-2 dark:border-gray-600" onPress={() => setIsFilterMenuOpen(true)}>
-          <HStack space="xs" className="items-center">
-            <Text className="text-sm font-medium">{getFilterLabel(currentFilter)}</Text>
-            <Badge variant="solid" className="bg-primary-500">
-              <Text className="text-xs text-white">{getFilterCount(currentFilter)}</Text>
-            </Badge>
-            <ChevronDown size={16} color="currentColor" />
-          </HStack>
-        </Pressable>
-      </HStack>
-
-      {/* Selection Mode Header */}
-      {isSelectionMode ? (
-        <HStack space="sm" className="items-center justify-between">
-          <HStack space="sm" className="items-center">
-            <Pressable onPress={exitSelectionMode} className="p-2">
-              <X size={20} color="currentColor" />
-            </Pressable>
-            <Text className="font-medium">{t('messages.selected_count', { count: selectedForDeletion.size })}</Text>
-          </HStack>
-
-          <HStack space="sm">
-            <Button size="sm" variant="outline" onPress={selectAllVisibleMessages}>
-              <ButtonText>{t('messages.select_all')}</ButtonText>
-            </Button>
-
-            <Button size="sm" variant="solid" className="bg-red-500" onPress={handleDeleteSelected} disabled={!hasSelectedMessages() || isDeleting}>
-              <Trash2 size={16} color="white" />
-              <ButtonText className="ml-1 text-white">{isDeleting ? t('common.deleting') : t('common.delete')}</ButtonText>
-            </Button>
-          </HStack>
-        </HStack>
-      ) : (
-        /* Normal Header */
-        <HStack space="sm" className="items-center justify-between">
-          <Text className="text-lg font-bold">
-            {t('messages.title')} ({filteredMessages.length})
-          </Text>
-
-          <Button size="sm" variant="solid" className="bg-primary-600" onPress={openCompose}>
-            <MessageSquarePlus size={16} color="white" />
-            <ButtonText className="ml-1 text-white">{t('messages.compose')}</ButtonText>
-          </Button>
-        </HStack>
-      )}
-    </VStack>
-  );
 
   const renderMessage = ({ item }: { item: MessageResultData }) => (
     <MessageCard message={item} onPress={() => handleMessagePress(item)} onLongPress={() => handleLongPress(item)} isSelected={selectedForDeletion.has(item.MessageId)} showCheckbox={isSelectionMode} />
@@ -188,79 +148,195 @@ export default function MessagesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-950">
-      {renderHeader()}
+    <>
+      <Stack.Screen
+        options={{
+          title: t('messages.title'),
+          headerLeft: () =>
+            !isLandscape ? (
+              <Pressable className="p-2" onPress={() => setIsSideMenuOpen(true)} testID="messages-menu-button">
+                <Menu size={24} className="text-gray-700 dark:text-gray-300" />
+              </Pressable>
+            ) : null,
+          headerRight: () => null,
+        }}
+      />
+      <FocusAwareStatusBar />
+      <View className="flex-1 bg-gray-50 dark:bg-gray-950">
+        {/* Search and Filter Bar */}
+        <VStack space="sm" className="border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+          <HStack space="sm" className="items-center">
+            <View className="flex-1">
+              <Input variant="outline" className="flex-1">
+                <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={setSearchQuery} testID="messages-search-input" />
+              </Input>
+            </View>
+            <Pressable className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800" onPress={() => setIsFilterMenuOpen(true)} testID="messages-filter-button">
+              <HStack space="xs" className="items-center">
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{getFilterLabel(currentFilter)}</Text>
+                <Badge variant="solid" className="bg-primary-500 dark:bg-primary-400">
+                  <Text className="text-xs text-white dark:text-gray-900">{getFilterCount(currentFilter)}</Text>
+                </Badge>
+                <ChevronDown size={16} className="text-gray-700 dark:text-gray-300" />
+              </HStack>
+            </Pressable>
+          </HStack>
 
-      {error ? (
-        <View className="p-4">
-          <Text className="text-center text-red-500">{error}</Text>
-          <Button onPress={fetchMessages} className="mt-2">
-            <ButtonText>{t('common.retry')}</ButtonText>
-          </Button>
-        </View>
-      ) : filteredMessages.length === 0 ? (
-        <ZeroState heading={t('messages.no_messages')} description={t('messages.no_messages_description')} icon={Mail} iconSize={64} iconColor="#9CA3AF">
-          <Button onPress={openCompose} className="bg-primary-600">
-            <ButtonText>{t('messages.send_first_message')}</ButtonText>
-          </Button>
-        </ZeroState>
-      ) : (
-        <FlatList data={filteredMessages} renderItem={renderMessage} keyExtractor={(item) => item.MessageId} className="flex-1" contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false} />
-      )}
+          {/* Selection Mode Header */}
+          {isSelectionMode ? (
+            <HStack space="sm" className="items-center justify-between">
+              <HStack space="sm" className="items-center">
+                <Pressable onPress={exitSelectionMode} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <X size={20} className="text-gray-700 dark:text-gray-300" />
+                </Pressable>
+              </HStack>
 
-      {/* Filter Action Sheet */}
-      <Actionsheet isOpen={isFilterMenuOpen} onClose={() => setIsFilterMenuOpen(false)}>
-        <ActionsheetBackdrop />
-        <ActionsheetContent>
-          <ActionsheetItem
-            onPress={() => {
-              setCurrentFilter('all');
-              setIsFilterMenuOpen(false);
-            }}
-          >
-            <HStack space="sm" className="w-full items-center justify-between">
-              <ActionsheetItemText>{t('messages.all_messages')}</ActionsheetItemText>
-              <Badge variant="solid" className="bg-gray-500">
-                <Text className="text-xs text-white">{getFilterCount('all')}</Text>
-              </Badge>
+              <HStack space="sm">
+                <Button size="sm" variant="outline" onPress={selectAllVisibleMessages}>
+                  <ButtonText>{t('messages.select_all')}</ButtonText>
+                </Button>
+
+                <Button size="sm" variant="solid" className="bg-red-500 hover:bg-red-600" onPress={handleDeleteSelected} disabled={!hasSelectedMessages() || isDeleting}>
+                  <Trash2 size={16} className="text-white" />
+                  <ButtonText className="ml-1 text-white">{isDeleting ? t('common.deleting') : t('common.delete')}</ButtonText>
+                </Button>
+              </HStack>
             </HStack>
-          </ActionsheetItem>
-
-          <ActionsheetItem
-            onPress={() => {
-              setCurrentFilter('inbox');
-              setIsFilterMenuOpen(false);
-            }}
-          >
-            <HStack space="sm" className="w-full items-center justify-between">
-              <ActionsheetItemText>{t('messages.inbox')}</ActionsheetItemText>
-              <Badge variant="solid" className="bg-blue-500">
-                <Text className="text-xs text-white">{getFilterCount('inbox')}</Text>
-              </Badge>
+          ) : (
+            /* Normal Filter/Count Display */
+            <HStack space="sm" className="items-center justify-between">
+              <Text className="text-sm text-gray-600 dark:text-gray-400">{t('messages.showing_count', { count: filteredMessages.length })}</Text>
             </HStack>
-          </ActionsheetItem>
+          )}
+        </VStack>
 
-          <ActionsheetItem
-            onPress={() => {
-              setCurrentFilter('sent');
-              setIsFilterMenuOpen(false);
+        {error ? (
+          <View className="p-4">
+            <Text className="text-center text-red-500">{error}</Text>
+            <Button
+              onPress={() => {
+                if (currentFilter === 'sent') {
+                  fetchSentMessages();
+                } else if (currentFilter === 'inbox') {
+                  fetchInboxMessages();
+                } else {
+                  // For 'all', retry both inbox and sent messages
+                  fetchInboxMessages();
+                  fetchSentMessages();
+                }
+              }}
+              className="mt-2"
+            >
+              <ButtonText>{t('common.retry')}</ButtonText>
+            </Button>
+          </View>
+        ) : filteredMessages.length === 0 && !isLoading ? (
+          <ZeroState heading={t('messages.no_messages')} description={t('messages.no_messages_description')} icon={Mail} iconSize={64} iconColor="#9CA3AF">
+            <Button onPress={openCompose} className="bg-primary-600">
+              <ButtonText>{t('messages.send_first_message')}</ButtonText>
+            </Button>
+          </ZeroState>
+        ) : (
+          <FlatList
+            data={filteredMessages}
+            renderItem={renderMessage}
+            keyExtractor={(item, index) => item.MessageId || `message-${index}`}
+            className="flex-1"
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
+            refreshing={isLoading}
+            onRefresh={() => {
+              if (currentFilter === 'sent') {
+                fetchSentMessages();
+              } else if (currentFilter === 'inbox') {
+                fetchInboxMessages();
+              } else {
+                // For 'all', refresh both inbox and sent messages
+                fetchInboxMessages();
+                fetchSentMessages();
+              }
             }}
-          >
-            <HStack space="sm" className="w-full items-center justify-between">
-              <ActionsheetItemText>{t('messages.sent')}</ActionsheetItemText>
-              <Badge variant="solid" className="bg-green-500">
-                <Text className="text-xs text-white">{getFilterCount('sent')}</Text>
-              </Badge>
-            </HStack>
-          </ActionsheetItem>
-        </ActionsheetContent>
-      </Actionsheet>
+          />
+        )}
 
-      {/* Message Details Sheet */}
-      <MessageDetailsSheet />
+        {isLoading && filteredMessages.length === 0 && <Loading />}
 
-      {/* Compose Message Sheet */}
-      <ComposeMessageSheet />
-    </View>
+        {/* Side Menu Drawer */}
+        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} size={isLandscape ? 'lg' : 'md'}>
+          <DrawerBackdrop />
+          <DrawerContent className={isLandscape ? 'w-1/4' : 'w-4/5'}>
+            <DrawerBody className="p-0">
+              <SideMenu onNavigate={() => setIsSideMenuOpen(false)} />
+            </DrawerBody>
+          </DrawerContent>
+        </Drawer>
+
+        {/* Filter Action Sheet */}
+        <Actionsheet isOpen={isFilterMenuOpen} onClose={() => setIsFilterMenuOpen(false)}>
+          <ActionsheetBackdrop />
+          <ActionsheetContent>
+            <ActionsheetItem
+              onPress={() => {
+                setCurrentFilter('all');
+                setIsFilterMenuOpen(false);
+                // For 'all', fetch both inbox and sent messages
+                fetchInboxMessages();
+                fetchSentMessages();
+              }}
+            >
+              <HStack space="sm" className="w-full items-center justify-between">
+                <ActionsheetItemText>{t('messages.all_messages')}</ActionsheetItemText>
+                <Badge variant="solid" className="bg-gray-500 dark:bg-gray-400">
+                  <Text className="text-xs text-white dark:text-gray-900">{getFilterCount('all')}</Text>
+                </Badge>
+              </HStack>
+            </ActionsheetItem>
+
+            <ActionsheetItem
+              onPress={() => {
+                setCurrentFilter('inbox');
+                setIsFilterMenuOpen(false);
+                fetchInboxMessages();
+              }}
+            >
+              <HStack space="sm" className="w-full items-center justify-between">
+                <ActionsheetItemText>{t('messages.inbox')}</ActionsheetItemText>
+                <Badge variant="solid" className="bg-blue-500 dark:bg-blue-400">
+                  <Text className="text-xs text-white dark:text-gray-900">{getFilterCount('inbox')}</Text>
+                </Badge>
+              </HStack>
+            </ActionsheetItem>
+
+            <ActionsheetItem
+              onPress={() => {
+                setCurrentFilter('sent');
+                setIsFilterMenuOpen(false);
+                fetchSentMessages();
+              }}
+            >
+              <HStack space="sm" className="w-full items-center justify-between">
+                <ActionsheetItemText>{t('messages.sent')}</ActionsheetItemText>
+                <Badge variant="solid" className="bg-green-500 dark:bg-green-400">
+                  <Text className="text-xs text-white dark:text-gray-900">{getFilterCount('sent')}</Text>
+                </Badge>
+              </HStack>
+            </ActionsheetItem>
+          </ActionsheetContent>
+        </Actionsheet>
+
+        {/* Message Details Sheet */}
+        <MessageDetailsSheet />
+
+        {/* Compose Message Sheet */}
+        <ComposeMessageSheet />
+
+        {/* FAB button for composing new message */}
+        {!isSelectionMode && (
+          <Fab placement="bottom right" size="lg" onPress={openCompose} testID="messages-compose-fab">
+            <FabIcon as={MessageSquarePlus} size="lg" />
+          </Fab>
+        )}
+      </View>
+    </>
   );
 }

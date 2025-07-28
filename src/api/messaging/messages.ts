@@ -13,7 +13,8 @@ const recipientsApi = createCachedApiEndpoint('/Messages/GetRecipients', {
   enabled: true,
 });
 
-const getAllMessagesApi = createApiEndpoint('/Messages/GetAllMessages');
+const getInboxMessagesApi = createApiEndpoint('/Messages/GetInboxMessages');
+const getSentMessagesApi = createApiEndpoint('/Messages/GetOutboxMessages');
 const getMessageApi = createApiEndpoint('/Messages/GetMessage');
 const sendMessageApi = createApiEndpoint('/Messages/SendMessage');
 const deleteMessageApi = createApiEndpoint('/Messages/DeleteMessage');
@@ -27,8 +28,13 @@ export const getRecipients = async (disallowNoone: boolean, includeUnits: boolea
   return response.data;
 };
 
-export const getAllMessages = async () => {
-  const response = await getAllMessagesApi.get<MessagesResult>();
+export const getInboxMessages = async () => {
+  const response = await getInboxMessagesApi.get<MessagesResult>();
+  return response.data;
+};
+
+export const getSentMessages = async () => {
+  const response = await getSentMessagesApi.get<MessagesResult>();
   return response.data;
 };
 

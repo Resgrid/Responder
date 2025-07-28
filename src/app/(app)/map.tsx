@@ -3,11 +3,14 @@ import { useFocusEffect } from 'expo-router';
 import { NavigationIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import MapPins from '@/components/maps/map-pins';
 import PinDetailModal from '@/components/maps/pin-detail-modal';
+import { SideMenu } from '@/components/sidebar/side-menu';
+import { Button, ButtonText } from '@/components/ui/button';
+import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
@@ -24,6 +27,9 @@ Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
 
 export default function HomeMap() {
   const { t } = useTranslation();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -269,68 +275,101 @@ export default function HomeMap() {
   const showRecenterButton = !location.isMapLocked && hasUserMovedMap && location.latitude && location.longitude;
 
   return (
-    <View className="size-full flex-1" testID="home-map-container">
-      <FocusAwareStatusBar />
-      <Mapbox.MapView
-        ref={mapRef}
-        styleURL={styleURL.styleURL}
-        style={styles.map}
-        onCameraChanged={onCameraChanged}
-        onDidFinishLoadingMap={() => setIsMapReady(true)}
-        testID="home-map-view"
-        scrollEnabled={!location.isMapLocked}
-        zoomEnabled={!location.isMapLocked}
-        rotateEnabled={!location.isMapLocked}
-        pitchEnabled={!location.isMapLocked}
-      >
-        <Mapbox.Camera
-          ref={cameraRef}
-          followZoomLevel={location.isMapLocked ? 16 : 12}
-          followUserLocation={location.isMapLocked}
-          followUserMode={location.isMapLocked ? Mapbox.UserTrackingMode.FollowWithHeading : undefined}
-          followPitch={location.isMapLocked ? 45 : undefined}
-        />
+    <>
+      <View className="size-full flex-1" testID="home-map-container">
+        <FocusAwareStatusBar />
 
-        {location.latitude && location.longitude && (
-          <Mapbox.PointAnnotation id="userLocation" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 0.5 }}>
-            <Animated.View
-              style={[
-                styles.markerContainer,
-                {
-                  transform: [{ scale: pulseAnim }],
-                },
-              ]}
+        {/* Content Area with Side Menu */}
+        <View className="flex-1 flex-row">
+          {/* Permanent Side Menu in Landscape */}
+          {isLandscape && (
+            <View className="w-1/4 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+              <SideMenu />
+            </View>
+          )}
+
+          {/* Map Content */}
+          <View className={`flex-1 ${isLandscape ? 'w-3/4' : 'w-full'}`}>
+            <Mapbox.MapView
+              ref={mapRef}
+              styleURL={styleURL.styleURL}
+              style={styles.map}
+              onCameraChanged={onCameraChanged}
+              onDidFinishLoadingMap={() => setIsMapReady(true)}
+              testID="home-map-view"
+              scrollEnabled={!location.isMapLocked}
+              zoomEnabled={!location.isMapLocked}
+              rotateEnabled={!location.isMapLocked}
+              pitchEnabled={!location.isMapLocked}
             >
-              <View style={styles.markerOuterRing} />
-              <View style={styles.markerInnerContainer}>
-                <View style={styles.markerDot} />
-                {location.heading !== null && location.heading !== undefined && (
-                  <View
+              <Mapbox.Camera
+                ref={cameraRef}
+                followZoomLevel={location.isMapLocked ? 16 : 12}
+                followUserLocation={location.isMapLocked}
+                followUserMode={location.isMapLocked ? Mapbox.UserTrackingMode.FollowWithHeading : undefined}
+                followPitch={location.isMapLocked ? 45 : undefined}
+              />
+
+              {location.latitude && location.longitude && (
+                <Mapbox.PointAnnotation id="userLocation" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 0.5 }}>
+                  <Animated.View
                     style={[
-                      styles.directionIndicator,
+                      styles.markerContainer,
                       {
-                        transform: [{ rotate: `${location.heading}deg` }],
+                        transform: [{ scale: pulseAnim }],
                       },
                     ]}
-                  />
-                )}
-              </View>
-            </Animated.View>
-          </Mapbox.PointAnnotation>
-        )}
-        <MapPins pins={mapPins} onPinPress={handlePinPress} />
-      </Mapbox.MapView>
+                  >
+                    <View style={styles.markerOuterRing} />
+                    <View style={styles.markerInnerContainer}>
+                      <View style={styles.markerDot} />
+                      {location.heading !== null && location.heading !== undefined && (
+                        <View
+                          style={[
+                            styles.directionIndicator,
+                            {
+                              transform: [{ rotate: `${location.heading}deg` }],
+                            },
+                          ]}
+                        />
+                      )}
+                    </View>
+                  </Animated.View>
+                </Mapbox.PointAnnotation>
+              )}
+              <MapPins pins={mapPins} onPinPress={handlePinPress} />
+            </Mapbox.MapView>
 
-      {/* Recenter Button - only show when map is not locked and user has moved the map */}
-      {showRecenterButton && (
-        <TouchableOpacity style={styles.recenterButton} onPress={handleRecenterMap} testID="recenter-button">
-          <NavigationIcon size={20} color="#ffffff" />
-        </TouchableOpacity>
+            {/* Recenter Button - only show when map is not locked and user has moved the map */}
+            {showRecenterButton && (
+              <TouchableOpacity style={styles.recenterButton} onPress={handleRecenterMap} testID="recenter-button">
+                <NavigationIcon size={20} color="#ffffff" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Pin Detail Modal */}
+        <PinDetailModal pin={selectedPin} isOpen={isPinDetailModalOpen} onClose={handleClosePinDetail} onSetAsCurrentCall={handleSetAsCurrentCall} />
+      </View>
+
+      {/* Drawer for Portrait Mode */}
+      {!isLandscape && (
+        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)}>
+          <DrawerBackdrop onPress={() => setIsSideMenuOpen(false)} />
+          <DrawerContent className="w-4/5 bg-white p-1 dark:bg-gray-900">
+            <DrawerBody>
+              <SideMenu onNavigate={() => setIsSideMenuOpen(false)} />
+            </DrawerBody>
+            <DrawerFooter>
+              <Button onPress={() => setIsSideMenuOpen(false)} className="w-full bg-primary-600">
+                <ButtonText>{t('common.close')}</ButtonText>
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       )}
-
-      {/* Pin Detail Modal */}
-      <PinDetailModal pin={selectedPin} isOpen={isPinDetailModalOpen} onClose={handleClosePinDetail} onSetAsCurrentCall={handleSetAsCurrentCall} />
-    </View>
+    </>
   );
 }
 

@@ -252,7 +252,9 @@ export default function TabLayout() {
                 fontWeight: '500',
               },
               tabBarStyle: {
-                display: 'none', // Hide tab bar since we only have one tab
+                paddingBottom: 5,
+                paddingTop: 5,
+                height: isLandscape ? 65 : 60,
               },
             }}
           >
@@ -263,6 +265,17 @@ export default function TabLayout() {
                 tabBarIcon: ({ color }) => <Icon as={Home} stroke={color} className="text-primary-500 dark:text-primary-400" />,
                 headerLeft: () => <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />,
                 tabBarButtonTestID: 'home-tab',
+                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
+              }}
+            />
+
+            <Tabs.Screen
+              name="map"
+              options={{
+                title: t('tabs.map'),
+                tabBarIcon: ({ color }) => <Icon as={Map} stroke={color} className="text-primary-500 dark:text-primary-400" />,
+                headerLeft: () => <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />,
+                tabBarButtonTestID: 'map-tab',
                 headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
               }}
             />
