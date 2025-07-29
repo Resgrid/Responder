@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { getAllShifts, getShift, getShiftDay, getShiftDaysForDateRange, getTodaysShifts, signupForShiftDay, withdrawFromShiftDay } from '@/api/shifts/shifts';
+import { getAllShifts, getShift, getShiftDay, getTodaysShifts, signupForShiftDay } from '@/api/shifts/shifts';
 import { logger } from '@/lib/logging';
 import { zustandStorage } from '@/lib/storage';
 import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
@@ -43,11 +43,11 @@ interface ShiftsState {
   fetchTodaysShifts: () => Promise<void>;
   fetchShift: (shiftId: string) => Promise<void>;
   fetchShiftDay: (shiftDayId: string) => Promise<void>;
-  fetchShiftDaysForDateRange: (shiftId: string, startDate: string, endDate: string) => Promise<void>;
+  //fetchShiftDaysForDateRange: (shiftId: string, startDate: string, endDate: string) => Promise<void>;
 
   // Actions - User interactions
   signupForShift: (shiftDayId: string, userId: string) => Promise<void>;
-  withdrawFromShift: (shiftDayId: string, userId: string) => Promise<void>;
+  //withdrawFromShift: (shiftDayId: string, userId: string) => Promise<void>;
 
   // Actions - UI state
   setCurrentView: (view: ShiftViewMode) => void;
@@ -61,8 +61,6 @@ interface ShiftsState {
   clearSignupError: () => void;
 
   // Computed properties helpers
-  getFilteredShifts: () => ShiftResultData[];
-  getFilteredTodaysShifts: () => ShiftDaysResultData[];
   getShiftDaysForDate: (date: string) => ShiftDaysResultData[];
 }
 
@@ -141,6 +139,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
+      console.log('fetchAllShifts error:', error);
       set({
         error: 'Failed to fetch shifts',
         isLoading: false,
@@ -212,30 +211,6 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
     }
   },
 
-  fetchShiftDaysForDateRange: async (shiftId: string, startDate: string, endDate: string) => {
-    set({ isCalendarLoading: true, error: null });
-    try {
-      const response = await getShiftDaysForDateRange(shiftId, startDate, endDate);
-      const { shiftCalendarData } = get();
-      set({
-        shiftCalendarData: {
-          ...shiftCalendarData,
-          [shiftId]: response.Data,
-        },
-        isCalendarLoading: false,
-      });
-    } catch (error) {
-      set({
-        error: 'Failed to fetch shift calendar data',
-        isCalendarLoading: false,
-      });
-      logger.error({
-        message: 'Failed to fetch shift days for date range',
-        context: { error, shiftId, startDate, endDate },
-      });
-    }
-  },
-
   // User interaction actions
   signupForShift: async (shiftDayId: string, userId: string) => {
     set({ isSignupLoading: true, signupError: null });
@@ -257,31 +232,6 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
       });
       logger.error({
         message: 'Failed to sign up for shift',
-        context: { error, shiftDayId, userId },
-      });
-    }
-  },
-
-  withdrawFromShift: async (shiftDayId: string, userId: string) => {
-    set({ isSignupLoading: true, signupError: null });
-    try {
-      await withdrawFromShiftDay(shiftDayId, userId);
-
-      // Refresh data after successful withdrawal
-      await Promise.all([get().fetchTodaysShifts(), get().fetchShiftDay(shiftDayId)]);
-
-      set({ isSignupLoading: false });
-      logger.info({
-        message: 'Successfully withdrew from shift',
-        context: { shiftDayId, userId },
-      });
-    } catch (error) {
-      set({
-        signupError: 'Failed to withdraw from shift',
-        isSignupLoading: false,
-      });
-      logger.error({
-        message: 'Failed to withdraw from shift',
         context: { error, shiftDayId, userId },
       });
     }
@@ -315,22 +265,6 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
   clearSignupError: () => set({ signupError: null }),
 
   // Computed property helpers
-  getFilteredShifts: () => {
-    const { shifts, searchQuery } = get();
-    if (!searchQuery.trim()) return shifts;
-
-    const query = searchQuery.toLowerCase();
-    return shifts.filter((shift) => shift.Name.toLowerCase().includes(query) || shift.Code.toLowerCase().includes(query));
-  },
-
-  getFilteredTodaysShifts: () => {
-    const { todaysShiftDays, searchQuery } = get();
-    if (!searchQuery.trim()) return todaysShiftDays;
-
-    const query = searchQuery.toLowerCase();
-    return todaysShiftDays.filter((shiftDay) => shiftDay.ShiftName.toLowerCase().includes(query));
-  },
-
   getShiftDaysForDate: (date: string) => {
     const { selectedShift, shiftCalendarData } = get();
     if (!selectedShift) return [];

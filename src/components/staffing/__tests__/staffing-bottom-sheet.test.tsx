@@ -14,7 +14,7 @@ jest.mock('react-i18next', () => ({
       if (key === 'common.step' && params) {
         return `Step ${params.step} of ${params.total}`;
       }
-      if (key === 'staffing.confirm_staffing' && params && params.staffing) {
+      if (key === 'home.staffing.confirm_staffing' && params && params.staffing) {
         return `Confirm ${params.staffing}`;
       }
       // Handle concatenated translation keys
@@ -26,16 +26,16 @@ jest.mock('react-i18next', () => ({
         'common.submit': 'Submit',
         'common.submitting': 'Submitting',
         'common.optional': 'optional',
-        'staffing.select_staffing_level': 'Select Staffing Level',
-        'staffing.select_staffing_level_description': 'Please select your staffing level',
-        'staffing.add_note': 'Add Note',
-        'staffing.confirm_staffing': 'Confirm Staffing',
-        'staffing.review_and_confirm': 'Review and Confirm',
-        'staffing.selected_staffing': 'Selected Staffing',
-        'staffing.note': 'Note',
-        'staffing.note_placeholder': 'Enter a note...',
-        'staffing.staffing_level': 'Staffing Level',
-        'staffing.no_staffing_options': 'No staffing options available',
+        'home.staffing.select_staffing_level': 'Select Staffing Level',
+        'home.staffing.select_staffing_level_description': 'Please select your staffing level',
+        'home.staffing.add_note': 'Add Note',
+        'home.staffing.confirm_staffing': 'Confirm Staffing',
+        'home.staffing.review_and_confirm': 'Review and Confirm',
+        'home.staffing.selected_staffing': 'Selected Staffing',
+        'home.staffing.note': 'Note',
+        'home.staffing.note_placeholder': 'Enter a note...',
+        'home.staffing.staffing_level': 'Staffing Level',
+        'home.staffing.no_staffing_options': 'No staffing options available',
       };
       return translations[key] || key;
     },
@@ -50,6 +50,30 @@ jest.mock('@/stores/staffing/staffing-bottom-sheet-store');
 // Mock the invertColor utility
 jest.mock('@/lib/utils', () => ({
   invertColor: jest.fn(() => '#000000'),
+}));
+
+// Mock the translate utility
+jest.mock('@/lib/i18n/utils', () => ({
+  translate: jest.fn((key: string, options?: any) => {
+    const translations: Record<string, string> = {
+      'home.staffing.select_staffing_level': 'Select Staffing Level',
+      'home.staffing.select_staffing_level_description': 'Please select your staffing level',
+      'home.staffing.add_note': 'Add Note',
+      'home.staffing.confirm_staffing': 'Confirm Staffing',
+      'home.staffing.review_and_confirm': 'Review and Confirm',
+      'home.staffing.selected_staffing': 'Selected Staffing',
+      'home.staffing.note': 'Note',
+      'home.staffing.note_placeholder': 'Enter a note...',
+      'home.staffing.staffing_level': 'Staffing Level',
+      'home.staffing.no_staffing_options': 'No staffing options available',
+      'common.next': 'Next',
+      'common.previous': 'Previous',
+      'common.submit': 'Submit',
+      'common.submitting': 'Submitting',
+      'common.optional': 'optional',
+    };
+    return translations[key] || key;
+  }),
 }));
 
 // Mock UI components

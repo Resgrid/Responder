@@ -6,6 +6,31 @@ global.window = {};
 // @ts-ignore
 global.window = global;
 
+// Mock React Native Appearance for NativeWind
+jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
+  getColorScheme: jest.fn(() => 'light'),
+  addChangeListener: jest.fn(),
+  removeChangeListener: jest.fn(),
+}));
+
+// Mock NativeWind
+jest.mock('nativewind', () => ({
+  cssInterop: jest.fn(),
+  styled: jest.fn(() => (Component: any) => Component),
+}));
+
+// Mock react-native-css-interop
+jest.mock('react-native-css-interop', () => ({
+  getColorScheme: jest.fn(() => 'light'),
+  appearanceObservables: {
+    getColorScheme: jest.fn(() => 'light'),
+  },
+}));
+
+jest.mock('react-native-css-interop/src/runtime/native/appearance-observables', () => ({
+  getColorScheme: jest.fn(() => 'light'),
+}));
+
 // Mock expo-audio globally
 jest.mock('expo-audio', () => ({
   createAudioPlayer: jest.fn(() => ({

@@ -105,12 +105,16 @@
       "upcoming": "Próximos"
     },
     "tapToSignUp": "Toca para inscribirse",
+    "title": "Calendario",
     "today": {
       "empty": {
         "description": "No tienes eventos programados para hoy.",
         "title": "Sin Eventos Hoy"
       }
     },
+    "eventsCount": "{{count}} evento",
+    "eventsCount_plural": "{{count}} eventos",
+    "noEvents": "No hay eventos programados",
     "unsignup": "Cancelar Asistencia",
     "upcoming": {
       "empty": {

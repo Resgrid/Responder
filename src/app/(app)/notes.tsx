@@ -36,40 +36,38 @@ export default function Notes() {
   }, [notes, searchQuery]);
 
   return (
-    <>
-      <View className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <FocusAwareStatusBar />
-        <Box className="flex-1 px-4 pt-4">
-          <Input className="mb-4 rounded-lg bg-white dark:bg-gray-800" size="md" variant="outline">
-            <InputSlot className="pl-3">
-              <InputIcon as={Search} />
+    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <FocusAwareStatusBar />
+      <Box className="flex-1 px-4 pt-4">
+        <Input className="mb-4 rounded-lg bg-white dark:bg-gray-800" size="md" variant="outline">
+          <InputSlot className="pl-3">
+            <InputIcon as={Search} />
+          </InputSlot>
+          <InputField placeholder={t('notes.search')} value={searchQuery} onChangeText={setSearchQuery} />
+          {searchQuery ? (
+            <InputSlot className="pr-3" onPress={() => setSearchQuery('')}>
+              <InputIcon as={X} />
             </InputSlot>
-            <InputField placeholder={t('notes.search')} value={searchQuery} onChangeText={setSearchQuery} />
-            {searchQuery ? (
-              <InputSlot className="pr-3" onPress={() => setSearchQuery('')}>
-                <InputIcon as={X} />
-              </InputSlot>
-            ) : null}
-          </Input>
+          ) : null}
+        </Input>
 
-          {isLoading && !refreshing ? (
-            <Loading />
-          ) : filteredNotes.length > 0 ? (
-            <FlatList
-              data={filteredNotes}
-              keyExtractor={(item) => item.NoteId}
-              renderItem={({ item }) => <NoteCard note={item} onPress={selectNote} />}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 100 }}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-            />
-          ) : (
-            <ZeroState icon={FileText} heading={t('notes.empty')} description={t('notes.emptyDescription')} />
-          )}
-        </Box>
+        {isLoading && !refreshing ? (
+          <Loading />
+        ) : filteredNotes.length > 0 ? (
+          <FlatList
+            data={filteredNotes}
+            keyExtractor={(item) => item.NoteId}
+            renderItem={({ item }) => <NoteCard note={item} onPress={selectNote} />}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          />
+        ) : (
+          <ZeroState icon={FileText} heading={t('notes.empty')} description={t('notes.emptyDescription')} />
+        )}
+      </Box>
 
-        <NoteDetailsSheet />
-      </View>
-    </>
+      <NoteDetailsSheet />
+    </View>
   );
 }

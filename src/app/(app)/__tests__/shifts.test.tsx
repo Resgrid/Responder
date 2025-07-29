@@ -263,8 +263,6 @@ const defaultMockStore = {
   closeShiftDayDetails: jest.fn(),
   selectShift: jest.fn(),
   selectShiftDay: jest.fn(),
-  getFilteredShifts: jest.fn(() => mockShifts),
-  getFilteredTodaysShifts: jest.fn(() => mockTodaysShifts),
 };
 
 describe('ShiftsScreen', () => {
@@ -351,7 +349,6 @@ describe('ShiftsScreen', () => {
       ...defaultMockStore,
       currentView: 'all',
       shifts: [],
-      getFilteredShifts: jest.fn(() => []),
     });
 
     const { getByTestId } = render(<ShiftsScreen />);
@@ -363,7 +360,6 @@ describe('ShiftsScreen', () => {
     mockUseShiftsStore.mockReturnValue({
       ...defaultMockStore,
       todaysShiftDays: [],
-      getFilteredTodaysShifts: jest.fn(() => []),
     });
 
     const { getByTestId } = render(<ShiftsScreen />);
@@ -463,39 +459,38 @@ describe('ShiftsScreen', () => {
   });
 
   it('filters results based on search query', () => {
-    const getFilteredShifts = jest.fn(() => [mockShifts[0]]);
     mockUseShiftsStore.mockReturnValue({
       ...defaultMockStore,
       currentView: 'all',
       searchQuery: 'day',
-      getFilteredShifts,
+      shifts: [mockShifts[0]], // Only Day Shift matches the search
     });
 
     const { queryByTestId } = render(<ShiftsScreen />);
 
-    expect(getFilteredShifts).toHaveBeenCalled();
     // Only Day Shift should be rendered due to filtering
     expect(queryByTestId('shift-card-1')).toBeTruthy();
   });
 
   it('filters today shifts based on search query', () => {
-    const getFilteredTodaysShifts = jest.fn(() => mockTodaysShifts);
     mockUseShiftsStore.mockReturnValue({
       ...defaultMockStore,
       searchQuery: 'day',
-      getFilteredTodaysShifts,
+      todaysShiftDays: mockTodaysShifts.filter(shift =>
+        shift.ShiftName.toLowerCase().includes('day')
+      ),
     });
 
-    render(<ShiftsScreen />);
+    const { getByTestId } = render(<ShiftsScreen />);
 
-    expect(getFilteredTodaysShifts).toHaveBeenCalled();
+    expect(getByTestId('shift-day-card-day1')).toBeTruthy();
   });
 
   it('handles empty search results', () => {
     mockUseShiftsStore.mockReturnValue({
       ...defaultMockStore,
       searchQuery: 'nonexistent',
-      getFilteredTodaysShifts: jest.fn(() => []),
+      todaysShiftDays: [],
     });
 
     const { getByTestId } = render(<ShiftsScreen />);

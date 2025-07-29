@@ -2,7 +2,7 @@ import { addMonths, eachDayOfInterval, endOfMonth, format, isSameDay, parseISO, 
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { View } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -183,39 +183,41 @@ export const ShiftCalendarView: React.FC<ShiftCalendarViewProps> = ({ shift, shi
   }
 
   return (
-    <VStack className="flex-1 space-y-4 p-4">
-      {/* Month Navigation */}
-      <HStack className="items-center justify-between">
-        <Button onPress={handlePreviousMonth} variant="outline" size="sm" className="bg-white dark:bg-gray-800">
-          <Icon as={ChevronLeft} size={16} className="text-gray-600 dark:text-gray-400" />
-        </Button>
+    <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+      <VStack className="space-y-4 p-4">
+        {/* Month Navigation */}
+        <HStack className="items-center justify-between">
+          <Button onPress={handlePreviousMonth} variant="outline" size="sm" className="bg-white dark:bg-gray-800">
+            <Icon as={ChevronLeft} size="sm" className="text-gray-600 dark:text-gray-400" />
+          </Button>
 
-        <Text className="text-lg font-semibold text-gray-900 dark:text-white">{format(currentMonth, 'MMMM yyyy')}</Text>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-white">{format(currentMonth, 'MMMM yyyy')}</Text>
 
-        <Button onPress={handleNextMonth} variant="outline" size="sm" className="bg-white dark:bg-gray-800">
-          <Icon as={ChevronRight} size={16} className="text-gray-600 dark:text-gray-400" />
-        </Button>
-      </HStack>
-
-      {/* Calendar */}
-      {renderCalendarGrid()}
-
-      {/* Legend */}
-      <VStack className="space-y-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-        <Text className="text-sm font-medium text-gray-900 dark:text-white">Legend</Text>
-        <HStack className="space-x-4">
-          <HStack className="items-center space-x-2">
-            <View className="size-3 rounded-full bg-green-500" />
-            <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.signed_up')}</Text>
-          </HStack>
-
-          <HStack className="items-center space-x-2">
-            <View className="size-3 rounded-full bg-orange-500" />
-            <Text className="text-xs text-gray-600 dark:text-gray-400">Available</Text>
-          </HStack>
+          <Button onPress={handleNextMonth} variant="outline" size="sm" className="bg-white dark:bg-gray-800">
+            <Icon as={ChevronRight} size="sm" className="text-gray-600 dark:text-gray-400" />
+          </Button>
         </HStack>
+
+        {/* Calendar */}
+        {renderCalendarGrid()}
+
+        {/* Legend */}
+        <VStack className="space-y-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+          <Text className="text-sm font-medium text-gray-900 dark:text-white">Legend</Text>
+          <HStack className="space-x-4">
+            <HStack className="items-center space-x-2">
+              <View className="size-3 rounded-full bg-green-500" />
+              <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.signed_up')}</Text>
+            </HStack>
+
+            <HStack className="items-center space-x-2">
+              <View className="size-3 rounded-full bg-orange-500" />
+              <Text className="text-xs text-gray-600 dark:text-gray-400">Available</Text>
+            </HStack>
+          </HStack>
+        </VStack>
       </VStack>
-    </VStack>
+    </ScrollView>
   );
 };
 

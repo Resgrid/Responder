@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
-import { HStack, View, VStack } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
+import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import { VStack } from '@/components/ui/vstack';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -25,7 +26,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
   const [signupNote, setSignupNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
 
-  const { setAttendance, isAttendanceLoading, attendanceError } = useCalendarStore();
+  const { setCalendarItemAttendingStatus, isAttendanceLoading, attendanceError } = useCalendarStore();
 
   if (!item) return null;
 
@@ -84,7 +85,8 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
 
   const performAttendanceChange = async (attending: boolean) => {
     try {
-      await setAttendance(item.CalendarItemId, attending, signupNote);
+      const status = attending ? 1 : 4; // 1 = attending, 4 = not attending (matching Angular)
+      await setCalendarItemAttendingStatus(item.CalendarItemId, signupNote, status);
       setSignupNote('');
       setShowNoteInput(false);
 
@@ -130,7 +132,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
   const startDateTime = formatDateTime(item.Start);
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose}>
+    <CustomBottomSheet isOpen={isOpen} onClose={onClose}>
       <VStack className="max-h-[80vh] p-6">
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -215,7 +217,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                 {isSignedUp ? (
                   <Button variant="outline" onPress={() => handleAttendanceChange(false)} disabled={isAttendanceLoading} className="flex-1 border-red-500">
                     {isAttendanceLoading ? (
-                      <Loading size="sm" />
+                      <Loading size="small" />
                     ) : (
                       <>
                         <XCircle size={16} color="#EF4444" className="mr-2" />
@@ -238,13 +240,13 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                           <ButtonText>{t('common.cancel')}</ButtonText>
                         </Button>
                         <Button variant="solid" onPress={() => performAttendanceChange(true)} disabled={isAttendanceLoading} className="flex-1 bg-green-600">
-                          {isAttendanceLoading ? <Loading size="sm" /> : <ButtonText className="text-white">{t('calendar.confirmSignup')}</ButtonText>}
+                          {isAttendanceLoading ? <Loading size="small" /> : <ButtonText className="text-white">{t('calendar.confirmSignup')}</ButtonText>}
                         </Button>
                       </>
                     ) : (
                       <Button variant="solid" onPress={() => handleAttendanceChange(true)} disabled={isAttendanceLoading} className="flex-1 bg-green-600">
                         {isAttendanceLoading ? (
-                          <Loading size="sm" />
+                          <Loading size="small" />
                         ) : (
                           <>
                             <CheckCircle size={16} color="#FFFFFF" className="mr-2" />
@@ -263,6 +265,6 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
           {renderAttendeesList()}
         </ScrollView>
       </VStack>
-    </BottomSheet>
+    </CustomBottomSheet>
   );
 };

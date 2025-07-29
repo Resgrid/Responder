@@ -1,0 +1,649 @@
+import React from 'react';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { ScrollView } from 'react-native';
+import { ShiftDetailsSheet } from '../shift-details-sheet';
+import { useShiftsStore } from '@/stores/shifts/store';
+import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
+
+// Mock react-i18next
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'shifts.details': 'Shift Details',
+        'shifts.shift_code': 'Shift Code',
+        'shifts.in_shift': 'In Shift',
+        'shifts.personnel_count': 'Personnel',
+        'shifts.groups': 'Groups',
+        'shifts.next_day': 'Next Day',
+        'shifts.shift_type': 'Shift Type',
+        'shifts.calendar': 'Calendar',
+        'shifts.loading': 'Loading...',
+        'shifts.no_shifts': 'No shifts available',
+      };
+      return translations[key] || key;
+    },
+  }),
+}));
+
+// Mock date-fns
+jest.mock('date-fns', () => ({
+  format: jest.fn((date, formatStr) => {
+    if (formatStr === 'MMM dd, yyyy') {
+      return 'Jan 15, 2024';
+    }
+    if (formatStr === 'yyyy-MM-dd') {
+      return '2024-01-15';
+    }
+    return date;
+  }),
+  parseISO: jest.fn((dateStr) => new Date(dateStr)),
+  startOfMonth: jest.fn(() => new Date('2024-01-01')),
+  endOfMonth: jest.fn(() => new Date('2024-01-31')),
+}));
+
+// Mock lucide-react-native
+jest.mock('lucide-react-native', () => ({
+  Clock: ({ size, className, ...props }: any) => 'Clock-Icon',
+  Users: ({ size, className, ...props }: any) => 'Users-Icon',
+  Calendar: ({ size, className, ...props }: any) => 'Calendar-Icon',
+  Info: ({ size, className, ...props }: any) => 'Info-Icon',
+}));
+
+// Mock UI components
+jest.mock('@/components/ui/badge', () => ({
+  Badge: ({ children, action, size, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('badge', { 'data-action': action, 'data-size': size, 'data-class': className, ...props }, children);
+  },
+  BadgeText: ({ children, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('badge-text', props, children);
+  },
+}));
+
+jest.mock('@/components/ui/box', () => ({
+  Box: ({ children, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('box', { 'data-class': className, ...props }, children);
+  },
+}));
+
+jest.mock('@/components/ui/button', () => ({
+  Button: ({ children, onPress, variant, action, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement(
+      'button',
+      {
+        onPress,
+        role: 'button',
+        'data-variant': variant,
+        'data-action': action,
+        'data-class': className,
+        ...props,
+      },
+      children
+    );
+  },
+  ButtonText: ({ children, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('button-text', { 'data-class': className, ...props }, children);
+  },
+}));
+
+jest.mock('@/components/ui/card', () => ({
+  Card: ({ children, size, variant, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement(
+      'card',
+      {
+        'data-size': size,
+        'data-variant': variant,
+        'data-class': className,
+        ...props,
+      },
+      children
+    );
+  },
+}));
+
+jest.mock('@/components/ui/text', () => ({
+  Text: ({ children, size, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('text', { 'data-size': size, 'data-class': className, ...props }, children);
+  },
+}));
+
+jest.mock('@/components/ui/vstack', () => ({
+  VStack: ({ children, space, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('vstack', { 'data-space': space, 'data-class': className, ...props }, children);
+  },
+}));
+
+jest.mock('@/components/ui/hstack', () => ({
+  HStack: ({ children, space, className, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('hstack', { 'data-space': space, 'data-class': className, ...props }, children);
+  },
+}));
+
+jest.mock('@/components/ui/spinner', () => ({
+  Spinner: ({ size, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('spinner', { 'data-size': size, ...props });
+  },
+}));
+
+jest.mock('@/components/ui/bottom-sheet', () => ({
+  CustomBottomSheet: ({ children, isOpen, onClose, testID, ...props }: any) => {
+    const React = require('react');
+    if (!isOpen) return null;
+    return React.createElement(
+      'bottom-sheet',
+      {
+        testID,
+        onClose,
+        ...props,
+      },
+      children
+    );
+  },
+}));
+
+// Mock shift calendar view and day card
+jest.mock('../shift-calendar-view', () => ({
+  ShiftCalendarView: ({ shift, shiftDays, isLoading, onShiftDayPress, onDateRangeChange, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('shift-calendar-view', {
+      'data-shift-id': shift?.ShiftId,
+      'data-loading': isLoading,
+      role: 'shift-calendar-view',
+      ...props,
+    });
+  },
+}));
+
+jest.mock('../shift-day-card', () => ({
+  ShiftDayCard: ({ shiftDay, onPress, ...props }: any) => {
+    const React = require('react');
+    return React.createElement(
+      'shift-day-card',
+      {
+        'data-shift-day-id': shiftDay?.ShiftDayId,
+        role: 'shift-day-card',
+        onPress,
+        ...props,
+      },
+      `Shift Day ${shiftDay?.ShiftDayId}`
+    );
+  },
+}));
+
+// Mock the shifts store
+const mockUseShiftsStore = jest.mocked(useShiftsStore);
+
+jest.mock('@/stores/shifts/store', () => ({
+  useShiftsStore: jest.fn(),
+}));
+
+describe('ShiftDetailsSheet', () => {
+  const mockShift: ShiftResultData = {
+    ShiftId: 'shift-1',
+    Name: 'Test Shift',
+    Code: 'TS001',
+    InShift: true,
+    PersonnelCount: 10,
+    GroupCount: 3,
+    NextDay: '2024-01-15T10:00:00Z',
+    NextDayId: 'next-day-1',
+    ScheduleType: 1, // Automatic
+    AssignmentType: 0, // Optional
+    Color: '#FF0000',
+    Days: [
+      {
+        ShiftDayId: 'day-1',
+        ShiftId: 'shift-1',
+        ShiftName: 'Test Shift',
+        ShiftDay: '2024-01-15',
+        Start: '08:00:00',
+        End: '16:00:00',
+        SignedUp: false,
+        ShiftType: 0,
+        Signups: [],
+        Needs: [],
+      },
+      {
+        ShiftDayId: 'day-2',
+        ShiftId: 'shift-1',
+        ShiftName: 'Test Shift',
+        ShiftDay: '2024-01-16',
+        Start: '08:00:00',
+        End: '16:00:00',
+        SignedUp: false,
+        ShiftType: 0,
+        Signups: [],
+        Needs: [],
+      },
+    ],
+  };
+
+  const defaultStoreState = {
+    selectedShift: mockShift,
+    shiftCalendarData: {},
+    isShiftLoading: false,
+    isCalendarLoading: false,
+    selectShiftDay: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseShiftsStore.mockReturnValue(defaultStoreState);
+  });
+
+  describe('Component Rendering', () => {
+    it('should render the shift details sheet when open', () => {
+      const { getByTestId } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByTestId('shift-details-sheet')).toBeTruthy();
+    });
+
+    it('should not render anything when closed', () => {
+      const { queryByTestId } = render(<ShiftDetailsSheet isOpen={false} onClose={jest.fn()} />);
+
+      expect(queryByTestId('shift-details-sheet')).toBeNull();
+    });
+
+    it('should not render when no shift is selected', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: null,
+      });
+
+      const { queryByTestId } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(queryByTestId('shift-details-sheet')).toBeNull();
+    });
+  });
+
+  describe('Shift Information Display', () => {
+    it('should display shift name', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('Test Shift')).toBeTruthy();
+    });
+
+    it('should display shift code when available', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('Shift Code: TS001')).toBeTruthy();
+    });
+
+    it('should display in-shift badge when user is in shift', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('In Shift')).toBeTruthy();
+    });
+
+    it('should not display in-shift badge when user is not in shift', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, InShift: false },
+      });
+
+      const { queryByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(queryByText('In Shift')).toBeNull();
+    });
+
+    it('should display personnel count', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('10')).toBeTruthy();
+      expect(getByText('Personnel')).toBeTruthy();
+    });
+
+    it('should display group count', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('3')).toBeTruthy();
+      expect(getByText('Groups')).toBeTruthy();
+    });
+
+    it('should display next day information when available', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('Next Day')).toBeTruthy();
+      expect(getByText('Jan 15, 2024')).toBeTruthy();
+    });
+
+    it('should display schedule type', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('Automatic')).toBeTruthy();
+    });
+
+    it('should display assignment type', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('Optional')).toBeTruthy();
+    });
+  });
+
+  describe('Tab Navigation', () => {
+    it('should display info tab by default', () => {
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('Test Shift')).toBeTruthy();
+    });
+
+    it('should switch to calendar tab when clicked', () => {
+      const { getAllByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      const calendarButtons = getAllByText('Calendar');
+      const calendarTabButton = calendarButtons.find((button) => button.props.onPress);
+
+      if (calendarTabButton) {
+        fireEvent.press(calendarTabButton);
+      }
+
+      // Should render calendar view
+      expect(getAllByText('Calendar')).toBeTruthy();
+    });
+  });
+
+  describe('Loading States', () => {
+    it('should display loading spinner when shift is loading', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        isShiftLoading: true,
+      });
+
+      const { getByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(getByText('Loading...')).toBeTruthy();
+    });
+  });
+
+  describe('Recent Shift Days', () => {
+    it('should display all shift days when available', () => {
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      // Check for "Recent Shift Days" text
+      const textElements = root.findAllByType('text');
+      const hasRecentShiftDaysText = textElements.some((el: any) => el.props.children === 'Recent Shift Days');
+      expect(hasRecentShiftDaysText).toBe(true);
+
+      // Check for shift day cards - should display all available days
+      const shiftDayCards = root.findAllByType('shift-day-card');
+      expect(shiftDayCards.length).toBe(2);
+      expect(shiftDayCards[0].props.children).toBe('Shift Day day-1');
+      expect(shiftDayCards[1].props.children).toBe('Shift Day day-2');
+    });
+
+    it('should not display recent shift days section when no days available', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, Days: [] },
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      // Should not find "Recent Shift Days" text
+      const textElements = root.findAllByType('text');
+      const hasRecentShiftDaysText = textElements.some((el: any) => el.props.children === 'Recent Shift Days');
+      expect(hasRecentShiftDaysText).toBe(false);
+    });
+
+    it('should display all shift days when scrolling is enabled', () => {
+      // Create a shift with many days to test scrolling
+      const manyDays = Array.from({ length: 10 }, (_, i) => ({
+        ShiftDayId: `day-${i + 1}`,
+        ShiftId: 'shift-1',
+        ShiftName: 'Test Shift',
+        ShiftDay: `2024-01-${i + 15}`,
+        Start: '08:00:00',
+        End: '16:00:00',
+        SignedUp: false,
+        ShiftType: 0,
+        Signups: [],
+        Needs: [],
+      }));
+
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, Days: manyDays },
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      // Should render all shift day cards (not limited to 3 anymore with scrolling)
+      const shiftDayCards = root.findAllByType('shift-day-card');
+      expect(shiftDayCards.length).toBe(10);
+
+      // Verify first and last cards are present
+      expect(shiftDayCards[0].props.children).toBe('Shift Day day-1');
+      expect(shiftDayCards[9].props.children).toBe('Shift Day day-10');
+    });
+
+    it('should render content within a ScrollView for scrollability', () => {
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      // Should find ScrollView component
+      const scrollViews = root.findAllByType(ScrollView);
+      expect(scrollViews.length).toBeGreaterThan(0);
+
+      // ScrollView should have proper props for mobile optimization
+      const scrollView = scrollViews[0];
+      expect(scrollView.props.showsVerticalScrollIndicator).toBe(false);
+      expect(scrollView.props.contentContainerStyle).toEqual({ paddingBottom: 20 });
+    });
+  });
+
+  describe('Date Formatting', () => {
+    it('should handle invalid next day date gracefully', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, NextDay: 'invalid-date' },
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      const textElements = root.findAllByType('text');
+      const hasNextDay = textElements.some((el: any) => el.props.children === 'Next Day');
+      const hasInvalidDate = textElements.some((el: any) => el.props.children === 'invalid-date');
+
+      expect(hasNextDay).toBe(true);
+      expect(hasInvalidDate).toBe(true);
+    });
+
+    it('should handle empty next day', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, NextDay: '' },
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      const textElements = root.findAllByType('text');
+      const hasNextDay = textElements.some((el: any) => el.props.children === 'Next Day');
+
+      expect(hasNextDay).toBe(false);
+    });
+  });
+
+  describe('Schedule and Assignment Types', () => {
+    it('should display manual schedule type', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, ScheduleType: 0 }, // Manual
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      const badgeTextElements = root.findAllByType('badge-text');
+      const hasManual = badgeTextElements.some((element: any) => element.props.children === 'Manual');
+      expect(hasManual).toBe(true);
+    });
+
+    it('should display required assignment type', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, AssignmentType: 1 }, // Required
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      const badgeTextElements = root.findAllByType('badge-text');
+      const hasRequired = badgeTextElements.some((element: any) => element.props.children === 'Required');
+      expect(hasRequired).toBe(true);
+    });
+
+    it('should display unknown for invalid schedule type', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, ScheduleType: 999 }, // Invalid -> Unknown
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      const badgeTextElements = root.findAllByType('badge-text');
+      const hasUnknown = badgeTextElements.some((element: any) => element.props.children === 'Unknown');
+      expect(hasUnknown).toBe(true);
+    });
+
+    it('should display unknown for invalid assignment type', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, AssignmentType: 999 }, // Invalid -> Unknown
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      const { root } = component;
+
+      const badgeTextElements = root.findAllByType('badge-text');
+      const hasUnknown = badgeTextElements.some((element: any) => element.props.children === 'Unknown');
+      expect(hasUnknown).toBe(true);
+    });
+  });
+
+  describe('Interaction', () => {
+    it('should call onClose when close is triggered', () => {
+      const onCloseMock = jest.fn();
+      const { getByTestId } = render(<ShiftDetailsSheet isOpen={true} onClose={onCloseMock} />);
+
+      const bottomSheet = getByTestId('shift-details-sheet');
+      if (bottomSheet.props.onClose) {
+        bottomSheet.props.onClose();
+      }
+
+      expect(onCloseMock).toHaveBeenCalled();
+    });
+
+    it('should call selectShiftDay when shift day card is pressed', () => {
+      const selectShiftDayMock = jest.fn();
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectShiftDay: selectShiftDayMock,
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      // Find shift day cards by their test output content
+      const { root } = component;
+      const shiftDayElements = root.findAllByType('shift-day-card');
+      expect(shiftDayElements.length).toBeGreaterThan(0);
+
+      const firstCard = shiftDayElements[0];
+      if (firstCard && firstCard.props.onPress) {
+        firstCard.props.onPress();
+      }
+
+      expect(selectShiftDayMock).toHaveBeenCalledWith(mockShift.Days[0]);
+    });
+  });
+
+  describe('Calendar Tab', () => {
+    it('should render calendar view when calendar tab is active', () => {
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      // Find buttons by type and click the calendar one
+      const { root } = component;
+      const buttonElements = root.findAllByType('button');
+
+      // Find calendar button by looking for button-text with "Calendar"
+      let calendarButton = null;
+      for (const button of buttonElements) {
+        const buttonTextElements = button.findAllByType('button-text');
+        const hasCalendarText = buttonTextElements.some((textEl: any) => textEl.props.children === 'Calendar');
+        if (hasCalendarText && button.props.onPress) {
+          calendarButton = button;
+          break;
+        }
+      }
+
+      expect(calendarButton).toBeTruthy();
+
+      if (calendarButton && calendarButton.props.onPress) {
+        calendarButton.props.onPress();
+      }
+
+      // Should find the calendar view component by type
+      const calendarViews = root.findAllByType('shift-calendar-view');
+      expect(calendarViews.length).toBeGreaterThan(0);
+      expect(calendarViews[0].props['data-shift-id']).toBe('shift-1');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle shift without code', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, Code: '' },
+      });
+
+      const { queryByText } = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      expect(queryByText(/Shift Code:/)).toBeNull();
+    });
+
+    it('should handle zero personnel count', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, PersonnelCount: 0 },
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      // Check for zero in the rendered content by examining text elements
+      const { root } = component;
+      const textElements = root.findAllByType('text');
+      const hasZero = textElements.some((element: any) => element.props.children === 0 || element.props.children === '0');
+      expect(hasZero).toBe(true);
+    });
+
+    it('should handle zero group count', () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: { ...mockShift, GroupCount: 0 },
+      });
+
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      // Check for zero in the rendered content by examining text elements
+      const { root } = component;
+      const textElements = root.findAllByType('text');
+      const hasZero = textElements.some((element: any) => element.props.children === 0 || element.props.children === '0');
+      expect(hasZero).toBe(true);
+    });
+  });
+});

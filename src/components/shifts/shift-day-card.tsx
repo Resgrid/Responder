@@ -3,13 +3,12 @@ import { AlertCircle, CheckCircle, Clock, Users } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { View } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { HStack } from '@/components/ui/hstack';
-import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
+import { View } from '@/components/ui/view';
 import { VStack } from '@/components/ui/vstack';
 import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
 
@@ -57,81 +56,97 @@ export const ShiftDayCard: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress })
   };
 
   const getShiftTypeText = (shiftType: number) => {
-    // These would map to enum values from backend
     switch (shiftType) {
       case 0:
-        return 'Regular';
+        return t('shifts.shift_type.regular');
       case 1:
-        return 'Emergency';
+        return t('shifts.shift_type.emergency');
       case 2:
-        return 'Training';
+        return t('shifts.shift_type.training');
       default:
-        return 'Unknown';
+        return t('shifts.shift_type.unknown');
     }
+  };
+
+  const getProgressPercentage = () => {
+    const totalNeeds = getTotalNeeds();
+    const totalSignups = getTotalSignups();
+    return totalNeeds > 0 ? Math.min((totalSignups / totalNeeds) * 100, 100) : 0;
   };
 
   return (
     <Pressable onPress={onPress} className="mb-3">
-      <Card className="bg-white shadow-sm dark:bg-gray-800">
-        <CardContent className="p-4">
-          <VStack className="space-y-3">
+      <Card size="md" variant="elevated" className="bg-background-0 shadow-sm">
+        <View className="p-4">
+          <VStack space="sm">
             {/* Header */}
-            <HStack className="items-start justify-between">
-              <VStack className="mr-3 flex-1">
-                <Text className="text-lg font-semibold text-gray-900 dark:text-white">{shiftDay.ShiftName}</Text>
-                <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDate(shiftDay.ShiftDay)}</Text>
+            <HStack className="items-start justify-between" space="md">
+              <VStack className="flex-1" space="xs">
+                <Text size="lg" bold className="text-typography-900">
+                  {shiftDay.ShiftName}
+                </Text>
+                <Text size="sm" className="text-typography-600">
+                  {formatDate(shiftDay.ShiftDay)}
+                </Text>
               </VStack>
 
               {shiftDay.SignedUp ? (
-                <Badge className="border-green-200 bg-green-100 dark:border-green-700 dark:bg-green-900">
-                  <HStack className="items-center space-x-1">
-                    <Icon as={CheckCircle} size={12} className="text-green-600 dark:text-green-400" />
-                    <Text className="text-xs font-medium text-green-800 dark:text-green-200">{t('shifts.signed_up')}</Text>
+                <Badge size="md" variant="solid" action="success" className="flex-row items-center">
+                  <HStack space="xs" className="items-center">
+                    <CheckCircle size={12} color="#059669" />
+                    <Text size="xs" bold className="text-success-800">
+                      {t('shifts.signed_up')}
+                    </Text>
                   </HStack>
                 </Badge>
               ) : (
-                <Badge className="border-orange-200 bg-orange-100 dark:border-orange-700 dark:bg-orange-900">
-                  <HStack className="items-center space-x-1">
-                    <Icon as={AlertCircle} size={12} className="text-orange-600 dark:text-orange-400" />
-                    <Text className="text-xs font-medium text-orange-800 dark:text-orange-200">{t('shifts.signup')}</Text>
+                <Badge size="md" variant="solid" action="warning" className="flex-row items-center">
+                  <HStack space="xs" className="items-center">
+                    <AlertCircle size={12} color="#D97706" />
+                    <Text size="xs" bold className="text-warning-800">
+                      {t('shifts.signup')}
+                    </Text>
                   </HStack>
                 </Badge>
               )}
             </HStack>
 
             {/* Time Range */}
-            <HStack className="items-center space-x-2">
-              <Icon as={Clock} size={16} className="text-gray-500 dark:text-gray-400" />
-              <Text className="text-sm text-gray-600 dark:text-gray-400">
+            <HStack space="sm" className="items-center">
+              <Clock size={16} color="#6B7280" />
+              <Text size="sm" className="text-typography-600">
                 {formatTime(shiftDay.Start)} - {formatTime(shiftDay.End)}
               </Text>
             </HStack>
 
             {/* Stats Row */}
-            <HStack className="justify-between">
-              <HStack className="items-center space-x-1">
-                <Icon as={Users} size={16} className="text-blue-500" />
-                <Text className="text-sm text-gray-600 dark:text-gray-400">
+            <HStack className="items-center justify-between">
+              <HStack space="xs" className="items-center">
+                <Users size={16} color="#3B82F6" />
+                <Text size="sm" className="text-typography-600">
                   {getTotalSignups()}/{getTotalNeeds()} {t('shifts.signups')}
                 </Text>
               </HStack>
 
-              <Badge className="border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
-                <Text className="text-xs text-gray-700 dark:text-gray-300">{getShiftTypeText(shiftDay.ShiftType)}</Text>
+              <Badge size="sm" variant="outline" action="muted">
+                <Text size="xs" className="text-typography-700">
+                  {getShiftTypeText(shiftDay.ShiftType)}
+                </Text>
               </Badge>
             </HStack>
 
             {/* Progress Bar */}
-            <View className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+            <View className="h-2 w-full rounded-full bg-background-200">
               <View
                 className="h-2 rounded-full bg-primary-600"
                 style={{
-                  width: `${getTotalNeeds() > 0 ? (getTotalSignups() / getTotalNeeds()) * 100 : 0}%`,
+                  width: `${getProgressPercentage()}%`,
                 }}
+                testID="progress-bar"
               />
             </View>
           </VStack>
-        </CardContent>
+        </View>
       </Card>
     </Pressable>
   );

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CalendarCard } from '@/components/calendar/calendar-card';
 import { CalendarItemDetailsSheet } from '@/components/calendar/calendar-item-details-sheet';
-import { CalendarView } from '@/components/calendar/calendar-view';
+import { EnhancedCalendarView } from '@/components/calendar/enhanced-calendar-view';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import { View } from '@/components/ui';
@@ -27,31 +27,45 @@ export default function CalendarScreen() {
   const [selectedItem, setSelectedItem] = useState<CalendarItemResultData | null>(null);
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
 
-  const { todaysItems, upcomingItems, selectedMonthItems, selectedDate, isTodaysLoading, isUpcomingLoading, isLoading, error, fetchTodaysItems, fetchUpcomingItems, fetchItemsForDateRange, clearError } =
-    useCalendarStore();
+  const {
+    todayCalendarItems,
+    upcomingCalendarItems,
+    selectedMonthItems,
+    selectedDate,
+    isTodaysLoading,
+    isUpcomingLoading,
+    isLoading,
+    error,
+    loadTodaysCalendarItems,
+    loadUpcomingCalendarItems,
+    loadCalendarItemsForDateRange,
+    viewCalendarItemAction,
+    clearError,
+  } = useCalendarStore();
 
   useEffect(() => {
-    // Initialize data on mount
-    fetchTodaysItems();
-    fetchUpcomingItems();
-  }, [fetchTodaysItems, fetchUpcomingItems]);
+    // Initialize data on mount using new Angular-style actions
+    loadTodaysCalendarItems();
+    loadUpcomingCalendarItems();
+  }, [loadTodaysCalendarItems, loadUpcomingCalendarItems]);
 
   const handleRefresh = async () => {
     clearError();
     if (activeTab === 'today') {
-      await fetchTodaysItems();
+      await loadTodaysCalendarItems();
     } else if (activeTab === 'upcoming') {
-      await fetchUpcomingItems();
+      await loadUpcomingCalendarItems();
     }
   };
 
   const handleItemPress = (item: CalendarItemResultData) => {
     setSelectedItem(item);
+    viewCalendarItemAction(item); // Update store state to match Angular
     setIsDetailsSheetOpen(true);
   };
 
   const handleMonthChange = (startDate: string, endDate: string) => {
-    fetchItemsForDateRange(startDate, endDate);
+    loadCalendarItemsForDateRange(startDate, endDate);
   };
 
   const getItemsForSelectedDate = () => {
@@ -86,13 +100,13 @@ export default function CalendarScreen() {
       );
     }
 
-    if (todaysItems.length === 0) {
+    if (!todayCalendarItems || todayCalendarItems.length === 0) {
       return <ZeroState heading={t('calendar.today.empty.title')} description={t('calendar.today.empty.description')} />;
     }
 
     return (
       <FlatList
-        data={todaysItems}
+        data={todayCalendarItems}
         renderItem={renderCalendarItem}
         keyExtractor={(item) => item.CalendarItemId}
         className="flex-1"
@@ -118,13 +132,13 @@ export default function CalendarScreen() {
       );
     }
 
-    if (upcomingItems.length === 0) {
+    if (!upcomingCalendarItems || upcomingCalendarItems.length === 0) {
       return <ZeroState heading={t('calendar.upcoming.empty.title')} description={t('calendar.upcoming.empty.description')} />;
     }
 
     return (
       <FlatList
-        data={upcomingItems}
+        data={upcomingCalendarItems}
         renderItem={renderCalendarItem}
         keyExtractor={(item) => item.CalendarItemId}
         className="flex-1"
@@ -138,7 +152,7 @@ export default function CalendarScreen() {
   const renderCalendarTab = () => {
     return (
       <View className="flex-1">
-        <CalendarView onMonthChange={handleMonthChange} />
+        <EnhancedCalendarView onMonthChange={handleMonthChange} />
         {selectedDate ? (
           <View className="flex-1 border-t border-gray-200 dark:border-gray-800">
             <VStack className="p-4">
@@ -186,29 +200,27 @@ export default function CalendarScreen() {
           headerShown: true,
         }}
       />
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
-        <VStack className="flex-1">
-          {/* Tab Navigation */}
-          <HStack className="space-x-2 p-4">
-            {renderTabButton('today', t('calendar.tabs.today'))}
-            {renderTabButton('upcoming', t('calendar.tabs.upcoming'))}
-            {renderTabButton('calendar', t('calendar.tabs.calendar'))}
-          </HStack>
+      <VStack className="flex-1">
+        {/* Tab Navigation */}
+        <HStack className="space-x-2 p-4">
+          {renderTabButton('today', t('calendar.tabs.today'))}
+          {renderTabButton('upcoming', t('calendar.tabs.upcoming'))}
+          {renderTabButton('calendar', t('calendar.tabs.calendar'))}
+        </HStack>
 
-          {/* Tab Content */}
-          {renderActiveTab()}
+        {/* Tab Content */}
+        {renderActiveTab()}
 
-          {/* Calendar Item Details Sheet */}
-          <CalendarItemDetailsSheet
-            item={selectedItem}
-            isOpen={isDetailsSheetOpen}
-            onClose={() => {
-              setIsDetailsSheetOpen(false);
-              setSelectedItem(null);
-            }}
-          />
-        </VStack>
-      </SafeAreaView>
+        {/* Calendar Item Details Sheet */}
+        <CalendarItemDetailsSheet
+          item={selectedItem}
+          isOpen={isDetailsSheetOpen}
+          onClose={() => {
+            setIsDetailsSheetOpen(false);
+            setSelectedItem(null);
+          }}
+        />
+      </VStack>
     </>
   );
 }

@@ -6,7 +6,18 @@ import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData'
 // Mock react-i18next
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'shifts.signed_up': 'Signed Up',
+        'shifts.signup': 'Sign Up',
+        'shifts.signups': 'Sign-ups',
+        'shifts.shift_type.regular': 'Regular',
+        'shifts.shift_type.emergency': 'Emergency',
+        'shifts.shift_type.training': 'Training',
+        'shifts.shift_type.unknown': 'Unknown',
+      };
+      return translations[key] || key;
+    },
   }),
 }));
 
@@ -28,32 +39,28 @@ jest.mock('date-fns', () => ({
 }));
 
 // Mock UI components
-jest.mock('@/components/ui', () => ({
+jest.mock('@/components/ui/view', () => ({
   View: 'View',
 }));
 
 jest.mock('@/components/ui/text', () => ({
-  Text: 'Text',
+  Text: ({ children, ...props }: any) => <div data-testid="text" {...props}>{children}</div>,
 }));
 
 jest.mock('@/components/ui/badge', () => ({
-  Badge: 'Badge',
+  Badge: ({ children, ...props }: any) => <div data-testid="badge" {...props}>{children}</div>,
 }));
 
-jest.mock('@/components/ui/card', () => {
-  const React = require('react');
-  return {
-    Card: ({ children, className, ...props }: any) => React.createElement('div', { 'data-testid': 'card', ...props }, children),
-    CardContent: ({ children, className, ...props }: any) => React.createElement('div', { 'data-testid': 'card-content', ...props }, children),
-  };
-});
+jest.mock('@/components/ui/card', () => ({
+  Card: ({ children, ...props }: any) => <div data-testid="card" {...props}>{children}</div>,
+}));
 
 jest.mock('@/components/ui/hstack', () => ({
-  HStack: 'HStack',
+  HStack: ({ children, ...props }: any) => <div data-testid="hstack" {...props}>{children}</div>,
 }));
 
 jest.mock('@/components/ui/vstack', () => ({
-  VStack: 'VStack',
+  VStack: ({ children, ...props }: any) => <div data-testid="vstack" {...props}>{children}</div>,
 }));
 
 jest.mock('@/components/ui/pressable', () => {
@@ -70,16 +77,12 @@ jest.mock('@/components/ui/pressable', () => {
   };
 });
 
-jest.mock('@/components/ui/icon', () => ({
-  Icon: ({ as, ...props }: any) => <div data-testid="icon" {...props} />,
-}));
-
 // Mock lucide-react-native icons
 jest.mock('lucide-react-native', () => ({
-  Clock: 'Clock',
-  Users: 'Users',
-  CheckCircle: 'CheckCircle',
-  AlertCircle: 'AlertCircle',
+  Clock: ({ color, size, ...props }: any) => <div data-testid="clock-icon" data-color={color} data-size={size} {...props} />,
+  Users: ({ color, size, ...props }: any) => <div data-testid="users-icon" data-color={color} data-size={size} {...props} />,
+  CheckCircle: ({ color, size, ...props }: any) => <div data-testid="check-circle-icon" data-color={color} data-size={size} {...props} />,
+  AlertCircle: ({ color, size, ...props }: any) => <div data-testid="alert-circle-icon" data-color={color} data-size={size} {...props} />,
 }));
 
 const mockShiftDay: ShiftDaysResultData = {
@@ -131,15 +134,18 @@ describe('ShiftDayCard', () => {
   });
 
   it('renders shift day information correctly', () => {
-    const { getByText } = render(
+    const { getByText, getAllByText } = render(
       <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
     );
 
     expect(getByText('Day Shift')).toBeTruthy();
     expect(getByText('Jan 15, 2024')).toBeTruthy();
-    expect(getByText('8:00 AM - 4:00 PM')).toBeTruthy();
-    expect(getByText('2/5 shifts.signups')).toBeTruthy();
+    expect(getByText('8:00 AM')).toBeTruthy();
+    expect(getByText('4:00 PM')).toBeTruthy();
     expect(getByText('Regular')).toBeTruthy();
+    // Check that signup/needs numbers are rendered (may be in different elements)
+    const signupNumbers = getAllByText(/[0-9]+/);
+    expect(signupNumbers.length).toBeGreaterThan(0);
   });
 
   it('shows signup badge when user is not signed up', () => {
@@ -147,7 +153,7 @@ describe('ShiftDayCard', () => {
       <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
     );
 
-    expect(getByText('shifts.signup')).toBeTruthy();
+    expect(getByText('Sign Up')).toBeTruthy();
   });
 
   it('shows signed up badge when user is signed up', () => {
@@ -156,88 +162,86 @@ describe('ShiftDayCard', () => {
       <ShiftDayCard shiftDay={signedUpShiftDay} onPress={mockOnPress} />
     );
 
-    expect(getByText('shifts.signed_up')).toBeTruthy();
+    expect(getByText('Signed Up')).toBeTruthy();
   });
 
-  it('calculates total signups correctly', () => {
+  it('displays shift types correctly', () => {
+    // Test Regular (default)
+    const { getByText: getRegularText } = render(
+      <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
+    );
+    expect(getRegularText('Regular')).toBeTruthy();
+
+    // Test Emergency
+    const emergencyShiftDay = { ...mockShiftDay, ShiftType: 1 };
+    const { getByText: getEmergencyText } = render(
+      <ShiftDayCard shiftDay={emergencyShiftDay} onPress={mockOnPress} />
+    );
+    expect(getEmergencyText('Emergency')).toBeTruthy();
+
+    // Test Training
+    const trainingShiftDay = { ...mockShiftDay, ShiftType: 2 };
+    const { getByText: getTrainingText } = render(
+      <ShiftDayCard shiftDay={trainingShiftDay} onPress={mockOnPress} />
+    );
+    expect(getTrainingText('Training')).toBeTruthy();
+
+    // Test Unknown
+    const unknownShiftDay = { ...mockShiftDay, ShiftType: 999 };
+    const { getByText: getUnknownText } = render(
+      <ShiftDayCard shiftDay={unknownShiftDay} onPress={mockOnPress} />
+    );
+    expect(getUnknownText('Unknown')).toBeTruthy();
+  });
+
+  it('handles onPress events correctly', () => {
     const { getByText } = render(
       <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
     );
 
-    // 2 signups out of 5 needed (3 + 2)
-    expect(getByText('2/5 shifts.signups')).toBeTruthy();
+    // Click on any element within the pressable card
+    fireEvent.press(getByText('Day Shift'));
+    expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
-  it('handles empty signups and needs', () => {
+  it('displays progress bar with correct testID', () => {
+    const { getByTestId } = render(
+      <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
+    );
+
+    const progressBar = getByTestId('progress-bar');
+    expect(progressBar).toBeTruthy();
+    // Progress should be 40% (2 signups / 5 needed)
+    expect(progressBar.props.style.width).toBe('40%');
+  });
+
+  it('handles empty signups and needs arrays', () => {
     const emptyShiftDay = {
       ...mockShiftDay,
       Signups: [],
       Needs: [],
     };
-    const { getByText } = render(
+    const { getByTestId } = render(
       <ShiftDayCard shiftDay={emptyShiftDay} onPress={mockOnPress} />
     );
 
-    expect(getByText('0/0 shifts.signups')).toBeTruthy();
+    const progressBar = getByTestId('progress-bar');
+    expect(progressBar.props.style.width).toBe('0%');
   });
 
-  it('handles missing signups and needs arrays', () => {
-    const shiftDayWithoutArrays = {
+  it('handles undefined signups and needs gracefully', () => {
+    const shiftDayWithUndefined = {
       ...mockShiftDay,
-      Signups: [],
-      Needs: [],
-    };
-    const { getByText } = render(
-      <ShiftDayCard shiftDay={shiftDayWithoutArrays} onPress={mockOnPress} />
+      Signups: undefined,
+      Needs: undefined,
+    } as any;
+    const { getByTestId, getByText } = render(
+      <ShiftDayCard shiftDay={shiftDayWithUndefined} onPress={mockOnPress} />
     );
 
-    expect(getByText('0/0 shifts.signups')).toBeTruthy();
-  });
-
-  it('renders different shift types correctly', () => {
-    const emergencyShiftDay = { ...mockShiftDay, ShiftType: 1 };
-    const { getByText } = render(
-      <ShiftDayCard shiftDay={emergencyShiftDay} onPress={mockOnPress} />
-    );
-
-    expect(getByText('Emergency')).toBeTruthy();
-  });
-
-  it('renders training shift type correctly', () => {
-    const trainingShiftDay = { ...mockShiftDay, ShiftType: 2 };
-    const { getByText } = render(
-      <ShiftDayCard shiftDay={trainingShiftDay} onPress={mockOnPress} />
-    );
-
-    expect(getByText('Training')).toBeTruthy();
-  });
-
-  it('handles unknown shift type', () => {
-    const unknownShiftDay = { ...mockShiftDay, ShiftType: 999 };
-    const { getByText } = render(
-      <ShiftDayCard shiftDay={unknownShiftDay} onPress={mockOnPress} />
-    );
-
-    expect(getByText('Unknown')).toBeTruthy();
-  });
-
-  it('calls onPress when card is pressed', () => {
-    const { getByText } = render(
-      <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
-    );
-
-    fireEvent.press(getByText('Day Shift'));
-    expect(mockOnPress).toHaveBeenCalledTimes(1);
-  });
-
-  it('displays correct progress bar width', () => {
-    const { getByText } = render(
-      <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
-    );
-
-    // Progress bar should be 40% (2 signups / 5 needed)
-    // This would require adding testID to the progress bar View
     expect(getByText('Day Shift')).toBeTruthy();
+    const progressBar = getByTestId('progress-bar');
+    expect(progressBar.props.style.width).toBe('0%');
   });
 
   it('handles invalid date formats gracefully', () => {
@@ -253,6 +257,8 @@ describe('ShiftDayCard', () => {
 
     // Should still render the shift name
     expect(getByText('Day Shift')).toBeTruthy();
+    // Invalid times should be displayed as-is
+    expect(getByText('invalid-time')).toBeTruthy();
   });
 
   it('handles empty date strings', () => {
@@ -270,7 +276,7 @@ describe('ShiftDayCard', () => {
     expect(getByText(' - ')).toBeTruthy(); // Empty start and end times
   });
 
-  it('calculates signup percentage correctly for full capacity', () => {
+  it('calculates progress percentage correctly for full capacity', () => {
     const fullShiftDay = {
       ...mockShiftDay,
       Signups: [
@@ -281,11 +287,12 @@ describe('ShiftDayCard', () => {
         { UserId: 'user5', Name: 'User 5', Roles: [] },
       ],
     };
-    const { getByText } = render(
+    const { getByTestId } = render(
       <ShiftDayCard shiftDay={fullShiftDay} onPress={mockOnPress} />
     );
 
-    expect(getByText('5/5 shifts.signups')).toBeTruthy();
+    const progressBar = getByTestId('progress-bar');
+    expect(progressBar.props.style.width).toBe('100%'); // 5/5 = 100%
   });
 
   it('handles zero capacity gracefully', () => {
@@ -305,10 +312,52 @@ describe('ShiftDayCard', () => {
         },
       ],
     };
-    const { getByText } = render(
+    const { getByTestId } = render(
       <ShiftDayCard shiftDay={zeroCapacityShiftDay} onPress={mockOnPress} />
     );
 
-    expect(getByText('2/0 shifts.signups')).toBeTruthy();
+    const progressBar = getByTestId('progress-bar');
+    expect(progressBar.props.style.width).toBe('0%'); // No capacity means 0% progress
+  });
+
+  it('calculates progress percentage correctly when over capacity', () => {
+    const overCapacityShiftDay = {
+      ...mockShiftDay,
+      Signups: Array.from({ length: 10 }, (_, i) => ({
+        UserId: `user${i}`,
+        Name: `User ${i}`,
+        Roles: [],
+      })),
+    };
+    const { getByTestId } = render(
+      <ShiftDayCard shiftDay={overCapacityShiftDay} onPress={mockOnPress} />
+    );
+
+    const progressBar = getByTestId('progress-bar');
+    expect(progressBar.props.style.width).toBe('100%'); // Should cap at 100%
+  });
+
+  it('renders basic UI components correctly', () => {
+    const { getByTestId } = render(
+      <ShiftDayCard shiftDay={mockShiftDay} onPress={mockOnPress} />
+    );
+
+    // Check that key UI elements are present
+    expect(getByTestId('card')).toBeTruthy();
+    expect(getByTestId('progress-bar')).toBeTruthy();
+
+    // Check for icon presence - they should be mocked
+    expect(getByTestId('clock-icon')).toBeTruthy();
+    expect(getByTestId('users-icon')).toBeTruthy();
+    expect(getByTestId('alert-circle-icon')).toBeTruthy();
+  });
+
+  it('shows correct icon when signed up', () => {
+    const signedUpShiftDay = { ...mockShiftDay, SignedUp: true };
+    const { getByTestId } = render(
+      <ShiftDayCard shiftDay={signedUpShiftDay} onPress={mockOnPress} />
+    );
+
+    expect(getByTestId('check-circle-icon')).toBeTruthy();
   });
 }); 

@@ -3,11 +3,9 @@ import { Calendar, Clock, Users } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { View } from '@/components/ui';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge, BadgeText } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { HStack } from '@/components/ui/hstack';
-import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
@@ -34,11 +32,11 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({ shift, onPress }) => {
     // These would map to enum values from backend
     switch (scheduleType) {
       case 0:
-        return 'Manual';
+        return t('shifts.manual') || 'Manual';
       case 1:
-        return 'Automatic';
+        return t('shifts.automatic') || 'Automatic';
       default:
-        return 'Unknown';
+        return t('shifts.unknown') || 'Unknown';
     }
   };
 
@@ -46,77 +44,81 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({ shift, onPress }) => {
     // These would map to enum values from backend
     switch (assignmentType) {
       case 0:
-        return 'Optional';
+        return t('shifts.assigned') || 'Assigned';
       case 1:
-        return 'Required';
+        return t('shifts.signup') || 'Sign Up';
       default:
-        return 'Unknown';
+        return t('shifts.unknown') || 'Unknown';
     }
   };
 
   return (
     <Pressable onPress={onPress} className="mb-3">
       <Card className="border-l-4 bg-white shadow-sm dark:bg-gray-800" style={{ borderLeftColor: shift.Color || '#3B82F6' }}>
-        <CardContent className="p-4">
-          <VStack className="space-y-3">
-            {/* Header */}
-            <HStack className="items-start justify-between">
-              <VStack className="mr-3 flex-1">
-                <Text className="text-lg font-semibold text-gray-900 dark:text-white">{shift.Name}</Text>
-                {shift.Code && (
-                  <Text className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('shifts.shift_code')}: {shift.Code}
-                  </Text>
-                )}
+        <VStack space="md" className="p-4">
+          {/* Header */}
+          <HStack className="items-start justify-between">
+            <VStack space="xs" className="mr-3 flex-1">
+              <Text size="lg" className="font-semibold text-gray-900 dark:text-white">
+                {shift.Name}
+              </Text>
+              {shift.Code ? (
+                <Text size="sm" className="text-gray-600 dark:text-gray-400">
+                  {t('shifts.shift_code')}: {shift.Code}
+                </Text>
+              ) : null}
+            </VStack>
+
+            {shift.InShift ? (
+              <Badge action="success" size="sm">
+                <BadgeText>{t('shifts.in_shift')}</BadgeText>
+              </Badge>
+            ) : null}
+          </HStack>
+
+          {/* Stats Row */}
+          <HStack space="lg">
+            <HStack space="xs" className="items-center">
+              <Users size={16} className="text-gray-500 dark:text-gray-400" />
+              <Text size="sm" className="text-gray-600 dark:text-gray-400">
+                {shift.PersonnelCount} {t('shifts.personnel_count')}
+              </Text>
+            </HStack>
+
+            <HStack space="xs" className="items-center">
+              <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
+              <Text size="sm" className="text-gray-600 dark:text-gray-400">
+                {shift.GroupCount} {t('shifts.groups')}
+              </Text>
+            </HStack>
+          </HStack>
+
+          {/* Next Day */}
+          {shift.NextDay ? (
+            <HStack space="sm" className="items-center">
+              <Clock size={16} className="text-gray-500 dark:text-gray-400" />
+              <VStack space="xs">
+                <Text size="sm" className="font-medium text-gray-700 dark:text-gray-300">
+                  {t('shifts.next_day')}
+                </Text>
+                <Text size="sm" className="text-gray-600 dark:text-gray-400">
+                  {formatNextDay(shift.NextDay)}
+                </Text>
               </VStack>
-
-              {shift.InShift && (
-                <Badge className="border-green-200 bg-green-100 dark:border-green-700 dark:bg-green-900">
-                  <Text className="text-xs font-medium text-green-800 dark:text-green-200">{t('shifts.in_shift')}</Text>
-                </Badge>
-              )}
             </HStack>
+          ) : null}
 
-            {/* Stats Row */}
-            <HStack className="space-x-4">
-              <HStack className="items-center space-x-1">
-                <Icon as={Users} size={16} className="text-gray-500 dark:text-gray-400" />
-                <Text className="text-sm text-gray-600 dark:text-gray-400">
-                  {shift.PersonnelCount} {t('shifts.personnel_count')}
-                </Text>
-              </HStack>
+          {/* Schedule and Assignment Type */}
+          <HStack space="sm">
+            <Badge action="info" size="sm">
+              <BadgeText>{getScheduleTypeText(shift.ScheduleType)}</BadgeText>
+            </Badge>
 
-              <HStack className="items-center space-x-1">
-                <Icon as={Calendar} size={16} className="text-gray-500 dark:text-gray-400" />
-                <Text className="text-sm text-gray-600 dark:text-gray-400">
-                  {shift.GroupCount} {t('shifts.groups')}
-                </Text>
-              </HStack>
-            </HStack>
-
-            {/* Next Day */}
-            {shift.NextDay && (
-              <HStack className="items-center space-x-2">
-                <Icon as={Clock} size={16} className="text-gray-500 dark:text-gray-400" />
-                <VStack>
-                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('shifts.next_day')}</Text>
-                  <Text className="text-sm text-gray-600 dark:text-gray-400">{formatNextDay(shift.NextDay)}</Text>
-                </VStack>
-              </HStack>
-            )}
-
-            {/* Schedule and Assignment Type */}
-            <HStack className="space-x-2">
-              <Badge className="border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900">
-                <Text className="text-xs text-blue-700 dark:text-blue-300">{getScheduleTypeText(shift.ScheduleType)}</Text>
-              </Badge>
-
-              <Badge className="border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900">
-                <Text className="text-xs text-purple-700 dark:text-purple-300">{getAssignmentTypeText(shift.AssignmentType)}</Text>
-              </Badge>
-            </HStack>
-          </VStack>
-        </CardContent>
+            <Badge action="muted" size="sm">
+              <BadgeText>{getAssignmentTypeText(shift.AssignmentType)}</BadgeText>
+            </Badge>
+          </HStack>
+        </VStack>
       </Card>
     </Pressable>
   );

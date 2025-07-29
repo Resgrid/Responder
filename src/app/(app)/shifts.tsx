@@ -1,9 +1,9 @@
 import { Search } from 'lucide-react-native';
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, StyleSheet } from 'react-native';
 
-import ZeroState from '@/components/common/zero-state-example';
+import ZeroState from '@/components/common/zero-state';
 import { ShiftCard } from '@/components/shifts/shift-card';
 import { ShiftDayCard } from '@/components/shifts/shift-day-card';
 import { ShiftDayDetailsSheet } from '@/components/shifts/shift-day-details-sheet';
@@ -18,9 +18,11 @@ import { Input, InputField } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
+import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
 import { type ShiftViewMode, useShiftsStore } from '@/stores/shifts/store';
 
-export default function ShiftsScreen() {
+const ShiftsScreen: React.FC = () => {
   const { t } = useTranslation();
   const {
     // Data
@@ -43,13 +45,19 @@ export default function ShiftsScreen() {
     closeShiftDayDetails,
     selectShift,
     selectShiftDay,
-    // Computed
-    getFilteredShifts,
-    getFilteredTodaysShifts,
   } = useShiftsStore();
 
-  const filteredShifts = useMemo(() => getFilteredShifts(), [getFilteredShifts]);
-  const filteredTodaysShifts = useMemo(() => getFilteredTodaysShifts(), [getFilteredTodaysShifts]);
+  const filteredShifts = useMemo(() => {
+    if (!searchQuery.trim()) return shifts;
+    const query = searchQuery.trim().toLowerCase();
+    return shifts.filter((shift) => shift.Name.toLowerCase().includes(query) || shift.Code.toLowerCase().includes(query));
+  }, [shifts, searchQuery]);
+
+  const filteredTodaysShifts = useMemo(() => {
+    if (!searchQuery.trim()) return todaysShiftDays;
+    const query = searchQuery.trim().toLowerCase();
+    return todaysShiftDays.filter((shiftDay) => shiftDay.ShiftName.toLowerCase().includes(query));
+  }, [todaysShiftDays, searchQuery]);
 
   useEffect(() => {
     // Refresh data when the screen is focused
@@ -60,17 +68,34 @@ export default function ShiftsScreen() {
     }
   }, [currentView, fetchTodaysShifts, fetchAllShifts]);
 
-  const handleRefresh = async () => {
+  const handleTabChange = useCallback(
+    (mode: ShiftViewMode) => {
+      setCurrentView(mode);
+      // Fetch appropriate data when tab changes
+      if (mode === 'today') {
+        fetchTodaysShifts();
+      } else {
+        fetchAllShifts();
+      }
+    },
+    [setCurrentView, fetchTodaysShifts, fetchAllShifts]
+  );
+
+  const handleRefresh = useCallback(async () => {
     if (currentView === 'today') {
       await fetchTodaysShifts();
     } else {
       await fetchAllShifts();
     }
-  };
+  }, [currentView, fetchTodaysShifts, fetchAllShifts]);
+
+  const renderShiftItem = useCallback(({ item }: { item: ShiftResultData }) => <ShiftCard shift={item} onPress={() => selectShift(item)} />, [selectShift]);
+
+  const renderShiftDayItem = useCallback(({ item }: { item: ShiftDaysResultData }) => <ShiftDayCard shiftDay={item} onPress={() => selectShiftDay(item)} />, [selectShiftDay]);
 
   const renderTabButton = (mode: ShiftViewMode, title: string) => (
     <Button
-      onPress={() => setCurrentView(mode)}
+      onPress={() => handleTabChange(mode)}
       variant={currentView === mode ? 'solid' : 'outline'}
       className={`flex-1 ${currentView === mode ? 'border-primary-600 bg-primary-600' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'}`}
     >
@@ -81,7 +106,7 @@ export default function ShiftsScreen() {
   const renderSearchBar = () => (
     <View className="px-4 pb-2">
       <Input variant="outline" className="bg-white dark:bg-gray-800">
-        <Icon as={Search} className="ml-3 text-gray-400" size={20} />
+        <Icon as={Search} className="ml-3 text-gray-400" size="sm" />
         <InputField placeholder={t('shifts.search_placeholder')} value={searchQuery} onChangeText={setSearchQuery} className="ml-2" />
       </Input>
     </View>
@@ -98,17 +123,21 @@ export default function ShiftsScreen() {
     }
 
     if (filteredTodaysShifts.length === 0) {
-      return <ZeroState title={t('shifts.no_shifts_today')} description={t('shifts.no_shifts_today')} buttonText="" onButtonPress={() => {}} showButton={false} />;
+      return <ZeroState heading={t('shifts.no_shifts_today')} description={t('shifts.no_shifts_today_description', 'Check back later or contact your supervisor for shift assignments')} />;
     }
 
     return (
       <FlatList
         data={filteredTodaysShifts}
         keyExtractor={(item) => item.ShiftDayId}
-        renderItem={({ item }) => <ShiftDayCard shiftDay={item} onPress={() => selectShiftDay(item)} />}
+        renderItem={renderShiftDayItem}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={isTodaysLoading} onRefresh={handleRefresh} />}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
       />
     );
   };
@@ -124,24 +153,28 @@ export default function ShiftsScreen() {
     }
 
     if (filteredShifts.length === 0) {
-      return <ZeroState title={t('shifts.no_shifts')} description={t('shifts.no_shifts')} buttonText="" onButtonPress={() => {}} showButton={false} />;
+      return <ZeroState heading={t('shifts.no_shifts')} description={t('shifts.no_shifts_description', 'Contact your supervisor if you believe you should have shift assignments')} />;
     }
 
     return (
       <FlatList
         data={filteredShifts}
         keyExtractor={(item) => item.ShiftId}
-        renderItem={({ item }) => <ShiftCard shift={item} onPress={() => selectShift(item)} />}
+        renderItem={renderShiftItem}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={handleRefresh} />}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
       />
     );
   };
 
   return (
     <View className="flex-1 bg-gray-50 dark:bg-gray-900">
-      <FocusAwareStatusBar style="auto" />
+      <FocusAwareStatusBar />
 
       <VStack className="flex-1">
         {/* Tab Navigation */}
@@ -165,7 +198,9 @@ export default function ShiftsScreen() {
       <ShiftDayDetailsSheet isOpen={isShiftDayDetailsOpen} onClose={closeShiftDayDetails} />
     </View>
   );
-}
+};
+
+export default React.memo(ShiftsScreen);
 
 const styles = StyleSheet.create({
   listContent: {

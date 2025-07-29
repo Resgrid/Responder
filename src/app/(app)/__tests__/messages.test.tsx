@@ -87,8 +87,30 @@ jest.mock('@/stores/messages/store', () => ({
 // Mock other modules
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
-  Stack: ({ children }: any) => children,
-  useFocusEffect: jest.fn(),
+  Stack: {
+    Screen: ({ children }: any) => {
+      const React = require('react');
+      return React.createElement('div', { 'data-testid': 'stack-screen' }, children);
+    },
+  },
+  useFocusEffect: jest.fn((fn) => fn()),
+}));
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((fn) => fn()),
+}));
+
+// Mock useWindowDimensions and Alert separately to avoid module issues
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 375, height: 812 })),
+}));
+
+jest.mock('react-native/Libraries/Alert/Alert', () => ({
+  __esModule: true,
+  default: {
+    alert: jest.fn(),
+  },
 }));
 
 jest.mock('react-i18next', () => ({
@@ -119,16 +141,6 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Alert: { alert: jest.fn() },
-    StatusBar: () => null,
-    useWindowDimensions: () => ({ width: 375, height: 812 }),
-  };
-});
-
 // Mock UI components with simple implementations
 jest.mock('@/components/ui', () => ({
   View: ({ children, ...props }: any) => {
@@ -136,6 +148,7 @@ jest.mock('@/components/ui', () => ({
     const { View } = require('react-native');
     return React.createElement(View, props, children);
   },
+  FocusAwareStatusBar: () => null,
 }));
 
 jest.mock('@/components/ui/safe-area-view', () => ({
@@ -214,6 +227,27 @@ jest.mock('@/components/ui/flat-list', () => ({
 
 jest.mock('@/components/ui/badge', () => ({
   Badge: ({ children, ...props }: any) => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, props, children);
+  },
+}));
+
+jest.mock('@/components/ui/fab', () => ({
+  Fab: ({ children, onPress, ...props }: any) => {
+    const React = require('react');
+    const { TouchableOpacity } = require('react-native');
+    return React.createElement(TouchableOpacity, { ...props, onPress }, children);
+  },
+  FabIcon: ({ children, ...props }: any) => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, props, children);
+  },
+}));
+
+jest.mock('@/components/ui/checkbox', () => ({
+  Checkbox: ({ children, ...props }: any) => {
     const React = require('react');
     const { View } = require('react-native');
     return React.createElement(View, props, children);
@@ -328,10 +362,13 @@ const mockStore = {
   isDetailsOpen: false,
   isComposeOpen: false,
   isDeleting: false,
+  inboxMessages: [],
+  sentMessages: [],
   setSearchQuery: jest.fn(),
   setCurrentFilter: jest.fn(),
   selectMessage: jest.fn(),
-  fetchMessages: jest.fn(),
+  fetchInboxMessages: jest.fn(),
+  fetchSentMessages: jest.fn(),
   getFilteredMessages: jest.fn(() => mockMessages),
   hasSelectedMessages: jest.fn(() => false),
   clearSelection: jest.fn(),
@@ -342,6 +379,8 @@ const mockStore = {
 };
 
 const mockedUseMessagesStore = useMessagesStore as jest.MockedFunction<typeof useMessagesStore>;
+// Add getState method to the mocked store
+(mockedUseMessagesStore as any).getState = jest.fn(() => mockStore);
 
 describe('MessagesScreen', () => {
   beforeEach(() => {
@@ -352,10 +391,10 @@ describe('MessagesScreen', () => {
   it('renders the messages screen correctly', () => {
     render(<MessagesScreen />);
 
-    expect(screen.getByText('Messages')).toBeTruthy();
-    expect(screen.getByText('Compose')).toBeTruthy();
     expect(screen.getByPlaceholderText('Search messages...')).toBeTruthy();
     expect(screen.getByText('All Messages')).toBeTruthy();
+    expect(screen.getByTestId('messages-search-input')).toBeTruthy();
+    expect(screen.getByTestId('messages-filter-button')).toBeTruthy();
   });
 
   it('displays messages when available', () => {
@@ -412,11 +451,11 @@ describe('MessagesScreen', () => {
     expect(mockStore.setSearchQuery).toHaveBeenCalledWith('test query');
   });
 
-  it('calls openCompose when compose button is pressed', () => {
+  it('calls openCompose when compose FAB is pressed', () => {
     render(<MessagesScreen />);
 
-    const composeButton = screen.getByText('Compose');
-    fireEvent.press(composeButton);
+    const composeFab = screen.getByTestId('messages-compose-fab');
+    fireEvent.press(composeFab);
 
     expect(mockStore.openCompose).toHaveBeenCalled();
   });
@@ -430,10 +469,11 @@ describe('MessagesScreen', () => {
     expect(mockStore.selectMessage).toHaveBeenCalledWith('1');
   });
 
-  it('calls fetchMessages on component mount', () => {
+  it('calls fetchInboxMessages and fetchSentMessages on component mount', () => {
     render(<MessagesScreen />);
 
-    expect(mockStore.fetchMessages).toHaveBeenCalled();
+    expect(mockStore.fetchInboxMessages).toHaveBeenCalled();
+    expect(mockStore.fetchSentMessages).toHaveBeenCalled();
   });
 
   it('shows message count correctly', () => {

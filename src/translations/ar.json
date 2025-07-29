@@ -105,12 +105,16 @@
       "upcoming": "القادم"
     },
     "tapToSignUp": "اضغط للتسجيل",
+    "title": "التقويم",
     "today": {
       "empty": {
         "description": "ليس لديك أحداث مجدولة لليوم.",
         "title": "لا توجد أحداث اليوم"
       }
     },
+    "eventsCount": "{{count}} حدث",
+    "eventsCount_plural": "{{count}} أحداث",
+    "noEvents": "لا توجد أحداث مجدولة",
     "unsignup": "إلغاء الحضور",
     "upcoming": {
       "empty": {

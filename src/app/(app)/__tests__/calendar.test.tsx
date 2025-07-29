@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useTranslation } from 'react-i18next';
 
-import CalendarScreen from '../../calendar';
+import CalendarScreen from '../calendar';
 import { useCalendarStore } from '@/stores/calendar/store';
 
 // Mock the translation hook

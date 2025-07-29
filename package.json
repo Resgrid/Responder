@@ -137,6 +137,7 @@
     "react-native": "0.76.9",
     "react-native-base64": "~0.2.1",
     "react-native-ble-plx": "^3.5.0",
+    "react-native-calendars": "^1.1313.0",
     "react-native-edge-to-edge": "~1.1.2",
     "react-native-flash-message": "~0.4.2",
     "react-native-gesture-handler": "~2.20.2",

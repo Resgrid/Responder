@@ -5,13 +5,11 @@ import { type CalendarItemTypesResult } from '@/models/v4/calendar/calendarItemT
 import { type SetCalendarAttendingResult } from '@/models/v4/calendar/setCalendarAttendingResult';
 
 // Define API endpoints
-const getCalendarItemsApi = createApiEndpoint('/Calendar/GetCalendarItems');
-const getCalendarItemsForDateRangeApi = createApiEndpoint('/Calendar/GetCalendarItemsForDateRange');
+const getCalendarItemsApi = createApiEndpoint('/Calendar/GetDepartmentCalendarItems');
+const getCalendarItemsForDateRangeApi = createApiEndpoint('/Calendar/GetDepartmentCalendarItemsInRange');
 const getCalendarItemApi = createApiEndpoint('/Calendar/GetCalendarItem');
-const setCalendarAttendingApi = createApiEndpoint('/Calendar/SetCalendarAttending');
-const getCalendarItemTypesApi = createApiEndpoint('/Calendar/GetCalendarItemTypes');
-const getTodaysCalendarItemsApi = createApiEndpoint('/Calendar/GetTodaysCalendarItems');
-const getUpcomingCalendarItemsApi = createApiEndpoint('/Calendar/GetUpcomingCalendarItems');
+const setCalendarAttendingApi = createApiEndpoint('/Calendar/SetCalendarAttendingStatus');
+const getCalendarItemTypesApi = createApiEndpoint('/Calendar/GetDepartmentCalendarItemTypes');
 
 /**
  * Fetch all calendar items for the department
@@ -24,8 +22,8 @@ export const getCalendarItems = async () => {
 /**
  * Fetch calendar items for a specific date range
  */
-export const getCalendarItemsForDateRange = async (startDate: string, endDate: string) => {
-  const response = await getCalendarItemsForDateRangeApi.get<CalendarItemsResult>({ startDate, endDate });
+export const getCalendarItemsForDateRange = async (start: string, end: string) => {
+  const response = await getCalendarItemsForDateRangeApi.get<CalendarItemsResult>({ start, end });
   return response.data;
 };
 
@@ -40,11 +38,11 @@ export const getCalendarItem = async (calendarItemId: string) => {
 /**
  * Set attendance for a calendar item
  */
-export const setCalendarAttending = async (calendarItemId: string, attending: boolean, note?: string) => {
+export const setCalendarAttending = async (params: { calendarItemId: string; attending: boolean; note?: string }) => {
   const response = await setCalendarAttendingApi.post<SetCalendarAttendingResult>({
-    CalendarItemId: calendarItemId,
-    Attending: attending,
-    Note: note || '',
+    CalendarItemId: params.calendarItemId,
+    Attending: params.attending,
+    Note: params.note || '',
   });
   return response.data;
 };
@@ -54,21 +52,5 @@ export const setCalendarAttending = async (calendarItemId: string, attending: bo
  */
 export const getCalendarItemTypes = async () => {
   const response = await getCalendarItemTypesApi.get<CalendarItemTypesResult>();
-  return response.data;
-};
-
-/**
- * Fetch calendar items for today
- */
-export const getTodaysCalendarItems = async () => {
-  const response = await getTodaysCalendarItemsApi.get<CalendarItemsResult>();
-  return response.data;
-};
-
-/**
- * Fetch upcoming calendar items (next 7 days)
- */
-export const getUpcomingCalendarItems = async () => {
-  const response = await getUpcomingCalendarItemsApi.get<CalendarItemsResult>();
   return response.data;
 };

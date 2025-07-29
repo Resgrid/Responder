@@ -1,12 +1,13 @@
 /* eslint-disable react/no-unstable-nested-components */
 
 import { NovuProvider } from '@novu/react-native';
-import { Redirect, SplashScreen, Tabs } from 'expo-router';
+import { Redirect, Slot, SplashScreen } from 'expo-router';
 import { size } from 'lodash';
 import { Contact, Home, ListTree, Mail, Map, Megaphone, Menu, Notebook, Truck, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationButton } from '@/components/notifications/NotificationButton';
 import { NotificationInbox } from '@/components/notifications/NotificationInbox';
@@ -16,6 +17,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
+import { Text } from '@/components/ui/text';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { useSignalRLifecycle } from '@/hooks/use-signalr-lifecycle';
 import { useAuthStore } from '@/lib/auth';
@@ -43,6 +45,7 @@ export default function TabLayout() {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const { isActive, appState } = useAppLifecycle();
+  const insets = useSafeAreaInsets();
 
   // Refs to track initialization state
   const hasInitialized = useRef(false);
@@ -215,6 +218,15 @@ export default function TabLayout() {
 
   const content = (
     <View style={styles.container}>
+      {/* Top Navigation Bar */}
+      <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
+        <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />
+        <View className="flex-1 items-center">
+          <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
+        </View>
+        <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />
+      </View>
+
       <View className="flex-1 flex-row" ref={parentRef}>
         {/* Drawer - conditionally rendered as permanent in landscape */}
         {isLandscape ? (
@@ -239,47 +251,7 @@ export default function TabLayout() {
 
         {/* Main content area */}
         <View className={`flex-1 ${isLandscape ? 'w-3/4' : 'w-full'}`}>
-          <Tabs
-            screenOptions={{
-              headerShown: true,
-              tabBarShowLabel: false,
-              tabBarIconStyle: {
-                width: 24,
-                height: 24,
-              },
-              tabBarLabelStyle: {
-                fontSize: isLandscape ? 12 : 10,
-                fontWeight: '500',
-              },
-              tabBarStyle: {
-                paddingBottom: 5,
-                paddingTop: 5,
-                height: isLandscape ? 65 : 60,
-              },
-            }}
-          >
-            <Tabs.Screen
-              name="home"
-              options={{
-                title: t('tabs.home'),
-                tabBarIcon: ({ color }) => <Icon as={Home} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                headerLeft: () => <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />,
-                tabBarButtonTestID: 'home-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-
-            <Tabs.Screen
-              name="map"
-              options={{
-                title: t('tabs.map'),
-                tabBarIcon: ({ color }) => <Icon as={Map} stroke={color} className="text-primary-500 dark:text-primary-400" />,
-                headerLeft: () => <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />,
-                tabBarButtonTestID: 'map-tab',
-                headerRight: () => <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />,
-              }}
-            />
-          </Tabs>
+          <Slot />
         </View>
       </View>
     </View>
@@ -307,17 +279,17 @@ interface CreateDrawerMenuButtonProps {
 
 const CreateDrawerMenuButton = ({ setIsOpen, isLandscape }: CreateDrawerMenuButtonProps) => {
   if (isLandscape) {
-    return null;
+    return <View className="w-8" />; // Spacer to maintain layout balance
   }
 
   return (
     <Pressable
-      className="p-3"
+      className="p-2"
       onPress={() => {
         setIsOpen(true);
       }}
     >
-      <Menu size={24} color="currentColor" className="text-gray-700 dark:text-gray-300" />
+      <Menu size={24} color="white" />
     </Pressable>
   );
 };

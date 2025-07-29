@@ -381,44 +381,6 @@ describe('useShiftsStore', () => {
 	});
 
 	describe('computed properties', () => {
-		beforeEach(() => {
-			useShiftsStore.setState({
-				shifts: mockShifts,
-				todaysShiftDays: mockTodaysShifts,
-			});
-		});
-
-		it('should filter shifts by search query', () => {
-			const { result } = renderHook(() => useShiftsStore());
-
-			act(() => {
-				result.current.setSearchQuery('day');
-			});
-
-			const filteredShifts = result.current.getFilteredShifts();
-			expect(filteredShifts).toHaveLength(1);
-			expect(filteredShifts[0].Name).toBe('Day Shift');
-		});
-
-		it("should filter today's shifts by search query", () => {
-			const { result } = renderHook(() => useShiftsStore());
-
-			act(() => {
-				result.current.setSearchQuery('day');
-			});
-
-			const filteredTodaysShifts = result.current.getFilteredTodaysShifts();
-			expect(filteredTodaysShifts).toHaveLength(1);
-			expect(filteredTodaysShifts[0].ShiftName).toBe('Day Shift');
-		});
-
-		it('should return all shifts when search query is empty', () => {
-			const { result } = renderHook(() => useShiftsStore());
-
-			const filteredShifts = result.current.getFilteredShifts();
-			expect(filteredShifts).toEqual(mockShifts);
-		});
-
 		it('should get shift days for specific date', () => {
 			useShiftsStore.setState({
 				selectedShift: mockShifts[0],

@@ -8,17 +8,17 @@ import { createCachedApiEndpoint } from '../common/cached-client';
 import { createApiEndpoint } from '../common/client';
 
 // Define API endpoints with caching for data that doesn't change frequently
-const getAllShiftsApi = createCachedApiEndpoint('/Shifts/GetAllShifts', {
+const getAllShiftsApi = createCachedApiEndpoint('/Shifts/GetShifts', {
   ttl: 60 * 1000 * 60, // Cache for 1 hour
-  enabled: true,
+  enabled: false,
 });
 
 const getTodaysShiftsApi = createApiEndpoint('/Shifts/GetTodaysShifts');
 const getShiftApi = createApiEndpoint('/Shifts/GetShift');
 const getShiftDayApi = createApiEndpoint('/Shifts/GetShiftDay');
-const getShiftDaysForDateRangeApi = createApiEndpoint('/Shifts/GetShiftDaysForDateRange');
+//const getShiftDaysForDateRangeApi = createApiEndpoint('/Shifts/GetShiftDaysForDateRange');
 const signupForShiftDayApi = createApiEndpoint('/Shifts/SignupForShiftDay');
-const withdrawFromShiftDayApi = createApiEndpoint('/Shifts/WithdrawFromShiftDay');
+//const withdrawFromShiftDayApi = createApiEndpoint('/Shifts/WithdrawFromShiftDay');
 
 /**
  * Fetch all shifts for the department
@@ -59,14 +59,14 @@ export const getShiftDay = async (shiftDayId: string) => {
 /**
  * Fetch shift days for a date range
  */
-export const getShiftDaysForDateRange = async (shiftId: string, startDate: string, endDate: string) => {
-  const response = await getShiftDaysForDateRangeApi.get<ShiftDaysResult>({
-    shiftId: shiftId,
-    startDate: startDate,
-    endDate: endDate,
-  });
-  return response.data;
-};
+//export const getShiftDaysForDateRange = async (shiftId: string, startDate: string, endDate: string) => {
+//  const response = await getShiftDaysForDateRangeApi.get<ShiftDaysResult>({
+//    shiftId: shiftId,
+//    startDate: startDate,
+//    endDate: endDate,
+//  });
+//  return response.data;
+//};
 
 /**
  * Sign up for a shift day
@@ -82,10 +82,10 @@ export const signupForShiftDay = async (shiftDayId: string, userId: string) => {
 /**
  * Withdraw from a shift day
  */
-export const withdrawFromShiftDay = async (shiftDayId: string, userId: string) => {
-  const response = await withdrawFromShiftDayApi.post<SignupShiftDayResult>({
-    shiftDayId: shiftDayId,
-    userId: userId,
-  });
-  return response.data;
-};
+//export const withdrawFromShiftDay = async (shiftDayId: string, userId: string) => {
+//  const response = await withdrawFromShiftDayApi.post<SignupShiftDayResult>({
+//    shiftDayId: shiftDayId,
+//    userId: userId,
+//  });
+//  return response.data;
+//};
