@@ -1,0 +1,275 @@
+name: React Native CI/CD
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'docs/**'
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      buildType:
+        type: choice
+        description: 'Build type to run'
+        options:
+          - dev
+          - prod-apk
+          - prod-aab
+          - ios-dev
+          - ios-adhoc
+          - ios-prod
+          - all
+      platform:
+        type: choice
+        description: 'Platform to build'
+        default: 'all'
+        options:
+          - android
+          - ios
+          - all
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+  EXPO_APPLE_PASSWORD: ${{ secrets.EXPO_APPLE_PASSWORD }}
+  EXPO_TEAM_ID: ${{ secrets.EXPO_TEAM_ID }}
+  CREDENTIALS_JSON_BASE64: ${{ secrets.CREDENTIALS_JSON_BASE64 }}
+  POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  UNIT_BASE_API_URL: ${{ secrets.UNIT_BASE_API_URL }}
+  UNIT_CHANNEL_API_URL: ${{ secrets.UNIT_CHANNEL_API_URL }}
+  UNIT_LOGGING_KEY: ${{ secrets.UNIT_LOGGING_KEY }}
+  UNIT_MAPBOX_DLKEY: ${{ secrets.UNIT_MAPBOX_DLKEY }}
+  UNIT_MAPBOX_PUBKEY: ${{ secrets.UNIT_MAPBOX_PUBKEY }}
+  UNIT_SENTRY_DSN: ${{ secrets.UNIT_SENTRY_DSN }}
+  UNIT_ANDROID_KS: ${{ secrets.UNIT_ANDROID_KS }}
+  UNIT_GOOGLE_SERVICES: ${{ secrets.UNIT_GOOGLE_SERVICES }}
+  MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+  APPLE_APIKEY: ${{ secrets.APPLE_APIKEY }}
+  MATCH_UNIT_BUNDLEID: ${{ secrets.MATCH_UNIT_BUNDLEID }}
+  MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+  MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+  EXPO_ACCOUNT_OWNER: ${{ secrets.EXPO_ACCOUNT_OWNER }}
+  BUNDLE_ID: ${{ secrets.MATCH_UNIT_BUNDLEID }}
+  EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+  SCHEME: ${{ secrets.SCHEME }}
+  UNIT_IOS_CERT: ${{ secrets.UNIT_IOS_CERT }}
+  EXPO_ASC_API_KEY_PATH: ${{ secrets.EXPO_ASC_API_KEY_PATH }}
+  EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID }}
+  EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
+  EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_TEAM_ID }}
+  EXPO_APPLE_TEAM_TYPE: ${{ secrets.EXPO_APPLE_TEAM_TYPE }}
+  NODE_OPTIONS: --openssl-legacy-provider
+
+jobs:
+  check-skip:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    steps:
+      - name: Skip CI check
+        run: echo "Proceeding with workflow"
+
+  test:
+    needs: check-skip
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: 📦 Setup yarn cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 📦 Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: 🧪 Run Checks and Tests
+        run: yarn check-all
+
+  build-and-deploy:
+    needs: test
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        platform: [android, ios]
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-latest' || 'ubuntu-latest' }}
+    environment: RNBuild
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Setup yarn cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 📦 Install dependencies
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: 📋 Create Google Json File
+        run: |
+          echo $UNIT_GOOGLE_SERVICES | base64 -d > google-services.json
+
+      - name: 📋 Update package.json Versions
+        run: |
+          # Check if jq is installed, if not install it
+          if ! command -v jq &> /dev/null; then
+            echo "Installing jq..."
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+          # Fix the main entry in package.json
+          if [ -f ./package.json ]; then
+            # Create a backup
+            cp package.json package.json.bak
+            # Update the package.json
+            jq '.version = "7.${{ github.run_number }}"' package.json > package.json.tmp && mv package.json.tmp package.json
+            jq '.versionCode = "7${{ github.run_number }}"' package.json > package.json.tmp && mv package.json.tmp package.json
+            echo "Updated package.json versions"
+            cat package.json | grep "version"
+            cat package.json | grep "versionCode"
+          else
+            echo "package.json not found"
+            exit 1
+          fi
+
+      - name: 📱 Setup EAS build cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.eas-build-local
+          key: ${{ runner.os }}-eas-build-local-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-eas-build-local-
+
+      - name: 🔄 Verify EAS CLI installation
+        run: |
+          echo "EAS CLI version:"
+          eas --version
+
+      - name: 📋 Create iOS Cert
+        run: |
+          echo $UNIT_IOS_CERT | base64 -d > AuthKey_HRBP5FNJN6.p8
+
+      - name: 📋 Restore gradle.properties
+        env:
+          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        shell: bash
+        run: |
+          mkdir -p ~/.gradle/
+          echo ${GRADLE_PROPERTIES} > ~/.gradle/gradle.properties
+
+      - name: 📱 Build Development APK
+        if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'dev'))
+        run: |
+          # Build with increased memory limit
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile development --local --non-interactive --output=./ResgridUnit-dev.apk
+        env:
+          NODE_ENV: development
+
+      - name: 📱 Build Production APK
+        if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile production-apk --local --non-interactive --output=./ResgridUnit-prod.apk
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build Production AAB
+        if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-aab'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile production --local --non-interactive --output=./ResgridUnit-prod.aab
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build iOS Development
+        if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-dev'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform ios --profile development --local --non-interactive --output=./ResgridUnit-ios-dev.ipa
+        env:
+          NODE_ENV: development
+
+      - name: 📱 Build iOS Ad-Hoc
+        if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-adhoc'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform ios --profile internal --local --non-interactive --output=./ResgridUnit-ios-adhoc.ipa
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build iOS Production
+        if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-prod'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform ios --profile production --local --non-interactive --output=./ResgridUnit-ios-prod.ipa
+        env:
+          NODE_ENV: production
+
+      - name: 📦 Upload build artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-builds-${{ matrix.platform }}
+          path: |
+            ./ResgridUnit-dev.apk
+            ./ResgridUnit-prod.apk
+            ./ResgridUnit-prod.aab
+            ./ResgridUnit-ios-dev.ipa
+            ./ResgridUnit-ios-adhoc.ipa
+            ./ResgridUnit-ios-prod.ipa
+          retention-days: 7
+
+      - name: 📦 Upload Android build artifacts to Testfairy
+        if: (matrix.platform == 'android')
+        uses: alexfu/testfairy-upload-action@main
+        with:
+          api-key: ${{ secrets.TESTFAIRY_API_KEY }}
+          file: ./ResgridUnit-prod.apk
+          groups: Resgrid
+          notify: on
+
+      - name: 📦 Upload iOS build artifacts to Testfairy
+        if: (matrix.platform == 'ios')
+        uses: alexfu/testfairy-upload-action@main
+        with:
+          api-key: ${{ secrets.TESTFAIRY_API_KEY }}
+          file: ./ResgridUnit-ios-adhoc.ipa
+          groups: Resgrid
+          notify: on
