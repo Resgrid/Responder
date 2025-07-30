@@ -39,14 +39,14 @@ env:
   CREDENTIALS_JSON_BASE64: ${{ secrets.CREDENTIALS_JSON_BASE64 }}
   POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-  UNIT_BASE_API_URL: ${{ secrets.UNIT_BASE_API_URL }}
-  UNIT_CHANNEL_API_URL: ${{ secrets.UNIT_CHANNEL_API_URL }}
-  UNIT_LOGGING_KEY: ${{ secrets.UNIT_LOGGING_KEY }}
-  UNIT_MAPBOX_DLKEY: ${{ secrets.UNIT_MAPBOX_DLKEY }}
-  UNIT_MAPBOX_PUBKEY: ${{ secrets.UNIT_MAPBOX_PUBKEY }}
-  UNIT_SENTRY_DSN: ${{ secrets.UNIT_SENTRY_DSN }}
-  UNIT_ANDROID_KS: ${{ secrets.UNIT_ANDROID_KS }}
-  UNIT_GOOGLE_SERVICES: ${{ secrets.UNIT_GOOGLE_SERVICES }}
+  RESPOND_BASE_API_URL: ${{ secrets.RESPOND_BASE_API_URL }}
+  RESPOND_CHANNEL_API_URL: ${{ secrets.RESPOND_CHANNEL_API_URL }}
+  RESPOND_LOGGING_KEY: ${{ secrets.RESPOND_LOGGING_KEY }}
+  RESPOND_MAPBOX_DLKEY: ${{ secrets.RESPOND_MAPBOX_DLKEY }}
+  RESPOND_MAPBOX_PUBKEY: ${{ secrets.RESPOND_MAPBOX_PUBKEY }}
+  RESPOND_SENTRY_DSN: ${{ secrets.RESPOND_SENTRY_DSN }}
+  RESPOND_ANDROID_KS: ${{ secrets.RESPOND_ANDROID_KS }}
+  RESPOND_GOOGLE_SERVICES: ${{ secrets.RESPOND_GOOGLE_SERVICES }}
   MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -58,7 +58,7 @@ env:
   BUNDLE_ID: ${{ secrets.MATCH_UNIT_BUNDLEID }}
   EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
   SCHEME: ${{ secrets.SCHEME }}
-  UNIT_IOS_CERT: ${{ secrets.UNIT_IOS_CERT }}
+  RESPOND_IOS_CERT: ${{ secrets.RESPOND_IOS_CERT }}
   EXPO_ASC_API_KEY_PATH: ${{ secrets.EXPO_ASC_API_KEY_PATH }}
   EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID }}
   EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
@@ -144,7 +144,7 @@ jobs:
 
       - name: 📋 Create Google Json File
         run: |
-          echo $UNIT_GOOGLE_SERVICES | base64 -d > google-services.json
+          echo $RESPOND_GOOGLE_SERVICES | base64 -d > google-services.json
 
       - name: 📋 Update package.json Versions
         run: |
@@ -184,7 +184,7 @@ jobs:
 
       - name: 📋 Create iOS Cert
         run: |
-          echo $UNIT_IOS_CERT | base64 -d > AuthKey_HRBP5FNJN6.p8
+          echo $RESPOND_IOS_CERT | base64 -d > AuthKey_HRBP5FNJN6.p8
 
       - name: 📋 Restore gradle.properties
         env:

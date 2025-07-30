@@ -14,7 +14,6 @@ import { RealtimeGeolocationItem } from '@/components/settings/realtime-geolocat
 import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { ThemeItem } from '@/components/settings/theme-item';
 import { ToggleItem } from '@/components/settings/toggle-item';
-import { UnitSelectionBottomSheet } from '@/components/settings/unit-selection-bottom-sheet';
 import { FocusAwareStatusBar, ScrollView } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Card } from '@/components/ui/card';
@@ -24,7 +23,6 @@ import { useAuth, useAuthStore } from '@/lib';
 import { logger } from '@/lib/logging';
 import { getBaseApiUrl } from '@/lib/storage/app';
 import { openLinkInBrowser } from '@/lib/utils';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useUnitsStore } from '@/stores/units/store';
 
 export default function Settings() {
@@ -106,7 +104,6 @@ export default function Settings() {
 
       <LoginInfoBottomSheet isOpen={showLoginInfo} onClose={() => setShowLoginInfo(false)} onSubmit={handleLoginInfoSubmit} />
       <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} />
-      <UnitSelectionBottomSheet isOpen={showUnitSelection} onClose={() => setShowUnitSelection(false)} />
     </Box>
   );
 }
