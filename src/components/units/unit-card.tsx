@@ -1,9 +1,11 @@
-import { MapPin, Settings, Truck } from 'lucide-react-native';
+import { MapPin, Truck } from 'lucide-react-native';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from 'react-native';
 
 import { type UnitResultData } from '@/models/v4/units/unitResultData';
 
-import { Badge } from '../ui/badge';
+import { Badge, BadgeText } from '../ui/badge';
 import { Box } from '../ui/box';
 import { HStack } from '../ui/hstack';
 import { Icon } from '../ui/icon';
@@ -16,55 +18,56 @@ interface UnitCardProps {
 }
 
 export const UnitCard: React.FC<UnitCardProps> = ({ unit, onPress }) => {
+  const { t } = useTranslation();
   const hasLocation = unit.Latitude && unit.Longitude;
 
   return (
     <Pressable onPress={() => onPress(unit.UnitId)} testID={`unit-card-${unit.UnitId}`}>
-      <Box className="mb-3 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
-        <VStack space="xs">
+      <Box className="mb-3 rounded-lg border border-outline-100 bg-background-0 p-4 shadow-sm">
+        <VStack space="sm">
           <HStack className="items-center justify-between">
             <HStack className="flex-1 items-center" space="sm">
-              <Icon as={Truck} size={20} className="text-blue-600 dark:text-blue-400" />
-              <Text className="flex-1 text-lg font-semibold text-gray-800 dark:text-gray-100" numberOfLines={1}>
+              <Icon as={Truck} size="md" className="text-primary-600" />
+              <Text className="flex-1 text-lg font-semibold text-typography-900" numberOfLines={1}>
                 {unit.Name}
               </Text>
             </HStack>
-            {hasLocation && <Icon as={MapPin} size={16} className="text-green-600 dark:text-green-400" />}
+            {hasLocation && <Icon as={MapPin} size="sm" className="text-success-600" />}
           </HStack>
 
-          {unit.Type && <Text className="text-sm text-gray-600 dark:text-gray-300">{unit.Type}</Text>}
+          {unit.Type && <Text className="text-sm text-typography-600">{unit.Type}</Text>}
 
-          <HStack className="mt-2 flex-wrap items-center" space="xs">
-            {unit.GroupName && (
-              <Badge className="mb-1 mr-1 bg-purple-100 dark:bg-purple-900">
-                <Text className="text-xs text-purple-800 dark:text-purple-100">{unit.GroupName}</Text>
+          <HStack className="flex-wrap items-center" space="xs">
+            {unit.GroupName ? (
+              <Badge action="info" variant="outline" size="sm">
+                <BadgeText>{unit.GroupName}</BadgeText>
               </Badge>
-            )}
+            ) : null}
 
-            {unit.PlateNumber && (
-              <Badge className="mb-1 mr-1 bg-gray-100 dark:bg-gray-700">
-                <Text className="text-xs text-gray-800 dark:text-gray-100">{unit.PlateNumber}</Text>
+            {unit.PlateNumber ? (
+              <Badge action="muted" variant="outline" size="sm">
+                <BadgeText>{unit.PlateNumber}</BadgeText>
               </Badge>
-            )}
+            ) : null}
 
-            {unit.FourWheelDrive && (
-              <Badge className="mb-1 mr-1 bg-orange-100 dark:bg-orange-900">
-                <Text className="text-xs text-orange-800 dark:text-orange-100">4WD</Text>
+            {unit.FourWheelDrive ? (
+              <Badge action="warning" variant="outline" size="sm">
+                <BadgeText>{t('units.fourWheelDrive')}</BadgeText>
               </Badge>
-            )}
+            ) : null}
 
-            {unit.SpecialPermit && (
-              <Badge className="mb-1 mr-1 bg-yellow-100 dark:bg-yellow-900">
-                <Text className="text-xs text-yellow-800 dark:text-yellow-100">Special Permit</Text>
+            {unit.SpecialPermit ? (
+              <Badge action="success" variant="outline" size="sm">
+                <BadgeText>{t('units.specialPermit')}</BadgeText>
               </Badge>
-            )}
+            ) : null}
           </HStack>
 
-          {unit.Note && (
-            <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400" numberOfLines={2}>
+          {unit.Note ? (
+            <Text className="text-xs text-typography-500" numberOfLines={2}>
               {unit.Note}
             </Text>
-          )}
+          ) : null}
         </VStack>
       </Box>
     </Pressable>

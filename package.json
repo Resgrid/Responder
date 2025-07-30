@@ -31,7 +31,7 @@
     "version": "yarn run prebuild && git add .",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc  --noemit",
-    "lint:translations": "eslint ./src/translations/ --fix --ext .json  ",
+    "lint:translations": "eslint ./src/translations/ --fix --ext .json",
     "test": "jest --coverage=true --coverageReporters=cobertura",
     "check-all": "yarn run lint && yarn run type-check && yarn run lint:translations",
     "test:ci": "yarn run test --coverage",

@@ -12,7 +12,7 @@ jest.mock('@/stores/staffing/staffing-bottom-sheet-store');
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key === 'home.staffing.no_options_available' ? 'No staffing options available' : key,
+    t: (key: string) => key === 'home.staffing.no_options_available' ? 'No staffing options available' : key,
   }),
 }));
 
@@ -20,9 +20,9 @@ jest.mock('@/lib/utils', () => ({
   invertColor: jest.fn(() => '#000000'),
 }));
 
-const mockUseHomeStore = useHomeStore;
-const mockUseCoreStore = useCoreStore;
-const mockUseStaffingBottomSheetStore = useStaffingBottomSheetStore;
+const mockUseHomeStore = useHomeStore as jest.MockedFunction<typeof useHomeStore>;
+const mockUseCoreStore = useCoreStore as jest.MockedFunction<typeof useCoreStore>;
+const mockUseStaffingBottomSheetStore = useStaffingBottomSheetStore as jest.MockedFunction<typeof useStaffingBottomSheetStore>;
 
 describe('StaffingButtons', () => {
   const mockSetIsOpen = jest.fn();
@@ -32,10 +32,18 @@ describe('StaffingButtons', () => {
 
     mockUseHomeStore.mockReturnValue({
       departmentStats: { openCalls: 0, personnelInService: 0, unitsInService: 0 },
-      isLoadingStats: false, currentUser: null, currentUserStatus: null, currentUserStaffing: null,
-      isLoadingUser: false, availableStatuses: [], availableStaffings: [], isLoadingOptions: false,
-      error: null, fetchDepartmentStats: jest.fn(), fetchCurrentUserInfo: jest.fn(),
-      fetchOptions: jest.fn(), clearError: jest.fn(),
+      isLoadingStats: false, 
+      currentUser: null, 
+      currentUserStatus: null, 
+      currentUserStaffing: null,
+      isLoadingUser: false, 
+      availableStatuses: [], 
+      availableStaffings: [], 
+      isLoadingOptions: false,
+      error: null, 
+      fetchDepartmentStats: jest.fn(), 
+      fetchCurrentUserInfo: jest.fn(),
+      refreshAll: jest.fn(),
     });
 
     mockUseCoreStore.mockReturnValue({
@@ -43,10 +51,7 @@ describe('StaffingButtons', () => {
     });
 
     mockUseStaffingBottomSheetStore.mockReturnValue({
-      isOpen: false, currentStep: 'select-staffing', selectedStaffing: null, note: '', isLoading: false,
-      setIsOpen: mockSetIsOpen, setCurrentStep: jest.fn(), setSelectedStaffing: jest.fn(),
-      setNote: jest.fn(), setIsLoading: jest.fn(), nextStep: jest.fn(), previousStep: jest.fn(),
-      submitStaffing: jest.fn(), reset: jest.fn(),
+      setIsOpen: mockSetIsOpen,
     });
   });
 

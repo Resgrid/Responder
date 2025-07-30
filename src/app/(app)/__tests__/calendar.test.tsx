@@ -223,7 +223,7 @@ const mockStore = {
 describe('CalendarScreen', () => {
   beforeEach(() => {
     (useTranslation as jest.Mock).mockReturnValue({ t: mockT });
-    (useCalendarStore as jest.Mock).mockReturnValue(mockStore);
+    (useCalendarStore as unknown as jest.Mock).mockReturnValue(mockStore);
     jest.clearAllMocks();
   });
 
@@ -256,19 +256,17 @@ describe('CalendarScreen', () => {
   });
 
   describe('Today Tab', () => {
-    it('shows loading state for today\'s items', () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
-        ...mockStore,
-        isTodaysLoading: true,
-      });
-
-      const { getByTestId } = render(<CalendarScreen />);
-
-      expect(getByTestId('loading')).toBeTruthy();
+  it('shows loading state for today\'s items', () => {
+    (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isTodaysLoading: true,
     });
 
-    it('shows error state for today\'s items', () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+    const { getByTestId } = render(<CalendarScreen />);
+
+    expect(getByTestId('loading')).toBeTruthy();
+  });    it('shows error state for today\'s items', () => {
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         error: 'Failed to load',
       });
@@ -288,7 +286,7 @@ describe('CalendarScreen', () => {
     });
 
     it('renders today\'s items when available', () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         todayCalendarItems: [mockCalendarItem],
       });
@@ -301,7 +299,7 @@ describe('CalendarScreen', () => {
 
   describe('Upcoming Tab', () => {
     it('shows loading state for upcoming items', () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         isUpcomingLoading: true,
       });
@@ -321,7 +319,7 @@ describe('CalendarScreen', () => {
     });
 
     it('renders upcoming items when available', () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         upcomingCalendarItems: [mockCalendarItem],
       });
@@ -355,7 +353,7 @@ describe('CalendarScreen', () => {
         Start: '2024-01-15T10:00:00Z', // Same time as selected date
       };
 
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         selectedDate: testDate,
         selectedMonthItems: [mockItemWithMatchingDate],
@@ -368,7 +366,7 @@ describe('CalendarScreen', () => {
     });
 
     it('shows empty message when no events for selected date', () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         selectedDate: '2024-01-15',
         selectedMonthItems: [],
@@ -383,7 +381,7 @@ describe('CalendarScreen', () => {
 
   describe('Calendar Item Details', () => {
     it('opens details sheet when item is pressed', async () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         todayCalendarItems: [mockCalendarItem],
       });
@@ -398,7 +396,7 @@ describe('CalendarScreen', () => {
     });
 
     it('closes details sheet when close is pressed', async () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         todayCalendarItems: [mockCalendarItem],
       });
@@ -423,7 +421,7 @@ describe('CalendarScreen', () => {
 
   describe('Error Handling', () => {
     it('calls retry action when retry button is pressed', () => {
-      (useCalendarStore as jest.Mock).mockReturnValue({
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         error: 'Network error',
       });

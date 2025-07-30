@@ -48,14 +48,14 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
   const isSignedUp = item.Attending;
 
   return (
-    <Pressable onPress={onPress} testID={testID}>
-      <Card className="mb-3 shadow-sm">
+    <Pressable onPress={onPress} testID={testID} className="mb-3">
+      <Card variant="elevated" className="shadow-sm">
         <CardContent className="p-4">
           <VStack space="sm">
             {/* Header with type and attendance status */}
             <HStack className="items-start justify-between">
               <VStack className="flex-1">
-                <Heading size="sm" className="text-gray-900 dark:text-white" numberOfLines={2}>
+                <Heading size="sm" className="text-typography-900 dark:text-typography-50" numberOfLines={2}>
                   {item.Title}
                 </Heading>
                 {item.TypeName ? (
@@ -70,16 +70,16 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
             {/* Date and Time */}
             <HStack className="items-center" space="sm">
               <Calendar size={16} color="#6B7280" />
-              <Text className="text-sm text-gray-600 dark:text-gray-300">{formatDate(item.Start)}</Text>
+              <Text className="text-sm text-typography-600 dark:text-typography-300">{formatDate(item.Start)}</Text>
               <Clock size={16} color="#6B7280" className="ml-2" />
-              <Text className="text-sm text-gray-600 dark:text-gray-300">{getEventDuration()}</Text>
+              <Text className="text-sm text-typography-600 dark:text-typography-300">{getEventDuration()}</Text>
             </HStack>
 
             {/* Location */}
             {item.Location ? (
               <HStack className="items-center" space="sm">
                 <MapPin size={16} color="#6B7280" />
-                <Text className="flex-1 text-sm text-gray-600 dark:text-gray-300" numberOfLines={1}>
+                <Text className="flex-1 text-sm text-typography-600 dark:text-typography-300" numberOfLines={1}>
                   {item.Location}
                 </Text>
               </HStack>
@@ -87,7 +87,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
 
             {/* Description preview */}
             {item.Description ? (
-              <Text className="text-sm text-gray-500 dark:text-gray-400" numberOfLines={2}>
+              <Text className="text-sm text-typography-500 dark:text-typography-400" numberOfLines={2}>
                 {item.Description}
               </Text>
             ) : null}
@@ -96,21 +96,21 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
             {item.Attendees && item.Attendees.length > 0 ? (
               <HStack className="items-center" space="sm">
                 <Users size={16} color="#6B7280" />
-                <Text className="text-sm text-gray-600 dark:text-gray-300">{t('calendar.attendeesCount', { count: item.Attendees.length })}</Text>
+                <Text className="text-sm text-typography-600 dark:text-typography-300">{t('calendar.attendeesCount', { count: item.Attendees.length })}</Text>
               </HStack>
             ) : null}
 
             {/* Signup info */}
             {canSignUp ? (
-              <HStack className="items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-700">
-                <Text className="text-sm text-gray-500 dark:text-gray-400">{t('calendar.signupAvailable')}</Text>
+              <HStack className="items-center justify-between border-t border-outline-100 pt-2 dark:border-outline-700">
+                <Text className="text-sm text-typography-500 dark:text-typography-400">{t('calendar.signupAvailable')}</Text>
                 {isSignedUp ? (
-                  <Badge variant="solid" className="bg-green-500">
+                  <Badge action="success" variant="solid">
                     <Text className="text-xs text-white">{t('calendar.signedUp')}</Text>
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="border-primary-500">
-                    <Text className="text-xs text-primary-600 dark:text-primary-400">{t('calendar.tapToSignUp')}</Text>
+                  <Badge action="info" variant="outline">
+                    <Text className="text-xs text-info-600 dark:text-info-400">{t('calendar.tapToSignUp')}</Text>
                   </Badge>
                 )}
               </HStack>

@@ -28,7 +28,7 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
     if (!dateString) return '';
     try {
       const date = parseDateISOString(dateString);
-      return formatDateForDisplay(date);
+      return formatDateForDisplay(date, 'MMM dd, yyyy h:mm tt');
     } catch {
       return dateString;
     }
@@ -87,7 +87,7 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
           <HStack space="sm" className="flex-1 items-center">
             {showCheckbox && (
               <Checkbox
-                value={isSelected}
+                value={isSelected ? 'true' : 'false'}
                 onChange={() => {}} // Handled by parent
                 aria-label={t('messages.select_message')}
               />

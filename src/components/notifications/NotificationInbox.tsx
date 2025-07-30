@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { useCoreStore } from '@/stores/app/core-store';
+import useAuthStore from '@/stores/auth/store';
 import { useToastStore } from '@/stores/toast/store';
 import { type NotificationPayload } from '@/types/notification';
 
@@ -24,8 +25,8 @@ interface NotificationInboxProps {
 }
 
 export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) => {
-  const activeUnitId = useCoreStore((state) => state.activeUnitId);
   const config = useCoreStore((state: any) => state.config);
+  const userId = useAuthStore((state) => state.userId);
   const { notifications, isLoading, fetchMore, hasMore, refetch } = useNotifications();
   const showToast = useToastStore((state) => state.showToast);
   const [selectedNotification, setSelectedNotification] = useState<NotificationPayload | null>(null);
@@ -286,7 +287,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#2196F3" />
                 </View>
-              ) : !activeUnitId || !config ? (
+              ) : !userId || !config ? (
                 <View style={styles.loadingContainer}>
                   <Text>Unable to load notifications</Text>
                 </View>

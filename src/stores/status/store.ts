@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { saveUnitStatus } from '@/api/units/unitStatuses';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
+import { type UnitResultData } from '@/models/v4/units/unitResultData';
 import { SaveUnitStatusInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
 
 import { useCoreStore } from '../app/core-store';
@@ -43,19 +44,18 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set) =>
 interface StatusesState {
   isLoading: boolean;
   error: string | null;
-  saveUnitStatus: (type: string, note: string) => Promise<void>;
+  saveUnitStatus: (activeUnit: UnitResultData, type: string, note: string) => Promise<void>;
 }
 
 export const useStatusesStore = create<StatusesState>((set) => ({
   isLoading: false,
   error: null,
-  saveUnitStatus: async (type: string, note: string) => {
+  saveUnitStatus: async (activeUnit: UnitResultData, type: string, note: string) => {
     set({ isLoading: true, error: null });
     try {
       let status = new SaveUnitStatusInput();
       const date = new Date();
 
-      const activeUnit = useCoreStore.getState().activeUnit;
       if (activeUnit) {
         status.Id = activeUnit?.UnitId;
         status.Type = type;
@@ -63,9 +63,6 @@ export const useStatusesStore = create<StatusesState>((set) => ({
         status.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
         status.Note = note;
         await saveUnitStatus(status);
-
-        // Refresh the active unit status after saving
-        await useCoreStore.getState().setActiveUnitWithFetch(activeUnit.UnitId);
       }
       set({ isLoading: false });
     } catch (error) {

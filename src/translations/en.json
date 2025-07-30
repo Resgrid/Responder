@@ -79,11 +79,14 @@
       "attendanceUpdate": "Failed to update attendance. Please try again.",
       "title": "Error"
     },
+    "eventsCount": "{{count}} event",
+    "eventsCount_plural": "{{count}} events",
     "loading": {
       "date": "Loading events for selected date...",
       "today": "Loading today's events...",
       "upcoming": "Loading upcoming events..."
     },
+    "noEvents": "No events scheduled",
     "optional": "Optional",
     "required": "Required",
     "selectDate": "Select a date to view events",
@@ -106,16 +109,13 @@
     },
     "tapToSignUp": "Tap to sign up",
     "title": "Calendar",
-    "todayButton": "Today",
     "today": {
       "empty": {
         "description": "You have no scheduled events for today.",
         "title": "No Events Today"
       }
     },
-    "eventsCount": "{{count}} event",
-    "eventsCount_plural": "{{count}} events",
-    "noEvents": "No events scheduled",
+    "todayButton": "Today",
     "unsignup": "Cancel Attendance",
     "upcoming": {
       "empty": {
@@ -236,7 +236,6 @@
     "call_location": "Call Location",
     "call_number": "Call Number",
     "call_priority": "Call Priority",
-    "personnel": "People",
     "confirm_deselect_message": "Are you sure you want to deselect the current active call?",
     "confirm_deselect_title": "Deselect Active Call",
     "contact_info": "Contact Info",
@@ -291,6 +290,7 @@
     "no_open_calls": "No open calls available",
     "note": "Note",
     "note_placeholder": "Enter the note of the call",
+    "personnel": "People",
     "plus_code": "Plus Code",
     "plus_code_found": "Plus code found and location updated",
     "plus_code_geocoding_error": "Failed to search for plus code, please try again",
@@ -574,6 +574,7 @@
     "no_messages_description": "Send your first message to get started",
     "no_subject": "No Subject",
     "note_optional": "Note (Optional)",
+    "people": "People",
     "recipients": "Recipients",
     "recipients_count": "{{count}} recipients",
     "recipients_required": "At least one recipient is required",
@@ -599,7 +600,6 @@
     "subject": "Subject",
     "subject_required": "Subject is required",
     "title": "Messages",
-    "people": "People",
     "types": {
       "alert": "Alert",
       "message": "Message",
@@ -631,13 +631,13 @@
   "personnel": {
     "empty": "No personnel found",
     "emptyDescription": "No personnel match your search criteria or no personnel data is available.",
-    "search": "Search personnel...",
     "filter": {
-      "title": "Filter Personnel",
       "description": "Select filters to refine the personnel list. Changes are automatically applied.",
       "empty": "No filter options available",
-      "emptyDescription": "Filter options will appear here when available."
+      "emptyDescription": "Filter options will appear here when available.",
+      "title": "Filter Personnel"
     },
+    "search": "Search personnel...",
     "status": {
       "add_note": "Add Note",
       "calls_tab": "Calls",
@@ -750,6 +750,7 @@
   "shifts": {
     "all_shifts": "All Shifts",
     "already_signed_up": "Already Signed Up",
+    "automatic": "Automatic",
     "available": "Available",
     "calendar": "Calendar",
     "current_signups": "Current Sign-ups",
@@ -761,6 +762,7 @@
     "loading": "Loading shifts...",
     "loading_details": "Loading shift details...",
     "loading_signup": "Processing...",
+    "manual": "Manual",
     "needed": "Needed",
     "needs": "Needs",
     "next_day": "Next Day",
@@ -770,8 +772,10 @@
     "no_shifts_today": "No shifts scheduled for today",
     "no_shifts_today_description": "Check back later or contact your supervisor for shift assignments",
     "no_signups_yet": "No sign-ups yet",
+    "optional": "Optional",
     "personnel_count": "Personnel Count",
     "position_needs": "Position Needs",
+    "required": "Required",
     "roles": "Roles",
     "scheduled_for": "Scheduled for",
     "search_placeholder": "Search shifts...",
@@ -779,9 +783,9 @@
     "shift_day": "Shift Day",
     "shift_name": "Shift Name",
     "shift_type": {
+      "emergency": "Emergency",
       "label": "Shift Type",
       "regular": "Regular",
-      "emergency": "Emergency",
       "training": "Training",
       "unknown": "Unknown"
     },
@@ -795,19 +799,15 @@
     "today": "Today",
     "todays_shifts": "Today's Shifts",
     "type_emergency": "Emergency",
-    "type_regular": "Regular", 
+    "type_regular": "Regular",
     "type_training": "Training",
     "type_unknown": "Unknown",
+    "unknown": "Unknown",
     "withdraw": "Withdraw",
     "withdraw_error": "Failed to withdraw from shift",
     "withdraw_success": "Successfully withdrew from shift",
     "you": "You",
-    "you_are_signed_up": "You are signed up for this shift",
-    "manual": "Manual",
-    "automatic": "Automatic",
-    "optional": "Optional",
-    "required": "Required",
-    "unknown": "Unknown"
+    "you_are_signed_up": "You are signed up for this shift"
   },
   "sidebar": {
     "audio": "Stream",

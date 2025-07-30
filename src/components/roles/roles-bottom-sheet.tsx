@@ -6,7 +6,6 @@ import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { logger } from '@/lib/logging';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useRolesStore } from '@/stores/roles/store';
 import { useToastStore } from '@/stores/toast/store';
 
@@ -19,12 +18,13 @@ import { RoleAssignmentItem } from './role-assignment-item';
 type RolesBottomSheetProps = {
   isOpen: boolean;
   onClose: () => void;
+  activeUnit: { UnitId: string; Name: string } | null;
 };
 
-export const RolesBottomSheet: React.FC<RolesBottomSheetProps> = ({ isOpen, onClose }) => {
+export const RolesBottomSheet: React.FC<RolesBottomSheetProps> = ({ isOpen, onClose, activeUnit }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const activeUnit = useCoreStore((state) => state.activeUnit);
+  //const activeUnit = useCoreStore((state) => state.activeUnit);
   const { roles, unitRoleAssignments, users, isLoading, error } = useRolesStore();
 
   // Add state to track pending changes

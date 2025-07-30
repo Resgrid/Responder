@@ -1,7 +1,7 @@
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { ScrollView, useWindowDimensions } from 'react-native';
 import { create } from 'zustand';
 
 import { Box } from '@/components/ui/box';
@@ -58,8 +58,6 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   const { activeIndex, setActiveIndex } = useTabStore();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
   // Use local state if no external state management is needed
   const currentIndex = onChange ? activeIndex : localActiveIndex;
@@ -76,122 +74,97 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     [onChange, setActiveIndex]
   );
 
-  // Get dynamic styles for better dark mode support
-  const getTabStyle = (index: number) => {
+  // Get dynamic class names for tabs
+  const getTabClassName = (index: number) => {
     const isActive = index === currentIndex;
-
-    // Base styles
-    const baseStyle = {
-      flex: 1,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      flexDirection: 'row' as const,
+    
+    // Base classes
+    let baseClasses = 'flex-1 items-center justify-center flex-row';
+    
+    // Size-based padding classes
+    const sizeClasses = {
+      sm: isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
+      md: isLandscape ? 'px-4 py-2' : 'px-3 py-1.5',
+      lg: isLandscape ? 'px-5 py-2.5' : 'px-4 py-2',
     };
-
-    // Size-based padding
-    const sizeMap = {
-      sm: { paddingHorizontal: isLandscape ? 12 : 8, paddingVertical: isLandscape ? 6 : 4 },
-      md: { paddingHorizontal: isLandscape ? 16 : 12, paddingVertical: isLandscape ? 8 : 6 },
-      lg: { paddingHorizontal: isLandscape ? 20 : 16, paddingVertical: isLandscape ? 10 : 8 },
-    };
-
-    const sizeStyle = sizeMap[size];
-
-    // Variant-specific styles
-    let variantStyle = {};
+    
+    baseClasses += ` ${sizeClasses[size]}`;
+    
+    // Variant-specific classes
     switch (variant) {
       case 'default':
       case 'underlined':
-        variantStyle = {
-          borderBottomWidth: 2,
-          borderBottomColor: isActive ? '#90D5FF' : 'transparent',
-        };
+        baseClasses += isActive ? ' border-b-2 border-sky-300' : ' border-b-2 border-transparent';
         break;
       case 'pills':
-        variantStyle = {
-          backgroundColor: isActive ? '#90D5FF' : 'transparent',
-          borderRadius: 20,
-          marginHorizontal: 2,
-        };
+        baseClasses += isActive ? ' bg-sky-300 rounded-full mx-0.5' : ' bg-transparent rounded-full mx-0.5';
         break;
       case 'segmented':
-        variantStyle = {
-          backgroundColor: isActive ? '#90D5FF' : isDark ? '#374151' : '#F3F4F6',
-          borderRadius: 6,
-          marginHorizontal: 2,
-        };
+        baseClasses += isActive ? ' bg-sky-300 rounded-md mx-0.5' : ' bg-gray-100 dark:bg-gray-700 rounded-md mx-0.5';
         break;
     }
-
-    return { ...baseStyle, ...sizeStyle, ...variantStyle };
+    
+    return baseClasses;
   };
 
-  const getTextStyle = (index: number) => {
+  const getTextClassName = (index: number) => {
     const isActive = index === currentIndex;
-
-    // Base text style
-    const baseStyle = {
-      fontWeight: isActive ? '600' : ('500' as const),
-      fontSize: isLandscape ? (size === 'lg' ? 16 : size === 'md' ? 14 : 12) : size === 'lg' ? 14 : size === 'md' ? 12 : 10,
+    
+    // Base text classes
+    let textClasses = isActive ? 'font-semibold' : 'font-medium';
+    
+    // Size-based text classes
+    const textSizeClasses = {
+      sm: isLandscape ? 'text-xs' : 'text-[10px]',
+      md: isLandscape ? 'text-sm' : 'text-xs',
+      lg: isLandscape ? 'text-base' : 'text-sm',
     };
-
+    
+    textClasses += ` ${textSizeClasses[size]}`;
+    
     // Color based on variant and state
-    let color;
     if (variant === 'pills' && isActive) {
-      color = '#FFFFFF';
+      textClasses += ' text-white';
     } else if (variant === 'segmented' && isActive) {
-      color = '#FFFFFF';
+      textClasses += ' text-white';
     } else if (isActive) {
-      color = '#90D5FF';
+      textClasses += ' text-sky-300';
     } else {
-      color = isDark ? '#D1D5DB' : '#6B7280';
+      textClasses += ' text-gray-600 dark:text-gray-300';
     }
-
-    return { ...baseStyle, color };
+    
+    return textClasses;
   };
 
-  // Container style
-  const getContainerStyle = () => {
-    const baseStyle = {
-      flexDirection: 'row' as const,
-      flex: 1,
-    };
-
-    let variantStyle = {};
+  // Container class names
+  const getContainerClassName = () => {
+    let containerClasses = 'flex-row flex-1';
+    
     switch (variant) {
       case 'default':
       case 'underlined':
-        variantStyle = {
-          borderBottomWidth: 1,
-          borderBottomColor: isDark ? '#374151' : '#E5E7EB',
-        };
+        containerClasses += ' border-b border-gray-200 dark:border-gray-700';
         break;
       case 'pills':
-        variantStyle = {
-          padding: 4,
-        };
+        containerClasses += ' p-1';
         break;
       case 'segmented':
-        variantStyle = {
-          backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-          padding: 4,
-          borderRadius: 8,
-        };
+        containerClasses += ' bg-gray-50 dark:bg-gray-800 p-1 rounded-lg';
         break;
     }
-
-    return { ...baseStyle, ...variantStyle };
+    
+    return containerClasses;
   };
 
   return (
     <Box className={`flex-1 ${className}`}>
       {/* Tab Headers */}
       {scrollable ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={getContainerStyle()}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className={getContainerClassName()}>
           {tabs.map((tab, index) => (
-            <Pressable key={tab.key} style={getTabStyle(index)} onPress={() => handleTabPress(index)} className={tabClassName}>
+            <Pressable key={tab.key} className={`${getTabClassName(index)} ${tabClassName}`} onPress={() => handleTabPress(index)}>
               {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
-              <Text style={getTextStyle(index)}>{typeof tab.title === 'string' ? t(tab.title) : tab.title}</Text>
+              <Text className={getTextClassName(index)}>{typeof tab.title === 'string' ? t(tab.title) : tab.title}</Text>
               {tab.badge !== undefined && tab.badge > 0 && (
                 <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
                   <Text className="text-xs font-bold text-white">{tab.badge}</Text>
@@ -201,11 +174,11 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
           ))}
         </ScrollView>
       ) : (
-        <Box style={getContainerStyle()} className={tabsContainerClassName}>
+        <Box className={`${getContainerClassName()} ${tabsContainerClassName}`}>
           {tabs.map((tab, index) => (
-            <Pressable key={tab.key} style={getTabStyle(index)} onPress={() => handleTabPress(index)} className={tabClassName}>
+            <Pressable key={tab.key} className={`${getTabClassName(index)} ${tabClassName}`} onPress={() => handleTabPress(index)}>
               {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
-              <Text style={getTextStyle(index)}>{typeof tab.title === 'string' ? t(tab.title) : tab.title}</Text>
+              <Text className={getTextClassName(index)}>{typeof tab.title === 'string' ? t(tab.title) : tab.title}</Text>
               {tab.badge !== undefined && tab.badge > 0 && (
                 <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
                   <Text className="text-xs font-bold text-white">{tab.badge}</Text>

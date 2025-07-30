@@ -6,6 +6,7 @@ import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInf
 import { type ActiveUnitRoleResultData } from '@/models/v4/unitRoles/activeUnitRoleResultData';
 import { type SetUnitRolesInput } from '@/models/v4/unitRoles/setUnitRolesInput';
 import { type UnitRoleResultData } from '@/models/v4/unitRoles/unitRoleResultData';
+import { type UnitResultData } from '@/models/v4/units/unitResultData';
 
 import { useCoreStore } from '../app/core-store';
 
@@ -15,7 +16,7 @@ interface RolesState {
   users: PersonnelInfoResultData[];
   isLoading: boolean;
   error: string | null;
-  init: () => Promise<void>;
+  init: (activeUnit: UnitResultData) => Promise<void>;
   fetchRoles: () => Promise<void>;
   fetchRolesForUnit: (unitId: string) => Promise<void>;
   fetchUsers: () => Promise<void>;
@@ -28,7 +29,7 @@ export const useRolesStore = create<RolesState>((set) => ({
   users: [],
   isLoading: false,
   error: null,
-  init: async () => {
+  init: async (activeUnit) => {
     set({ isLoading: true, error: null });
     try {
       const response = await getAllUnitRolesAndAssignmentsForDepartment();
@@ -40,7 +41,6 @@ export const useRolesStore = create<RolesState>((set) => ({
         isLoading: false,
       });
 
-      const activeUnit = useCoreStore.getState().activeUnit;
       if (activeUnit) {
         const unitRoles = await getRoleAssignmentsForUnit(activeUnit.UnitId);
         set({ unitRoleAssignments: unitRoles.Data });

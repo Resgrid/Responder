@@ -7,8 +7,18 @@ import { MessageCard } from '../message-card';
 
 // Mock the utils
 jest.mock('@/lib/utils', () => ({
-  formatDateForDisplay: jest.fn((date) => date.toISOString().split('T')[0]),
-  parseDateISOString: jest.fn((dateString) => new Date(dateString)),
+  formatDateForDisplay: jest.fn((date: Date, format: string) => {
+    if (format === 'MMM dd, yyyy h:mm tt') {
+      return 'Dec 01, 2023 10:00 AM';
+    }
+    return date.toISOString().split('T')[0];
+  }),
+  parseDateISOString: jest.fn((dateString) => {
+    if (dateString === 'invalid-date') {
+      throw new Error('Invalid date');
+    }
+    return new Date(dateString);
+  }),
 }));
 
 // Mock react-i18next
@@ -331,7 +341,7 @@ describe('MessageCard', () => {
     );
 
     const checkbox = getByTestId('message-checkbox');
-    expect(checkbox.props.value).toBe(true);
+    expect(checkbox.props.value).toBe('true');
   });
 
   it('hides checkbox when not in selection mode', () => {
@@ -414,5 +424,101 @@ describe('MessageCard', () => {
     );
 
     expect(queryByText(/recipients/)).toBeNull();
+  });
+
+  it('displays correct formatted date', () => {
+    const { getByText } = render(
+      <MessageCard
+        message={mockMessage}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />
+    );
+
+    expect(getByText('Dec 01, 2023 10:00 AM')).toBeTruthy();
+  });
+
+  it('shows correct checkbox value when unselected', () => {
+    const { getByTestId } = render(
+      <MessageCard
+        message={mockMessage}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+        showCheckbox={true}
+        isSelected={false}
+      />
+    );
+
+    const checkbox = getByTestId('message-checkbox');
+    expect(checkbox.props.value).toBe('false');
+  });
+
+  it('handles messages without recipients gracefully', () => {
+    const messageWithoutRecipients = { ...mockMessage, Recipients: [] };
+
+    const { queryByText } = render(
+      <MessageCard
+        message={messageWithoutRecipients}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />
+    );
+
+    // Should not crash and should not show recipients count
+    expect(queryByText(/recipients/)).toBeNull();
+  });
+
+  it('shows correct message type colors and labels', () => {
+    const { rerender, getByText } = render(
+      <MessageCard
+        message={{ ...mockMessage, Type: 0 }}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />
+    );
+    expect(getByText('Message')).toBeTruthy();
+
+    rerender(
+      <MessageCard
+        message={{ ...mockMessage, Type: 1 }}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />
+    );
+    expect(getByText('Poll')).toBeTruthy();
+
+    rerender(
+      <MessageCard
+        message={{ ...mockMessage, Type: 2 }}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />
+    );
+    expect(getByText('Alert')).toBeTruthy();
+
+    // Test unknown type defaults to 'Message'
+    rerender(
+      <MessageCard
+        message={{ ...mockMessage, Type: 99 }}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />
+    );
+    expect(getByText('Message')).toBeTruthy();
+  });
+
+  it('handles invalid date strings gracefully', () => {
+    const messageWithInvalidDate = { ...mockMessage, SentOnUtc: 'invalid-date' };
+
+    const { getByText } = render(
+      <MessageCard
+        message={messageWithInvalidDate}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />
+    );
+
+    // Should fall back to the original string
+    expect(getByText('invalid-date')).toBeTruthy();
   });
 }); 

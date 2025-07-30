@@ -12,4 +12,13 @@ const Card = React.forwardRef<React.ElementRef<typeof View>, ICardProps>(({ clas
 
 Card.displayName = 'Card';
 
-export { Card };
+// CardContent component for layout consistency
+type ICardContentProps = ViewProps & { className?: string };
+
+const CardContent = React.forwardRef<React.ElementRef<typeof View>, ICardContentProps>(({ className, ...props }, ref) => {
+  return <View className={`${className || ''}`} {...props} ref={ref} />;
+});
+
+CardContent.displayName = 'CardContent';
+
+export { Card, CardContent };
