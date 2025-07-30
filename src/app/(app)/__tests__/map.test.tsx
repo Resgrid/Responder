@@ -447,6 +447,11 @@ describe('HomeMap', () => {
       setActiveCall: mockSetActiveCall,
     });
 
+    // Also mock getState to return the same setActiveCall function
+    mockCoreStore.useCoreStore.getState = jest.fn(() => ({
+      setActiveCall: mockSetActiveCall,
+    }));
+
     render(<HomeMap />);
 
     await waitFor(() => {

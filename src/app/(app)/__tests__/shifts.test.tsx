@@ -26,12 +26,51 @@ jest.mock('@/components/ui/focus-aware-status-bar', () => ({
 // Mock nativewind
 jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'light' }),
+  cssInterop: jest.fn(),
 }));
 
+// Mock @expo/html-elements
+jest.mock('@expo/html-elements', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    H1: ({ children, ...props }: any) => React.createElement(Text, props, children),
+    H2: ({ children, ...props }: any) => React.createElement(Text, props, children),
+    H3: ({ children, ...props }: any) => React.createElement(Text, props, children),
+    H4: ({ children, ...props }: any) => React.createElement(Text, props, children),
+    H5: ({ children, ...props }: any) => React.createElement(Text, props, children),
+    H6: ({ children, ...props }: any) => React.createElement(Text, props, children),
+  };
+});
+
+// Mock react-native-svg
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ children, ...props }: any) => React.createElement(View, props, children),
+    Svg: ({ children, ...props }: any) => React.createElement(View, props, children),
+    Circle: ({ children, ...props }: any) => React.createElement(View, props, children),
+    Path: ({ children, ...props }: any) => React.createElement(View, props, children),
+    G: ({ children, ...props }: any) => React.createElement(View, props, children),
+  };
+});
+
 // Mock lucide-react-native
-jest.mock('lucide-react-native', () => ({
-  Search: () => null,
-}));
+jest.mock('lucide-react-native', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Search: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'search-icon', ...props }),
+    FileQuestion: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'file-question-icon', ...props }),
+    AlertCircle: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'alert-circle-icon', ...props }),
+    Clock: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'clock-icon', ...props }),
+    Users: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'users-icon', ...props }),
+    User: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'user-icon', ...props }),
+    Calendar: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'calendar-icon', ...props }),
+  };
+});
 
 // Mock specific React Native components that cause issues
 jest.mock('react-native/Libraries/Components/RefreshControl/RefreshControl', () => 'RefreshControl');
@@ -194,9 +233,37 @@ jest.mock('@/components/ui/spinner', () => {
   };
 });
 
-jest.mock('@/components/ui/icon', () => ({
-  Icon: ({ ...props }: any) => null,
-}));
+jest.mock('@/components/ui/box', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Box: ({ children, ...props }: any) => React.createElement(View, props, children),
+  };
+});
+
+jest.mock('@/components/ui/center', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Center: ({ children, ...props }: any) => React.createElement(View, props, children),
+  };
+});
+
+jest.mock('@/components/ui/heading', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    Heading: ({ children, ...props }: any) => React.createElement(Text, props, children),
+  };
+});
+
+jest.mock('@/components/ui/icon', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Icon: ({ size, color, children, ...props }: any) => React.createElement(View, { testID: 'ui-icon', ...props }, children),
+  };
+});
 
 const mockUseShiftsStore = useShiftsStore as jest.MockedFunction<typeof useShiftsStore>;
 

@@ -52,6 +52,15 @@ jest.mock('@/lib/utils', () => ({
   invertColor: jest.fn(() => '#000000'),
 }));
 
+// Mock NativeWind useColorScheme
+jest.mock('nativewind', () => ({
+  useColorScheme: jest.fn(() => ({
+    colorScheme: 'light',
+    setColorScheme: jest.fn(),
+    toggleColorScheme: jest.fn(),
+  })),
+}));
+
 // Mock the translate utility
 jest.mock('@/lib/i18n/utils', () => ({
   translate: jest.fn((key: string, options?: any) => {
@@ -86,6 +95,96 @@ jest.mock('@/components/ui/actionsheet', () => {
     ActionsheetContent: ({ children }: any) => <View testID="actionsheet-content">{children}</View>,
     ActionsheetDragIndicator: () => <View testID="actionsheet-drag-indicator" />,
     ActionsheetDragIndicatorWrapper: ({ children }: any) => <View testID="actionsheet-drag-indicator-wrapper">{children}</View>,
+  };
+});
+
+jest.mock('@/components/ui/button', () => {
+  const { TouchableOpacity, Text } = require('react-native');
+  return {
+    Button: ({ onPress, children, disabled, ...props }: any) => (
+      <TouchableOpacity onPress={disabled ? undefined : onPress} testID={props.testID} disabled={disabled}>
+        {children}
+      </TouchableOpacity>
+    ),
+    ButtonText: ({ children }: any) => <Text>{children}</Text>,
+  };
+});
+
+jest.mock('@/components/ui/heading', () => {
+  const { Text } = require('react-native');
+  return {
+    Heading: ({ children }: any) => <Text>{children}</Text>,
+  };
+});
+
+jest.mock('@/components/ui/hstack', () => {
+  const { View } = require('react-native');
+  return {
+    HStack: ({ children }: any) => <View>{children}</View>,
+  };
+});
+
+jest.mock('@/components/ui/vstack', () => {
+  const { View } = require('react-native');
+  return {
+    VStack: ({ children }: any) => <View>{children}</View>,
+  };
+});
+
+jest.mock('@/components/ui/text', () => {
+  const { Text } = require('react-native');
+  return {
+    Text: ({ children }: any) => <Text>{children}</Text>,
+  };
+});
+
+jest.mock('@/components/ui/radio', () => {
+  const React = require('react');
+  const { View, TouchableOpacity, Text } = require('react-native');
+  return {
+    RadioGroup: ({ value, onChange, children }: any) => (
+      <View testID="radio-group">
+        {React.Children.map(children, (child: any) =>
+          React.cloneElement(child, {
+            isSelected: child.props.value === value,
+            onPress: () => onChange(child.props.value)
+          })
+        )}
+      </View>
+    ),
+    Radio: ({ value, children, isSelected, onPress }: any) => (
+      <TouchableOpacity onPress={onPress} testID={`radio-${value}`}>
+        {children}
+      </TouchableOpacity>
+    ),
+    RadioIndicator: ({ children }: any) => <View>{children}</View>,
+    RadioIcon: ({ as: Component }: any) => <View testID="radio-icon" />,
+    RadioLabel: ({ children }: any) => <View>{children}</View>,
+  };
+});
+
+jest.mock('@/components/ui/textarea', () => {
+  const { View, TextInput } = require('react-native');
+  return {
+    Textarea: ({ children }: any) => <View>{children}</View>,
+    TextareaInput: ({ onChangeText, placeholder, value, ...props }: any) => (
+      <TextInput
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        value={value}
+        testID={props.testID || 'textarea-input'}
+        {...props}
+      />
+    ),
+  };
+});
+
+jest.mock('lucide-react-native', () => {
+  const { View } = require('react-native');
+  return {
+    ArrowLeft: ({ color, size }: any) => <View testID="arrow-left-icon" />,
+    ArrowRight: ({ color, size }: any) => <View testID="arrow-right-icon" />,
+    CircleIcon: ({ color, size }: any) => <View testID="circle-icon" />,
   };
 });
 

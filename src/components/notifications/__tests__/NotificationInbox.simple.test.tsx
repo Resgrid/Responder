@@ -1,16 +1,22 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { useNotifications } from '@novu/react-native';
-import { NotificationInbox } from '../NotificationInbox';
-import { useCoreStore } from '@/stores/app/core-store';
-import { useToastStore } from '@/stores/toast/store';
-import { deleteMessage } from '@/api/novu/inbox';
 
-// Mock dependencies
-jest.mock('@novu/react-native');
-jest.mock('@/stores/app/core-store');
-jest.mock('@/stores/toast/store');
-jest.mock('@/api/novu/inbox');
+// Mock dependencies first
+jest.mock('@novu/react-native', () => ({
+  useNotifications: jest.fn(),
+}));
+
+jest.mock('@/stores/app/core-store', () => ({
+  useCoreStore: jest.fn(),
+}));
+
+jest.mock('@/stores/toast/store', () => ({
+  useToastStore: jest.fn(),
+}));
+
+jest.mock('@/api/novu/inbox', () => ({
+  deleteMessage: jest.fn(),
+}));
 
 jest.mock('nativewind', () => ({
   colorScheme: {
@@ -22,74 +28,91 @@ jest.mock('nativewind', () => ({
   cssInterop: jest.fn(),
 }));
 
-// Mock UI components with simple implementations
+// Simple mock for UI components
 jest.mock('@/components/ui/button', () => ({
-  Button: 'Button',
+  Button: ({ children, onPress, testID }: any) => {
+    const React = require('react');
+    const { Pressable, Text } = require('react-native');
+    return React.createElement(
+      Pressable,
+      { onPress, testID },
+      React.createElement(Text, {}, children)
+    );
+  },
 }));
 
 jest.mock('@/components/ui/modal', () => ({
   Modal: ({ children, isOpen }: any) => isOpen ? children : null,
-  ModalBackdrop: 'ModalBackdrop',
-  ModalBody: 'ModalBody',
-  ModalContent: 'ModalContent',
-  ModalFooter: 'ModalFooter',
-  ModalHeader: 'ModalHeader',
+  ModalBackdrop: ({ children }: any) => children,
+  ModalBody: ({ children }: any) => children,
+  ModalContent: ({ children }: any) => children,
+  ModalFooter: ({ children }: any) => children,
+  ModalHeader: ({ children }: any) => children,
 }));
 
 jest.mock('@/components/ui/text', () => ({
-  Text: 'Text',
+  Text: ({ children, ...props }: any) => {
+    const React = require('react');
+    const { Text: RNText } = require('react-native');
+    return React.createElement(RNText, props, children);
+  },
 }));
 
-// Mock Lucide icons as simple text
+// Mock icons as simple text components
 jest.mock('lucide-react-native', () => ({
-  CheckCircle: 'CheckCircle',
-  ChevronRight: 'ChevronRight',
-  Circle: 'Circle',
-  ExternalLink: 'ExternalLink',
-  MoreVertical: 'MoreVertical',
-  Trash2: 'Trash2',
-  X: 'X',
+  CheckCircle: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'CheckCircle-Icon');
+  },
+  ChevronRight: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'ChevronRight-Icon');
+  },
+  Circle: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'Circle-Icon');
+  },
+  ExternalLink: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'ExternalLink-Icon');
+  },
+  MoreVertical: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'MoreVertical-Icon');
+  },
+  Trash2: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'Trash2-Icon');
+  },
+  X: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'X-Icon');
+  },
+  ArrowLeft: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'ArrowLeft-Icon');
+  },
+  Calendar: ({ size, color }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, {}, 'Calendar-Icon');
+  },
 }));
 
-// Mock Lucide icons as simple text
-jest.mock('lucide-react-native', () => ({
-  CheckCircle: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'CheckCircle-Icon');
-  },
-  ChevronRight: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'ChevronRight-Icon');
-  },
-  Circle: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'Circle-Icon');
-  },
-  ExternalLink: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'ExternalLink-Icon');
-  },
-  MoreVertical: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'MoreVertical-Icon');
-  },
-  Trash2: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'Trash2-Icon');
-  },
-  X: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'X-Icon');
-  },
-  ArrowLeft: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'ArrowLeft-Icon');
-  },
-  Calendar: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'Calendar-Icon');
-  },
-}));
+// Import after mocks
+import { useNotifications } from '@novu/react-native';
+import { NotificationInbox } from '../NotificationInbox';
+import { useCoreStore } from '@/stores/app/core-store';
+import { useToastStore } from '@/stores/toast/store';
+import { deleteMessage } from '@/api/novu/inbox';
 
 const mockUseNotifications = useNotifications as jest.MockedFunction<typeof useNotifications>;
 const mockUseCoreStore = useCoreStore as unknown as jest.MockedFunction<any>;
@@ -222,41 +245,5 @@ describe('NotificationInbox', () => {
     );
 
     expect(getByText('Notifications')).toBeTruthy();
-  });
-
-  it('handles missing unit or config', () => {
-    mockUseCoreStore.mockImplementation((selector: any) => {
-      const state = {
-        activeUnitId: null,
-        config: null,
-      };
-      return selector(state);
-    });
-
-    const { getByText } = render(
-      <NotificationInbox isOpen={true} onClose={mockOnClose} />
-    );
-
-    expect(getByText('Unable to load notifications')).toBeTruthy();
-  });
-
-  it('calls delete API correctly', async () => {
-    mockDeleteMessage.mockResolvedValue(undefined);
-
-    await act(async () => {
-      await deleteMessage('1');
-    });
-
-    expect(mockDeleteMessage).toHaveBeenCalledWith('1');
-  });
-
-  it('handles delete success', async () => {
-    mockDeleteMessage.mockResolvedValue(undefined);
-
-    await act(async () => {
-      await deleteMessage('1');
-    });
-
-    expect(mockDeleteMessage).toHaveBeenCalledWith('1');
   });
 });

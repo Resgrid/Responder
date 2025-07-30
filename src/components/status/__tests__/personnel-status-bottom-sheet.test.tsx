@@ -19,6 +19,14 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+// Mock nativewind useColorScheme hook
+jest.mock('nativewind', () => ({
+  useColorScheme: () => ({
+    colorScheme: 'light',
+    setColorScheme: jest.fn(),
+  }),
+}));
+
 // Mock the stores
 jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/calls/store');

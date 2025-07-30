@@ -160,7 +160,7 @@ describe('Calendar Store', () => {
 				'2024-01-15 00:00:00',
 				'2024-01-15 23:59:59'
 			);
-			expect(result.current.todaysItems).toEqual([mockCalendarItem]);
+			expect(result.current.todayCalendarItems).toEqual([mockCalendarItem]);
 			expect(result.current.isTodaysLoading).toBe(false);
 			expect(result.current.error).toBeNull();
 		});
@@ -174,7 +174,7 @@ describe('Calendar Store', () => {
 				await result.current.fetchTodaysItems();
 			});
 
-			expect(result.current.todaysItems).toEqual([]);
+			expect(result.current.todayCalendarItems).toEqual([]);
 			expect(result.current.isTodaysLoading).toBe(false);
 			expect(result.current.error).toBe("Failed to load today's items");
 		});
@@ -198,7 +198,7 @@ describe('Calendar Store', () => {
 				'2024-01-15 00:00:00',
 				'2024-01-22 23:59:59'
 			);
-			expect(result.current.upcomingItems).toEqual([mockCalendarItem]);
+			expect(result.current.upcomingCalendarItems).toEqual([mockCalendarItem]);
 			expect(result.current.isUpcomingLoading).toBe(false);
 			expect(result.current.error).toBeNull();
 		});
@@ -212,7 +212,7 @@ describe('Calendar Store', () => {
 				await result.current.fetchUpcomingItems();
 			});
 
-			expect(result.current.upcomingItems).toEqual([]);
+			expect(result.current.upcomingCalendarItems).toEqual([]);
 			expect(result.current.isUpcomingLoading).toBe(false);
 			expect(result.current.error).toBe('Failed to load upcoming items');
 		});
@@ -232,7 +232,7 @@ describe('Calendar Store', () => {
 				await result.current.fetchCalendarItem('123');
 			});
 
-			expect(result.current.selectedItem).toEqual(mockCalendarItem);
+			expect(result.current.viewCalendarItem).toEqual(mockCalendarItem);
 			expect(result.current.isItemLoading).toBe(false);
 			expect(result.current.error).toBeNull();
 		});
@@ -246,7 +246,7 @@ describe('Calendar Store', () => {
 				await result.current.fetchCalendarItem('123');
 			});
 
-			expect(result.current.selectedItem).toBeNull();
+			expect(result.current.viewCalendarItem).toBeNull();
 			expect(result.current.isItemLoading).toBe(false);
 			expect(result.current.error).toBe('Failed to fetch calendar item');
 		});
@@ -261,10 +261,10 @@ describe('Calendar Store', () => {
 
 			// Set initial state with the item
 			useCalendarStore.setState({
-				todaysItems: [mockCalendarItem],
-				upcomingItems: [mockCalendarItem],
+				todayCalendarItems: [mockCalendarItem],
+				upcomingCalendarItems: [mockCalendarItem],
 				selectedMonthItems: [mockCalendarItem],
-				selectedItem: mockCalendarItem,
+				viewCalendarItem: mockCalendarItem,
 			});
 
 			const { result } = renderHook(() => useCalendarStore());
@@ -277,10 +277,10 @@ describe('Calendar Store', () => {
 			expect(result.current.attendanceError).toBeNull();
 
 			// Check that attendance was updated in all arrays
-			expect(result.current.todaysItems[0].Attending).toBe(true);
-			expect(result.current.upcomingItems[0].Attending).toBe(true);
+			expect(result.current.todayCalendarItems[0].Attending).toBe(true);
+			expect(result.current.upcomingCalendarItems[0].Attending).toBe(true);
 			expect(result.current.selectedMonthItems[0].Attending).toBe(true);
-			expect(result.current.selectedItem?.Attending).toBe(true);
+			expect(result.current.viewCalendarItem?.Attending).toBe(true);
 		});
 
 		it('should handle attendance update error', async () => {
@@ -342,14 +342,14 @@ describe('Calendar Store', () => {
 
 	describe('clearSelectedItem', () => {
 		it('should clear selected item', () => {
-			useCalendarStore.setState({ selectedItem: mockCalendarItem });
+			useCalendarStore.setState({ viewCalendarItem: mockCalendarItem });
 			const { result } = renderHook(() => useCalendarStore());
 
 			act(() => {
 				result.current.clearSelectedItem();
 			});
 
-			expect(result.current.selectedItem).toBeNull();
+			expect(result.current.viewCalendarItem).toBeNull();
 		});
 	});
 
@@ -395,8 +395,8 @@ describe('Calendar Store', () => {
 			});
 
 			expect(result.current.itemTypes).toEqual(mockTypesResponse.Data);
-			expect(result.current.todaysItems).toEqual([mockCalendarItem]);
-			expect(result.current.upcomingItems).toEqual([mockCalendarItem]);
+			expect(result.current.todayCalendarItems).toEqual([mockCalendarItem]);
+			expect(result.current.upcomingCalendarItems).toEqual([mockCalendarItem]);
 		});
 	});
 

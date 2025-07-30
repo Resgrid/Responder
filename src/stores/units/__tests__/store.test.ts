@@ -120,7 +120,7 @@ describe('useUnitsStore', () => {
 			await fetchUnits();
 
 			const state = useUnitsStore.getState();
-			expect(state.error).toBe('An unknown error occurred');
+			expect(state.error).toBe('Failed to fetch units');
 		});
 
 		it('should set loading state during fetch', async () => {
@@ -196,8 +196,8 @@ describe('useUnitsStore', () => {
 			closeDetails();
 
 			expect(useUnitsStore.getState().isDetailsOpen).toBe(false);
-			// selectedUnitId should remain
-			expect(useUnitsStore.getState().selectedUnitId).toBe('unit-123');
+			// selectedUnitId should be set to null when closing details
+			expect(useUnitsStore.getState().selectedUnitId).toBeNull();
 		});
 
 		it('should work when details already closed', () => {

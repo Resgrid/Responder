@@ -77,8 +77,8 @@ jest.mock('@/components/calendar/calendar-card', () => ({
   },
 }));
 
-jest.mock('@/components/calendar/calendar-view', () => ({
-  CalendarView: () => {
+jest.mock('@/components/calendar/enhanced-calendar-view', () => ({
+  EnhancedCalendarView: ({ onMonthChange }: any) => {
     const React = require('react');
     const { View, Text } = require('react-native');
     return React.createElement(View, { testID: "calendar-view" },
@@ -186,18 +186,38 @@ const mockCalendarItem = {
 };
 
 const mockStore = {
-  todaysItems: [],
-  upcomingItems: [],
+  todayCalendarItems: [],
+  upcomingCalendarItems: [],
+  calendarItems: [],
+  viewCalendarItem: null,
   selectedMonthItems: [],
   selectedDate: null,
+  itemTypes: [],
+  updateCalendarItems: false,
   isTodaysLoading: false,
   isUpcomingLoading: false,
   isLoading: false,
+  isItemLoading: false,
+  isAttendanceLoading: false,
+  isTypesLoading: false,
   error: null,
+  attendanceError: null,
+  loadTodaysCalendarItems: jest.fn(),
+  loadUpcomingCalendarItems: jest.fn(),
+  loadCalendarItems: jest.fn(),
+  loadCalendarItemsForDateRange: jest.fn(),
+  viewCalendarItemAction: jest.fn(),
+  setCalendarItemAttendingStatus: jest.fn(),
+  fetchCalendarItem: jest.fn(),
+  fetchItemTypes: jest.fn(),
+  setSelectedDate: jest.fn(),
+  clearSelectedItem: jest.fn(),
+  clearError: jest.fn(),
+  dismissModal: jest.fn(),
+  init: jest.fn(),
   fetchTodaysItems: jest.fn(),
   fetchUpcomingItems: jest.fn(),
   fetchItemsForDateRange: jest.fn(),
-  clearError: jest.fn(),
 };
 
 describe('CalendarScreen', () => {
@@ -218,8 +238,8 @@ describe('CalendarScreen', () => {
   it('initializes data on mount', () => {
     render(<CalendarScreen />);
 
-    expect(mockStore.fetchTodaysItems).toHaveBeenCalledTimes(1);
-    expect(mockStore.fetchUpcomingItems).toHaveBeenCalledTimes(1);
+    expect(mockStore.loadTodaysCalendarItems).toHaveBeenCalledTimes(1);
+    expect(mockStore.loadUpcomingCalendarItems).toHaveBeenCalledTimes(1);
   });
 
   it('switches between tabs correctly', () => {
@@ -270,7 +290,7 @@ describe('CalendarScreen', () => {
     it('renders today\'s items when available', () => {
       (useCalendarStore as jest.Mock).mockReturnValue({
         ...mockStore,
-        todaysItems: [mockCalendarItem],
+        todayCalendarItems: [mockCalendarItem],
       });
 
       const { getByTestId } = render(<CalendarScreen />);
@@ -303,7 +323,7 @@ describe('CalendarScreen', () => {
     it('renders upcoming items when available', () => {
       (useCalendarStore as jest.Mock).mockReturnValue({
         ...mockStore,
-        upcomingItems: [mockCalendarItem],
+        upcomingCalendarItems: [mockCalendarItem],
       });
 
       const { getByText, getByTestId } = render(<CalendarScreen />);
@@ -365,7 +385,7 @@ describe('CalendarScreen', () => {
     it('opens details sheet when item is pressed', async () => {
       (useCalendarStore as jest.Mock).mockReturnValue({
         ...mockStore,
-        todaysItems: [mockCalendarItem],
+        todayCalendarItems: [mockCalendarItem],
       });
 
       const { getByTestId } = render(<CalendarScreen />);
@@ -380,7 +400,7 @@ describe('CalendarScreen', () => {
     it('closes details sheet when close is pressed', async () => {
       (useCalendarStore as jest.Mock).mockReturnValue({
         ...mockStore,
-        todaysItems: [mockCalendarItem],
+        todayCalendarItems: [mockCalendarItem],
       });
 
       const { getByTestId, queryByTestId } = render(<CalendarScreen />);
