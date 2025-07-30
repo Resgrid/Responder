@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { logger } from '@/lib/logging';
-import { useCoreStore } from '@/stores/app/core-store';
+import { type UnitResultData } from '@/models/v4/units/unitResultData';
 import { useRolesStore } from '@/stores/roles/store';
 import { useToastStore } from '@/stores/toast/store';
 
@@ -18,11 +18,11 @@ import { RoleAssignmentItem } from './role-assignment-item';
 type RolesModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  activeUnit: UnitResultData | null;
 };
 
-export const RolesModal: React.FC<RolesModalProps> = ({ isOpen, onClose }) => {
+export const RolesModal: React.FC<RolesModalProps> = ({ isOpen, onClose, activeUnit }) => {
   const { t } = useTranslation();
-  const activeUnit = useCoreStore((state) => state.activeUnit);
   const { roles, unitRoleAssignments, users, isLoading, error } = useRolesStore();
 
   // Add state to track pending changes

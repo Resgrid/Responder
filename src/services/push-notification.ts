@@ -3,10 +3,11 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { registerUnitDevice } from '@/api/devices/push';
+import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { useCoreStore } from '@/stores/app/core-store';
+import useAuthStore from '@/stores/auth/store';
 import { securityStore } from '@/stores/security/store';
 
 // Define notification response types
@@ -127,7 +128,7 @@ class PushNotificationService {
     // This would typically involve using a navigation service or dispatching an action
   };
 
-  public async registerForPushNotifications(unitId: string, departmentCode: string): Promise<string | null> {
+  public async registerForPushNotifications(userId: string): Promise<string | null> {
     if (!Device.isDevice) {
       logger.warn({
         message: 'Push notifications are not available on simulator/emulator',
@@ -164,17 +165,17 @@ class PushNotificationService {
         message: 'Push notification token obtained',
         context: {
           token: this.pushToken,
-          unitId,
+          userId,
           platform: Platform.OS,
         },
       });
 
-      await registerUnitDevice({
-        UnitId: unitId,
+      await registerDevice({
+        UserId: userId,
         Token: this.pushToken,
         Platform: Platform.OS === 'ios' ? 1 : 2,
         DeviceUuid: getDeviceUuid() || '',
-        Prefix: departmentCode,
+        Prefix: '',
       });
 
       return this.pushToken;
@@ -258,20 +259,20 @@ export const pushNotificationService = PushNotificationService.getInstance();
 
 // React hook for component usage
 export const usePushNotifications = () => {
-  const activeUnitId = useCoreStore((state) => state.activeUnitId);
+  const userId = useAuthStore((state) => state.userId);
   const rights = securityStore((state) => state.rights);
-  const previousUnitIdRef = useRef<string | null>(null);
+  const previousUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only register if we have an active unit ID and it's different from the previous one
-    if (rights && activeUnitId && activeUnitId !== previousUnitIdRef.current) {
+    // Only register if we have an active user ID and it's different from the previous one
+    if (rights && userId && userId !== previousUserIdRef.current) {
       pushNotificationService
-        .registerForPushNotifications(activeUnitId, rights.DepartmentCode)
+        .registerForPushNotifications(userId)
         .then((token) => {
           if (token) {
             logger.info({
               message: 'Successfully registered for push notifications',
-              context: { unitId: activeUnitId },
+              context: { userId },
             });
           }
         })
@@ -282,14 +283,14 @@ export const usePushNotifications = () => {
           });
         });
 
-      previousUnitIdRef.current = activeUnitId;
+      previousUserIdRef.current = userId;
     }
 
     // Cleanup function
     return () => {
       // No need to clean up here as the service handles its own cleanup
     };
-  }, [activeUnitId, rights]);
+  }, [userId, rights]);
 
   return {
     pushToken: pushNotificationService.getPushToken(),

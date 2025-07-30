@@ -3,6 +3,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { type UnitResultData } from '@/models/v4/units/unitResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useStatusBottomSheetStore, useStatusesStore } from '@/stores/status/store';
@@ -15,7 +16,7 @@ import { Text } from '../ui/text';
 import { Textarea, TextareaInput } from '../ui/textarea';
 import { VStack } from '../ui/vstack';
 
-export const StatusBottomSheet = () => {
+export const StatusBottomSheet = (activeUnit: UnitResultData) => {
   const { t } = useTranslation();
   const { isOpen, currentStep, selectedCall, selectedStatus, note, setIsOpen, setCurrentStep, setSelectedCall, setNote, reset } = useStatusBottomSheetStore();
 
@@ -34,13 +35,13 @@ export const StatusBottomSheet = () => {
 
   const handleSubmit = React.useCallback(async () => {
     try {
-      await useStatusesStore.getState().saveUnitStatus(selectedStatus?.Id.toString() || '', note);
+      await useStatusesStore.getState().saveUnitStatus(activeUnit, selectedStatus?.Id.toString() || '', note);
       // TODO: Implement status update logic here
       reset();
     } catch (error) {
       console.error('Failed to save unit status:', error);
     }
-  }, [selectedStatus?.Id, note, reset]);
+  }, [selectedStatus?.Id, note, activeUnit, reset]);
 
   const handleCallSelect = (callId: string) => {
     const call = calls.find((c) => c.CallId === callId);

@@ -167,7 +167,7 @@ describe('RolesBottomSheet', () => {
   });
 
   it('renders correctly when opened', () => {
-    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} activeUnit={mockActiveUnit} />);
 
     expect(screen.getByText('Unit Role Assignments')).toBeTruthy();
     expect(screen.getByText('Unit 1')).toBeTruthy();
@@ -176,20 +176,20 @@ describe('RolesBottomSheet', () => {
   });
 
   it('does not render when not opened', () => {
-    render(<RolesBottomSheet isOpen={false} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={false} onClose={mockOnClose} activeUnit={mockActiveUnit} />);
 
     expect(screen.queryByText('Unit Role Assignments')).toBeNull();
   });
 
   it('fetches roles and users when opened', () => {
-    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} activeUnit={mockActiveUnit} />);
 
     expect(mockFetchRolesForUnit).toHaveBeenCalledWith('unit1');
     expect(mockFetchUsers).toHaveBeenCalled();
   });
 
   it('renders role assignment items', () => {
-    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} activeUnit={mockActiveUnit} />);
 
     expect(screen.getByTestId('role-item-Captain')).toBeTruthy();
     expect(screen.getByTestId('role-item-Engineer')).toBeTruthy();
@@ -208,15 +208,13 @@ describe('RolesBottomSheet', () => {
       assignRoles: mockAssignRoles,
     } as any);
 
-    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} activeUnit={mockActiveUnit} />);
 
     expect(screen.getByText(errorMessage)).toBeTruthy();
   });
 
   it('handles missing active unit gracefully', () => {
-    mockUseCoreStore.mockReturnValue(null);
-
-    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} activeUnit={null} />);
 
     expect(screen.getByText('Unit Role Assignments')).toBeTruthy();
     expect(screen.queryByText('Unit 1')).toBeNull();
@@ -243,7 +241,7 @@ describe('RolesBottomSheet', () => {
       assignRoles: mockAssignRoles,
     } as any);
 
-    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} activeUnit={mockActiveUnit} />);
 
     // Should only show roles for the active unit
     expect(screen.getByTestId('role-item-Captain')).toBeTruthy();
@@ -252,7 +250,7 @@ describe('RolesBottomSheet', () => {
   });
 
   it('has functional buttons', () => {
-    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} />);
+    render(<RolesBottomSheet isOpen={true} onClose={mockOnClose} activeUnit={mockActiveUnit} />);
 
     expect(screen.getByText('Cancel')).toBeTruthy();
     expect(screen.getByText('Save')).toBeTruthy();

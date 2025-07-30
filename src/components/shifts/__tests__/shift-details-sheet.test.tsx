@@ -398,7 +398,7 @@ describe('ShiftDetailsSheet', () => {
       const buttonElements = root.findAllByType('button');
 
       // Find calendar button by looking for button-text with "Calendar"
-      let calendarButton = null;
+      let calendarButton: any = null;
       for (const button of buttonElements) {
         const buttonTextElements = button.findAllByType('button-text');
         const hasCalendarText = buttonTextElements.some((textEl: any) => textEl.props.children === 'Calendar');
@@ -660,7 +660,7 @@ describe('ShiftDetailsSheet', () => {
       const buttonElements = root.findAllByType('button');
 
       // Find calendar button by looking for button-text with "Calendar"
-      let calendarButton = null;
+      let calendarButton: any = null;
       for (const button of buttonElements) {
         const buttonTextElements = button.findAllByType('button-text');
         const hasCalendarText = buttonTextElements.some((textEl: any) => textEl.props.children === 'Calendar');
