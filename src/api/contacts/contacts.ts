@@ -1,0 +1,36 @@
+import { type ContactResult } from '@/models/v4/contacts/contactResult';
+import { type ContactsCategoriesResult } from '@/models/v4/contacts/contactsCategoriesResult';
+import { type ContactsResult } from '@/models/v4/contacts/contactsResult';
+
+import { createCachedApiEndpoint } from '../common/cached-client';
+import { createApiEndpoint } from '../common/client';
+
+// Define API endpoints
+const getAllContactsApi = createCachedApiEndpoint('/Contacts/GetAllContacts', {
+  ttl: 60 * 1000 * 1440, // Cache for 1 day
+  enabled: true,
+});
+
+const getAllContactCategoriesApi = createCachedApiEndpoint('/Contacts/GetAllContactCategories', {
+  ttl: 60 * 1000 * 1440, // Cache for 1 day
+  enabled: true,
+});
+
+const getContactApi = createApiEndpoint('/Contacts/GetContactById');
+
+export const getAllContacts = async () => {
+  const response = await getAllContactsApi.get<ContactsResult>();
+  return response.data;
+};
+
+export const getContact = async (contactId: string) => {
+  const response = await getContactApi.get<ContactResult>({
+    contactId,
+  });
+  return response.data;
+};
+
+export const getAllContactCategories = async () => {
+  const response = await getAllContactCategoriesApi.get<ContactsCategoriesResult>();
+  return response.data;
+};
