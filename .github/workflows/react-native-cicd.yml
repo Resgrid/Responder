@@ -202,7 +202,7 @@ jobs:
         run: |
           # Build with increased memory limit
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform android --profile development --local --non-interactive --output=./ResgridUnit-dev.apk
+          eas build --platform android --profile development --local --non-interactive --output=./ResgridRespond-dev.apk
         env:
           NODE_ENV: development
 
@@ -210,7 +210,7 @@ jobs:
         if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform android --profile production-apk --local --non-interactive --output=./ResgridUnit-prod.apk
+          eas build --platform android --profile production-apk --local --non-interactive --output=./ResgridRespond-prod.apk
         env:
           NODE_ENV: production
 
@@ -218,7 +218,7 @@ jobs:
         if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-aab'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform android --profile production --local --non-interactive --output=./ResgridUnit-prod.aab
+          eas build --platform android --profile production --local --non-interactive --output=./ResgridRespond-prod.aab
         env:
           NODE_ENV: production
 
@@ -226,7 +226,7 @@ jobs:
         if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-dev'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform ios --profile development --local --non-interactive --output=./ResgridUnit-ios-dev.ipa
+          eas build --platform ios --profile development --local --non-interactive --output=./ResgridRespond-ios-dev.ipa
         env:
           NODE_ENV: development
 
@@ -234,7 +234,7 @@ jobs:
         if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-adhoc'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform ios --profile internal --local --non-interactive --output=./ResgridUnit-ios-adhoc.ipa
+          eas build --platform ios --profile internal --local --non-interactive --output=./ResgridRespond-ios-adhoc.ipa
         env:
           NODE_ENV: production
 
@@ -242,7 +242,7 @@ jobs:
         if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-prod'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform ios --profile production --local --non-interactive --output=./ResgridUnit-ios-prod.ipa
+          eas build --platform ios --profile production --local --non-interactive --output=./ResgridRespond-ios-prod.ipa
         env:
           NODE_ENV: production
 
@@ -251,12 +251,12 @@ jobs:
         with:
           name: app-builds-${{ matrix.platform }}
           path: |
-            ./ResgridUnit-dev.apk
-            ./ResgridUnit-prod.apk
-            ./ResgridUnit-prod.aab
-            ./ResgridUnit-ios-dev.ipa
-            ./ResgridUnit-ios-adhoc.ipa
-            ./ResgridUnit-ios-prod.ipa
+            ./ResgridRespond-dev.apk
+            ./ResgridRespond-prod.apk
+            ./ResgridRespond-prod.aab
+            ./ResgridRespond-ios-dev.ipa
+            ./ResgridRespond-ios-adhoc.ipa
+            ./ResgridRespond-ios-prod.ipa
           retention-days: 7
 
       - name: 📦 Upload Android build artifacts to Testfairy
@@ -264,7 +264,7 @@ jobs:
         uses: alexfu/testfairy-upload-action@main
         with:
           api-key: ${{ secrets.TESTFAIRY_API_KEY }}
-          file: ./ResgridUnit-prod.apk
+          file: ./ResgridRespond-prod.apk
           groups: Resgrid
           notify: on
 
@@ -273,6 +273,6 @@ jobs:
         uses: alexfu/testfairy-upload-action@main
         with:
           api-key: ${{ secrets.TESTFAIRY_API_KEY }}
-          file: ./ResgridUnit-ios-adhoc.ipa
+          file: ./ResgridRespond-ios-adhoc.ipa
           groups: Resgrid
           notify: on
