@@ -36,7 +36,7 @@ export const StatusButtons: React.FC = () => {
   return (
     <VStack space="sm" className="p-4" testID="status-buttons">
       {activeStatuses
-        ?.filter((status) => ![4, 5, 6].includes(status.Id))
+        ?.filter((status) => ![4, 5, 6, 7].includes(status.Id))
         .map((status) => (
           <Button
             key={status.Id}

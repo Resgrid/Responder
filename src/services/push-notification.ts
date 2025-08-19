@@ -3,11 +3,12 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { registerDevice, registerUnitDevice } from '@/api/devices/push';
+import { registerUnitDevice } from '@/api/devices/push';
+import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { useCoreStore } from '@/stores/app/core-store';
-import useAuthStore from '@/stores/auth/store';
+import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
 
 // Define notification response types
@@ -111,6 +112,20 @@ class PushNotificationService {
         data,
       },
     });
+
+    // Check if the notification has an eventCode and show modal
+    // eventCode must be a string to be valid
+    if (data && data.eventCode && typeof data.eventCode === 'string') {
+      const notificationData = {
+        eventCode: data.eventCode as string,
+        title: notification.request.content.title || undefined,
+        body: notification.request.content.body || undefined,
+        data,
+      };
+
+      // Show the notification modal using the store
+      usePushNotificationModalStore.getState().showNotificationModal(notificationData);
+    }
   };
 
   private handleNotificationResponse = (response: Notifications.NotificationResponse): void => {
@@ -128,7 +143,7 @@ class PushNotificationService {
     // This would typically involve using a navigation service or dispatching an action
   };
 
-  public async registerForPushNotifications(userId: string): Promise<string | null> {
+  public async registerForPushNotifications(unitId: string, departmentCode: string): Promise<string | null> {
     if (!Device.isDevice) {
       logger.warn({
         message: 'Push notifications are not available on simulator/emulator',
@@ -141,7 +156,14 @@ class PushNotificationService {
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
+        const { status } = await Notifications.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+            allowCriticalAlerts: true,
+          },
+        });
         finalStatus = status;
       }
 
@@ -165,17 +187,17 @@ class PushNotificationService {
         message: 'Push notification token obtained',
         context: {
           token: this.pushToken,
-          userId,
+          unitId,
           platform: Platform.OS,
         },
       });
 
-      await registerDevice({
-        UserId: userId,
+      await registerUnitDevice({
+        UnitId: unitId,
         Token: this.pushToken,
         Platform: Platform.OS === 'ios' ? 1 : 2,
         DeviceUuid: getDeviceUuid() || '',
-        Prefix: '',
+        Prefix: departmentCode,
       });
 
       return this.pushToken;
@@ -225,7 +247,7 @@ class PushNotificationService {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Test Notification',
-          body: 'This is a test notification from Resgrid Responder',
+          body: 'This is a test notification from Resgrid Unit',
           data: { type: 'test', timestamp: new Date().toISOString() },
         },
         trigger: null, // Send immediately
@@ -261,18 +283,18 @@ export const pushNotificationService = PushNotificationService.getInstance();
 export const usePushNotifications = () => {
   const userId = useAuthStore((state) => state.userId);
   const rights = securityStore((state) => state.rights);
-  const previousUserIdRef = useRef<string | null>(null);
+  const previousUnitIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only register if we have an active user ID and it's different from the previous one
-    if (rights && userId && userId !== previousUserIdRef.current) {
+    // Only register if we have an active unit ID and it's different from the previous one
+    if (rights && userId && userId !== previousUnitIdRef.current) {
       pushNotificationService
-        .registerForPushNotifications(userId)
+        .registerForPushNotifications(userId, rights.DepartmentCode)
         .then((token) => {
           if (token) {
             logger.info({
               message: 'Successfully registered for push notifications',
-              context: { userId },
+              context: { userId: userId },
             });
           }
         })
@@ -283,7 +305,7 @@ export const usePushNotifications = () => {
           });
         });
 
-      previousUserIdRef.current = userId;
+      previousUnitIdRef.current = userId;
     }
 
     // Cleanup function

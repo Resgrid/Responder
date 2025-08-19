@@ -23,6 +23,7 @@ import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
 
 import { useCallDetailMenu } from '../../components/calls/call-detail-menu';
@@ -46,6 +47,7 @@ export default function CallDetail() {
     longitude: null,
   });
   const { call, callExtraData, callPriority, isLoading, error, fetchCallDetail, reset } = useCallDetailStore();
+  const { canUserCreateCalls } = useSecurityStore();
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -148,7 +150,7 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
           }}
         />
         <View className="size-full flex-1">
@@ -166,7 +168,7 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
           }}
         />
         <View className="size-full flex-1">
@@ -416,7 +418,7 @@ export default function CallDetail() {
         options={{
           title: t('call_detail.title'),
           headerShown: true,
-          headerRight: () => <HeaderRightMenu />,
+          headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
         }}
       />
       <ScrollView className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>

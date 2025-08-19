@@ -68,7 +68,7 @@ export const useMessagesStore = create<MessagesState>()(
     isDeleting: false,
     error: null,
     searchQuery: '',
-    currentFilter: 'all',
+    currentFilter: 'inbox',
     selectedForDeletion: new Set(),
     lastFetchTime: null,
 

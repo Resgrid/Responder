@@ -3,6 +3,11 @@ import React from 'react';
 
 import { useCallDetailMenu } from '../call-detail-menu';
 
+// Mock the security store
+jest.mock('@/stores/security/store', () => ({
+  useSecurityStore: jest.fn(),
+}));
+
 // Mock the i18next hook
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -68,6 +73,7 @@ jest.mock('@/components/ui/', () => ({
 describe('Call Detail Menu Integration Test', () => {
   const mockOnEditCall = jest.fn();
   const mockOnCloseCall = jest.fn();
+  const { useSecurityStore } = require('@/stores/security/store');
 
   const TestComponent = () => {
     const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
@@ -85,6 +91,18 @@ describe('Call Detail Menu Integration Test', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock - user CAN create calls
+    useSecurityStore.mockReturnValue({
+      canUserCreateCalls: true,
+      getRights: jest.fn(),
+      isUserDepartmentAdmin: false,
+      isUserGroupAdmin: jest.fn(),
+      canUserCreateNotes: false,
+      canUserCreateMessages: false,
+      canUserViewPII: false,
+      departmentCode: 'TEST',
+    });
   });
 
   it('should render the header menu button and actionsheet', () => {
@@ -92,6 +110,24 @@ describe('Call Detail Menu Integration Test', () => {
 
     // Check if the kebab menu button is rendered
     expect(screen.getByTestId('kebab-menu-button')).toBeTruthy();
+  });
+
+  it('should not render the header menu button when user cannot create calls', () => {
+    useSecurityStore.mockReturnValue({
+      canUserCreateCalls: false,
+      getRights: jest.fn(),
+      isUserDepartmentAdmin: false,
+      isUserGroupAdmin: jest.fn(),
+      canUserCreateNotes: false,
+      canUserCreateMessages: false,
+      canUserViewPII: false,
+      departmentCode: 'TEST',
+    });
+
+    render(<TestComponent />);
+
+    // Check that the kebab menu button is not rendered
+    expect(screen.queryByTestId('kebab-menu-button')).toBeNull();
   });
 
   it('should open actionsheet when menu button is pressed', async () => {

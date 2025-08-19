@@ -26,6 +26,7 @@ import { useIsFirstTime } from '@/lib/storage';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
 import { audioService } from '@/services/audio.service';
 import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
+import { offlineQueueService } from '@/services/offline-queue.service';
 import { usePushNotifications } from '@/services/push-notification';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCalendarStore } from '@/stores/calendar/store';
@@ -115,6 +116,9 @@ export default function TabLayout() {
       // Initialize Bluetooth service
       await bluetoothAudioService.initialize();
       await audioService.initialize();
+
+      // Initialize offline queue service
+      await offlineQueueService.initialize();
 
       logger.info({
         message: 'App initialization completed successfully',

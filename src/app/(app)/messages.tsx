@@ -27,6 +27,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
 import { type MessageFilter, useMessagesStore } from '@/stores/messages/store';
+import { useSecurityStore } from '@/stores/security/store';
 
 export default function MessagesScreen() {
   const { t } = useTranslation();
@@ -35,6 +36,8 @@ export default function MessagesScreen() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+
+  const { canUserCreateMessages } = useSecurityStore();
 
   const {
     isLoading,
@@ -232,9 +235,11 @@ export default function MessagesScreen() {
           </View>
         ) : filteredMessages.length === 0 && !isLoading ? (
           <ZeroState heading={t('messages.no_messages')} description={t('messages.no_messages_description')} icon={Mail} iconSize={64} iconColor="#9CA3AF">
-            <Button onPress={openCompose} className="bg-primary-600">
-              <ButtonText>{t('messages.send_first_message')}</ButtonText>
-            </Button>
+            {canUserCreateMessages ? (
+              <Button onPress={openCompose} className="bg-primary-600">
+                <ButtonText>{t('messages.send_first_message')}</ButtonText>
+              </Button>
+            ) : null}
           </ZeroState>
         ) : (
           <FlatList
@@ -331,7 +336,7 @@ export default function MessagesScreen() {
         <ComposeMessageSheet />
 
         {/* FAB button for composing new message */}
-        {!isSelectionMode && (
+        {!isSelectionMode && canUserCreateMessages && (
           <Fab placement="bottom right" size="lg" onPress={openCompose} testID="messages-compose-fab">
             <FabIcon as={MessageSquarePlus} size="lg" />
           </Fab>

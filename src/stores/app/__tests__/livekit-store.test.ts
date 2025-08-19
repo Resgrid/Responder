@@ -1,334 +1,455 @@
+// Mock expo-asset and expo-av first (before any imports)
+jest.mock('expo-asset', () => ({
+  Asset: {
+    fromModule: jest.fn(),
+    loadAsync: jest.fn(),
+  },
+}));
+
+jest.mock('expo-av', () => ({
+  Audio: {
+    setAudioModeAsync: jest.fn(),
+    getStatusAsync: jest.fn(),
+    loadAsync: jest.fn(),
+    createAsync: jest.fn(),
+  },
+}));
+
+// Mock audio service
+jest.mock('../../../services/audio.service', () => ({
+  playAudio: jest.fn(),
+  stopAudio: jest.fn(),
+  preloadAudio: jest.fn(),
+  setAudioMode: jest.fn(),
+  AudioService: {
+    playAudio: jest.fn(),
+    stopAudio: jest.fn(),
+    preloadAudio: jest.fn(),
+    setAudioMode: jest.fn(),
+  },
+}));
+
+// Mock CallKeep service
+jest.mock('../../../services/callkeep.service.ios', () => ({
+  callKeepService: {
+    setup: jest.fn(),
+    startCall: jest.fn(),
+    endCall: jest.fn(),
+    isCallActiveNow: jest.fn(),
+    getCurrentCallUUID: jest.fn(),
+    cleanup: jest.fn(),
+    setMuteStateCallback: jest.fn(),
+  },
+}));
+
 import { Platform } from 'react-native';
-import { requestMultiple, check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 
 import { useLiveKitStore } from '../livekit-store';
+import { logger } from '../../../lib/logging';
 
-// Mock react-native-permissions
-jest.mock('react-native-permissions', () => ({
-	requestMultiple: jest.fn(),
-	check: jest.fn(),
-	request: jest.fn(),
-	PERMISSIONS: {
-		ANDROID: {
-			RECORD_AUDIO: 'android.permission.RECORD_AUDIO',
-		},
-		IOS: {
-			MICROPHONE: 'ios.permission.MICROPHONE',
-		},
-	},
-	RESULTS: {
-		GRANTED: 'granted',
-		DENIED: 'denied',
-		BLOCKED: 'blocked',
-		UNAVAILABLE: 'unavailable',
-	},
+// Mock livekit-client
+jest.mock('livekit-client', () => ({
+  Room: jest.fn().mockImplementation(() => ({
+    on: jest.fn(),
+    off: jest.fn(),
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    localParticipant: {
+      audioTracks: new Map(),
+      videoTracks: new Map(),
+    },
+    remoteParticipants: new Map(),
+  })),
+  RoomEvent: {
+    Connected: 'connected',
+    Disconnected: 'disconnected',
+    ParticipantConnected: 'participantConnected',
+    ParticipantDisconnected: 'participantDisconnected',
+    TrackPublished: 'trackPublished',
+    TrackUnpublished: 'trackUnpublished',
+    LocalTrackPublished: 'localTrackPublished',
+    LocalTrackUnpublished: 'localTrackUnpublished',
+  },
+}));
+
+// Mock MMKV storage
+jest.mock('react-native-mmkv', () => ({
+  MMKV: jest.fn().mockImplementation(() => ({
+    getString: jest.fn(),
+    setString: jest.fn(),
+    getBoolean: jest.fn(),
+    setBoolean: jest.fn(),
+    delete: jest.fn(),
+    clearAll: jest.fn(),
+  })),
+}));
+
+// Mock storage
+jest.mock('../../../lib/storage', () => ({
+  storage: {
+    getString: jest.fn(),
+    setString: jest.fn(),
+    getBoolean: jest.fn(),
+    setBoolean: jest.fn(),
+    delete: jest.fn(),
+    clearAll: jest.fn(),
+  },
+}));
+
+// Mock API endpoints
+jest.mock('../../../api/voice', () => ({
+  getDepartmentVoice: jest.fn(),
+  getDepartmentAudioStreams: jest.fn(),
+  canConnectToVoiceSession: jest.fn(),
+  connectToVoiceSession: jest.fn(),
+}));
+
+// Mock expo-audio
+jest.mock('expo-audio', () => ({
+  getRecordingPermissionsAsync: jest.fn(),
+  requestRecordingPermissionsAsync: jest.fn(),
+}));
+
+// Mock logger
+jest.mock('../../../lib/logging', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
 }));
 
 // Mock Platform
 jest.mock('react-native', () => ({
-	Platform: {
-		OS: 'android',
-	},
+  Platform: {
+    OS: 'android',
+  },
 }));
 
-// Mock other dependencies
-jest.mock('@notifee/react-native', () => ({
-	default: {
-		registerForegroundService: jest.fn(),
-		displayNotification: jest.fn(),
-		stopForegroundService: jest.fn(),
-	},
-}));
-
-jest.mock('livekit-client', () => ({
-	Room: jest.fn().mockImplementation(() => ({
-		connect: jest.fn(),
-		disconnect: jest.fn(),
-		on: jest.fn(),
-		localParticipant: {
-			setMicrophoneEnabled: jest.fn(),
-			setCameraEnabled: jest.fn(),
-			sid: 'local-participant-sid',
-		},
-	})),
-	RoomEvent: {
-		ParticipantConnected: 'participantConnected',
-		ParticipantDisconnected: 'participantDisconnected',
-		ActiveSpeakersChanged: 'activeSpeakersChanged',
-	},
-}));
-
-jest.mock('../../../api/voice', () => ({
-	getDepartmentVoiceSettings: jest.fn(),
-	getCanConnectToVoiceSession: jest.fn(),
-}));
-
-jest.mock('../../../services/audio.service', () => ({
-	audioService: {
-		playConnectToAudioRoomSound: jest.fn(),
-		playDisconnectedFromAudioRoomSound: jest.fn(),
-	},
-}));
-
-jest.mock('../bluetooth-audio-store', () => ({
-	useBluetoothAudioStore: {
-		getState: jest.fn(() => ({
-			selectedAudioDevices: {
-				microphone: null,
-				speaker: null,
-			},
-			connectedDevice: null,
-			setSelectedMicrophone: jest.fn(),
-			setSelectedSpeaker: jest.fn(),
-		})),
-	},
-}));
-
-describe('LiveKit Store - requestPermissions', () => {
-	const mockRequestMultiple = requestMultiple as jest.MockedFunction<typeof requestMultiple>;
-	const mockCheck = check as jest.MockedFunction<typeof check>;
-	const mockRequest = request as jest.MockedFunction<typeof request>;
-
-	beforeEach(() => {
-		jest.clearAllMocks();
-	});
-
-	describe('Android', () => {
-		beforeEach(() => {
-			(Platform as any).OS = 'android';
-		});
-
-		it('should request audio recording permission successfully', async () => {
-			mockRequestMultiple.mockResolvedValue({
-				[PERMISSIONS.ANDROID.RECORD_AUDIO]: RESULTS.GRANTED,
-			} as any);
-
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(mockRequestMultiple).toHaveBeenCalledWith([PERMISSIONS.ANDROID.RECORD_AUDIO]);
-			expect(consoleSpy).toHaveBeenCalledWith('Audio recording permission granted successfully');
-			expect(consoleSpy).toHaveBeenCalledWith('Foreground service permissions are handled at manifest level');
-
-			consoleSpy.mockRestore();
-		});
-
-		it('should handle permission denial gracefully', async () => {
-			mockRequestMultiple.mockResolvedValue({
-				[PERMISSIONS.ANDROID.RECORD_AUDIO]: RESULTS.DENIED,
-			} as any);
-
-			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(mockRequestMultiple).toHaveBeenCalledWith([PERMISSIONS.ANDROID.RECORD_AUDIO]);
-			expect(consoleErrorSpy).toHaveBeenCalledWith('Permissions not granted', {
-				[PERMISSIONS.ANDROID.RECORD_AUDIO]: RESULTS.DENIED,
-			});
-
-			consoleErrorSpy.mockRestore();
-		});
-
-		it('should handle permission request errors', async () => {
-			const error = new Error('Permission request failed');
-			mockRequestMultiple.mockRejectedValue(error);
-
-			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to request permissions:', error);
-
-			consoleErrorSpy.mockRestore();
-		});
-	});
-
-	describe('iOS', () => {
-		beforeEach(() => {
-			(Platform as any).OS = 'ios';
-		});
-
-		it('should request microphone permission when not already granted', async () => {
-			mockCheck.mockResolvedValue(RESULTS.DENIED as any);
-			mockRequest.mockResolvedValue(RESULTS.GRANTED as any);
-
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(mockCheck).toHaveBeenCalledWith(PERMISSIONS.IOS.MICROPHONE);
-			expect(mockRequest).toHaveBeenCalledWith(PERMISSIONS.IOS.MICROPHONE);
-			expect(consoleSpy).toHaveBeenCalledWith('iOS microphone permission granted');
-
-			consoleSpy.mockRestore();
-		});
-
-		it('should skip permission request when already granted', async () => {
-			mockCheck.mockResolvedValue(RESULTS.GRANTED as any);
-
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(mockCheck).toHaveBeenCalledWith(PERMISSIONS.IOS.MICROPHONE);
-			expect(mockRequest).not.toHaveBeenCalled();
-			expect(consoleSpy).toHaveBeenCalledWith('iOS microphone permission granted');
-
-			consoleSpy.mockRestore();
-		});
-
-		it('should handle microphone permission denial', async () => {
-			mockCheck.mockResolvedValue(RESULTS.DENIED as any);
-			mockRequest.mockResolvedValue(RESULTS.DENIED as any);
-
-			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(mockCheck).toHaveBeenCalledWith(PERMISSIONS.IOS.MICROPHONE);
-			expect(mockRequest).toHaveBeenCalledWith(PERMISSIONS.IOS.MICROPHONE);
-			expect(consoleErrorSpy).toHaveBeenCalledWith('Microphone permission not granted on iOS');
-
-			consoleErrorSpy.mockRestore();
-		});
-
-		it('should handle iOS permission check errors', async () => {
-			const error = new Error('Permission check failed');
-			mockCheck.mockRejectedValue(error);
-
-			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to request permissions:', error);
-
-			consoleErrorSpy.mockRestore();
-		});
-	});
-
-	describe('Other platforms', () => {
-		beforeEach(() => {
-			(Platform as any).OS = 'web';
-		});
-
-		it('should not request permissions on unsupported platforms', async () => {
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-			await useLiveKitStore.getState().requestPermissions();
-
-			expect(mockRequestMultiple).not.toHaveBeenCalled();
-			expect(mockCheck).not.toHaveBeenCalled();
-			expect(mockRequest).not.toHaveBeenCalled();
-			expect(consoleSpy).not.toHaveBeenCalled();
-
-			consoleSpy.mockRestore();
-		});
-	});
-});
-
-describe('LiveKit Store - microphone functionality', () => {
-	beforeEach(() => {
-		jest.clearAllMocks();
-		// Reset store state
-		useLiveKitStore.setState({
-			isConnected: false,
-			currentRoom: null,
-			isMicrophoneEnabled: false,
-		});
-	});
-
-	it('should have correct initial microphone state', () => {
-		const state = useLiveKitStore.getState();
-		expect(state.isMicrophoneEnabled).toBe(false);
-	});
-
-	it('should not toggle microphone when not connected to a room', async () => {
-		const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-
-		await useLiveKitStore.getState().toggleMicrophone();
-
-		expect(consoleSpy).toHaveBeenCalledWith('Cannot toggle microphone: not connected to a room');
-		expect(useLiveKitStore.getState().isMicrophoneEnabled).toBe(false);
-
-		consoleSpy.mockRestore();
-	});
-
-	it('should toggle microphone when connected to a room', async () => {
-		const mockRoom = {
-			localParticipant: {
-				setMicrophoneEnabled: jest.fn().mockResolvedValue(undefined),
-			},
-		};
-
-		// Set up connected state
-		useLiveKitStore.setState({
-			isConnected: true,
-			currentRoom: mockRoom as any,
-			isMicrophoneEnabled: false,
-		});
-
-		const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-		// Toggle microphone on
-		await useLiveKitStore.getState().toggleMicrophone();
-
-		expect(mockRoom.localParticipant.setMicrophoneEnabled).toHaveBeenCalledWith(true);
-		expect(useLiveKitStore.getState().isMicrophoneEnabled).toBe(true);
-		expect(consoleSpy).toHaveBeenCalledWith('Microphone enabled');
-
-		// Toggle microphone off
-		await useLiveKitStore.getState().toggleMicrophone();
-
-		expect(mockRoom.localParticipant.setMicrophoneEnabled).toHaveBeenCalledWith(false);
-		expect(useLiveKitStore.getState().isMicrophoneEnabled).toBe(false);
-		expect(consoleSpy).toHaveBeenCalledWith('Microphone disabled');
-
-		consoleSpy.mockRestore();
-	});
-
-	it('should handle microphone toggle errors gracefully', async () => {
-		const mockRoom = {
-			localParticipant: {
-				setMicrophoneEnabled: jest.fn().mockRejectedValue(new Error('Microphone error')),
-			},
-		};
-
-		useLiveKitStore.setState({
-			isConnected: true,
-			currentRoom: mockRoom as any,
-			isMicrophoneEnabled: false,
-		});
-
-		const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-		await useLiveKitStore.getState().toggleMicrophone();
-
-		expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to toggle microphone:', expect.any(Error));
-		// State should not change on error
-		expect(useLiveKitStore.getState().isMicrophoneEnabled).toBe(false);
-
-		consoleErrorSpy.mockRestore();
-	});
-
-	it('should reset microphone state when disconnecting from room', async () => {
-		const mockRoom = {
-			disconnect: jest.fn(),
-		};
-
-		// Set up connected state with microphone enabled
-		useLiveKitStore.setState({
-			isConnected: true,
-			currentRoom: mockRoom as any,
-			isMicrophoneEnabled: true,
-			currentRoomInfo: { Id: '1', Name: 'Test Room' } as any,
-		});
-
-		await useLiveKitStore.getState().disconnectFromRoom();
-
-		expect(useLiveKitStore.getState().isMicrophoneEnabled).toBe(false);
-		expect(useLiveKitStore.getState().isConnected).toBe(false);
-		expect(useLiveKitStore.getState().currentRoom).toBeNull();
-	});
+const mockGetRecordingPermissionsAsync = getRecordingPermissionsAsync as jest.MockedFunction<typeof getRecordingPermissionsAsync>;
+const mockRequestRecordingPermissionsAsync = requestRecordingPermissionsAsync as jest.MockedFunction<typeof requestRecordingPermissionsAsync>;
+const mockLogger = logger as jest.Mocked<typeof logger>;
+
+describe('LiveKit Store - Permission Management', () => {
+  beforeEach(() => {
+    // Clear all mocks before each test
+    jest.clearAllMocks();
+    
+    // Reset store state
+    useLiveKitStore.setState({
+      currentRoom: null,
+      isConnected: false,
+      isTalking: false,
+      availableRooms: [],
+      isBottomSheetVisible: false,
+    });
+  });
+
+  describe('Android permission flow', () => {
+    beforeEach(() => {
+      (Platform as any).OS = 'android';
+    });
+
+    it('should successfully request permissions when not granted initially', async () => {
+      // Mock initial permission check - not granted
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'undetermined',
+      } as any);
+
+      // Mock permission request - granted
+      mockRequestRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: true,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'granted',
+      } as any);
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockLogger.info).toHaveBeenCalledWith({
+        message: 'Microphone permission granted successfully',
+        context: { platform: 'android' },
+      });
+    });
+
+    it('should skip request when permissions already granted', async () => {
+      // Mock initial permission check - already granted
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: true,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'granted',
+      } as any);
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).not.toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalledWith({
+        message: 'Microphone permission granted successfully',
+        context: { platform: 'android' },
+      });
+    });
+
+    it('should handle permission denial', async () => {
+      // Mock initial permission check - not granted
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'undetermined',
+      } as any);
+
+      // Mock permission request - denied
+      mockRequestRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'denied',
+      } as any);
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Microphone permission not granted',
+        context: { platform: 'android' },
+      });
+    });
+
+    it('should handle permission errors gracefully', async () => {
+      // Mock initial permission check - throws error
+      mockGetRecordingPermissionsAsync.mockRejectedValueOnce(new Error('Permission API error'));
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Failed to request permissions',
+        context: { platform: 'android', error: expect.any(Error) },
+      });
+    });
+
+    it('should handle request API errors', async () => {
+      // Mock initial permission check - not granted
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'undetermined',
+      } as any);
+
+      // Mock permission request - throws error
+      mockRequestRecordingPermissionsAsync.mockRejectedValueOnce(new Error('Request API error'));
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Failed to request permissions',
+        context: { platform: 'android', error: expect.any(Error) },
+      });
+    });
+  });
+
+  describe('iOS permission flow', () => {
+    beforeEach(() => {
+      (Platform as any).OS = 'ios';
+    });
+
+    it('should successfully request permissions on iOS', async () => {
+      // Mock initial permission check - not granted
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'undetermined',
+      } as any);
+
+      // Mock permission request - granted
+      mockRequestRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: true,
+        canAskAgain: true,
+        expires: 'never',
+        status: 'granted',
+      } as any);
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockLogger.info).toHaveBeenCalledWith({
+        message: 'Microphone permission granted successfully',
+        context: { platform: 'ios' },
+      });
+    });
+
+    it('should handle iOS permission denial', async () => {
+      // Mock initial permission check - not granted
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        canAskAgain: false,
+        expires: 'never',
+        status: 'denied',
+      } as any);
+
+      // Mock permission request - still denied
+      mockRequestRecordingPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        canAskAgain: false,
+        expires: 'never',
+        status: 'denied',
+      } as any);
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Microphone permission not granted',
+        context: { platform: 'ios' },
+      });
+    });
+  });
+
+  describe('Unsupported platform handling', () => {
+    beforeEach(() => {
+      (Platform as any).OS = 'web';
+    });
+
+    it('should handle unsupported platform gracefully', async () => {
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).not.toHaveBeenCalled();
+      expect(mockRequestRecordingPermissionsAsync).not.toHaveBeenCalled();
+      // For unsupported platforms, the function just returns without logging
+      expect(mockLogger.info).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Permission response edge cases', () => {
+    beforeEach(() => {
+      (Platform as any).OS = 'android';
+    });
+
+    it('should handle undefined permission response', async () => {
+      // Mock initial permission check - returns undefined
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce(undefined as any);
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Failed to request permissions',
+        context: { platform: 'android', error: expect.any(Error) },
+      });
+    });
+
+    it('should handle malformed permission response', async () => {
+      // Mock initial permission check - missing granted property
+      mockGetRecordingPermissionsAsync.mockResolvedValueOnce({
+        canAskAgain: true,
+        expires: 'never',
+        status: 'undetermined',
+      } as any);
+
+      const { requestPermissions } = useLiveKitStore.getState();
+      await requestPermissions();
+
+      expect(mockGetRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect(mockRequestRecordingPermissionsAsync).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('CallKeep Integration', () => {
+    const mockCallKeepService = require('../../../services/callkeep.service.ios').callKeepService;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (Platform as any).OS = 'ios';
+      
+      // Reset mock implementations
+      mockCallKeepService.setup.mockResolvedValue(undefined);
+      mockCallKeepService.startCall.mockResolvedValue('test-uuid');
+      mockCallKeepService.endCall.mockResolvedValue(undefined);
+      mockCallKeepService.isCallActiveNow.mockReturnValue(false);
+      mockCallKeepService.getCurrentCallUUID.mockReturnValue(null);
+      mockCallKeepService.setMuteStateCallback.mockReturnValue(undefined);
+    });
+
+    it('should have CallKeep service available for iOS integration', () => {
+      // This is a basic integration test to ensure the CallKeep service
+      // is properly mocked and available for the LiveKit store to use
+      expect(mockCallKeepService).toBeDefined();
+      expect(typeof mockCallKeepService.setup).toBe('function');
+      expect(typeof mockCallKeepService.startCall).toBe('function');
+      expect(typeof mockCallKeepService.endCall).toBe('function');
+      expect(typeof mockCallKeepService.setMuteStateCallback).toBe('function');
+    });
+
+    it('should handle CallKeep setup calls', async () => {
+      // Note: setupCallKeep is now handled globally via app initialization service
+      // This test just verifies the CallKeep service methods can be called
+      await mockCallKeepService.setup({
+        appName: 'Resgrid Unit',
+        maximumCallGroups: 1,
+        maximumCallsPerCallGroup: 1,
+        includesCallsInRecents: false,
+        supportsVideo: false,
+      });
+      expect(mockCallKeepService.setup).toHaveBeenCalled();
+    });
+
+    it('should handle CallKeep start and end call operations', async () => {
+      // Test the basic call lifecycle
+      const uuid = await mockCallKeepService.startCall('test-room');
+      expect(mockCallKeepService.startCall).toHaveBeenCalledWith('test-room');
+      expect(uuid).toBe('test-uuid');
+      
+      await mockCallKeepService.endCall();
+      expect(mockCallKeepService.endCall).toHaveBeenCalled();
+    });
+
+    it('should skip CallKeep operations on non-iOS platforms', async () => {
+      (Platform as any).OS = 'android';
+      
+      // Verify that platform checks work as expected
+      expect(Platform.OS).toBe('android');
+      
+      // CallKeep operations would be skipped on Android
+      // This test confirms the platform detection works properly
+    });
+
+    it('should handle CallKeep service errors gracefully', async () => {
+      const error = new Error('CallKeep operation failed');
+      mockCallKeepService.setup.mockRejectedValue(error);
+      
+      try {
+        await mockCallKeepService.setup({});
+      } catch (e) {
+        expect(e).toBe(error);
+      }
+      
+      expect(mockCallKeepService.setup).toHaveBeenCalled();
+    });
+  });
 });

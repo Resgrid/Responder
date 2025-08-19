@@ -1,6 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React, { useState } from 'react';
 
+// Mock the security store
+jest.mock('@/stores/security/store', () => ({
+  useSecurityStore: jest.fn(),
+}));
+
 // --- Start of Robust Mocks ---
 const View = (props: any) => React.createElement('div', { ...props });
 const Text = (props: any) => React.createElement('span', { ...props });
@@ -11,14 +16,24 @@ const TouchableOpacity = (props: any) => React.createElement('button', { ...prop
 const MockCallDetailMenu = ({ onEditCall, onCloseCall }: any) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const HeaderRightMenu = () => (
-    <TouchableOpacity
-      testID="kebab-menu-button"
-      onPress={() => setIsOpen(true)}
-    >
-      <Text>Open Menu</Text>
-    </TouchableOpacity>
-  );
+  // Mock the security store hook
+  const { useSecurityStore } = require('@/stores/security/store');
+  const { canUserCreateCalls } = useSecurityStore();
+
+  const HeaderRightMenu = () => {
+    if (!canUserCreateCalls) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        testID="kebab-menu-button"
+        onPress={() => setIsOpen(true)}
+      >
+        <Text>Open Menu</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const CallDetailActionSheet = () => {
     if (!isOpen) return null;
@@ -57,6 +72,7 @@ describe('useCallDetailMenu', () => {
   const mockOnEditCall = jest.fn();
   const mockOnCloseCall = jest.fn();
   const { useCallDetailMenu } = require('../call-detail-menu');
+  const { useSecurityStore } = require('@/stores/security/store');
 
   const TestComponent = () => {
     const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
@@ -74,11 +90,39 @@ describe('useCallDetailMenu', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock - user CAN create calls
+    useSecurityStore.mockReturnValue({
+      canUserCreateCalls: true,
+      getRights: jest.fn(),
+      isUserDepartmentAdmin: false,
+      isUserGroupAdmin: jest.fn(),
+      canUserCreateNotes: false,
+      canUserCreateMessages: false,
+      canUserViewPII: false,
+      departmentCode: 'TEST',
+    });
   });
 
   it('renders the header menu button', () => {
     render(<TestComponent />);
     expect(screen.getByTestId('kebab-menu-button')).toBeTruthy();
+  });
+
+  it('does not render the header menu button when user cannot create calls', () => {
+    useSecurityStore.mockReturnValue({
+      canUserCreateCalls: false,
+      getRights: jest.fn(),
+      isUserDepartmentAdmin: false,
+      isUserGroupAdmin: jest.fn(),
+      canUserCreateNotes: false,
+      canUserCreateMessages: false,
+      canUserViewPII: false,
+      departmentCode: 'TEST',
+    });
+
+    render(<TestComponent />);
+    expect(screen.queryByTestId('kebab-menu-button')).toBeNull();
   });
 
   it('opens the action sheet when menu button is pressed', async () => {

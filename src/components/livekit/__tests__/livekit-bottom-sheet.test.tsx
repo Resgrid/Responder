@@ -28,7 +28,17 @@ jest.mock('@/services/audio.service', () => ({
   audioService: {
     playConnectionSound: jest.fn(),
     playDisconnectionSound: jest.fn(),
+    playStartTransmittingSound: jest.fn(),
+    playStopTransmittingSound: jest.fn(),
   },
+}));
+
+// Mock analytics
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
 }));
 
 // Mock i18next
@@ -107,6 +117,7 @@ describe('LiveKitBottomSheet', () => {
     isConnected: false,
     isConnecting: false,
     isTalking: false,
+    requestPermissions: jest.fn(),
   };
 
   const defaultBluetoothState = {
@@ -419,6 +430,115 @@ describe('LiveKitBottomSheet', () => {
 
       await audioService.playDisconnectionSound();
       expect(audioService.playDisconnectionSound).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Analytics', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockUseLiveKitStore.mockReturnValue(defaultLiveKitState);
+      mockUseBluetoothAudioStore.mockReturnValue(defaultBluetoothState);
+    });
+
+    it('should track analytics event when bottom sheet is opened', () => {
+      const requestPermissions = jest.fn();
+      mockUseLiveKitStore.mockReturnValue({
+        ...defaultLiveKitState,
+        isBottomSheetVisible: true,
+        availableRooms: mockAvailableRooms,
+        requestPermissions,
+      });
+
+      render(<LiveKitBottomSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('livekit_bottom_sheet_opened', {
+        availableRoomsCount: 2,
+        isConnected: false,
+        isConnecting: false,
+        currentView: BottomSheetView.ROOM_SELECT,
+        hasCurrentRoom: false,
+        currentRoomName: 'none',
+        isMuted: true,
+        isTalking: false,
+        hasBluetoothMicrophone: false,
+        hasBluetoothSpeaker: false,
+        permissionsRequested: false,
+      });
+    });
+
+    it('should not track analytics event when bottom sheet is closed', () => {
+      mockUseLiveKitStore.mockReturnValue({
+        ...defaultLiveKitState,
+        isBottomSheetVisible: false,
+      });
+
+      render(<LiveKitBottomSheet />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should track analytics event with connected state', () => {
+      const requestPermissions = jest.fn();
+      mockUseLiveKitStore.mockReturnValue({
+        ...defaultLiveKitState,
+        isBottomSheetVisible: true,
+        isConnected: true,
+        currentRoomInfo: mockCurrentRoomInfo,
+        availableRooms: mockAvailableRooms,
+        isTalking: true,
+        requestPermissions,
+      });
+
+      render(<LiveKitBottomSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('livekit_bottom_sheet_opened', {
+        availableRoomsCount: 2,
+        isConnected: true,
+        isConnecting: false,
+        currentView: BottomSheetView.ROOM_SELECT,
+        hasCurrentRoom: true,
+        currentRoomName: 'Test Room',
+        isMuted: true,
+        isTalking: true,
+        hasBluetoothMicrophone: false,
+        hasBluetoothSpeaker: false,
+        permissionsRequested: false,
+      });
+    });
+
+    it('should track analytics event with bluetooth devices', () => {
+      const requestPermissions = jest.fn();
+      const bluetoothAudioDevices = {
+        microphone: { id: 'bt-mic', name: 'Bluetooth Mic', type: 'bluetooth' as const, isAvailable: true },
+        speaker: { id: 'bt-speaker', name: 'Bluetooth Speaker', type: 'bluetooth' as const, isAvailable: true },
+      };
+
+      mockUseLiveKitStore.mockReturnValue({
+        ...defaultLiveKitState,
+        isBottomSheetVisible: true,
+        availableRooms: mockAvailableRooms,
+        requestPermissions,
+      });
+
+      mockUseBluetoothAudioStore.mockReturnValue({
+        selectedAudioDevices: bluetoothAudioDevices,
+      });
+
+      render(<LiveKitBottomSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('livekit_bottom_sheet_opened', {
+        availableRoomsCount: 2,
+        isConnected: false,
+        isConnecting: false,
+        currentView: BottomSheetView.ROOM_SELECT,
+        hasCurrentRoom: false,
+        currentRoomName: 'none',
+        isMuted: true,
+        isTalking: false,
+        hasBluetoothMicrophone: true,
+        hasBluetoothSpeaker: true,
+        permissionsRequested: false,
+      });
     });
   });
 }); 

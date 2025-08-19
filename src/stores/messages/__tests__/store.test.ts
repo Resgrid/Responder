@@ -109,7 +109,7 @@ describe('MessagesStore', () => {
       isDeleting: false,
       error: null,
       searchQuery: '',
-      currentFilter: 'all',
+      currentFilter: 'inbox',
       selectedForDeletion: new Set(),
     });
   });

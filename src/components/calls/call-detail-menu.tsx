@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable } from '@/components/ui/';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper, ActionsheetItem, ActionsheetItemText } from '@/components/ui/actionsheet';
 import { HStack } from '@/components/ui/hstack';
+import { useSecurityStore } from '@/stores/security/store';
 
 interface CallDetailMenuProps {
   onEditCall: () => void;
@@ -13,6 +14,7 @@ interface CallDetailMenuProps {
 
 export const useCallDetailMenu = ({ onEditCall, onCloseCall }: CallDetailMenuProps) => {
   const { t } = useTranslation();
+  const { canUserCreateCalls } = useSecurityStore();
   const [isKebabMenuOpen, setIsKebabMenuOpen] = useState(false);
 
   const openMenu = () => {
@@ -20,11 +22,18 @@ export const useCallDetailMenu = ({ onEditCall, onCloseCall }: CallDetailMenuPro
   };
   const closeMenu = () => setIsKebabMenuOpen(false);
 
-  const HeaderRightMenu = () => (
-    <Pressable onPressIn={openMenu} testID="kebab-menu-button" className="rounded p-2">
-      <MoreVerticalIcon size={24} className="text-gray-700 dark:text-gray-300" />
-    </Pressable>
-  );
+  const HeaderRightMenu = () => {
+    // Only show the menu if user can create calls
+    if (!canUserCreateCalls) {
+      return null;
+    }
+
+    return (
+      <Pressable onPressIn={openMenu} testID="kebab-menu-button" className="rounded p-2">
+        <MoreVerticalIcon size={24} className="text-gray-700 dark:text-gray-300" />
+      </Pressable>
+    );
+  };
 
   const CallDetailActionSheet = () => (
     <Actionsheet isOpen={isKebabMenuOpen} onClose={closeMenu} testID="call-detail-actionsheet">

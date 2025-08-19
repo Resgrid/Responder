@@ -16,6 +16,7 @@ import { VStack } from '@/components/ui/vstack';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
 
 interface PinDetailModalProps {
@@ -29,6 +30,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const router = useRouter();
+  const { canUserViewPII } = useSecurityStore();
   const showToast = useToastStore((state) => state.showToast);
   const userLocation = useLocationStore((state) => ({
     latitude: state.latitude,
@@ -36,6 +38,12 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
   }));
 
   if (!pin) return null;
+
+  // Check if this is a personnel pin
+  const isPersonnelPin = pin.ImagePath && pin.ImagePath.toLowerCase().startsWith('person');
+
+  // Determine if coordinates should be shown (hide for personnel pins when PII cannot be viewed)
+  const shouldShowCoordinates = !isPersonnelPin || canUserViewPII;
 
   const isCallPin = pin.ImagePath?.toLowerCase() === 'call' || pin.Type === 1;
 
@@ -81,12 +89,14 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
         </HStack>
 
         <VStack className="mb-6 space-y-3">
-          <Box className="flex-row items-center">
-            <MapPinIcon size={16} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
-            <Text className="ml-2 text-sm text-gray-600">
-              {pin.Latitude.toFixed(6)}, {pin.Longitude.toFixed(6)}
-            </Text>
-          </Box>
+          {shouldShowCoordinates ? (
+            <Box className="flex-row items-center">
+              <MapPinIcon size={16} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+              <Text className="ml-2 text-sm text-gray-600">
+                {pin.Latitude.toFixed(6)}, {pin.Longitude.toFixed(6)}
+              </Text>
+            </Box>
+          ) : null}
 
           {pin.InfoWindowContent && (
             <Box>

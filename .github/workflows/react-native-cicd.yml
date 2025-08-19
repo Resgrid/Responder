@@ -276,3 +276,41 @@ jobs:
           file: ./ResgridRespond-ios-adhoc.ipa
           groups: Resgrid
           notify: on
+
+      - name: 📋 Extract Release Notes from PR Body
+        if: ${{ matrix.platform == 'android' }}
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -eo pipefail
+          # Grab lines after "## Release Notes" until the next header
+          RELEASE_NOTES="$(printf '%s\n' "$PR_BODY" \
+            | awk 'f && /^## /{f=0} /^## Release Notes/{f=1; next} f')"
+          # Use a unique delimiter to write multiline into GITHUB_ENV
+          delimiter="EOF_$(date +%s)_$RANDOM"
+          {
+            echo "RELEASE_NOTES<<$delimiter"
+            printf '%s\n' "${RELEASE_NOTES:-No release notes provided.}"
+            echo "$delimiter"
+          } >> "$GITHUB_ENV"
+
+      - name: 📋 Prepare Release Notes file
+        if: ${{ matrix.platform == 'android' }}
+        run: |
+          {
+            echo "## Version 10.${{ github.run_number }} - $(date +%Y-%m-%d)"
+            echo
+            printf '%s\n' "${RELEASE_NOTES:-No release notes provided.}"
+          } > RELEASE_NOTES.md
+
+      - name: 📦 Create Release
+        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        uses: ncipollo/release-action@v1
+        with:
+          tag: '10.${{ github.run_number }}'
+          commit: ${{ github.sha }}
+          makeLatest: true
+          allowUpdates: true
+          name: '10.${{ github.run_number }}'
+          artifacts: './ResgridRespond-prod.apk'
+          bodyFile: 'RELEASE_NOTES.md'

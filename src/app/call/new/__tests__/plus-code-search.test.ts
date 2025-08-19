@@ -83,6 +83,14 @@ describe('Plus Code Search Logic', () => {
     NovuBackendApiUrl: '',
     NovuSocketUrl: '',
     NovuApplicationId: '',
+    EventingUrl: '',
+    DirectionsMapKey: '',
+    PersonnelLocationStaleSeconds: 0,
+    UnitLocationStaleSeconds: 0,
+    PersonnelLocationMinMeters: 0,
+    UnitLocationMinMeters: 0,
+    AnalyticsApiKey: '',
+    AnalyticsHost: ''
   };
 
   beforeEach(() => {
@@ -123,6 +131,14 @@ describe('Plus Code Search Logic', () => {
         NovuBackendApiUrl: '',
         NovuSocketUrl: '',
         NovuApplicationId: '',
+        EventingUrl: '',
+        DirectionsMapKey: '',
+        PersonnelLocationStaleSeconds: 0,
+        UnitLocationStaleSeconds: 0,
+        PersonnelLocationMinMeters: 0,
+        UnitLocationMinMeters: 0,
+        AnalyticsApiKey: '',
+        AnalyticsHost: ''
       };
 
       const result = await performPlusCodeSearch('849VCWC8+R9', configWithoutKey);

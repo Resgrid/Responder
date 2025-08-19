@@ -3,7 +3,7 @@ import _ from 'lodash';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { getConfig } from '@/api/config/config';
+import { getConfig } from '@/api/config';
 import { getAllPersonnelStatuses, getCurrentPersonStatus } from '@/api/satuses';
 import { getAllPersonnelStaffings, getCurrentPersonStaffing } from '@/api/staffing';
 import { useAuthStore } from '@/lib/auth';

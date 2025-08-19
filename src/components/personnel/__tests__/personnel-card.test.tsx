@@ -2,14 +2,23 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
+import { useSecurityStore } from '@/stores/security/store';
 
 import { PersonnelCard } from '../personnel-card';
+
+// Mock the security store
+jest.mock('@/stores/security/store');
+const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
 
 describe('PersonnelCard', () => {
   const mockOnPress = jest.fn();
 
   beforeEach(() => {
     mockOnPress.mockClear();
+    // Default to allowing PII viewing
+    mockUseSecurityStore.mockReturnValue({
+      canUserViewPII: true,
+    } as any);
   });
 
   const basePersonnel: PersonnelInfoResultData = {
@@ -357,6 +366,81 @@ describe('PersonnelCard', () => {
       expect(screen.getByText('Role3')).toBeTruthy();
       expect(screen.getByText('+1')).toBeTruthy();
       expect(screen.queryByText('Role4')).toBeFalsy(); // Should be hidden
+    });
+  });
+
+  describe('PII Protection', () => {
+    it('should show contact information when user can view PII', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: true,
+      } as any);
+
+      render(<PersonnelCard personnel={basePersonnel} onPress={mockOnPress} />);
+
+      expect(screen.getByText('john.doe@example.com')).toBeTruthy();
+      expect(screen.getByText('+1234567890')).toBeTruthy();
+      expect(screen.getByText('Fire Department')).toBeTruthy();
+    });
+
+    it('should hide contact information when user cannot view PII', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      render(<PersonnelCard personnel={basePersonnel} onPress={mockOnPress} />);
+
+      expect(screen.queryByText('john.doe@example.com')).toBeFalsy();
+      expect(screen.queryByText('+1234567890')).toBeFalsy();
+      // Group name should still be shown
+      expect(screen.getByText('Fire Department')).toBeTruthy();
+    });
+
+    it('should show group even when PII is restricted and no contact info', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      const personnelWithoutContact = {
+        ...basePersonnel,
+        EmailAddress: '',
+        MobilePhone: '',
+      };
+
+      render(<PersonnelCard personnel={personnelWithoutContact} onPress={mockOnPress} />);
+
+      expect(screen.getByText('Fire Department')).toBeTruthy();
+    });
+
+    it('should handle PII restriction when personnel has no group', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      const personnelWithoutGroup = {
+        ...basePersonnel,
+        GroupName: '',
+      };
+
+      render(<PersonnelCard personnel={personnelWithoutGroup} onPress={mockOnPress} />);
+
+      expect(screen.getByText('John Doe')).toBeTruthy();
+      expect(screen.queryByText('john.doe@example.com')).toBeFalsy();
+      expect(screen.queryByText('+1234567890')).toBeFalsy();
+    });
+
+    it('should still show other information when PII is restricted', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      render(<PersonnelCard personnel={basePersonnel} onPress={mockOnPress} />);
+
+      // Should still show name, status, staffing, roles
+      expect(screen.getByText('John Doe')).toBeTruthy();
+      expect(screen.getByText('Available')).toBeTruthy();
+      expect(screen.getByText('On Duty')).toBeTruthy();
+      expect(screen.getByText('Firefighter')).toBeTruthy();
+      expect(screen.getByText('EMT')).toBeTruthy();
     });
   });
 }); 

@@ -44,7 +44,7 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
 
   useEffect(() => {
     // Auto-start scanning when modal opens and Bluetooth is ready
-    if (isOpen && bluetoothState === 'PoweredOn' && !isScanning && !connectedDevice) {
+    if (isOpen && bluetoothState === 'poweredOn' && !isScanning && !connectedDevice) {
       handleStartScan().catch((error) => {
         console.error('Failed to start scan:', error);
       });
@@ -90,21 +90,21 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
 
   const renderBluetoothState = () => {
     switch (bluetoothState) {
-      case 'PoweredOff':
+      case 'poweredOff':
         return (
           <VStack space="md" className="items-center p-4">
             <AlertTriangle size={48} color="orange" />
             <Text className="text-center">Bluetooth is turned off. Please enable Bluetooth to connect audio devices.</Text>
           </VStack>
         );
-      case 'Unauthorized':
+      case 'unauthorized':
         return (
           <VStack space="md" className="items-center p-4">
             <AlertTriangle size={48} color="red" />
             <Text className="text-center">Bluetooth permission denied. Please grant Bluetooth permissions in Settings.</Text>
           </VStack>
         );
-      case 'PoweredOn':
+      case 'poweredOn':
         return null;
       default:
         return (

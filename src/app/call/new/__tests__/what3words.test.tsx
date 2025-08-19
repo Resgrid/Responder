@@ -17,6 +17,14 @@ const mockConfig: GetConfigResultData = {
   NovuBackendApiUrl: '',
   NovuSocketUrl: '',
   NovuApplicationId: '',
+  EventingUrl: '',
+  DirectionsMapKey: '',
+  PersonnelLocationStaleSeconds: 0,
+  UnitLocationStaleSeconds: 0,
+  PersonnelLocationMinMeters: 0,
+  UnitLocationMinMeters: 0,
+  AnalyticsApiKey: '',
+  AnalyticsHost: ''
 };
 
 // Mock the core store

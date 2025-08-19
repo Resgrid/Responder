@@ -3,6 +3,7 @@ import React from 'react';
 
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { usePersonnelStore } from '@/stores/personnel/store';
+import { useSecurityStore } from '@/stores/security/store';
 
 import { PersonnelDetailsSheet } from '../personnel-details-sheet';
 
@@ -32,6 +33,10 @@ jest.mock('@/lib/utils', () => ({
 // Mock the personnel store
 jest.mock('@/stores/personnel/store');
 const mockUsePersonnelStore = usePersonnelStore as jest.MockedFunction<typeof usePersonnelStore>;
+
+// Mock the security store
+jest.mock('@/stores/security/store');
+const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
 
 describe('PersonnelDetailsSheet', () => {
   const mockCloseDetails = jest.fn();
@@ -89,9 +94,14 @@ describe('PersonnelDetailsSheet', () => {
     closeDetails: mockCloseDetails,
   };
 
+  const defaultSecurityState = {
+    canUserViewPII: true,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockUsePersonnelStore.mockReturnValue(defaultStoreState as any);
+    mockUseSecurityStore.mockReturnValue(defaultSecurityState as any);
   });
 
   describe('Basic Rendering', () => {
@@ -510,6 +520,67 @@ describe('PersonnelDetailsSheet', () => {
       const { UNSAFE_root } = render(<PersonnelDetailsSheet />);
 
       expect(UNSAFE_root.children).toHaveLength(0);
+    });
+  });
+
+  describe('PII Protection', () => {
+    it('should show contact information when user can view PII', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: true,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(screen.getByText('Contact Information')).toBeTruthy();
+      expect(screen.getByText('john.doe@example.com')).toBeTruthy();
+      expect(screen.getByText('+1234567890')).toBeTruthy();
+    });
+
+    it('should hide contact information when user cannot view PII', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(screen.queryByText('Contact Information')).toBeFalsy();
+      expect(screen.queryByText('john.doe@example.com')).toBeFalsy();
+      expect(screen.queryByText('+1234567890')).toBeFalsy();
+    });
+
+    it('should still show other information when PII is restricted', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      // Should still show name, group, status, staffing, roles
+      expect(screen.getByText('John Doe')).toBeTruthy();
+      expect(screen.getByText('Group')).toBeTruthy();
+      expect(screen.getByText('Fire Department')).toBeTruthy();
+      expect(screen.getByText('Current Status')).toBeTruthy();
+      expect(screen.getByText('Available')).toBeTruthy();
+      expect(screen.getByText('Staffing')).toBeTruthy();
+      expect(screen.getByText('On Duty')).toBeTruthy();
+      expect(screen.getByText('Roles')).toBeTruthy();
+      expect(screen.getByText('Firefighter')).toBeTruthy();
+    });
+
+    it('should handle PII restriction with personnel who have no contact info', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedPersonnelId: '2', // Personnel with minimal data
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(screen.getByText('Jane Smith')).toBeTruthy();
+      expect(screen.queryByText('Contact Information')).toBeFalsy();
     });
   });
 

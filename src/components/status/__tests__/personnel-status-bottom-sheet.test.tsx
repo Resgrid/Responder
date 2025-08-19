@@ -7,6 +7,16 @@ import { useCallsStore } from '@/stores/calls/store';
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
 import { PersonnelStatusBottomSheet } from '../personnel-status-bottom-sheet';
 
+// Mock NetInfo
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: {
+    fetch: jest.fn(),
+    addEventListener: jest.fn(),
+    useNetInfo: jest.fn()
+  }
+}));
+
 // Mock the translation hook
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -181,6 +191,7 @@ describe('PersonnelStatusBottomSheet', () => {
     isLoading: false,
     groups: [] as any[],
     isLoadingGroups: false,
+    setIsOpen: jest.fn(),
     setCurrentStep: jest.fn(),
     setSelectedCall: jest.fn(),
     setSelectedGroup: jest.fn(),
@@ -188,11 +199,18 @@ describe('PersonnelStatusBottomSheet', () => {
     setSelectedTab: jest.fn(),
     setNote: jest.fn(),
     setRespondingTo: jest.fn(),
+    setIsLoading: jest.fn(),
     fetchGroups: jest.fn(),
     nextStep: jest.fn(),
     previousStep: jest.fn(),
     submitStatus: jest.fn(),
     reset: jest.fn(),
+    // Helper methods for Detail-based logic
+    isDestinationRequired: jest.fn(() => true),
+    areCallsAllowed: jest.fn(() => true),
+    areStationsAllowed: jest.fn(() => true),
+    getRequiredGpsAccuracy: jest.fn(() => false),
+    goToNextStep: jest.fn(),
   };
 
   const mockCallsStore = {
@@ -378,6 +396,8 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatus: mockStatus,
         currentStep: 'select-responding-to',
         nextStep: mockNextStep,
+        responseType: 'call', // Select a call to enable the next button
+        selectedCall: { CallId: '1', Number: 'CALL-001', Name: 'Test Call', Address: '123 Test St' },
         groups: mockGroups,
       });
 

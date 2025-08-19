@@ -7,15 +7,16 @@ import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
 import { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
+import { offlineQueueProcessor } from '@/services/offline-queue-processor';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useToastStore } from '@/stores/toast/store';
 
 import { useCallsStore } from '../calls/store';
 
-type PersonnelStatusStep = 'select-responding-to' | 'add-note' | 'confirm';
-type ResponseTab = 'calls' | 'stations';
-type ResponseType = 'none' | 'call' | 'station';
+export type PersonnelStatusStep = 'select-responding-to' | 'add-note' | 'confirm';
+export type ResponseTab = 'calls' | 'stations';
+export type ResponseType = 'none' | 'call' | 'station';
 
 interface PersonnelStatusBottomSheetStore {
   isOpen: boolean;
@@ -44,6 +45,11 @@ interface PersonnelStatusBottomSheetStore {
   previousStep: () => void;
   submitStatus: () => Promise<void>;
   reset: () => void;
+  // Helper methods for Detail-based logic
+  isDestinationRequired: () => boolean;
+  areCallsAllowed: () => boolean;
+  areStationsAllowed: () => boolean;
+  getRequiredGpsAccuracy: () => boolean;
 }
 
 export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSheetStore>((set, get) => ({
@@ -109,10 +115,29 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     }
   },
   nextStep: () => {
-    const { currentStep } = get();
+    const { currentStep, isDestinationRequired } = get();
     switch (currentStep) {
       case 'select-responding-to':
-        set({ currentStep: 'add-note' });
+        if (isDestinationRequired()) {
+          // Need to select destination first
+          return;
+        } else {
+          set({ currentStep: 'add-note' });
+        }
+        break;
+      case 'add-note':
+        set({ currentStep: 'confirm' });
+        break;
+    }
+  },
+  goToNextStep: () => {
+    const { currentStep, isDestinationRequired } = get();
+    switch (currentStep) {
+      case 'select-responding-to':
+        // Always go to note step if destination is not required
+        if (!isDestinationRequired()) {
+          set({ currentStep: 'add-note' });
+        }
         break;
       case 'add-note':
         set({ currentStep: 'confirm' });
@@ -123,6 +148,7 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     const { currentStep } = get();
     switch (currentStep) {
       case 'add-note':
+        // Always go back to select-responding-to step (even if skipped in some cases)
         set({ currentStep: 'select-responding-to' });
         break;
       case 'confirm':
@@ -131,7 +157,7 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     }
   },
   submitStatus: async () => {
-    const { selectedStatus, note, respondingTo, selectedCall, selectedGroup, responseType } = get();
+    const { selectedStatus, note, respondingTo, selectedCall, selectedGroup, responseType, getRequiredGpsAccuracy } = get();
     const showToast = useToastStore.getState().showToast;
     const { userId } = useAuthStore.getState();
     const { fetchCurrentUserInfo } = useHomeStore.getState();
@@ -139,6 +165,13 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
 
     if (!userId || !selectedStatus) {
       showToast('error', 'Missing required information');
+      return;
+    }
+
+    // Check GPS requirements
+    const requiresGps = getRequiredGpsAccuracy();
+    if (requiresGps && (!locationState.latitude || !locationState.longitude)) {
+      showToast('error', 'GPS location is required for this status but not available');
       return;
     }
 
@@ -154,7 +187,7 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
       status.Note = note;
       status.RespondingTo = respondingTo;
 
-      // Use location from location store if available, otherwise set to empty strings
+      // Always include GPS coordinates if available (regardless of requirement)
       status.Latitude = locationState.latitude ? locationState.latitude.toString() : '';
       status.Longitude = locationState.longitude ? locationState.longitude.toString() : '';
       status.Accuracy = locationState.accuracy ? locationState.accuracy.toString() : '';
@@ -172,11 +205,20 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
         status.EventId = '';
       }
 
-      await savePersonnelStatus(status);
-      await fetchCurrentUserInfo();
+      try {
+        // Try to submit directly first
+        await savePersonnelStatus(status);
+        await fetchCurrentUserInfo();
+        showToast('success', 'Status updated successfully');
+        get().reset();
+      } catch (error) {
+        // If direct submission fails, add to offline queue
+        console.warn('Direct status submission failed, adding to offline queue:', error);
 
-      showToast('success', 'Status updated successfully');
-      get().reset();
+        offlineQueueProcessor.addPersonnelStatusToQueue(status);
+        showToast('info', 'Status saved offline and will be submitted when connection is restored');
+        get().reset();
+      }
     } catch (error) {
       showToast('error', 'Failed to update status');
     } finally {
@@ -198,4 +240,33 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
       groups: [],
       isLoadingGroups: false,
     }),
+
+  // Helper methods for Detail-based logic
+  isDestinationRequired: () => {
+    const { selectedStatus } = get();
+    if (!selectedStatus) return false;
+    // Detail: 0 = No destination needed, 1 = Station only, 2 = Call only, 3 = Both
+    return selectedStatus.Detail > 0;
+  },
+
+  areCallsAllowed: () => {
+    const { selectedStatus } = get();
+    if (!selectedStatus) return false;
+    // Detail: 2 = Call only, 3 = Both
+    return selectedStatus.Detail === 2 || selectedStatus.Detail === 3;
+  },
+
+  areStationsAllowed: () => {
+    const { selectedStatus } = get();
+    if (!selectedStatus) return false;
+    // Detail: 1 = Station only, 3 = Both
+    return selectedStatus.Detail === 1 || selectedStatus.Detail === 3;
+  },
+
+  getRequiredGpsAccuracy: () => {
+    const { selectedStatus } = get();
+    if (!selectedStatus) return false;
+    // Use the Gps field to determine if GPS is required
+    return selectedStatus.Gps;
+  },
 }));

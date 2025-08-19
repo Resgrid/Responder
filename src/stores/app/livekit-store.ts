@@ -1,11 +1,11 @@
 import notifee, { AndroidImportance } from '@notifee/react-native';
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Room, RoomEvent } from 'livekit-client';
 import { Platform } from 'react-native';
-import { check, type Permission, PERMISSIONS, request, requestMultiple, RESULTS } from 'react-native-permissions';
-import { set } from 'zod';
 import { create } from 'zustand';
 
 import { getCanConnectToVoiceSession, getDepartmentVoiceSettings } from '../../api/voice';
+import { logger } from '../../lib/logging';
 import { type DepartmentVoiceChannelResultData } from '../../models/v4/voice/departmentVoiceResultData';
 import { audioService } from '../../services/audio.service';
 import { useBluetoothAudioStore } from './bluetooth-audio-store';
@@ -18,7 +18,10 @@ const setupAudioRouting = async (room: Room): Promise<void> => {
 
     // If we have a connected Bluetooth device, prioritize it
     if (connectedDevice && connectedDevice.hasAudioCapability) {
-      console.log('Using Bluetooth device for audio routing:', connectedDevice.name);
+      logger.info({
+        message: 'Using Bluetooth device for audio routing',
+        context: { deviceName: connectedDevice.name },
+      });
 
       // Update selected devices to use Bluetooth
       const deviceName = connectedDevice.name || 'Bluetooth Device';
@@ -36,13 +39,21 @@ const setupAudioRouting = async (room: Room): Promise<void> => {
 
       // Note: Actual audio routing would be implemented via native modules
       // This is a placeholder for the audio routing logic
-      console.log('Audio routing configured for Bluetooth device');
+      logger.debug({
+        message: 'Audio routing configured for Bluetooth device',
+      });
     } else {
       // Use default audio devices (selected devices or default)
-      console.log('Using default audio devices:', selectedAudioDevices);
+      logger.debug({
+        message: 'Using default audio devices',
+        context: { selectedAudioDevices },
+      });
     }
   } catch (error) {
-    console.error('Failed to setup audio routing:', error);
+    logger.error({
+      message: 'Failed to setup audio routing',
+      context: { error },
+    });
   }
 };
 
@@ -53,7 +64,6 @@ interface LiveKitState {
   currentRoom: Room | null;
   currentRoomInfo: DepartmentVoiceChannelResultData | null;
   isTalking: boolean;
-  isMicrophoneEnabled: boolean;
   isVoiceEnabled: boolean;
   voipServerWebsocketSslAddress: string;
   callerIdName: string;
@@ -71,14 +81,12 @@ interface LiveKitState {
   setCurrentRoom: (room: Room | null) => void;
   setCurrentRoomInfo: (roomInfo: DepartmentVoiceChannelResultData | null) => void;
   setIsTalking: (isTalking: boolean) => void;
-  setIsMicrophoneEnabled: (enabled: boolean) => void;
   setAvailableRooms: (rooms: DepartmentVoiceChannelResultData[]) => void;
   setIsBottomSheetVisible: (visible: boolean) => void;
 
   // Room operations
   connectToRoom: (roomInfo: DepartmentVoiceChannelResultData, token: string) => Promise<void>;
   disconnectFromRoom: () => void;
-  toggleMicrophone: () => Promise<void>;
   fetchVoiceSettings: () => Promise<void>;
   fetchCanConnectToVoice: () => Promise<void>;
   requestPermissions: () => Promise<void>;
@@ -90,7 +98,6 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
   currentRoom: null,
   currentRoomInfo: null,
   isTalking: false,
-  isMicrophoneEnabled: false,
   availableRooms: [],
   isBottomSheetVisible: false,
   isVoiceEnabled: false,
@@ -103,46 +110,45 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
   setCurrentRoom: (room) => set({ currentRoom: room }),
   setCurrentRoomInfo: (roomInfo) => set({ currentRoomInfo: roomInfo }),
   setIsTalking: (isTalking) => set({ isTalking }),
-  setIsMicrophoneEnabled: (enabled) => set({ isMicrophoneEnabled: enabled }),
   setAvailableRooms: (rooms) => set({ availableRooms: rooms }),
   setIsBottomSheetVisible: (visible) => set({ isBottomSheetVisible: visible }),
 
   requestPermissions: async () => {
     try {
-      if (Platform.OS === 'android') {
-        const permissions: Permission[] = [PERMISSIONS.ANDROID.RECORD_AUDIO];
+      if (Platform.OS === 'android' || Platform.OS === 'ios') {
+        // Use expo-audio for both Android and iOS microphone permissions
+        const micPermission = await getRecordingPermissionsAsync();
 
-        // Request the available permissions through react-native-permissions
-        const result = await requestMultiple(permissions);
-        const allGranted = permissions.every((permission) => result[permission] === RESULTS.GRANTED);
-
-        if (!allGranted) {
-          console.error('Permissions not granted', result);
-          return;
-        }
-
-        console.log('Audio recording permission granted successfully');
-
-        // Note: Foreground service permissions are typically handled at the manifest level
-        // and don't require runtime permission requests. They are automatically granted
-        // when the app is installed if declared in AndroidManifest.xml
-        console.log('Foreground service permissions are handled at manifest level');
-      } else if (Platform.OS === 'ios') {
-        // Request microphone permission for iOS
-        const micPermission = await check(PERMISSIONS.IOS.MICROPHONE);
-
-        if (micPermission !== RESULTS.GRANTED) {
-          const result = await request(PERMISSIONS.IOS.MICROPHONE);
-          if (result !== RESULTS.GRANTED) {
-            console.error('Microphone permission not granted on iOS');
+        if (!micPermission.granted) {
+          const result = await requestRecordingPermissionsAsync();
+          if (!result.granted) {
+            logger.error({
+              message: 'Microphone permission not granted',
+              context: { platform: Platform.OS },
+            });
             return;
           }
         }
 
-        console.log('iOS microphone permission granted');
+        logger.info({
+          message: 'Microphone permission granted successfully',
+          context: { platform: Platform.OS },
+        });
+
+        // Note: Foreground service permissions are typically handled at the manifest level
+        // and don't require runtime permission requests. They are automatically granted
+        // when the app is installed if declared in AndroidManifest.xml
+        if (Platform.OS === 'android') {
+          logger.debug({
+            message: 'Foreground service permissions are handled at manifest level',
+          });
+        }
       }
     } catch (error) {
-      console.error('Failed to request permissions:', error);
+      logger.error({
+        message: 'Failed to request permissions',
+        context: { error, platform: Platform.OS },
+      });
     }
   },
 
@@ -162,7 +168,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       // Setup room event listeners
       room.on(RoomEvent.ParticipantConnected, (participant) => {
-        console.log('A participant connected', participant.identity);
+        logger.info({
+          message: 'A participant connected',
+          context: { participantIdentity: participant.identity },
+        });
         // Play connection sound when others join
         if (participant.identity !== room.localParticipant.identity) {
           //audioService.playConnectToAudioRoomSound();
@@ -170,7 +179,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       });
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-        console.log('A participant disconnected', participant.identity);
+        logger.info({
+          message: 'A participant disconnected',
+          context: { participantIdentity: participant.identity },
+        });
         // Play disconnection sound when others leave
         //audioService.playDisconnectedFromAudioRoomSound();
       });
@@ -199,7 +211,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
           notifee.registerForegroundService(async () => {
             // Minimal function with no interval or tasks to reduce strain on the main thread
             return new Promise(() => {
-              console.log('Foreground service registered.');
+              logger.debug({
+                message: 'Foreground service registered',
+              });
             });
           });
 
@@ -217,17 +231,22 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
         await startForegroundService();
       } catch (error) {
-        console.error('Failed to register foreground service:', error);
+        logger.error({
+          message: 'Failed to register foreground service',
+          context: { error },
+        });
       }
       set({
         currentRoom: room,
         currentRoomInfo: roomInfo,
         isConnected: true,
         isConnecting: false,
-        isMicrophoneEnabled: false,
       });
     } catch (error) {
-      console.error('Failed to connect to room:', error);
+      logger.error({
+        message: 'Failed to connect to room',
+        context: { error },
+      });
       set({ isConnecting: false });
     }
   },
@@ -241,33 +260,16 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       try {
         await notifee.stopForegroundService();
       } catch (error) {
-        console.error('Failed to stop foreground service:', error);
+        logger.error({
+          message: 'Failed to stop foreground service',
+          context: { error },
+        });
       }
       set({
         currentRoom: null,
         currentRoomInfo: null,
         isConnected: false,
-        isMicrophoneEnabled: false,
       });
-    }
-  },
-
-  toggleMicrophone: async () => {
-    const { currentRoom, isMicrophoneEnabled } = get();
-
-    if (!currentRoom) {
-      console.warn('Cannot toggle microphone: not connected to a room');
-      return;
-    }
-
-    try {
-      const newMicState = !isMicrophoneEnabled;
-      await currentRoom.localParticipant.setMicrophoneEnabled(newMicState);
-      set({ isMicrophoneEnabled: newMicState });
-
-      console.log(`Microphone ${newMicState ? 'enabled' : 'disabled'}`);
-    } catch (error) {
-      console.error('Failed to toggle microphone:', error);
     }
   },
 
@@ -298,7 +300,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         availableRooms: rooms,
       });
     } catch (error) {
-      console.error('Failed to fetch rooms:', error);
+      logger.error({
+        message: 'Failed to fetch rooms',
+        context: { error },
+      });
     }
   },
 
@@ -315,7 +320,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         set({ canConnectToVoiceSession: false });
       }
     } catch (error) {
-      console.error('Failed to fetch can connect to voice:', error);
+      logger.error({
+        message: 'Failed to fetch can connect to voice',
+        context: { error },
+      });
     }
   },
 }));

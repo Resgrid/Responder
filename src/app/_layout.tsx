@@ -19,19 +19,17 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { APIProvider } from '@/api';
-import { PostHogProviderWrapper } from '@/components/common/posthog-provider';
+import { AptabaseProviderWrapper } from '@/components/common/aptabase-provider';
 import { LiveKitBottomSheet } from '@/components/livekit';
-import { StaffingBottomSheet } from '@/components/staffing/staffing-bottom-sheet';
-import { PersonnelStatusBottomSheet } from '@/components/status/personnel-status-bottom-sheet';
-import { ToastContainer } from '@/components/toast/toast-container';
+import { PushNotificationModal } from '@/components/push-notification/push-notification-modal';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { loadKeepAliveState } from '@/lib/hooks/use-keep-alive';
 import { loadSelectedTheme } from '@/lib/hooks/use-selected-theme';
 import { logger } from '@/lib/logging';
-import { getDeviceUuid } from '@/lib/storage/app';
-import { setDeviceUuid } from '@/lib/storage/app';
+import { getDeviceUuid, setDeviceUuid } from '@/lib/storage/app';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
 import { uuidv4 } from '@/lib/utils';
+import { appInitializationService } from '@/services/app-initialization.service';
 
 export { ErrorBoundary } from 'expo-router';
 export const navigationRef = createNavigationContainerRef();
@@ -49,14 +47,16 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
 Sentry.init({
   dsn: Env.SENTRY_DSN,
   debug: __DEV__, // Only debug in development, not production
-  tracesSampleRate: __DEV__ ? 1.0 : 0.1, // 100% in dev, 10% in production to reduce performance impact
+  tracesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
+  profilesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
+  sendDefaultPii: false,
   integrations: [
     // Pass integration
     navigationIntegration,
   ],
-  enableNativeFramesTracking: !isRunningInExpoGo(), // Tracks slow and frozen frames in the application
+  enableNativeFramesTracking: true, //!isRunningInExpoGo(), // Tracks slow and frozen frames in the application
   // Add additional options to prevent timing issues
-  beforeSendTransaction(event) {
+  beforeSendTransaction(event: any) {
     // Filter out problematic navigation transactions that might cause timestamp errors
     if (event.contexts?.trace?.op === 'navigation' && !event.contexts?.trace?.data?.route) {
       return null;
@@ -96,19 +96,8 @@ function RootLayout() {
   const ref = useNavigationContainerRef();
 
   useEffect(() => {
-    // Register navigation container with better error handling
     if (ref?.current) {
-      try {
-        navigationIntegration.registerNavigationContainer(ref);
-        logger.info({
-          message: 'Sentry navigation integration registered successfully',
-        });
-      } catch (error) {
-        logger.warn({
-          message: 'Failed to register Sentry navigation integration',
-          context: { error },
-        });
-      }
+      navigationIntegration.registerNavigationContainer(ref);
     }
 
     // Clear the badge count on app startup
@@ -152,6 +141,21 @@ function RootLayout() {
           context: { error },
         });
       });
+
+    // Initialize global app services (including CallKeep for iOS)
+    appInitializationService
+      .initialize()
+      .then(() => {
+        logger.info({
+          message: 'Global app services initialized successfully',
+        });
+      })
+      .catch((error) => {
+        logger.error({
+          message: 'Failed to initialize global app services',
+          context: { error },
+        });
+      });
   }, [ref]);
 
   return (
@@ -175,8 +179,8 @@ function Providers({ children }: { children: React.ReactNode }) {
           <BottomSheetModalProvider>
             {children}
             <LiveKitBottomSheet />
+            <PushNotificationModal />
             <FlashMessage position="top" />
-            <ToastContainer />
           </BottomSheetModalProvider>
         </ThemeProvider>
       </GluestackUIProvider>
@@ -186,15 +190,7 @@ function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView>
-        <KeyboardProvider>
-          {Env.POSTHOG_API_KEY && Env.POSTHOG_HOST && !__DEV__ ? (
-            <PostHogProviderWrapper apiKey={Env.POSTHOG_API_KEY} host={Env.POSTHOG_HOST} navigationRef={navigationRef}>
-              {renderContent()}
-            </PostHogProviderWrapper>
-          ) : (
-            renderContent()
-          )}
-        </KeyboardProvider>
+        <KeyboardProvider>{Env.APTABASE_APP_KEY && !__DEV__ ? <AptabaseProviderWrapper appKey={Env.APTABASE_APP_KEY}>{renderContent()}</AptabaseProviderWrapper> : renderContent()}</KeyboardProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

@@ -37,14 +37,9 @@ interface LoadingProps {
    * @default false
    */
   transparent?: boolean;
-
-  /**
-   * Test identifier for testing
-   */
-  testID?: string;
 }
 
-export const Loading: React.FC<LoadingProps> = ({ text, fullscreen = false, size = 'large', type = 'spinner', transparent = false, testID = 'loading' }) => {
+export const Loading: React.FC<LoadingProps> = ({ text, fullscreen = false, size = 'large', type = 'spinner', transparent = false }) => {
   const { t } = useTranslation();
   const loadingText = text || t('common:loading');
 
@@ -75,7 +70,7 @@ export const Loading: React.FC<LoadingProps> = ({ text, fullscreen = false, size
   };
 
   return (
-    <View className={containerClasses} testID={testID}>
+    <View className={containerClasses}>
       <VStack space="sm" className="items-center rounded-xl p-4">
         {renderLoadingIndicator()}
         {loadingText && <Text className={`text-foreground mt-2 font-medium text-blue-400 ${size === 'small' ? 'text-xs' : size === 'large' ? 'text-sm' : 'text-base'}`}>{loadingText}</Text>}

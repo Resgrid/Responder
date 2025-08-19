@@ -120,6 +120,14 @@ describe('Coordinates Search Logic', () => {
     NovuBackendApiUrl: '',
     NovuSocketUrl: '',
     NovuApplicationId: '',
+    EventingUrl: '',
+    DirectionsMapKey: '',
+    PersonnelLocationStaleSeconds: 0,
+    UnitLocationStaleSeconds: 0,
+    PersonnelLocationMinMeters: 0,
+    UnitLocationMinMeters: 0,
+    AnalyticsApiKey: '',
+    AnalyticsHost: ''
   };
 
   beforeEach(() => {
@@ -256,6 +264,14 @@ describe('Coordinates Search Logic', () => {
         NovuBackendApiUrl: '',
         NovuSocketUrl: '',
         NovuApplicationId: '',
+        EventingUrl: '',
+        DirectionsMapKey: '',
+        PersonnelLocationStaleSeconds: 0,
+        UnitLocationStaleSeconds: 0,
+        PersonnelLocationMinMeters: 0,
+        UnitLocationMinMeters: 0,
+        AnalyticsApiKey: '',
+        AnalyticsHost: ''
       };
 
       const result = await performCoordinatesSearch('40.7128, -74.0060', configWithoutKey);

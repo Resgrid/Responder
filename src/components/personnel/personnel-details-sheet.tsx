@@ -3,6 +3,7 @@ import React from 'react';
 
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
+import { useSecurityStore } from '@/stores/security/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
 import { Badge } from '../ui/badge';
@@ -16,6 +17,7 @@ import { VStack } from '../ui/vstack';
 
 export const PersonnelDetailsSheet: React.FC = () => {
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
+  const { canUserViewPII } = useSecurityStore();
 
   const selectedPersonnel = personnel?.find((person) => person.UserId === selectedPersonnelId);
 
@@ -51,24 +53,26 @@ export const PersonnelDetailsSheet: React.FC = () => {
             ) : null}
 
             {/* Contact Information Section */}
-            <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-              <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Information</Text>
-              <VStack space="xs">
-                {selectedPersonnel.EmailAddress ? (
-                  <HStack space="xs" className="items-center">
-                    <Mail size={16} className="text-gray-600 dark:text-gray-400" />
-                    <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.EmailAddress}</Text>
-                  </HStack>
-                ) : null}
+            {canUserViewPII ? (
+              <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Information</Text>
+                <VStack space="xs">
+                  {selectedPersonnel.EmailAddress ? (
+                    <HStack space="xs" className="items-center">
+                      <Mail size={16} className="text-gray-600 dark:text-gray-400" />
+                      <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.EmailAddress}</Text>
+                    </HStack>
+                  ) : null}
 
-                {selectedPersonnel.MobilePhone ? (
-                  <HStack space="xs" className="items-center">
-                    <Phone size={16} className="text-gray-600 dark:text-gray-400" />
-                    <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.MobilePhone}</Text>
-                  </HStack>
-                ) : null}
-              </VStack>
-            </Box>
+                  {selectedPersonnel.MobilePhone ? (
+                    <HStack space="xs" className="items-center">
+                      <Phone size={16} className="text-gray-600 dark:text-gray-400" />
+                      <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.MobilePhone}</Text>
+                    </HStack>
+                  ) : null}
+                </VStack>
+              </Box>
+            ) : null}
 
             {/* Group Information */}
             {selectedPersonnel.GroupName ? (
