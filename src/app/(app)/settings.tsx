@@ -1,7 +1,8 @@
 /* eslint-disable react/react-in-jsx-scope */
 import { Env } from '@env';
+import { useFocusEffect } from '@react-navigation/native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BackgroundGeolocationItem } from '@/components/settings/background-geolocation-item';
@@ -19,6 +20,7 @@ import { Box } from '@/components/ui/box';
 import { Card } from '@/components/ui/card';
 import { Heading } from '@/components/ui/heading';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth, useAuthStore } from '@/lib';
 import { logger } from '@/lib/logging';
 import { getBaseApiUrl } from '@/lib/storage/app';
@@ -29,18 +31,72 @@ export default function Settings() {
   const { t } = useTranslation();
   const signOut = useAuthStore.getState().logout;
   const { colorScheme } = useColorScheme();
+  const { trackEvent } = useAnalytics();
   const [showLoginInfo, setShowLoginInfo] = React.useState(false);
   const { login, status, isAuthenticated } = useAuth();
   const [showServerUrl, setShowServerUrl] = React.useState(false);
   const [showUnitSelection, setShowUnitSelection] = React.useState(false);
   const { units } = useUnitsStore();
 
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent('settings_viewed', {
+        timestamp: new Date().toISOString(),
+        colorScheme: colorScheme || 'light',
+        isAuthenticated,
+        serverUrl: getBaseApiUrl(),
+        unitsCount: units.length,
+      });
+    }, [trackEvent, colorScheme, isAuthenticated, units.length])
+  );
+
   const handleLoginInfoSubmit = async (data: { username: string; password: string }) => {
     logger.info({
       message: 'Updating login info',
     });
+
+    trackEvent('settings_login_info_updated', {
+      timestamp: new Date().toISOString(),
+      username: data.username,
+    });
+
     await login({ username: data.username, password: data.password });
   };
+
+  const handleServerUrlPress = useCallback(() => {
+    trackEvent('settings_server_url_pressed', {
+      timestamp: new Date().toISOString(),
+      currentServerUrl: getBaseApiUrl(),
+    });
+    setShowServerUrl(true);
+  }, [trackEvent]);
+
+  const handleLoginInfoPress = useCallback(() => {
+    trackEvent('settings_login_info_pressed', {
+      timestamp: new Date().toISOString(),
+    });
+    setShowLoginInfo(true);
+  }, [trackEvent]);
+
+  const handleLogoutPress = useCallback(() => {
+    trackEvent('settings_logout_pressed', {
+      timestamp: new Date().toISOString(),
+    });
+    signOut();
+  }, [trackEvent, signOut]);
+
+  const handleSupportLinkPress = useCallback(
+    (linkType: string, url: string) => {
+      trackEvent('settings_support_link_pressed', {
+        timestamp: new Date().toISOString(),
+        linkType,
+        url,
+      });
+      openLinkInBrowser(url);
+    },
+    [trackEvent]
+  );
 
   useEffect(() => {
     if (status === 'signedIn' && isAuthenticated) {
@@ -69,9 +125,9 @@ export default function Settings() {
           <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
             <Heading className="mb2 text-sm">{t('settings.account')}</Heading>
             <VStack space="sm">
-              <Item text={t('settings.server')} value={getBaseApiUrl()} onPress={() => setShowServerUrl(true)} textStyle="text-info-600" />
-              <Item text={t('settings.login_info')} onPress={() => setShowLoginInfo(true)} textStyle="text-info-600" />
-              <Item text={t('settings.logout')} onPress={signOut} textStyle="text-error-600" />
+              <Item text={t('settings.server')} value={getBaseApiUrl()} onPress={handleServerUrlPress} textStyle="text-info-600" />
+              <Item text={t('settings.login_info')} onPress={handleLoginInfoPress} textStyle="text-info-600" />
+              <Item text={t('settings.logout')} onPress={handleLogoutPress} textStyle="text-error-600" />
             </VStack>
           </Card>
 
@@ -92,11 +148,11 @@ export default function Settings() {
           <Card className={`mb-4 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
             <Heading className="mb2 text-sm">{t('settings.support')}</Heading>
             <VStack space="sm">
-              <Item text={t('settings.help_center')} onPress={() => openLinkInBrowser('https://resgrid.zohodesk.com/portal/en/home')} />
-              <Item text={t('settings.contact_us')} onPress={() => openLinkInBrowser('https://resgrid.com/contact')} />
-              <Item text={t('settings.status_page')} onPress={() => openLinkInBrowser('https://resgrid.freshstatus.io')} />
-              <Item text={t('settings.privacy_policy')} onPress={() => openLinkInBrowser('https://resgrid.com/privacy')} />
-              <Item text={t('settings.terms')} onPress={() => openLinkInBrowser('https://resgrid.com/terms')} />
+              <Item text={t('settings.help_center')} onPress={() => handleSupportLinkPress('help_center', 'https://resgrid.zohodesk.com/portal/en/home')} />
+              <Item text={t('settings.contact_us')} onPress={() => handleSupportLinkPress('contact_us', 'https://resgrid.com/contact')} />
+              <Item text={t('settings.status_page')} onPress={() => handleSupportLinkPress('status_page', 'https://resgrid.freshstatus.io')} />
+              <Item text={t('settings.privacy_policy')} onPress={() => handleSupportLinkPress('privacy_policy', 'https://resgrid.com/privacy')} />
+              <Item text={t('settings.terms')} onPress={() => handleSupportLinkPress('terms', 'https://resgrid.com/terms')} />
             </VStack>
           </Card>
         </VStack>

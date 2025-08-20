@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useTranslation } from 'react-i18next';
 
 import CalendarScreen from '../calendar';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useCalendarStore } from '@/stores/calendar/store';
 
 // Mock the translation hook
@@ -24,9 +25,22 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(() => ({})),
 }));
 
+// Mock react-navigation/native
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((callback) => {
+    // Immediately call the callback to simulate focus effect
+    callback();
+  }),
+}));
+
 // Mock the calendar store
 jest.mock('@/stores/calendar/store', () => ({
   useCalendarStore: jest.fn(),
+}));
+
+// Mock the analytics hook
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: jest.fn(),
 }));
 
 // Mock all gluestack-ui components to avoid CSS interop issues
@@ -221,9 +235,18 @@ const mockStore = {
 };
 
 describe('CalendarScreen', () => {
+  const mockTrackEvent = jest.fn();
+  const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
+
   beforeEach(() => {
     (useTranslation as jest.Mock).mockReturnValue({ t: mockT });
     (useCalendarStore as unknown as jest.Mock).mockReturnValue(mockStore);
+
+    // Default mock for analytics
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
+
     jest.clearAllMocks();
   });
 
@@ -242,30 +265,61 @@ describe('CalendarScreen', () => {
     expect(mockStore.loadUpcomingCalendarItems).toHaveBeenCalledTimes(1);
   });
 
+  it('tracks analytics when view becomes visible', () => {
+    render(<CalendarScreen />);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('calendar_viewed', {
+      timestamp: expect.any(String),
+      activeTab: 'today',
+    });
+    expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+  });
+
   it('switches between tabs correctly', () => {
     const { getByText } = render(<CalendarScreen />);
+
+    // Clear previous analytics calls
+    mockTrackEvent.mockClear();
 
     // Switch to upcoming tab
     fireEvent.press(getByText('Upcoming'));
 
+    expect(mockTrackEvent).toHaveBeenCalledWith('calendar_tab_changed', {
+      timestamp: expect.any(String),
+      fromTab: 'today',
+      toTab: 'upcoming',
+    });
+
     // Switch to calendar tab
     fireEvent.press(getByText('Calendar'));
 
+    expect(mockTrackEvent).toHaveBeenCalledWith('calendar_tab_changed', {
+      timestamp: expect.any(String),
+      fromTab: 'upcoming',
+      toTab: 'calendar',
+    });
+
     // Switch back to today tab
     fireEvent.press(getByText('Today'));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('calendar_tab_changed', {
+      timestamp: expect.any(String),
+      fromTab: 'calendar',
+      toTab: 'today',
+    });
   });
 
   describe('Today Tab', () => {
-  it('shows loading state for today\'s items', () => {
-    (useCalendarStore as unknown as jest.Mock).mockReturnValue({
-      ...mockStore,
-      isTodaysLoading: true,
-    });
+    it('shows loading state for today\'s items', () => {
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isTodaysLoading: true,
+      });
 
-    const { getByTestId } = render(<CalendarScreen />);
+      const { getByTestId } = render(<CalendarScreen />);
 
-    expect(getByTestId('loading')).toBeTruthy();
-  });    it('shows error state for today\'s items', () => {
+      expect(getByTestId('loading')).toBeTruthy();
+    }); it('shows error state for today\'s items', () => {
       (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         error: 'Failed to load',
@@ -388,10 +442,22 @@ describe('CalendarScreen', () => {
 
       const { getByTestId } = render(<CalendarScreen />);
 
+      // Clear previous analytics calls
+      mockTrackEvent.mockClear();
+
       fireEvent.press(getByTestId('calendar-card'));
 
       await waitFor(() => {
         expect(getByTestId('calendar-details-sheet')).toBeTruthy();
+      });
+
+      // Check analytics tracking for item view
+      expect(mockTrackEvent).toHaveBeenCalledWith('calendar_item_viewed', {
+        timestamp: expect.any(String),
+        itemId: mockCalendarItem.CalendarItemId,
+        itemTitle: mockCalendarItem.Title,
+        itemType: mockCalendarItem.TypeName,
+        tab: 'today',
       });
     });
 
@@ -428,9 +494,66 @@ describe('CalendarScreen', () => {
 
       const { getByTestId } = render(<CalendarScreen />);
 
+      // Clear previous analytics calls
+      mockTrackEvent.mockClear();
+
       fireEvent.press(getByTestId('retry-button'));
 
       expect(mockStore.clearError).toHaveBeenCalled();
+
+      // Check analytics tracking for refresh action
+      expect(mockTrackEvent).toHaveBeenCalledWith('calendar_refreshed', {
+        timestamp: expect.any(String),
+        tab: 'today',
+      });
+    });
+  });
+
+  describe('Analytics Tracking', () => {
+    it('tracks calendar view on mount', () => {
+      render(<CalendarScreen />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('calendar_viewed', {
+        timestamp: expect.any(String),
+        activeTab: 'today',
+      });
+    });
+
+    it('tracks tab changes', () => {
+      const { getByText } = render(<CalendarScreen />);
+
+      // Clear initial analytics call
+      mockTrackEvent.mockClear();
+
+      fireEvent.press(getByText('Upcoming'));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('calendar_tab_changed', {
+        timestamp: expect.any(String),
+        fromTab: 'today',
+        toTab: 'upcoming',
+      });
+    });
+
+    it('tracks item interactions', async () => {
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        todayCalendarItems: [mockCalendarItem],
+      });
+
+      const { getByTestId } = render(<CalendarScreen />);
+
+      // Clear initial analytics call
+      mockTrackEvent.mockClear();
+
+      fireEvent.press(getByTestId('calendar-card'));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('calendar_item_viewed', {
+        timestamp: expect.any(String),
+        itemId: mockCalendarItem.CalendarItemId,
+        itemTitle: mockCalendarItem.Title,
+        itemType: mockCalendarItem.TypeName,
+        tab: 'today',
+      });
     });
   });
 }); 

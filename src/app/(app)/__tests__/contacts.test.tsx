@@ -2,6 +2,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import React from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 
 import Contacts from '../contacts';
@@ -15,6 +16,28 @@ jest.mock('react-i18next', () => ({
 
 jest.mock('@/stores/contacts/store', () => ({
   useContactsStore: jest.fn(),
+}));
+
+// Mock analytics hook
+jest.mock('@/hooks/use-analytics');
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
+
+// Mock navigation hooks
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    const React = require('react');
+    React.useEffect(() => {
+      // Call the callback immediately to simulate focus
+      callback();
+    });
+  },
+}));
+
+// Mock the aptabase service
+jest.mock('@/services/aptabase.service', () => ({
+  aptabaseService: {
+    trackEvent: jest.fn(),
+  },
 }));
 
 jest.mock('@/components/common/loading', () => ({
@@ -108,8 +131,15 @@ const mockContacts = [
 ];
 
 describe('Contacts Page', () => {
+  const mockTrackEvent = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock for analytics
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
   });
 
   it('should render loading state during initial fetch', () => {
@@ -306,5 +336,64 @@ describe('Contacts Page', () => {
     // Should not show loading page since contacts are already loaded
     expect(screen.queryByText('Loading')).toBeFalsy();
     expect(screen.getByTestId('contact-card-1')).toBeTruthy();
+  });
+
+  describe('Analytics Tracking', () => {
+    it('should track contacts_viewed event when component mounts', () => {
+      useContactsStore.mockReturnValue({
+        contacts: mockContacts,
+        searchQuery: '',
+        setSearchQuery: jest.fn(),
+        selectContact: jest.fn(),
+        isLoading: false,
+        fetchContacts: jest.fn(),
+      });
+
+      render(<Contacts />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('contacts_viewed', {
+        timestamp: expect.any(String),
+      });
+    });
+
+    it('should track analytics with ISO timestamp format', () => {
+      useContactsStore.mockReturnValue({
+        contacts: mockContacts,
+        searchQuery: '',
+        setSearchQuery: jest.fn(),
+        selectContact: jest.fn(),
+        isLoading: false,
+        fetchContacts: jest.fn(),
+      });
+
+      render(<Contacts />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+      const call = mockTrackEvent.mock.calls[0];
+      expect(call[0]).toBe('contacts_viewed');
+      expect(call[1]).toHaveProperty('timestamp');
+
+      // Verify timestamp is in ISO format
+      const timestamp = (call[1] as { timestamp: string }).timestamp;
+      expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    });
+
+    it('should track analytics event on component mount', () => {
+      useContactsStore.mockReturnValue({
+        contacts: mockContacts,
+        searchQuery: '',
+        setSearchQuery: jest.fn(),
+        selectContact: jest.fn(),
+        isLoading: false,
+        fetchContacts: jest.fn(),
+      });
+
+      render(<Contacts />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+      expect(mockTrackEvent).toHaveBeenCalledWith('contacts_viewed', {
+        timestamp: expect.any(String),
+      });
+    });
   });
 }); 

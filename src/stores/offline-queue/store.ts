@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { logger } from '@/lib/logging';
-import { zustandStorage } from '@/lib/storage';
+import { secureOfflineQueueStorage } from '@/lib/storage/offline-queue-storage';
 import { type QueuedEvent, QueuedEventStatus, type QueuedEventType } from '@/models/offline-queue/queued-event';
 import { generateEventId } from '@/utils/id-generator';
 
@@ -263,7 +263,7 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
     }),
     {
       name: 'offline-queue-storage',
-      storage: createJSONStorage(() => zustandStorage),
+      storage: createJSONStorage(() => secureOfflineQueueStorage),
       // Only persist the events and statistics, not the network state or processing state
       partialize: (state) => ({
         queuedEvents: state.queuedEvents,

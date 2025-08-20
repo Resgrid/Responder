@@ -48,7 +48,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       UIBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'],
       ITSAppUsesNonExemptEncryption: false,
       UIViewControllerBasedStatusBarAppearance: false,
-      NSBluetoothAlwaysUsageDescription: 'Allow Resgrid Unit to connect to bluetooth devices for PTT.',
+      NSBluetoothAlwaysUsageDescription: 'Allow Resgrid Responder to connect to bluetooth devices for PTT.',
+      NSMicrophoneUsageDescription: 'Allow Resgrid Responder to access the microphone for voice communication and push-to-talk functionality during emergency response.',
     },
     entitlements: {
       ...((Env.APP_ENV === 'production' || Env.APP_ENV === 'internal') && {
@@ -255,7 +256,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-audio',
       {
-        microphonePermission: 'Allow Resgrid Unit to access the microphone for audio input used in PTT and calls.',
+        microphonePermission: 'Allow Resgrid Responder to access the microphone for audio input used in PTT and calls.',
       },
     ],
     'react-native-ble-manager',

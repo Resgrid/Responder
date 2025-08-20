@@ -12,6 +12,7 @@ import { useOfflineQueueStore } from '@/stores/offline-queue/store';
 class OfflineEventManager {
   private static instance: OfflineEventManager;
   private processingInterval: NodeJS.Timeout | null = null;
+  private backgroundTimeout: NodeJS.Timeout | null = null;
   private isProcessing = false;
   private appStateSubscription: { remove: () => void } | null = null;
   private readonly PROCESSING_INTERVAL = 10000; // 10 seconds
@@ -76,6 +77,12 @@ class OfflineEventManager {
       logger.info({
         message: 'Stopped offline event processing',
       });
+    }
+
+    // Clear background timeout if it exists
+    if (this.backgroundTimeout) {
+      clearTimeout(this.backgroundTimeout);
+      this.backgroundTimeout = null;
     }
   }
 
@@ -340,11 +347,17 @@ class OfflineEventManager {
       context: { nextAppState },
     });
 
+    // Clear any existing background timeout when state changes
+    if (this.backgroundTimeout) {
+      clearTimeout(this.backgroundTimeout);
+      this.backgroundTimeout = null;
+    }
+
     if (nextAppState === 'active') {
       this.startProcessing();
     } else if (nextAppState === 'background') {
       // Keep processing in background for a short time
-      setTimeout(() => {
+      this.backgroundTimeout = setTimeout(() => {
         if (AppState.currentState === 'background') {
           this.stopProcessing();
         }
@@ -359,6 +372,12 @@ class OfflineEventManager {
    */
   public cleanup(): void {
     this.stopProcessing();
+
+    // Clear background timeout
+    if (this.backgroundTimeout) {
+      clearTimeout(this.backgroundTimeout);
+      this.backgroundTimeout = null;
+    }
 
     if (this.appStateSubscription) {
       this.appStateSubscription.remove();

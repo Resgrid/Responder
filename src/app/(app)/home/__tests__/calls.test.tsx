@@ -10,7 +10,12 @@ jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
   },
+}));
+
+// Mock useFocusEffect to avoid navigation dependency
+jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn((callback: () => void) => {
+    // Execute the callback immediately in tests
     callback();
   }),
 }));
@@ -25,6 +30,11 @@ jest.mock('react-i18next', () => ({
 // Mock the stores
 jest.mock('@/stores/calls/store');
 jest.mock('@/stores/security/store');
+
+// Mock the analytics hook
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: jest.fn(),
+}));
 
 // Mock the UI components
 jest.mock('@/components/common/loading', () => ({
@@ -141,16 +151,24 @@ jest.mock('lucide-react-native', () => ({
 
 // Import the component to test
 import Calls from '../calls';
+import { useAnalytics } from '@/hooks/use-analytics';
 
 const mockUseCallsStore = useCallsStore as jest.MockedFunction<typeof useCallsStore>;
 const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
 describe('Calls Screen', () => {
   const mockFetchCalls = jest.fn();
   const mockFetchCallPriorities = jest.fn();
+  const mockTrackEvent = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock for analytics
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
 
     // Default mock for calls store
     mockUseCallsStore.mockReturnValue({
@@ -328,6 +346,29 @@ describe('Calls Screen', () => {
 
       expect(mockFetchCalls).toHaveBeenCalled();
       expect(mockFetchCallPriorities).toHaveBeenCalled();
+    });
+  });
+
+  describe('Analytics Tracking', () => {
+    it('should track calls_viewed event when component mounts', () => {
+      render(<Calls />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('calls_viewed', {
+        timestamp: expect.any(String),
+      });
+    });
+
+    it('should track analytics with ISO timestamp format', () => {
+      render(<Calls />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+      const call = mockTrackEvent.mock.calls[0];
+      expect(call[0]).toBe('calls_viewed');
+      expect(call[1]).toHaveProperty('timestamp');
+
+      // Verify timestamp is in ISO format
+      const timestamp = call[1].timestamp;
+      expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     });
   });
 });

@@ -1,8 +1,10 @@
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+
+import { useAnalytics } from '@/hooks/use-analytics';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
 import { Button, ButtonSpinner, ButtonText } from '../ui/button';
@@ -28,6 +30,7 @@ export function LoginInfoBottomSheet({ isOpen, onClose, onSubmit }: LoginInfoBot
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [isLoading, setIsLoading] = React.useState(false);
+  const { trackEvent } = useAnalytics();
 
   const {
     control,
@@ -35,18 +38,91 @@ export function LoginInfoBottomSheet({ isOpen, onClose, onSubmit }: LoginInfoBot
     formState: { errors },
   } = useForm<LoginInfoForm>();
 
+  // Track analytics when sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    try {
+      trackEvent('login_info_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        isLandscape,
+        colorScheme: colorScheme || 'light',
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track login info sheet view analytics:', error);
+    }
+  }, [trackEvent, isLandscape, colorScheme]);
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isOpen) {
+      trackViewAnalytics();
+    }
+  }, [isOpen, trackViewAnalytics]);
+
   const onFormSubmit = async (data: LoginInfoForm) => {
     try {
       setIsLoading(true);
+
+      // Track form submission analytics
+      try {
+        trackEvent('login_info_form_submitted', {
+          timestamp: new Date().toISOString(),
+          hasUsername: !!data.username,
+          hasPassword: !!data.password,
+          isLandscape,
+        });
+      } catch (error) {
+        console.warn('Failed to track login info form submission analytics:', error);
+      }
+
       await onSubmit(data);
+
+      // Track successful submission
+      try {
+        trackEvent('login_info_form_success', {
+          timestamp: new Date().toISOString(),
+          isLandscape,
+        });
+      } catch (error) {
+        console.warn('Failed to track login info form success analytics:', error);
+      }
+
       onClose();
+    } catch (error) {
+      // Track failed submission
+      try {
+        trackEvent('login_info_form_failed', {
+          timestamp: new Date().toISOString(),
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          isLandscape,
+        });
+      } catch (analyticsError) {
+        console.warn('Failed to track login info form failure analytics:', analyticsError);
+      }
+
+      // Re-throw the error so parent component can handle it
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle close with analytics
+  const handleClose = useCallback(() => {
+    try {
+      trackEvent('login_info_sheet_closed', {
+        timestamp: new Date().toISOString(),
+        wasFormModified: false, // Could track form dirty state if needed
+        isLandscape,
+      });
+    } catch (error) {
+      console.warn('Failed to track login info sheet close analytics:', error);
+    }
+    onClose();
+  }, [trackEvent, onClose, isLandscape]);
+
   return (
-    <Actionsheet isOpen={isOpen} onClose={onClose}>
+    <Actionsheet isOpen={isOpen} onClose={handleClose}>
       <ActionsheetBackdrop />
       <ActionsheetContent className={`rounded-t-3xl px-4 pb-6 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-white'}`}>
         <ActionsheetDragIndicatorWrapper>
@@ -97,7 +173,7 @@ export function LoginInfoBottomSheet({ isOpen, onClose, onSubmit }: LoginInfoBot
             </FormControl>
 
             <HStack space="md" className="mt-4">
-              <Button variant="outline" className="flex-1" onPress={onClose} size={isLandscape ? 'md' : 'sm'}>
+              <Button variant="outline" className="flex-1" onPress={handleClose} size={isLandscape ? 'md' : 'sm'}>
                 <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.cancel')}</ButtonText>
               </Button>
               <Button className="flex-1 bg-primary-600" onPress={handleSubmit(onFormSubmit)} disabled={isLoading} size={isLandscape ? 'md' : 'sm'}>

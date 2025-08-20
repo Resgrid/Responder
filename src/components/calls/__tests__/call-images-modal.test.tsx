@@ -3,6 +3,22 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuthStore } from '@/lib';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 
+// Mock analytics
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
+
+// Mock navigation
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((callback) => {
+    // Immediately call the callback to simulate focus effect
+    callback();
+  }),
+}));
+
 // Mock dependencies
 jest.mock('@/lib', () => ({
   useAuthStore: {
@@ -47,6 +63,8 @@ const MockCallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, 
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage } = useCallDetailStore();
+  const { useAnalytics } = require('@/hooks/use-analytics');
+  const { trackEvent } = useAnalytics();
 
   // Filter valid images and memoize to prevent re-filtering on every render
   const validImages = useMemo(() => {
@@ -59,8 +77,23 @@ const MockCallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, 
       fetchCallImages(callId);
       setActiveIndex(0);
       setImageErrors(new Set());
+
+      // Track analytics when modal becomes visible (similar to useFocusEffect)
+      try {
+        trackEvent('call_images_modal_viewed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          imageCount: validImages.length,
+          hasImages: Boolean(validImages.length),
+          isLoading: isLoadingImages,
+          hasError: Boolean(errorImages),
+        });
+      } catch (error) {
+        // Analytics errors should not break the component
+        console.warn('Failed to track call images modal analytics:', error);
+      }
     }
-  }, [isOpen, callId, fetchCallImages]);
+  }, [isOpen, callId, fetchCallImages, trackEvent, validImages.length, isLoadingImages, errorImages]);
 
   // Reset active index when valid images change
   useEffect(() => {
@@ -70,11 +103,57 @@ const MockCallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, 
   }, [validImages.length, activeIndex]);
 
   const handleNext = () => {
-    setActiveIndex(Math.min(validImages.length - 1, activeIndex + 1));
+    const newIndex = Math.min(validImages.length - 1, activeIndex + 1);
+    setActiveIndex(newIndex);
+
+    // Track navigation analytics
+    try {
+      trackEvent('call_images_navigation', {
+        timestamp: new Date().toISOString(),
+        callId,
+        direction: 'next',
+        fromIndex: activeIndex,
+        toIndex: newIndex,
+        totalImages: validImages.length,
+      });
+    } catch (error) {
+      console.warn('Failed to track image navigation analytics:', error);
+    }
   };
 
   const handlePrevious = () => {
-    setActiveIndex(Math.max(0, activeIndex - 1));
+    const newIndex = Math.max(0, activeIndex - 1);
+    setActiveIndex(newIndex);
+
+    // Track navigation analytics
+    try {
+      trackEvent('call_images_navigation', {
+        timestamp: new Date().toISOString(),
+        callId,
+        direction: 'previous',
+        fromIndex: activeIndex,
+        toIndex: newIndex,
+        totalImages: validImages.length,
+      });
+    } catch (error) {
+      console.warn('Failed to track image navigation analytics:', error);
+    }
+  };
+
+  const handleClose = () => {
+    // Track close analytics
+    try {
+      trackEvent('call_images_modal_closed', {
+        timestamp: new Date().toISOString(),
+        callId,
+        wasManualClose: true,
+        currentImageIndex: activeIndex,
+        totalImages: validImages.length,
+      });
+    } catch (error) {
+      console.warn('Failed to track call images modal close analytics:', error);
+    }
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -195,7 +274,7 @@ const MockCallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, 
         React.createElement(TouchableOpacity, {
           testID: 'close-button',
           key: 'close',
-          onPress: onClose
+          onPress: handleClose
         }, 'Close')
       ])
     )
@@ -288,6 +367,159 @@ describe('CallImagesModal', () => {
       setDepartmentId: jest.fn(),
       setGroupIds: jest.fn(),
     } as any);
+  });
+
+  describe('Analytics Tracking', () => {
+    it('tracks modal view analytics event with correct data', () => {
+      render(<MockCallImagesModal {...defaultProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_modal_viewed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-id',
+        imageCount: 4, // Valid images count
+        hasImages: true,
+        isLoading: false,
+        hasError: false,
+      });
+    });
+
+    it('tracks modal view with loading state', () => {
+      mockUseCallDetailStore.mockReturnValue({
+        ...mockStore,
+        isLoadingImages: true,
+      } as any);
+
+      render(<MockCallImagesModal {...defaultProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_modal_viewed', expect.objectContaining({
+        isLoading: true,
+      }));
+    });
+
+    it('tracks modal view with error state', () => {
+      mockUseCallDetailStore.mockReturnValue({
+        ...mockStore,
+        errorImages: 'Failed to load images',
+      } as any);
+
+      render(<MockCallImagesModal {...defaultProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_modal_viewed', expect.objectContaining({
+        hasError: true,
+      }));
+    });
+
+    it('tracks modal view with no images', () => {
+      mockUseCallDetailStore.mockReturnValue({
+        ...mockStore,
+        callImages: [],
+      } as any);
+
+      render(<MockCallImagesModal {...defaultProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_modal_viewed', expect.objectContaining({
+        imageCount: 0,
+        hasImages: false,
+      }));
+    });
+
+    it('tracks close analytics event with correct data', () => {
+      const { getByTestId } = render(<MockCallImagesModal {...defaultProps} />);
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const closeButton = getByTestId('close-button');
+      fireEvent.press(closeButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_modal_closed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-id',
+        wasManualClose: true,
+        currentImageIndex: 0,
+        totalImages: 4,
+      });
+    });
+
+    it('tracks navigation analytics when going to next image', () => {
+      const { getByTestId } = render(<MockCallImagesModal {...defaultProps} />);
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const nextButton = getByTestId('next-button');
+      fireEvent.press(nextButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_navigation', {
+        timestamp: expect.any(String),
+        callId: 'test-call-id',
+        direction: 'next',
+        fromIndex: 0,
+        toIndex: 1,
+        totalImages: 4,
+      });
+    });
+
+    it('tracks navigation analytics when going to previous image', () => {
+      const { getByTestId } = render(<MockCallImagesModal {...defaultProps} />);
+
+      // First go to next image to set index to 1
+      const nextButton = getByTestId('next-button');
+      fireEvent.press(nextButton);
+
+      // Clear analytics from previous action
+      mockTrackEvent.mockClear();
+
+      const previousButton = getByTestId('previous-button');
+      fireEvent.press(previousButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_navigation', {
+        timestamp: expect.any(String),
+        callId: 'test-call-id',
+        direction: 'previous',
+        fromIndex: 1,
+        toIndex: 0,
+        totalImages: 4,
+      });
+    });
+
+    it('does not track analytics when modal is closed', () => {
+      render(<MockCallImagesModal {...defaultProps} isOpen={false} />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('tracks analytics with correct timestamp format', () => {
+      const mockDate = new Date('2024-01-15T10:00:00Z');
+      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+
+      render(<MockCallImagesModal {...defaultProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_modal_viewed', expect.objectContaining({
+        timestamp: '2024-01-15T10:00:00.000Z',
+      }));
+
+      jest.restoreAllMocks();
+    });
+
+    it('handles analytics errors gracefully without breaking component', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('Analytics service unavailable');
+      });
+
+      // Component should still render normally despite analytics error
+      const { getByTestId } = render(<MockCallImagesModal {...defaultProps} />);
+      expect(getByTestId('actionsheet')).toBeTruthy();
+
+      // Error should be logged
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to track'),
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   describe('CSS Interop Fix - Basic Functionality', () => {

@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 import { logger } from '../lib/logging';
-import { callKeepService } from './callkeep.service.ios';
+import { callKeepService } from './callkeep.service';
 
 /**
  * Global app initialization service that handles one-time setup operations
@@ -78,17 +78,9 @@ class AppInitializationService {
   }
 
   /**
-   * Initialize CallKeep service for iOS
+   * Initialize CallKeep service (iOS only, no-op on Android)
    */
   private async _initializeCallKeep(): Promise<void> {
-    if (Platform.OS !== 'ios') {
-      logger.debug({
-        message: 'CallKeep initialization skipped - not iOS platform',
-        context: { platform: Platform.OS },
-      });
-      return;
-    }
-
     try {
       await callKeepService.setup({
         appName: 'Resgrid Unit',
@@ -107,7 +99,7 @@ class AppInitializationService {
         context: { error },
       });
       // Don't throw here - CallKeep failure shouldn't prevent app startup
-      // but LiveKit calls may not work properly in the background
+      // but LiveKit calls may not work properly in the background on iOS
     }
   }
 

@@ -1,9 +1,10 @@
 import { ArrowLeft, ArrowRight, CircleIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { translate } from '@/lib/i18n/utils';
 import { invertColor } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -20,6 +21,7 @@ import { VStack } from '../ui/vstack';
 
 export const StaffingBottomSheet = () => {
   const { t, ready } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const { isOpen, currentStep, selectedStaffing, note, isLoading, setCurrentStep, setSelectedStaffing, setNote, nextStep, previousStep, submitStaffing, reset } = useStaffingBottomSheetStore();
 
   const { activeStaffing } = useCoreStore();
@@ -37,7 +39,46 @@ export const StaffingBottomSheet = () => {
     [t, ready]
   );
 
+  // Analytics tracking function
+  const trackViewAnalytics = useCallback(() => {
+    try {
+      trackEvent('staffing_bottom_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        currentStep,
+        selectedStaffingId: selectedStaffing?.Id ?? 0,
+        selectedStaffingText: selectedStaffing?.Text ?? '',
+        hasNote: note.length > 0,
+        noteLength: note.length,
+        availableStaffingCount: activeStaffing?.length || 0,
+        colorScheme: colorScheme || 'light',
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track staffing bottom sheet view analytics:', error);
+    }
+  }, [trackEvent, currentStep, selectedStaffing, note, activeStaffing, colorScheme]);
+
+  // Track analytics when sheet becomes visible or step changes
+  useEffect(() => {
+    if (isOpen) {
+      trackViewAnalytics();
+    }
+  }, [isOpen, currentStep, trackViewAnalytics]);
+
   const handleClose = () => {
+    // Track close analytics
+    try {
+      trackEvent('staffing_bottom_sheet_closed', {
+        timestamp: new Date().toISOString(),
+        currentStep,
+        selectedStaffingId: selectedStaffing?.Id ?? 0,
+        hasNote: note.length > 0,
+        completed: false, // User closed without completing
+      });
+    } catch (error) {
+      console.warn('Failed to track staffing bottom sheet close analytics:', error);
+    }
+
     reset();
   };
 
@@ -45,18 +86,68 @@ export const StaffingBottomSheet = () => {
     const staffing = activeStaffing?.find((s) => s.Id.toString() === staffingId);
     if (staffing) {
       setSelectedStaffing(staffing);
+
+      // Track staffing selection analytics
+      try {
+        trackEvent('staffing_option_selected', {
+          timestamp: new Date().toISOString(),
+          staffingId: staffing.Id,
+          staffingText: staffing.Text,
+          currentStep,
+        });
+      } catch (error) {
+        console.warn('Failed to track staffing selection analytics:', error);
+      }
     }
   };
 
   const handleNext = () => {
+    // Track step progression analytics
+    try {
+      trackEvent('staffing_bottom_sheet_step_next', {
+        timestamp: new Date().toISOString(),
+        fromStep: currentStep,
+        toStep: currentStep === 'select-staffing' ? 'add-note' : 'confirm',
+        selectedStaffingId: selectedStaffing?.Id ?? 0,
+      });
+    } catch (error) {
+      console.warn('Failed to track step next analytics:', error);
+    }
+
     nextStep();
   };
 
   const handlePrevious = () => {
+    // Track step regression analytics
+    try {
+      trackEvent('staffing_bottom_sheet_step_previous', {
+        timestamp: new Date().toISOString(),
+        fromStep: currentStep,
+        toStep: currentStep === 'confirm' ? 'add-note' : 'select-staffing',
+        selectedStaffingId: selectedStaffing?.Id ?? 0,
+      });
+    } catch (error) {
+      console.warn('Failed to track step previous analytics:', error);
+    }
+
     previousStep();
   };
 
   const handleSubmit = async () => {
+    // Track submit analytics
+    try {
+      trackEvent('staffing_bottom_sheet_submitted', {
+        timestamp: new Date().toISOString(),
+        selectedStaffingId: selectedStaffing?.Id ?? 0,
+        selectedStaffingText: selectedStaffing?.Text ?? '',
+        hasNote: note.length > 0,
+        noteLength: note.length,
+        completed: true, // User completed the flow
+      });
+    } catch (error) {
+      console.warn('Failed to track staffing submit analytics:', error);
+    }
+
     await submitStaffing();
   };
 

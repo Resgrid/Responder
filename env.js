@@ -94,6 +94,7 @@ const client = z.object({
   SENTRY_DSN: z.string(),
   APTABASE_URL: z.string(),
   APTABASE_APP_KEY: z.string(),
+  STORAGE_ENCRYPTION_KEY: z.string().optional(),
 });
 
 const buildTime = z.object({
@@ -129,6 +130,7 @@ const _clientEnv = {
   SENTRY_DSN: process.env.RESPOND_SENTRY_DSN || '',
   APTABASE_APP_KEY: process.env.RESPOND_APTABASE_APP_KEY || '',
   APTABASE_URL: process.env.RESPOND_APTABASE_URL || '',
+  STORAGE_ENCRYPTION_KEY: process.env.RESPOND_STORAGE_ENCRYPTION_KEY || '',
 };
 
 /**

@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Filter, Search, Users, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,16 +17,27 @@ import { HStack } from '@/components/ui/hstack';
 import { Input } from '@/components/ui/input';
 import { InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { usePersonnelStore } from '@/stores/personnel/store';
 
 export default function Personnel() {
   const { t } = useTranslation();
   const { personnel, searchQuery, setSearchQuery, selectPersonnel, isLoading, fetchPersonnel, selectedFilters, openFilterSheet } = usePersonnelStore();
+  const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
     fetchPersonnel();
   }, [fetchPersonnel]);
+
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      trackEvent('personnel_viewed', {
+        timestamp: new Date().toISOString(),
+      });
+    }, [trackEvent])
+  );
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);

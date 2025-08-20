@@ -12,6 +12,7 @@ import { SideMenu } from '@/components/sidebar/side-menu';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { Env } from '@/lib/env';
@@ -27,6 +28,7 @@ Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
 
 export default function HomeMap() {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
@@ -62,6 +64,13 @@ export default function HomeMap() {
   // Handle navigation focus - reset map state when user navigates back to map page
   useFocusEffect(
     useCallback(() => {
+      // Track analytics when view becomes visible
+      trackEvent('map_viewed', {
+        timestamp: new Date().toISOString(),
+        isMapLocked: location.isMapLocked,
+        hasLocation: !!(location.latitude && location.longitude),
+      });
+
       // Reset hasUserMovedMap when navigating back to map
       setHasUserMovedMap(false);
 
@@ -92,7 +101,7 @@ export default function HomeMap() {
           },
         });
       }
-    }, [isMapReady, location.latitude, location.longitude, location.isMapLocked, location.heading])
+    }, [isMapReady, location.latitude, location.longitude, location.isMapLocked, location.heading, trackEvent])
   );
 
   useEffect(() => {
@@ -232,12 +241,27 @@ export default function HomeMap() {
 
       cameraRef.current?.setCamera(cameraConfig);
       setHasUserMovedMap(false);
+
+      // Track analytics for recenter action
+      trackEvent('map_recentered', {
+        timestamp: new Date().toISOString(),
+        isMapLocked: location.isMapLocked,
+        zoomLevel: location.isMapLocked ? 16 : 12,
+      });
     }
   };
 
   const handlePinPress = (pin: MapMakerInfoData) => {
     setSelectedPin(pin);
     setIsPinDetailModalOpen(true);
+
+    // Track analytics for pin interaction
+    trackEvent('map_pin_pressed', {
+      timestamp: new Date().toISOString(),
+      pinId: pin.Id,
+      pinTitle: pin.Title,
+      pinType: pin.Type,
+    });
   };
 
   const handleSetAsCurrentCall = async (pin: MapMakerInfoData) => {
@@ -252,6 +276,14 @@ export default function HomeMap() {
 
       await useCoreStore.getState().setActiveCall(pin.Id);
       useToastStore.getState().showToast('success', t('map.call_set_as_current'));
+
+      // Track analytics for setting current call
+      trackEvent('map_pin_set_as_current_call', {
+        timestamp: new Date().toISOString(),
+        pinId: pin.Id,
+        pinTitle: pin.Title,
+        pinType: pin.Type,
+      });
     } catch (error) {
       logger.error({
         message: 'Failed to set call as current call',

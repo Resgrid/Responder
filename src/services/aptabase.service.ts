@@ -44,18 +44,18 @@ class AptabaseService {
       return;
     }
 
-    try {
-      trackEvent(eventName, properties);
-
-      if (this.enableLogging) {
-        logger.debug({
-          message: 'Analytics event tracked',
-          context: { eventName, properties },
-        });
-      }
-    } catch (error) {
-      this.handleAnalyticsError(error, eventName, properties);
-    }
+    Promise.resolve(trackEvent(eventName, properties))
+      .then(() => {
+        if (this.enableLogging) {
+          logger.debug({
+            message: 'Analytics event tracked',
+            context: { eventName, properties },
+          });
+        }
+      })
+      .catch((error: any) => {
+        this.handleAnalyticsError(error, eventName, properties);
+      });
   }
 
   /**

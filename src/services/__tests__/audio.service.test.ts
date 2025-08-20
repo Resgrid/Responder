@@ -40,6 +40,10 @@ jest.mock('expo-av', () => ({
     DuckOthers: 'duckOthers',
     MixWithOthers: 'mixWithOthers',
   },
+  InterruptionModeAndroid: {
+    DoNotMix: 'doNotMix',
+    DuckOthers: 'duckOthers',
+  },
 }));
 
 // Mock react-native

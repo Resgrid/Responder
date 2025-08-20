@@ -5,6 +5,33 @@ import { ShiftDetailsSheet } from '../shift-details-sheet';
 import { useShiftsStore } from '@/stores/shifts/store';
 import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
 
+// Mock analytics hook
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
+
+// Mock react-native hooks
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    width: 375,
+    height: 812,
+    scale: 2,
+    fontScale: 1,
+  })),
+}));
+
+// Mock nativewind
+jest.mock('nativewind', () => ({
+  useColorScheme: jest.fn(() => ({
+    colorScheme: 'light',
+    setColorScheme: jest.fn(),
+  })),
+}));
+
 // Mock react-i18next
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -245,6 +272,7 @@ describe('ShiftDetailsSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseShiftsStore.mockReturnValue(defaultStoreState);
+    mockTrackEvent.mockClear();
   });
 
   describe('Component Rendering', () => {
@@ -393,6 +421,9 @@ describe('ShiftDetailsSheet', () => {
     it('should switch to calendar tab when clicked', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
+
+      // Clear analytics calls for this test
+      mockTrackEvent.mockClear();
 
       // Find buttons by type and click the calendar one
       const buttonElements = root.findAllByType('button');
@@ -651,9 +682,209 @@ describe('ShiftDetailsSheet', () => {
     });
   });
 
+  describe('Analytics Tracking', () => {
+    it('should track analytics when sheet is opened', async () => {
+      render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('shift_details_sheet_viewed', {
+          timestamp: expect.any(String),
+          shiftId: 'shift-1',
+          shiftName: 'Test Shift',
+          activeTab: 'info',
+          isLandscape: false,
+          colorScheme: 'light',
+          hasNextDay: true,
+          personnelCount: 10,
+          groupCount: 3,
+          inShift: true,
+          scheduleType: 1,
+          assignmentType: 0,
+          hasRecentDays: true,
+        });
+      });
+    });
+
+    it('should not track analytics when sheet is not open', () => {
+      render(<ShiftDetailsSheet isOpen={false} onClose={jest.fn()} />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should track analytics when tab is changed', async () => {
+      const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const { root } = component;
+      const buttonElements = root.findAllByType('button');
+
+      // Find calendar button by looking for button-text with "Calendar"
+      let calendarButton: any = null;
+      for (const button of buttonElements) {
+        const buttonTextElements = button.findAllByType('button-text');
+        const hasCalendarText = buttonTextElements.some((textEl: any) => textEl.props.children === 'Calendar');
+        if (hasCalendarText && button.props.onPress) {
+          calendarButton = button;
+          break;
+        }
+      }
+
+      expect(calendarButton).toBeTruthy();
+
+      if (calendarButton && calendarButton.props.onPress) {
+        act(() => {
+          calendarButton.props.onPress();
+        });
+      }
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('shift_details_tab_changed', {
+          timestamp: expect.any(String),
+          shiftId: 'shift-1',
+          shiftName: 'Test Shift',
+          fromTab: 'info',
+          toTab: 'calendar',
+          isLandscape: false,
+          colorScheme: 'light',
+        });
+      });
+    });
+
+    it('should track analytics when sheet is closed', () => {
+      const onCloseMock = jest.fn();
+      const { getByTestId } = render(<ShiftDetailsSheet isOpen={true} onClose={onCloseMock} />);
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const bottomSheet = getByTestId('shift-details-sheet');
+      if (bottomSheet.props.onClose) {
+        bottomSheet.props.onClose();
+      }
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('shift_details_sheet_closed', {
+        timestamp: expect.any(String),
+        shiftId: 'shift-1',
+        shiftName: 'Test Shift',
+        activeTab: 'info',
+        isLandscape: false,
+        colorScheme: 'light',
+      });
+
+      expect(onCloseMock).toHaveBeenCalled();
+    });
+
+    it('should handle analytics with missing shift data', async () => {
+      mockUseShiftsStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedShift: {
+          ShiftId: 'test-shift',
+          Name: '',
+          Code: '',
+          InShift: false,
+          PersonnelCount: 0,
+          GroupCount: 0,
+          NextDay: '',
+          NextDayId: '',
+          ScheduleType: 0,
+          AssignmentType: 0,
+          Color: '',
+          Days: [],
+        },
+      });
+
+      render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('shift_details_sheet_viewed', {
+          timestamp: expect.any(String),
+          shiftId: 'test-shift',
+          shiftName: '',
+          activeTab: 'info',
+          isLandscape: false,
+          colorScheme: 'light',
+          hasNextDay: false,
+          personnelCount: 0,
+          groupCount: 0,
+          inShift: false,
+          scheduleType: 0,
+          assignmentType: 0,
+          hasRecentDays: false,
+        });
+      });
+    });
+
+    it('should handle analytics errors gracefully', async () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('Analytics error');
+      });
+
+      // Should not break component functionality
+      expect(() => {
+        render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      }).not.toThrow();
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Failed to track shift details sheet view analytics:',
+          expect.any(Error)
+        );
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should track correct landscape orientation', async () => {
+      const useWindowDimensions = require('react-native/Libraries/Utilities/useWindowDimensions').default;
+      useWindowDimensions.mockReturnValue({
+        width: 812,
+        height: 375,
+        scale: 2,
+        fontScale: 1,
+      });
+
+      render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('shift_details_sheet_viewed',
+          expect.objectContaining({
+            isLandscape: true,
+          })
+        );
+      });
+    });
+
+    it('should track correct color scheme', async () => {
+      const { useColorScheme } = require('nativewind');
+      useColorScheme.mockReturnValue({
+        colorScheme: 'dark',
+        setColorScheme: jest.fn(),
+      });
+
+      render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('shift_details_sheet_viewed',
+          expect.objectContaining({
+            colorScheme: 'dark',
+          })
+        );
+      });
+    });
+  });
+
+  describe('Interaction', () => {
+  });
+
   describe('Calendar Tab', () => {
     it('should render calendar view when calendar tab is active', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+
+      // Clear analytics calls for this test
+      mockTrackEvent.mockClear();
 
       // Find buttons by type and click the calendar one
       const { root } = component;

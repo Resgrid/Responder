@@ -1,5 +1,5 @@
 import { AlertCircle, Calendar, CheckCircle, Clock, FileText, MapPin, User, Users, XCircle } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView } from 'react-native';
 
@@ -12,6 +12,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -27,6 +28,26 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
   const [showNoteInput, setShowNoteInput] = useState(false);
 
   const { setCalendarItemAttendingStatus, isAttendanceLoading, attendanceError } = useCalendarStore();
+  const { trackEvent } = useAnalytics();
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isOpen && item) {
+      trackEvent('calendar_item_details_viewed', {
+        itemId: item.CalendarItemId,
+        itemType: item.ItemType,
+        hasLocation: Boolean(item.Location),
+        hasDescription: Boolean(item.Description),
+        isAllDay: item.IsAllDay,
+        canSignUp: item.SignupType > 0 && !item.LockEditing,
+        isSignedUp: item.Attending,
+        attendeeCount: item.Attendees?.length || 0,
+        signupType: item.SignupType,
+        typeName: item.TypeName || '',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }, [isOpen, item, trackEvent]);
 
   if (!item) return null;
 
@@ -86,13 +107,41 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
   const performAttendanceChange = async (attending: boolean) => {
     try {
       const status = attending ? 1 : 4; // 1 = attending, 4 = not attending (matching Angular)
+
+      // Track attendance change attempt
+      trackEvent('calendar_item_attendance_attempted', {
+        itemId: item.CalendarItemId,
+        attending,
+        status,
+        hasNote: Boolean(signupNote),
+        noteLength: signupNote.length,
+        timestamp: new Date().toISOString(),
+      });
+
       await setCalendarItemAttendingStatus(item.CalendarItemId, signupNote, status);
       setSignupNote('');
       setShowNoteInput(false);
 
+      // Track successful attendance change
+      trackEvent('calendar_item_attendance_success', {
+        itemId: item.CalendarItemId,
+        attending,
+        status,
+        hasNote: Boolean(signupNote),
+        timestamp: new Date().toISOString(),
+      });
+
       // Show success message
       Alert.alert(t('calendar.attendanceUpdated.title'), attending ? t('calendar.attendanceUpdated.signedUp') : t('calendar.attendanceUpdated.unsignedUp'));
     } catch (error) {
+      // Track attendance change failure
+      trackEvent('calendar_item_attendance_failed', {
+        itemId: item.CalendarItemId,
+        attending,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+
       Alert.alert(t('calendar.error.title'), attendanceError || t('calendar.error.attendanceUpdate'));
     }
   };

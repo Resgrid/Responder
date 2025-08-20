@@ -75,9 +75,21 @@ jest.mock('react-i18next', () => ({
 // Mock navigation and focus hooks
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => true,
+  useFocusEffect: jest.fn((callback) => {
+    // Immediately call the callback to simulate focus effect
+    callback();
+  }),
   useNavigation: () => ({
     navigate: jest.fn(),
     goBack: jest.fn(),
+  }),
+}));
+
+// Mock analytics hook
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
   }),
 }));
 
@@ -151,12 +163,24 @@ const MockHomeDashboard = () => {
   const React = require('react');
   const { View, ScrollView } = require('react-native');
   const { useHomeStore } = require('@/stores/home/home-store');
+  const { useFocusEffect } = require('@react-navigation/native');
+  const { useAnalytics } = require('@/hooks/use-analytics');
 
   const { refreshAll } = useHomeStore();
+  const { trackEvent } = useAnalytics();
 
   React.useEffect(() => {
     refreshAll();
   }, [refreshAll]);
+
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      trackEvent('home_dashboard_viewed', {
+        timestamp: new Date().toISOString(),
+      });
+    }, [trackEvent])
+  );
 
   return React.createElement(View, { testID: 'home-dashboard-container' },
     React.createElement(ScrollView, null,
@@ -212,6 +236,15 @@ describe('HomeDashboard', () => {
     render(<MockHomeDashboard />);
 
     expect(mockRefreshAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('tracks analytics when view becomes focused', () => {
+    render(<MockHomeDashboard />);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('home_dashboard_viewed', {
+      timestamp: expect.any(String),
+    });
+    expect(mockTrackEvent).toHaveBeenCalledTimes(1);
   });
 
   it('configures component with correct options', () => {

@@ -5,6 +5,7 @@ import { offlineQueueProcessor } from './offline-queue-processor';
 
 export class OfflineQueueService {
   private static instance: OfflineQueueService;
+  private initialized = false;
 
   private constructor() {}
 
@@ -16,22 +17,32 @@ export class OfflineQueueService {
   }
 
   public async initialize(): Promise<void> {
+    if (this.initialized) {
+      logger.debug({
+        message: 'Offline queue service already initialized, skipping',
+      });
+      return;
+    }
+
     try {
       logger.info({
         message: 'Initializing offline queue service',
       });
 
-      // Initialize the network listener in the store
+      // Initialize the network listener in the store (await in case it's async)
       const queueStore = useOfflineQueueStore.getState();
-      queueStore.initializeNetworkListener();
+      await queueStore.initializeNetworkListener();
 
       // Start the queue processor
       await offlineQueueProcessor.startProcessing();
+
+      this.initialized = true;
 
       logger.info({
         message: 'Offline queue service initialized successfully',
       });
     } catch (error) {
+      this.initialized = false; // Ensure flag is cleared on failure
       logger.error({
         message: 'Failed to initialize offline queue service',
         context: { error },
@@ -43,6 +54,8 @@ export class OfflineQueueService {
   public cleanup(): void {
     try {
       offlineQueueProcessor.cleanup();
+
+      this.initialized = false;
 
       logger.info({
         message: 'Offline queue service cleaned up',

@@ -1,5 +1,5 @@
 import { CheckCircle, Headphones, Mic, Speaker } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
@@ -9,6 +9,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type AudioDeviceInfo, useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
 
 interface AudioDeviceSelectionProps {
@@ -17,7 +18,28 @@ interface AudioDeviceSelectionProps {
 
 export const AudioDeviceSelection: React.FC<AudioDeviceSelectionProps> = ({ showTitle = true }) => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const { availableAudioDevices, selectedAudioDevices, setSelectedMicrophone, setSelectedSpeaker } = useBluetoothAudioStore();
+
+  // Analytics: Track when the audio device selection view is viewed
+  useEffect(() => {
+    try {
+      trackEvent('audio_device_selection_viewed', {
+        timestamp: new Date().toISOString(),
+        totalDevicesCount: availableAudioDevices.length,
+        availableMicrophonesCount: availableAudioDevices.filter((device) => (device.type === 'bluetooth' ? device.isAvailable : true)).length,
+        availableSpeakersCount: availableAudioDevices.filter((device) => device.isAvailable).length,
+        hasSelectedMicrophone: !!selectedAudioDevices.microphone,
+        hasSelectedSpeaker: !!selectedAudioDevices.speaker,
+        selectedMicrophoneType: selectedAudioDevices.microphone?.type || '',
+        selectedSpeakerType: selectedAudioDevices.speaker?.type || '',
+        showTitle,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track audio device selection view analytics:', error);
+    }
+  }, [trackEvent, availableAudioDevices, selectedAudioDevices, showTitle]);
 
   const renderDeviceIcon = (device: AudioDeviceInfo) => {
     switch (device.type) {
@@ -49,8 +71,27 @@ export const AudioDeviceSelection: React.FC<AudioDeviceSelectionProps> = ({ show
     const deviceTypeLabel = getDeviceTypeLabel(device.type);
     const unavailableText = !device.isAvailable ? ` (${t('settings.audio_device_selection.unavailable')})` : '';
 
+    const handlePress = () => {
+      try {
+        // Track device selection analytics
+        trackEvent('audio_device_selected', {
+          timestamp: new Date().toISOString(),
+          deviceId: device.id,
+          deviceName: device.name,
+          deviceType: deviceType,
+          deviceCategory: device.type,
+          isAvailable: device.isAvailable,
+          wasAlreadySelected: isSelected,
+        });
+      } catch (error) {
+        console.warn('Failed to track audio device selection analytics:', error);
+      }
+
+      onSelect();
+    };
+
     return (
-      <Pressable key={`${deviceType}-${device.id}`} onPress={onSelect}>
+      <Pressable key={`${deviceType}-${device.id}`} onPress={handlePress} testID={`${deviceType}-${device.id}`}>
         <Card className={`mb-2 p-4 ${isSelected ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/30' : 'border-gray-200 dark:border-gray-700'}`}>
           <HStack className="items-center justify-between">
             <HStack className="flex-1 items-center" space="md">

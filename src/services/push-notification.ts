@@ -7,7 +7,6 @@ import { registerUnitDevice } from '@/api/devices/push';
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
-import { useCoreStore } from '@/stores/app/core-store';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
 

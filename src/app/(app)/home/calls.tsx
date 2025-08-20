@@ -12,6 +12,7 @@ import { Box } from '@/components/ui/box';
 import { Fab, FabIcon } from '@/components/ui/fab';
 import { FlatList } from '@/components/ui/flat-list';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { useCallsStore } from '@/stores/calls/store';
 import { useSecurityStore } from '@/stores/security/store';
@@ -19,19 +20,25 @@ import { useSecurityStore } from '@/stores/security/store';
 export default function Calls() {
   const { calls, isLoading, error, fetchCalls, fetchCallPriorities } = useCallsStore();
   const { canUserCreateCalls } = useSecurityStore();
+  const { trackEvent } = useAnalytics();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      // Track analytics when view becomes visible
+      trackEvent('calls_viewed', {
+        timestamp: new Date().toISOString(),
+      });
+
       fetchCallPriorities();
       fetchCalls();
 
       return () => {
         // Clean up if needed when screen loses focus
       };
-    }, [fetchCalls, fetchCallPriorities])
+    }, [fetchCalls, fetchCallPriorities, trackEvent])
   );
 
   const handleRefresh = () => {

@@ -5,6 +5,14 @@ import { type UnitResultData } from '@/models/v4/units/unitResultData';
 
 import { UnitDetailsSheet } from '../unit-details-sheet';
 
+// Mock analytics
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
+
 // Helper function to get all text content from rendered component
 const getTextContent = (component: any): string => {
   const getAllText = (node: any): string => {
@@ -568,5 +576,190 @@ describe('UnitDetailsSheet', () => {
 
     // Component should render when unit with special permit is selected
     expect(screen.getByTestId('close-button')).toBeTruthy();
+  });
+
+  describe('Analytics Tracking', () => {
+    beforeEach(() => {
+      mockTrackEvent.mockClear();
+    });
+
+    it('should track analytics when sheet becomes visible', () => {
+      Object.assign(mockUnitsStore, {
+        units: [mockUnit],
+        selectedUnitId: '1',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('unit_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        unitId: '1',
+        unitName: 'Engine 1',
+        unitType: 'Fire Engine',
+        hasLocation: true,
+        hasGroupName: true,
+        hasPlateNumber: true,
+        hasVin: true,
+        hasFourWheelDrive: false,
+        hasSpecialPermit: false,
+        hasNote: true,
+        hasStatusTimestamp: true,
+        colorScheme: 'light',
+      });
+    });
+
+    it('should track analytics with minimal unit data', () => {
+      Object.assign(mockUnitsStore, {
+        units: [mockUnitMinimal],
+        selectedUnitId: '3',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('unit_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        unitId: '3',
+        unitName: 'Rescue 3',
+        unitType: '',
+        hasLocation: false,
+        hasGroupName: false,
+        hasPlateNumber: false,
+        hasVin: false,
+        hasFourWheelDrive: false,
+        hasSpecialPermit: false,
+        hasNote: false,
+        hasStatusTimestamp: false,
+        colorScheme: 'light',
+      });
+    });
+
+    it('should track analytics when close button is pressed', () => {
+      Object.assign(mockUnitsStore, {
+        units: [mockUnit],
+        selectedUnitId: '1',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      // Clear the view analytics event
+      mockTrackEvent.mockClear();
+
+      const closeButton = screen.getByTestId('close-button');
+      fireEvent.press(closeButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('unit_details_sheet_closed', {
+        timestamp: expect.any(String),
+        unitId: '1',
+        unitName: 'Engine 1',
+      });
+      expect(mockUnitsStore.closeDetails).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not track analytics when no unit is selected', () => {
+      Object.assign(mockUnitsStore, {
+        units: [mockUnit],
+        selectedUnitId: null,
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should not track analytics when sheet is closed', () => {
+      Object.assign(mockUnitsStore, {
+        units: [mockUnit],
+        selectedUnitId: '1',
+        isDetailsOpen: false,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should track analytics for unit with features', () => {
+      Object.assign(mockUnitsStore, {
+        units: [mockUnitWithFeatures],
+        selectedUnitId: '2',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('unit_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        unitId: '2',
+        unitName: 'Ambulance 2',
+        unitType: 'Ambulance',
+        hasLocation: true,
+        hasGroupName: true,
+        hasPlateNumber: true,
+        hasVin: true,
+        hasFourWheelDrive: true,
+        hasSpecialPermit: true,
+        hasNote: true,
+        hasStatusTimestamp: true,
+        colorScheme: 'light',
+      });
+    });
+
+    it('should handle analytics errors gracefully', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('Analytics error');
+      });
+
+      Object.assign(mockUnitsStore, {
+        units: [mockUnit],
+        selectedUnitId: '1',
+        isDetailsOpen: true,
+      });
+
+      // Should not throw error
+      expect(() => render(<UnitDetailsSheet />)).not.toThrow();
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to track unit details sheet view analytics:',
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should handle close analytics errors gracefully', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+
+      Object.assign(mockUnitsStore, {
+        units: [mockUnit],
+        selectedUnitId: '1',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      // Clear the view analytics event and make trackEvent throw on close
+      mockTrackEvent.mockClear();
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('Analytics error');
+      });
+
+      const closeButton = screen.getByTestId('close-button');
+
+      // Should not throw error
+      expect(() => fireEvent.press(closeButton)).not.toThrow();
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to track unit details sheet close analytics:',
+        expect.any(Error)
+      );
+      expect(mockUnitsStore.closeDetails).toHaveBeenCalledTimes(1);
+
+      consoleWarnSpy.mockRestore();
+    });
   });
 }); 

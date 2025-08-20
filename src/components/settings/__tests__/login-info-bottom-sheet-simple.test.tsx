@@ -9,6 +9,13 @@ import React from 'react';
 
 import { LoginInfoBottomSheet } from '../login-info-bottom-sheet';
 
+// Mock analytics
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: jest.fn(),
+  }),
+}));
+
 // Mock dependencies
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

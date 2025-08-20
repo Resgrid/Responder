@@ -15,7 +15,7 @@ jest.mock('../../lib/logging', () => ({
 }));
 
 // Mock CallKeep service
-jest.mock('../callkeep.service.ios', () => ({
+jest.mock('../callkeep.service', () => ({
   callKeepService: {
     setup: jest.fn(),
     cleanup: jest.fn(),
@@ -26,7 +26,7 @@ import { Platform } from 'react-native';
 
 import { logger } from '../../lib/logging';
 import { appInitializationService } from '../app-initialization.service';
-import { callKeepService } from '../callkeep.service.ios';
+import { callKeepService } from '../callkeep.service';
 
 const mockLogger = logger as jest.Mocked<typeof logger>;
 const mockCallKeepService = callKeepService as jest.Mocked<typeof callKeepService>;
@@ -67,15 +67,17 @@ describe('AppInitializationService', () => {
       expect(appInitializationService.isAppInitialized()).toBe(true);
     });
 
-    it('should skip CallKeep initialization on Android', async () => {
+    it('should initialize successfully on Android', async () => {
       (Platform as any).OS = 'android';
 
       await appInitializationService.initialize();
 
-      expect(mockCallKeepService.setup).not.toHaveBeenCalled();
-      expect(mockLogger.debug).toHaveBeenCalledWith({
-        message: 'CallKeep initialization skipped - not iOS platform',
-        context: { platform: 'android' },
+      expect(mockCallKeepService.setup).toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalledWith({
+        message: 'Starting app initialization',
+      });
+      expect(mockLogger.info).toHaveBeenCalledWith({
+        message: 'CallKeep initialized successfully',
       });
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'App initialization completed successfully',

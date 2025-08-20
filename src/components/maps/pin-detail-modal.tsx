@@ -42,13 +42,19 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
   // Check if this is a personnel pin
   const isPersonnelPin = pin.ImagePath && pin.ImagePath.toLowerCase().startsWith('person');
 
+  // Check if pin has valid numeric coordinates
+  const hasCoordinates = pin.Latitude != null && pin.Longitude != null && Number.isFinite(pin.Latitude) && Number.isFinite(pin.Longitude);
+
   // Determine if coordinates should be shown (hide for personnel pins when PII cannot be viewed)
   const shouldShowCoordinates = !isPersonnelPin || canUserViewPII;
+
+  // Determine if routing is allowed (both PII and coordinate checks must pass)
+  const isRoutingAllowed = shouldShowCoordinates && hasCoordinates;
 
   const isCallPin = pin.ImagePath?.toLowerCase() === 'call' || pin.Type === 1;
 
   const handleRouteToLocation = async () => {
-    if (!pin.Latitude || !pin.Longitude) {
+    if (!hasCoordinates) {
       showToast('error', t('map.no_location_for_routing'));
       return;
     }
@@ -89,7 +95,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
         </HStack>
 
         <VStack className="mb-6 space-y-3">
-          {shouldShowCoordinates ? (
+          {shouldShowCoordinates && hasCoordinates ? (
             <Box className="flex-row items-center">
               <MapPinIcon size={16} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
               <Text className="ml-2 text-sm text-gray-600">
@@ -100,7 +106,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
 
           {pin.InfoWindowContent && (
             <Box>
-              <Text className="text-sm">{pin.InfoWindowContent}</Text>
+              <Text className="text-sm">{shouldShowCoordinates ? pin.InfoWindowContent : t('common.restricted_content')}</Text>
             </Box>
           )}
 
@@ -115,11 +121,13 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
         <Divider className="my-4" />
 
         <VStack className="space-y-3">
-          {/* Route to location button - always available */}
-          <Button onPress={handleRouteToLocation} variant="outline" className="w-full">
-            <ButtonIcon as={RouteIcon} />
-            <ButtonText>{t('common.route')}</ButtonText>
-          </Button>
+          {/* Route to location button - only available when routing is allowed */}
+          {isRoutingAllowed && (
+            <Button onPress={handleRouteToLocation} variant="outline" className="w-full">
+              <ButtonIcon as={RouteIcon} />
+              <ButtonText>{t('common.route')}</ButtonText>
+            </Button>
+          )}
 
           {/* Call-specific actions */}
           {isCallPin && (

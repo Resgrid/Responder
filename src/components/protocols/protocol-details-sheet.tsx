@@ -1,9 +1,10 @@
 import { Calendar, Tag, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString, stripHtmlTags } from '@/lib/utils';
 import { useProtocolsStore } from '@/stores/protocols/store';
 
@@ -19,15 +20,64 @@ import { VStack } from '../ui/vstack';
 export const ProtocolDetailsSheet: React.FC = () => {
   const { colorScheme } = useColorScheme();
   const { protocols, selectedProtocolId, isDetailsOpen, closeDetails } = useProtocolsStore();
+  const { trackEvent } = useAnalytics();
 
   const selectedProtocol = protocols.find((protocol) => protocol.Id === selectedProtocolId);
+
+  // Track analytics when the protocol details sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedProtocol) return;
+
+    try {
+      trackEvent('protocol_details_viewed', {
+        timestamp: new Date().toISOString(),
+        protocolId: selectedProtocol.Id || '',
+        protocolName: selectedProtocol.Name || '',
+        protocolCode: selectedProtocol.Code || '',
+        hasDescription: !!selectedProtocol.Description,
+        hasProtocolText: !!selectedProtocol.ProtocolText,
+        hasCode: !!selectedProtocol.Code,
+        protocolState: selectedProtocol.State || 0,
+        isDisabled: !!selectedProtocol.IsDisabled,
+        contentLength: selectedProtocol.ProtocolText?.length || 0,
+        departmentId: selectedProtocol.DepartmentId || '',
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track protocol details view analytics:', error);
+    }
+  }, [trackEvent, selectedProtocol]);
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isDetailsOpen && selectedProtocol) {
+      trackViewAnalytics();
+    }
+  }, [isDetailsOpen, selectedProtocol, trackViewAnalytics]);
+
+  // Handle close with analytics
+  const handleClose = useCallback(() => {
+    if (selectedProtocol) {
+      try {
+        trackEvent('protocol_details_closed', {
+          timestamp: new Date().toISOString(),
+          protocolId: selectedProtocol.Id || '',
+          protocolName: selectedProtocol.Name || '',
+        });
+      } catch (error) {
+        // Analytics errors should not break the component
+        console.warn('Failed to track protocol details close analytics:', error);
+      }
+    }
+    closeDetails();
+  }, [trackEvent, selectedProtocol, closeDetails]);
 
   if (!selectedProtocol) return null;
 
   const textColor = colorScheme === 'dark' ? '#E5E7EB' : '#1F2937'; // gray-200 : gray-800
 
   return (
-    <Actionsheet isOpen={isDetailsOpen} onClose={closeDetails} snapPoints={[67]}>
+    <Actionsheet isOpen={isDetailsOpen} onClose={handleClose} snapPoints={[67]}>
       <ActionsheetBackdrop />
       <ActionsheetContent className="w-full rounded-t-xl bg-white dark:bg-gray-800">
         <ActionsheetDragIndicatorWrapper>
@@ -39,7 +89,7 @@ export const ProtocolDetailsSheet: React.FC = () => {
             <Heading size="lg" className="text-gray-800 dark:text-gray-100">
               {selectedProtocol.Name}
             </Heading>
-            <Button variant="link" onPress={closeDetails} className="p-1" testID="close-button">
+            <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
               <X size={24} className="text-gray-600 dark:text-gray-400" />
             </Button>
           </HStack>

@@ -162,8 +162,7 @@ jobs:
             # Create a backup
             cp package.json package.json.bak
             # Update the package.json
-            jq '.version = "10.${{ github.run_number }}"' package.json > package.json.tmp && mv package.json.tmp package.json
-            jq '.versionCode = "${androidVersionCode}"' package.json > package.json.tmp && mv package.json.tmp package.json
+            jq --arg version "10.${{ github.run_number }}" --argjson versionCode "$androidVersionCode" '.version = $version | .versionCode = $versionCode' package.json > package.json.tmp && mv package.json.tmp package.json
             echo "Updated package.json versions"
             cat package.json | grep "version"
             cat package.json | grep "versionCode"

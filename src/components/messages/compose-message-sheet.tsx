@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, useWindowDimensions } from 'react-native';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
 import { useDispatchStore } from '@/stores/dispatch/store';
 import { useMessagesStore } from '@/stores/messages/store';
@@ -24,6 +25,7 @@ import { VStack } from '../ui/vstack';
 
 export const ComposeMessageSheet: React.FC = () => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
@@ -39,6 +41,31 @@ export const ComposeMessageSheet: React.FC = () => {
 
   const { data: dispatchData, fetchDispatchData } = useDispatchStore();
 
+  // Analytics tracking function
+  const trackViewAnalytics = useCallback(() => {
+    try {
+      trackEvent('compose_message_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        hasRecipients: recipients.length > 0,
+        recipientCount: recipients.length,
+        hasDispatchUsers: dispatchData.users.length > 0,
+        hasDispatchGroups: dispatchData.groups.length > 0,
+        hasDispatchRoles: dispatchData.roles.length > 0,
+        hasDispatchUnits: dispatchData.units.length > 0,
+        userCount: dispatchData.users.length,
+        groupCount: dispatchData.groups.length,
+        roleCount: dispatchData.roles.length,
+        unitCount: dispatchData.units.length,
+        isLoading: isRecipientsLoading,
+        currentMessageType: messageType,
+        currentTab: currentRecipientTab,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track compose message sheet view analytics:', error);
+    }
+  }, [trackEvent, recipients.length, dispatchData.users.length, dispatchData.groups.length, dispatchData.roles.length, dispatchData.units.length, isRecipientsLoading, messageType, currentRecipientTab]);
+
   // Fetch recipients when compose opens
   useEffect(() => {
     if (isComposeOpen && recipients.length === 0) {
@@ -46,6 +73,13 @@ export const ComposeMessageSheet: React.FC = () => {
       fetchDispatchData();
     }
   }, [isComposeOpen, recipients.length, fetchRecipients, fetchDispatchData]);
+
+  // Track analytics when compose sheet becomes visible
+  useEffect(() => {
+    if (isComposeOpen) {
+      trackViewAnalytics();
+    }
+  }, [isComposeOpen, trackViewAnalytics]);
 
   const resetForm = useCallback(() => {
     setSubject('');
@@ -56,6 +90,18 @@ export const ComposeMessageSheet: React.FC = () => {
   }, []);
 
   const handleClose = () => {
+    try {
+      trackEvent('compose_message_cancelled', {
+        timestamp: new Date().toISOString(),
+        hasSubject: !!subject.trim(),
+        hasBody: !!body.trim(),
+        hasRecipients: selectedRecipients.size > 0,
+        recipientCount: selectedRecipients.size,
+        messageType,
+      });
+    } catch (error) {
+      console.warn('Failed to track compose message cancel analytics:', error);
+    }
     resetForm();
     closeCompose();
   };
@@ -98,8 +144,39 @@ export const ComposeMessageSheet: React.FC = () => {
         recipients: recipientsList,
         expireOn: expirationDate || undefined,
       });
+
+      // Track successful send analytics
+      try {
+        trackEvent('compose_message_sent', {
+          timestamp: new Date().toISOString(),
+          messageType,
+          messageTypeLabel: getMessageTypeLabel(messageType),
+          recipientCount: recipientsList.length,
+          hasExpiration: !!expirationDate,
+          subjectLength: subject.trim().length,
+          bodyLength: body.trim().length,
+          personnelCount: recipientsList.filter((r) => r.type === 1).length,
+          groupsCount: recipientsList.filter((r) => r.type === 2).length,
+          rolesCount: recipientsList.filter((r) => r.type === 3).length,
+          unitsCount: recipientsList.filter((r) => r.type === 4).length,
+        });
+      } catch (error) {
+        console.warn('Failed to track compose message sent analytics:', error);
+      }
+
       resetForm();
     } catch (error) {
+      // Track failed send analytics
+      try {
+        trackEvent('compose_message_send_failed', {
+          timestamp: new Date().toISOString(),
+          messageType,
+          recipientCount: recipientsList.length,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      } catch (analyticsError) {
+        console.warn('Failed to track compose message send failed analytics:', analyticsError);
+      }
       // Error handled in store
     }
   };
@@ -134,12 +211,33 @@ export const ComposeMessageSheet: React.FC = () => {
 
   const toggleRecipient = (id: string) => {
     const newSelection = new Set(selectedRecipients);
-    if (newSelection.has(id)) {
+    const wasSelected = newSelection.has(id);
+
+    if (wasSelected) {
       newSelection.delete(id);
     } else {
       newSelection.add(id);
     }
+
     setSelectedRecipients(newSelection);
+
+    // Track recipient selection analytics
+    try {
+      const allRecipients = [...dispatchData.users, ...dispatchData.groups, ...dispatchData.roles, ...dispatchData.units];
+      const recipient = allRecipients.find((r) => r.Id === id);
+
+      trackEvent('compose_message_recipient_toggled', {
+        timestamp: new Date().toISOString(),
+        recipientId: id,
+        recipientName: recipient?.Name || 'Unknown',
+        recipientType: recipient?.Type || 'Unknown',
+        action: wasSelected ? 'removed' : 'added',
+        totalSelected: newSelection.size,
+        currentTab: currentRecipientTab,
+      });
+    } catch (error) {
+      console.warn('Failed to track compose message recipient toggle analytics:', error);
+    }
   };
 
   const getSelectedRecipientsNames = () => {
@@ -213,7 +311,27 @@ export const ComposeMessageSheet: React.FC = () => {
             {/* Message Type */}
             <VStack space="xs" className="w-full">
               <Text className="font-semibold">{t('messages.message_type')}</Text>
-              <Select selectedValue={messageType.toString()} onValueChange={(value) => setMessageType(parseInt(value))}>
+              <Select
+                selectedValue={messageType.toString()}
+                onValueChange={(value) => {
+                  const newType = parseInt(value);
+                  const oldType = messageType;
+                  setMessageType(newType);
+
+                  // Track message type change analytics
+                  try {
+                    trackEvent('compose_message_type_changed', {
+                      timestamp: new Date().toISOString(),
+                      fromType: oldType,
+                      toType: newType,
+                      fromTypeLabel: getMessageTypeLabel(oldType),
+                      toTypeLabel: getMessageTypeLabel(newType),
+                    });
+                  } catch (error) {
+                    console.warn('Failed to track compose message type change analytics:', error);
+                  }
+                }}
+              >
                 <SelectTrigger variant="outline" size="md" className="w-full">
                   <SelectInput placeholder={t('messages.select_message_type')} value={getMessageTypeLabel(messageType)} />
                 </SelectTrigger>
@@ -235,7 +353,23 @@ export const ComposeMessageSheet: React.FC = () => {
             <VStack space="sm" className="w-full">
               <Text className="font-semibold">{t('messages.recipients')}</Text>
 
-              <Pressable className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700" onPress={() => setIsRecipientsSheetOpen(true)}>
+              <Pressable
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700"
+                onPress={() => {
+                  setIsRecipientsSheetOpen(true);
+
+                  // Track recipients sheet opened analytics
+                  try {
+                    trackEvent('compose_message_recipients_sheet_opened', {
+                      timestamp: new Date().toISOString(),
+                      currentlySelectedCount: selectedRecipients.size,
+                      hasDispatchData: dispatchData.users.length > 0 || dispatchData.groups.length > 0 || dispatchData.roles.length > 0 || dispatchData.units.length > 0,
+                    });
+                  } catch (error) {
+                    console.warn('Failed to track compose message recipients sheet opened analytics:', error);
+                  }
+                }}
+              >
                 <HStack space="sm" className="items-center justify-between">
                   <VStack className="flex-1">
                     <Text className="font-medium">{selectedRecipients.size > 0 ? t('messages.recipients_selected', { count: selectedRecipients.size }) : t('messages.select_recipients')}</Text>
@@ -288,7 +422,26 @@ export const ComposeMessageSheet: React.FC = () => {
               {/* Tabs */}
               <HStack space="xs" className="w-full">
                 {['personnel', 'groups', 'roles'].map((tab) => (
-                  <Pressable key={tab} className={`flex-1 rounded-lg px-1 py-2 ${currentRecipientTab === tab ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-600'}`} onPress={() => setCurrentRecipientTab(tab as any)}>
+                  <Pressable
+                    key={tab}
+                    className={`flex-1 rounded-lg px-1 py-2 ${currentRecipientTab === tab ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-600'}`}
+                    onPress={() => {
+                      const oldTab = currentRecipientTab;
+                      setCurrentRecipientTab(tab as any);
+
+                      // Track tab change analytics
+                      try {
+                        trackEvent('compose_message_recipients_tab_changed', {
+                          timestamp: new Date().toISOString(),
+                          fromTab: oldTab,
+                          toTab: tab,
+                          selectedRecipientsCount: selectedRecipients.size,
+                        });
+                      } catch (error) {
+                        console.warn('Failed to track compose message recipients tab change analytics:', error);
+                      }
+                    }}
+                  >
                     <Text className={`text-center text-sm font-medium ${currentRecipientTab === tab ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t(`calls.${tab}`)}</Text>
                   </Pressable>
                 ))}

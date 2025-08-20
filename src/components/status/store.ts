@@ -118,25 +118,28 @@ export const useStatusesStore = create<StatusesState>((set) => ({
   saveUnitStatus: async (input: SaveUnitStatusInput) => {
     set({ isLoading: true, error: null });
     try {
-      const date = new Date();
-      input.Timestamp = date.toISOString();
-      input.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
+      // Create a shallow clone to avoid mutating the original input
+      const payload = { ...input };
 
-      // Ensure empty strings when no GPS data
-      input.Latitude = '';
-      input.Longitude = '';
-      input.Accuracy = '';
-      input.Altitude = '';
-      input.Speed = '';
-      input.Heading = '';
+      const date = new Date();
+      payload.Timestamp = date.toISOString();
+      payload.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
+
+      // Only default GPS fields to empty strings if they are undefined
+      payload.Latitude = payload.Latitude ?? '';
+      payload.Longitude = payload.Longitude ?? '';
+      payload.Accuracy = payload.Accuracy ?? '';
+      payload.Altitude = payload.Altitude ?? '';
+      payload.Speed = payload.Speed ?? '';
+      payload.Heading = payload.Heading ?? '';
 
       try {
         // Try to save directly first
-        await saveUnitStatus(input);
+        await saveUnitStatus(payload);
 
         logger.info({
           message: 'Unit status saved successfully',
-          context: { unitId: input.Id, statusType: input.Type },
+          context: { unitId: payload.Id, statusType: payload.Type },
         });
 
         set({ isLoading: false });
@@ -144,27 +147,27 @@ export const useStatusesStore = create<StatusesState>((set) => ({
         // If direct save fails, queue for offline processing
         logger.warn({
           message: 'Direct unit status save failed, queuing for offline processing',
-          context: { unitId: input.Id, statusType: input.Type, error },
+          context: { unitId: payload.Id, statusType: payload.Type, error },
         });
 
         // Extract role data for queuing
-        const roles = input.Roles?.map((role) => ({
+        const roles = payload.Roles?.map((role) => ({
           roleId: role.RoleId,
           userId: role.UserId,
         }));
 
-        // Extract GPS data for queuing - use location store if input doesn't have GPS data
+        // Extract GPS data for queuing - use location store if payload doesn't have GPS data
         let gpsData = undefined;
 
-        if (input.Latitude && input.Longitude) {
+        if (payload.Latitude && payload.Longitude) {
           gpsData = {
-            latitude: input.Latitude,
-            longitude: input.Longitude,
-            accuracy: input.Accuracy,
-            altitude: input.Altitude,
-            altitudeAccuracy: input.AltitudeAccuracy,
-            speed: input.Speed,
-            heading: input.Heading,
+            latitude: payload.Latitude,
+            longitude: payload.Longitude,
+            accuracy: payload.Accuracy,
+            altitude: payload.Altitude,
+            altitudeAccuracy: payload.AltitudeAccuracy,
+            speed: payload.Speed,
+            heading: payload.Heading,
           };
         } else {
           // Try to get GPS data from location store
@@ -183,11 +186,11 @@ export const useStatusesStore = create<StatusesState>((set) => ({
         }
 
         // Queue the event
-        const eventId = offlineEventManager.queueUnitStatusEvent(input.Id, input.Type, input.Note, input.RespondingTo, roles, gpsData);
+        const eventId = offlineEventManager.queueUnitStatusEvent(payload.Id, payload.Type, payload.Note, payload.RespondingTo, roles, gpsData);
 
         logger.info({
           message: 'Unit status queued for offline processing',
-          context: { unitId: input.Id, statusType: input.Type, eventId },
+          context: { unitId: payload.Id, statusType: payload.Type, eventId },
         });
 
         set({ isLoading: false });

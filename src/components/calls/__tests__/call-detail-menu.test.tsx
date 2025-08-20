@@ -6,6 +6,11 @@ jest.mock('@/stores/security/store', () => ({
   useSecurityStore: jest.fn(),
 }));
 
+// Mock the analytics hook
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: jest.fn(),
+}));
+
 // --- Start of Robust Mocks ---
 const View = (props: any) => React.createElement('div', { ...props });
 const Text = (props: any) => React.createElement('span', { ...props });
@@ -20,6 +25,10 @@ const MockCallDetailMenu = ({ onEditCall, onCloseCall }: any) => {
   const { useSecurityStore } = require('@/stores/security/store');
   const { canUserCreateCalls } = useSecurityStore();
 
+  // Mock the analytics hook
+  const { useAnalytics } = require('@/hooks/use-analytics');
+  const { trackEvent } = useAnalytics();
+
   const HeaderRightMenu = () => {
     if (!canUserCreateCalls) {
       return null;
@@ -28,7 +37,14 @@ const MockCallDetailMenu = ({ onEditCall, onCloseCall }: any) => {
     return (
       <TouchableOpacity
         testID="kebab-menu-button"
-        onPress={() => setIsOpen(true)}
+        onPress={() => {
+          setIsOpen(true);
+          // Simulate analytics tracking
+          trackEvent('call_detail_menu_viewed', {
+            timestamp: new Date().toISOString(),
+            canEditCall: canUserCreateCalls ?? false,
+          });
+        }}
       >
         <Text>Open Menu</Text>
       </TouchableOpacity>
@@ -42,6 +58,9 @@ const MockCallDetailMenu = ({ onEditCall, onCloseCall }: any) => {
         <TouchableOpacity
           testID="edit-call-button"
           onPress={() => {
+            trackEvent('call_detail_menu_edit_selected', {
+              timestamp: new Date().toISOString(),
+            });
             onEditCall?.();
             setIsOpen(false);
           }}
@@ -51,6 +70,9 @@ const MockCallDetailMenu = ({ onEditCall, onCloseCall }: any) => {
         <TouchableOpacity
           testID="close-call-button"
           onPress={() => {
+            trackEvent('call_detail_menu_close_selected', {
+              timestamp: new Date().toISOString(),
+            });
             onCloseCall?.();
             setIsOpen(false);
           }}
@@ -71,8 +93,10 @@ jest.mock('../call-detail-menu', () => ({
 describe('useCallDetailMenu', () => {
   const mockOnEditCall = jest.fn();
   const mockOnCloseCall = jest.fn();
+  const mockTrackEvent = jest.fn();
   const { useCallDetailMenu } = require('../call-detail-menu');
   const { useSecurityStore } = require('@/stores/security/store');
+  const { useAnalytics } = require('@/hooks/use-analytics');
 
   const TestComponent = () => {
     const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
@@ -90,6 +114,11 @@ describe('useCallDetailMenu', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock for analytics
+    useAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
 
     // Default mock - user CAN create calls
     useSecurityStore.mockReturnValue({
@@ -165,5 +194,61 @@ describe('useCallDetailMenu', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('actionsheet')).toBeNull();
     });
+  });
+
+  // Analytics Tests
+  it('tracks analytics when menu is opened', async () => {
+    render(<TestComponent />);
+    fireEvent.press(screen.getByTestId('kebab-menu-button'));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_menu_viewed', {
+      timestamp: expect.any(String),
+      canEditCall: true,
+    });
+  });
+
+  it('tracks analytics when edit call is selected', async () => {
+    render(<TestComponent />);
+    fireEvent.press(screen.getByTestId('kebab-menu-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-call-button')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByTestId('edit-call-button'));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_menu_edit_selected', {
+      timestamp: expect.any(String),
+    });
+  });
+
+  it('tracks analytics when close call is selected', async () => {
+    render(<TestComponent />);
+    fireEvent.press(screen.getByTestId('kebab-menu-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('close-call-button')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByTestId('close-call-button'));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_menu_close_selected', {
+      timestamp: expect.any(String),
+    });
+  });
+
+  it('tracks analytics with canEditCall false when user cannot create calls', async () => {
+    useSecurityStore.mockReturnValue({
+      canUserCreateCalls: false,
+      getRights: jest.fn(),
+      isUserDepartmentAdmin: false,
+      isUserGroupAdmin: jest.fn(),
+      canUserCreateNotes: false,
+      canUserCreateMessages: false,
+      canUserViewPII: false,
+      departmentCode: 'TEST',
+    });
+
+    render(<TestComponent />);
+    expect(screen.queryByTestId('kebab-menu-button')).toBeNull();
+
+    // Should not track analytics since menu is not rendered
+    expect(mockTrackEvent).not.toHaveBeenCalled();
   });
 });

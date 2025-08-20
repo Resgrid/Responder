@@ -1,6 +1,7 @@
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSecurityStore } from '@/stores/security/store';
@@ -18,8 +19,45 @@ import { VStack } from '../ui/vstack';
 export const PersonnelDetailsSheet: React.FC = () => {
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
   const { canUserViewPII } = useSecurityStore();
+  const { trackEvent } = useAnalytics();
 
   const selectedPersonnel = personnel?.find((person) => person.UserId === selectedPersonnelId);
+
+  // Track analytics when sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedPersonnel) return;
+
+    try {
+      const hasContactInfo = !!(selectedPersonnel.EmailAddress || selectedPersonnel.MobilePhone);
+      const hasGroupInfo = !!selectedPersonnel.GroupName;
+      const hasStatus = !!selectedPersonnel.Status;
+      const hasStaffing = !!selectedPersonnel.Staffing;
+      const hasRoles = !!(selectedPersonnel.Roles && selectedPersonnel.Roles.length > 0);
+      const hasIdentificationNumber = !!selectedPersonnel.IdentificationNumber;
+
+      trackEvent('personnel_details_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        personnelId: selectedPersonnel.UserId,
+        hasContactInfo,
+        hasGroupInfo,
+        hasStatus,
+        hasStaffing,
+        hasRoles,
+        hasIdentificationNumber,
+        roleCount: selectedPersonnel.Roles?.length || 0,
+        canViewPII: !!canUserViewPII,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track personnel details sheet view analytics:', error);
+    }
+  }, [trackEvent, selectedPersonnel, canUserViewPII]);
+
+  useEffect(() => {
+    if (isDetailsOpen && selectedPersonnel) {
+      trackViewAnalytics();
+    }
+  }, [isDetailsOpen, selectedPersonnel, trackViewAnalytics]);
 
   if (!selectedPersonnel || !isDetailsOpen) return null;
 

@@ -1,5 +1,6 @@
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Download, File, X } from 'lucide-react-native';
@@ -16,6 +17,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type CallFileResultData } from '@/models/v4/callFiles/callFileResultData';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 
@@ -29,12 +31,38 @@ interface CallFilesModalProps {
 
 export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const { callFiles, isLoadingFiles, errorFiles, fetchCallFiles } = useCallDetailStore();
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, number>>({});
 
   // Bottom sheet ref and snap points
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['67%'], []);
+
+  // Track if modal was actually opened to avoid false close events
+  const wasModalOpenRef = useRef(false);
+
+  // Track analytics when modal becomes visible
+  useFocusEffect(
+    useCallback(() => {
+      if (isOpen) {
+        wasModalOpenRef.current = true;
+        try {
+          trackEvent('call_files_modal_viewed', {
+            timestamp: new Date().toISOString(),
+            callId,
+            fileCount: callFiles?.length || 0,
+            hasFiles: Boolean(callFiles?.length),
+            isLoading: isLoadingFiles,
+            hasError: Boolean(errorFiles),
+          });
+        } catch (error) {
+          // Analytics errors should not break the component
+          console.warn('Failed to track call files modal analytics:', error);
+        }
+      }
+    }, [isOpen, trackEvent, callId, callFiles?.length, isLoadingFiles, errorFiles])
+  );
 
   // Handle modal open/close
   useEffect(() => {
@@ -50,10 +78,23 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
   const handleSheetChanges = useCallback(
     (index: number) => {
       if (index === -1) {
+        // Only track close analytics if modal was actually opened
+        if (wasModalOpenRef.current) {
+          try {
+            trackEvent('call_files_modal_closed', {
+              timestamp: new Date().toISOString(),
+              callId,
+              wasManualClose: false, // This means it was closed by gesture
+            });
+          } catch (error) {
+            console.warn('Failed to track call files modal close analytics:', error);
+          }
+          wasModalOpenRef.current = false;
+        }
         onClose();
       }
     },
-    [onClose]
+    [onClose, trackEvent, callId]
   );
 
   // Render backdrop
@@ -79,6 +120,16 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
     if (!file.Url || downloadingFiles[file.Id]) return;
 
     try {
+      // Track analytics for file download start
+      trackEvent('call_file_download_started', {
+        timestamp: new Date().toISOString(),
+        callId,
+        fileId: file.Id,
+        fileName: file.FileName || file.Name || 'unknown',
+        fileSize: file.Size,
+        mimeType: file.Mime || 'unknown',
+      });
+
       setDownloadingFiles((prev) => ({ ...prev, [file.Id]: 0 }));
 
       const fileData = await getCallAttachmentFile(file.Url, {
@@ -117,8 +168,30 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
           mimeType: file.Mime || 'application/octet-stream',
           dialogTitle: file.Name || file.FileName,
         });
+
+        // Track successful download
+        trackEvent('call_file_download_completed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          fileId: file.Id,
+          fileName: file.FileName || file.Name || 'unknown',
+          fileSize: file.Size,
+          mimeType: file.Mime || 'unknown',
+          wasShared: true,
+        });
       } else {
         Alert.alert(t('calls.files.share_error'), 'Sharing is not available on this device');
+
+        // Track completed download but failed share
+        trackEvent('call_file_download_completed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          fileId: file.Id,
+          fileName: file.FileName || file.Name || 'unknown',
+          fileSize: file.Size,
+          mimeType: file.Mime || 'unknown',
+          wasShared: false,
+        });
       }
 
       setDownloadingFiles((prev) => {
@@ -128,6 +201,16 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
       });
     } catch (error) {
       console.error('Error downloading file:', error);
+
+      // Track download error
+      trackEvent('call_file_download_failed', {
+        timestamp: new Date().toISOString(),
+        callId,
+        fileId: file.Id,
+        fileName: file.FileName || file.Name || 'unknown',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       Alert.alert(t('calls.files.open_error'), error instanceof Error ? error.message : 'Unknown error occurred');
       setDownloadingFiles((prev) => {
         const newState = { ...prev };
@@ -192,7 +275,23 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
         <Box className="flex-1 items-center justify-center py-8">
           <Text className="text-center text-red-600 dark:text-red-400">{t('calls.files.error')}</Text>
           <Text className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">{errorFiles}</Text>
-          <Button variant="outline" onPress={() => fetchCallFiles(callId)} className="mt-4" size="sm">
+          <Button
+            variant="outline"
+            onPress={() => {
+              try {
+                trackEvent('call_files_retry_pressed', {
+                  timestamp: new Date().toISOString(),
+                  callId,
+                  error: errorFiles,
+                });
+              } catch (error) {
+                console.warn('Failed to track call files retry analytics:', error);
+              }
+              fetchCallFiles(callId);
+            }}
+            className="mt-4"
+            size="sm"
+          >
             <Text>{t('common.retry')}</Text>
           </Button>
         </Box>
@@ -234,7 +333,27 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
           <VStack space="md" className="bg-white dark:bg-gray-800">
             <Box className="w-full flex-row items-center justify-between border-b border-gray-200 px-4 pb-4 pt-2 dark:border-gray-700">
               <Heading size="lg">{t('calls.files.title')}</Heading>
-              <Button variant="link" onPress={onClose} className="p-1" testID="close-button">
+              <Button
+                variant="link"
+                onPress={() => {
+                  // Only track close analytics if modal was actually opened
+                  if (wasModalOpenRef.current) {
+                    try {
+                      trackEvent('call_files_modal_closed', {
+                        timestamp: new Date().toISOString(),
+                        callId,
+                        wasManualClose: true, // This means it was closed by button press
+                      });
+                    } catch (error) {
+                      console.warn('Failed to track call files modal close analytics:', error);
+                    }
+                    wasModalOpenRef.current = false;
+                  }
+                  onClose();
+                }}
+                className="p-1"
+                testID="close-button"
+              >
                 <X size={24} />
               </Button>
             </Box>

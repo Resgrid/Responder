@@ -15,6 +15,11 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+// Mock the analytics hook
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: jest.fn(),
+}));
+
 // Mock the UI components
 jest.mock('@/components/ui/actionsheet', () => ({
   Actionsheet: ({ children, isOpen, testID }: { children: React.ReactNode; isOpen: boolean; testID?: string }) => {
@@ -73,7 +78,9 @@ jest.mock('@/components/ui/', () => ({
 describe('Call Detail Menu Integration Test', () => {
   const mockOnEditCall = jest.fn();
   const mockOnCloseCall = jest.fn();
+  const mockTrackEvent = jest.fn();
   const { useSecurityStore } = require('@/stores/security/store');
+  const { useAnalytics } = require('@/hooks/use-analytics');
 
   const TestComponent = () => {
     const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
@@ -91,6 +98,11 @@ describe('Call Detail Menu Integration Test', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock for analytics
+    useAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
 
     // Default mock - user CAN create calls
     useSecurityStore.mockReturnValue({
@@ -172,5 +184,52 @@ describe('Call Detail Menu Integration Test', () => {
     });
 
     expect(mockOnCloseCall).toHaveBeenCalledTimes(1);
+  });
+
+  // Analytics Integration Tests
+  it('should track analytics when menu is opened', async () => {
+    render(<TestComponent />);
+
+    const menuButton = screen.getByTestId('kebab-menu-button');
+    fireEvent.press(menuButton);
+
+    await waitFor(() => {
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_menu_viewed', {
+        timestamp: expect.any(String),
+        canEditCall: true,
+      });
+    });
+  });
+
+  it('should track analytics when edit button is pressed', async () => {
+    render(<TestComponent />);
+
+    const menuButton = screen.getByTestId('kebab-menu-button');
+    fireEvent.press(menuButton);
+
+    await waitFor(() => {
+      const editButton = screen.getByTestId('edit-call-button');
+      fireEvent.press(editButton);
+    });
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_menu_edit_selected', {
+      timestamp: expect.any(String),
+    });
+  });
+
+  it('should track analytics when close button is pressed', async () => {
+    render(<TestComponent />);
+
+    const menuButton = screen.getByTestId('kebab-menu-button');
+    fireEvent.press(menuButton);
+
+    await waitFor(() => {
+      const closeButton = screen.getByTestId('close-call-button');
+      fireEvent.press(closeButton);
+    });
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_menu_close_selected', {
+      timestamp: expect.any(String),
+    });
   });
 });

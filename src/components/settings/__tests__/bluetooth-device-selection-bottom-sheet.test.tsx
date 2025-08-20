@@ -44,6 +44,7 @@ jest.mock('@expo/html-elements', () => ({
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
 import { State, useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
 
@@ -59,12 +60,14 @@ jest.mock('@/services/bluetooth-audio.service', () => ({
   },
 }));
 
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: jest.fn(),
+}));
+
 const mockSetPreferredDevice = jest.fn();
+const mockUsePreferredBluetoothDevice = jest.fn();
 jest.mock('@/lib/hooks/use-preferred-bluetooth-device', () => ({
-  usePreferredBluetoothDevice: () => ({
-    preferredDevice: null,
-    setPreferredDevice: mockSetPreferredDevice,
-  }),
+  usePreferredBluetoothDevice: () => mockUsePreferredBluetoothDevice(),
 }));
 
 jest.mock('@/stores/app/bluetooth-audio-store', () => ({
@@ -194,15 +197,29 @@ jest.mock('@/components/ui/flat-list', () => ({
 }));
 
 const mockUseBluetoothAudioStore = useBluetoothAudioStore as jest.MockedFunction<typeof useBluetoothAudioStore>;
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
 describe('BluetoothDeviceSelectionBottomSheet', () => {
   const mockProps = {
     isOpen: true,
     onClose: jest.fn(),
   };
+  const mockTrackEvent = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock for analytics
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
+
+    // Default mock for preferred device hook
+    mockUsePreferredBluetoothDevice.mockReturnValue({
+      preferredDevice: null,
+      setPreferredDevice: mockSetPreferredDevice,
+    });
+
     mockUseBluetoothAudioStore.mockReturnValue({
       availableDevices: [
         {
@@ -519,6 +536,346 @@ describe('BluetoothDeviceSelectionBottomSheet', () => {
         // Should connect to new device
         expect(bluetoothAudioService.connectToDevice).toHaveBeenCalledWith('test-device-1');
       });
+    });
+  });
+
+  describe('Analytics Integration', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('tracks analytics when sheet becomes visible', () => {
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_device_selection_sheet_viewed',
+        expect.objectContaining({
+          timestamp: expect.any(String),
+          totalDevicesCount: 2,
+          audioCapableDevicesCount: 2,
+          microphoneCapableDevicesCount: 1,
+          connectedDevicesCount: 1,
+          hasPreferredDevice: false,
+          preferredDeviceId: '',
+          connectedDeviceId: 'test-device-2',
+          bluetoothState: State.PoweredOn,
+          hasConnectionError: false,
+          isScanning: false,
+          hasScanned: false,
+          isLandscape: false,
+        })
+      );
+    });
+
+    it('tracks analytics when sheet becomes visible with preferred device', () => {
+      // Mock preferred device
+      mockUsePreferredBluetoothDevice.mockReturnValue({
+        preferredDevice: { id: 'test-preferred', name: 'Preferred Device' },
+        setPreferredDevice: mockSetPreferredDevice,
+      });
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_device_selection_sheet_viewed',
+        expect.objectContaining({
+          hasPreferredDevice: true,
+          preferredDeviceId: 'test-preferred',
+        })
+      );
+    });
+
+    it('tracks analytics when scanning starts', async () => {
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and press the scan button
+      const scanButton = screen.getByText('bluetooth.scan');
+      fireEvent.press(scanButton);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_scan_started',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            bluetoothState: State.PoweredOn,
+            previousDeviceCount: 2,
+            hasPreferredDevice: false,
+            hasConnectedDevice: true,
+          })
+        );
+      });
+    });
+
+    it('tracks analytics when scanning fails', async () => {
+      // Make scanning fail
+      (bluetoothAudioService.startScanning as jest.Mock).mockRejectedValue(new Error('Scan failed'));
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and press the scan button
+      const scanButton = screen.getByText('bluetooth.scan');
+      fireEvent.press(scanButton);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_scan_failed',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            errorMessage: 'Scan failed',
+            bluetoothState: State.PoweredOn,
+          })
+        );
+      });
+    });
+
+    it('tracks analytics when device selection starts', async () => {
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and tap on the test device
+      const deviceItem = screen.getByText('Test Headset');
+      fireEvent.press(deviceItem);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_device_selection_started',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            selectedDeviceId: 'test-device-1',
+            selectedDeviceName: 'Test Headset',
+            selectedDeviceRssi: -50,
+            selectedDeviceHasAudio: true,
+            selectedDeviceHasMic: true,
+            wasAlreadyConnected: false,
+            previousPreferredDeviceId: '',
+            currentConnectedDeviceId: 'test-device-2',
+          })
+        );
+      });
+    });
+
+    it('tracks analytics when device selection completes successfully', async () => {
+      // Use fresh mocks for this test
+      jest.clearAllMocks();
+      mockTrackEvent.mockClear();
+
+      // Set up the mocks
+      mockUseAnalytics.mockReturnValue({
+        trackEvent: mockTrackEvent,
+      });
+
+      mockUsePreferredBluetoothDevice.mockReturnValue({
+        preferredDevice: null,
+        setPreferredDevice: mockSetPreferredDevice,
+      });
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and tap on the test device
+      const deviceItem = screen.getByText('Test Headset');
+      fireEvent.press(deviceItem);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_device_selection_completed',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            selectedDeviceId: 'test-device-1',
+            selectedDeviceName: 'Test Headset',
+            wasSuccessful: true,
+            hadToDisconnectPrevious: true,
+          })
+        );
+      });
+    });
+
+    it('tracks analytics when device selection fails to connect', async () => {
+      // Make connection fail
+      (bluetoothAudioService.connectToDevice as jest.Mock).mockRejectedValue(new Error('Connection failed'));
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and tap on the test device
+      const deviceItem = screen.getByText('Test Headset');
+      fireEvent.press(deviceItem);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_device_selection_completed',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            selectedDeviceId: 'test-device-1',
+            selectedDeviceName: 'Test Headset',
+            wasSuccessful: false,
+            connectionError: 'Connection failed',
+            hadToDisconnectPrevious: true,
+          })
+        );
+      });
+    });
+
+    it('tracks analytics when device selection fails completely', async () => {
+      // Make setPreferredDevice fail
+      mockSetPreferredDevice.mockRejectedValue(new Error('Failed to set device'));
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and tap on the test device
+      const deviceItem = screen.getByText('Test Headset');
+      fireEvent.press(deviceItem);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_device_selection_failed',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            selectedDeviceId: 'test-device-1',
+            selectedDeviceName: 'Test Headset',
+            errorMessage: 'Failed to set device',
+          })
+        );
+      });
+    });
+
+    it('tracks analytics when preferred device is cleared', async () => {
+      // Mock preferred device
+      mockUsePreferredBluetoothDevice.mockReturnValue({
+        preferredDevice: { id: 'test-preferred', name: 'Preferred Device' },
+        setPreferredDevice: mockSetPreferredDevice,
+      });
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and press the clear button
+      const clearButton = screen.getByText('bluetooth.clear');
+      fireEvent.press(clearButton);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_preferred_device_cleared',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            previousDeviceId: 'test-preferred',
+            previousDeviceName: 'Preferred Device',
+            wasConnected: false,
+          })
+        );
+      });
+    });
+
+    it('tracks analytics when clearing preferred device fails', async () => {
+      // Mock preferred device
+      mockUsePreferredBluetoothDevice.mockReturnValue({
+        preferredDevice: { id: 'test-preferred', name: 'Preferred Device' },
+        setPreferredDevice: mockSetPreferredDevice,
+      });
+
+      // Make setPreferredDevice fail
+      mockSetPreferredDevice.mockRejectedValue(new Error('Clear failed'));
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Find and press the clear button
+      const clearButton = screen.getByText('bluetooth.clear');
+      fireEvent.press(clearButton);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_preferred_device_clear_failed',
+          expect.objectContaining({
+            timestamp: expect.any(String),
+            errorMessage: 'Clear failed',
+          })
+        );
+      });
+    });
+
+    it('handles analytics errors gracefully', () => {
+      // Make trackEvent throw an error
+      const errorTrackEvent = jest.fn(() => {
+        throw new Error('Analytics error');
+      });
+
+      // Mock analytics to throw error
+      mockUseAnalytics.mockReturnValue({
+        trackEvent: errorTrackEvent,
+      });
+
+      // Mock scanning to NOT auto-trigger on mount to avoid conflicts
+      mockUseBluetoothAudioStore.mockReturnValue({
+        availableDevices: [],
+        isScanning: false,
+        bluetoothState: State.PoweredOn,
+        connectedDevice: null,
+        connectionError: null,
+      } as any);
+
+      // Spy on console.warn to ensure error is logged
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      // Should still render without crashing
+      expect(screen.getByText('bluetooth.select_device')).toBeTruthy();
+
+      // Should log the analytics error
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to track bluetooth device selection sheet view analytics:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('tracks correct device counts with varying capabilities', () => {
+      // Reset mocks for clean analytics tracking
+      jest.clearAllMocks();
+      mockTrackEvent.mockClear();
+
+      mockUseAnalytics.mockReturnValue({
+        trackEvent: mockTrackEvent,
+      });
+
+      mockUsePreferredBluetoothDevice.mockReturnValue({
+        preferredDevice: null,
+        setPreferredDevice: mockSetPreferredDevice,
+      });
+
+      mockUseBluetoothAudioStore.mockReturnValue({
+        availableDevices: [
+          {
+            id: 'audio-only',
+            name: 'Audio Only Device',
+            rssi: -60,
+            isConnected: false,
+            hasAudioCapability: true,
+            supportsMicrophoneControl: false,
+            device: {} as any,
+          },
+          {
+            id: 'mic-only',
+            name: 'Mic Only Device',
+            rssi: -65,
+            isConnected: false,
+            hasAudioCapability: false,
+            supportsMicrophoneControl: true,
+            device: {} as any,
+          },
+          {
+            id: 'both-capabilities',
+            name: 'Full Capability Device',
+            rssi: -55,
+            isConnected: true,
+            hasAudioCapability: true,
+            supportsMicrophoneControl: true,
+            device: {} as any,
+          },
+        ],
+        isScanning: false,
+        bluetoothState: State.PoweredOn,
+        connectedDevice: null,
+        connectionError: null,
+      } as any);
+
+      render(<BluetoothDeviceSelectionBottomSheet {...mockProps} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('bluetooth_device_selection_sheet_viewed',
+        expect.objectContaining({
+          totalDevicesCount: 3,
+          audioCapableDevicesCount: 2,
+          microphoneCapableDevicesCount: 2,
+          connectedDevicesCount: 1,
+        })
+      );
     });
   });
 });

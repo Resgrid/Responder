@@ -419,4 +419,246 @@ describe('PushNotificationModal', () => {
     expect(screen.queryByText('New notification')).toBeTruthy();
     expect(screen.getAllByText('Emergency Call')).toHaveLength(2);
   });
+
+  describe('Analytics', () => {
+    it('should track view analytics when modal becomes visible', async () => {
+      const callNotification = {
+        type: 'call' as const,
+        id: '1234',
+        eventCode: 'C:1234',
+        title: 'Emergency Call',
+        body: 'Structure fire reported at Main St',
+      };
+
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        notification: callNotification,
+      });
+
+      render(<PushNotificationModal />);
+
+      await waitFor(() => {
+        expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_modal_viewed', {
+          type: 'call',
+          id: '1234',
+          eventCode: 'C:1234',
+          timestamp: expect.any(String),
+          hasTitle: true,
+          hasBody: true,
+        });
+      });
+    });
+
+    it('should not track view analytics when modal is not visible', () => {
+      const callNotification = {
+        type: 'call' as const,
+        id: '1234',
+        eventCode: 'C:1234',
+        title: 'Emergency Call',
+        body: 'Structure fire reported at Main St',
+      };
+
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: false,
+        notification: callNotification,
+      });
+
+      render(<PushNotificationModal />);
+
+      expect(mockAnalytics.trackEvent).not.toHaveBeenCalledWith(
+        'push_notification_modal_viewed',
+        expect.any(Object)
+      );
+    });
+
+    it('should track view analytics for message notification', async () => {
+      const messageNotification = {
+        type: 'message' as const,
+        id: '5678',
+        eventCode: 'M:5678',
+        title: 'New Message',
+        body: 'You have a new message from dispatch',
+      };
+
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        notification: messageNotification,
+      });
+
+      render(<PushNotificationModal />);
+
+      await waitFor(() => {
+        expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_modal_viewed', {
+          type: 'message',
+          id: '5678',
+          eventCode: 'M:5678',
+          timestamp: expect.any(String),
+          hasTitle: true,
+          hasBody: true,
+        });
+      });
+    });
+
+    it('should track view analytics for notification without title', async () => {
+      const notificationWithoutTitle = {
+        type: 'chat' as const,
+        id: '9101',
+        eventCode: 'T:9101',
+        body: 'Chat message content',
+        // No title provided
+      };
+
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        notification: notificationWithoutTitle,
+      });
+
+      render(<PushNotificationModal />);
+
+      await waitFor(() => {
+        expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_modal_viewed', {
+          type: 'chat',
+          id: '9101',
+          eventCode: 'T:9101',
+          timestamp: expect.any(String),
+          hasTitle: false,
+          hasBody: true,
+        });
+      });
+    });
+
+    it('should track view analytics for notification without body', async () => {
+      const notificationWithoutBody = {
+        type: 'group-chat' as const,
+        id: '1121',
+        eventCode: 'G:1121',
+        title: 'Group Chat Message',
+        // No body provided
+      };
+
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        notification: notificationWithoutBody,
+      });
+
+      render(<PushNotificationModal />);
+
+      await waitFor(() => {
+        expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_modal_viewed', {
+          type: 'group-chat',
+          id: '1121',
+          eventCode: 'G:1121',
+          timestamp: expect.any(String),
+          hasTitle: true,
+          hasBody: false,
+        });
+      });
+    });
+
+    it('should not track view analytics when notification is null', () => {
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        notification: null,
+      });
+
+      render(<PushNotificationModal />);
+
+      expect(mockAnalytics.trackEvent).not.toHaveBeenCalledWith(
+        'push_notification_modal_viewed',
+        expect.any(Object)
+      );
+    });
+
+    it('should only track view analytics once per modal opening', async () => {
+      const callNotification = {
+        type: 'call' as const,
+        id: '1234',
+        eventCode: 'C:1234',
+        title: 'Emergency Call',
+        body: 'Structure fire reported at Main St',
+      };
+
+      const { rerender } = render(<PushNotificationModal />);
+
+      // First render with modal closed
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: false,
+        notification: callNotification,
+      });
+
+      rerender(<PushNotificationModal />);
+
+      // Then open the modal
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        notification: callNotification,
+      });
+
+      rerender(<PushNotificationModal />);
+
+      await waitFor(() => {
+        expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_modal_viewed', {
+          type: 'call',
+          id: '1234',
+          eventCode: 'C:1234',
+          timestamp: expect.any(String),
+          hasTitle: true,
+          hasBody: true,
+        });
+      });
+
+      // Clear the mock to reset call count
+      mockAnalytics.trackEvent.mockClear();
+
+      // Rerender with same open state - should not track again
+      rerender(<PushNotificationModal />);
+
+      expect(mockAnalytics.trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should handle analytics tracking errors gracefully', async () => {
+      const callNotification = {
+        type: 'call' as const,
+        id: '1234',
+        eventCode: 'C:1234',
+        title: 'Emergency Call',
+        body: 'Structure fire reported at Main St',
+      };
+
+      // Mock trackEvent to throw an error
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      mockAnalytics.trackEvent.mockImplementation(() => {
+        throw new Error('Analytics service unavailable');
+      });
+
+      (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        notification: callNotification,
+      });
+
+      // Should not throw and component should still render
+      expect(() => render(<PushNotificationModal />)).not.toThrow();
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Failed to track push notification modal view analytics:',
+          expect.any(Error)
+        );
+      });
+
+      // Component should still render normally
+      expect(screen.queryByText('New notification')).toBeTruthy();
+
+      consoleSpy.mockRestore();
+    });
+  });
 });

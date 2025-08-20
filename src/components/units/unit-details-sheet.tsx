@@ -1,8 +1,9 @@
 import { Calendar, Car, MapPin, Settings, Truck, Users, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useUnitsStore } from '@/stores/units/store';
 
@@ -20,17 +21,17 @@ import { VStack } from '../ui/vstack';
 export const UnitDetailsSheet: React.FC = React.memo(() => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const { trackEvent } = useAnalytics();
   const { units, selectedUnitId, isDetailsOpen, closeDetails } = useUnitsStore();
 
   const selectedUnit = units.find((unit) => unit.UnitId === selectedUnitId);
 
-  if (!selectedUnit) return null;
-
-  const hasLocation = selectedUnit.Latitude && selectedUnit.Longitude;
+  const hasLocation = selectedUnit?.Latitude && selectedUnit?.Longitude;
   const isDark = colorScheme === 'dark';
-  
+
   // Helper to get timestamp - handle both UnitResultData and UnitInfoResultData
   const getStatusTimestamp = (unit: typeof selectedUnit) => {
+    if (!unit) return null;
     if ('CurrentStatusTimestampUtc' in unit) {
       return unit.CurrentStatusTimestampUtc;
     }
@@ -42,8 +43,60 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
 
   const statusTimestamp = getStatusTimestamp(selectedUnit);
 
+  // Track analytics when sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedUnit) return;
+
+    try {
+      trackEvent('unit_details_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        unitId: selectedUnit.UnitId || '',
+        unitName: selectedUnit.Name || '',
+        unitType: selectedUnit.Type || '',
+        hasLocation: !!hasLocation,
+        hasGroupName: !!selectedUnit.GroupName,
+        hasPlateNumber: !!selectedUnit.PlateNumber,
+        hasVin: !!selectedUnit.Vin,
+        hasFourWheelDrive: !!selectedUnit.FourWheelDrive,
+        hasSpecialPermit: !!selectedUnit.SpecialPermit,
+        hasNote: !!selectedUnit.Note,
+        hasStatusTimestamp: !!statusTimestamp,
+        colorScheme: colorScheme || 'light',
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track unit details sheet view analytics:', error);
+    }
+  }, [trackEvent, selectedUnit, hasLocation, statusTimestamp, colorScheme]);
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isDetailsOpen && selectedUnit) {
+      trackViewAnalytics();
+    }
+  }, [isDetailsOpen, selectedUnit, trackViewAnalytics]);
+
+  // Handle close with analytics
+  const handleClose = useCallback(() => {
+    if (selectedUnit) {
+      try {
+        trackEvent('unit_details_sheet_closed', {
+          timestamp: new Date().toISOString(),
+          unitId: selectedUnit.UnitId || '',
+          unitName: selectedUnit.Name || '',
+        });
+      } catch (error) {
+        // Analytics errors should not break the component
+        console.warn('Failed to track unit details sheet close analytics:', error);
+      }
+    }
+    closeDetails();
+  }, [trackEvent, selectedUnit, closeDetails]);
+
+  if (!selectedUnit) return null;
+
   return (
-    <Actionsheet isOpen={isDetailsOpen} onClose={closeDetails} snapPoints={[67]}>
+    <Actionsheet isOpen={isDetailsOpen} onClose={handleClose} snapPoints={[67]}>
       <ActionsheetBackdrop />
       <ActionsheetContent className="w-full rounded-t-xl bg-white dark:bg-gray-800">
         <ActionsheetDragIndicatorWrapper>
@@ -58,7 +111,7 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
                 {selectedUnit.Name}
               </Heading>
             </HStack>
-            <Button variant="link" onPress={closeDetails} className="p-1" testID="close-button">
+            <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
               <X size={24} color={isDark ? '#9ca3af' : '#6b7280'} />
             </Button>
           </HStack>

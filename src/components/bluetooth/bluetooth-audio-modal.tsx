@@ -1,5 +1,5 @@
 import { AlertTriangle, Bluetooth, BluetoothConnected, CheckCircle, Mic, MicOff, RefreshCw, Signal, Wifi } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
@@ -12,6 +12,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
 import { type BluetoothAudioDevice, useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
@@ -25,15 +26,28 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
   const { bluetoothState, isScanning, isConnecting, availableDevices, connectedDevice, connectionError, isAudioRoutingActive, buttonEvents, lastButtonAction } = useBluetoothAudioStore();
 
   const { isConnected: isLiveKitConnected, currentRoom } = useLiveKitStore();
+  const { trackEvent } = useAnalytics();
   const [isMicMuted, setIsMicMuted] = useState(false);
+  const [modalOpenTime, setModalOpenTime] = useState<number | null>(null);
 
   const handleStartScan = React.useCallback(async () => {
     try {
+      trackEvent('bluetooth_scan_started', {
+        timestamp: new Date().toISOString(),
+        bluetoothState,
+        hasConnectedDevice: !!connectedDevice,
+        currentDevicesCount: availableDevices.length,
+      });
       await bluetoothAudioService.startScanning(15000); // 15 second scan
     } catch (error) {
       console.error('Failed to start Bluetooth scan:', error);
+      trackEvent('bluetooth_scan_failed', {
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        bluetoothState,
+      });
     }
-  }, []);
+  }, [trackEvent, bluetoothState, connectedDevice, availableDevices.length]);
 
   useEffect(() => {
     // Update mic state from LiveKit
@@ -41,6 +55,29 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
       setIsMicMuted(!currentRoom.localParticipant.isMicrophoneEnabled);
     }
   }, [currentRoom?.localParticipant, currentRoom?.localParticipant?.isMicrophoneEnabled]);
+
+  // Track analytics when modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      const openTime = Date.now();
+      setModalOpenTime(openTime);
+
+      trackEvent('bluetooth_audio_modal_viewed', {
+        timestamp: new Date().toISOString(),
+        bluetoothState,
+        availableDevicesCount: availableDevices.length,
+        hasConnectedDevice: !!connectedDevice,
+        connectedDeviceId: connectedDevice?.id || '',
+        connectedDeviceName: connectedDevice?.name || '',
+        isLiveKitConnected,
+        isAudioRoutingActive,
+        hasConnectionError: !!connectionError,
+        isScanning,
+        isConnecting,
+        recentButtonEventsCount: buttonEvents.length,
+      });
+    }
+  }, [isOpen, trackEvent, bluetoothState, availableDevices.length, connectedDevice, isLiveKitConnected, isAudioRoutingActive, connectionError, isScanning, isConnecting, buttonEvents.length]);
 
   useEffect(() => {
     // Auto-start scanning when modal opens and Bluetooth is ready
@@ -52,41 +89,119 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
   }, [isOpen, bluetoothState, isScanning, connectedDevice, handleStartScan]);
 
   const handleStopScan = React.useCallback(() => {
+    trackEvent('bluetooth_scan_stopped', {
+      timestamp: new Date().toISOString(),
+      bluetoothState,
+      devicesFoundCount: availableDevices.length,
+    });
     bluetoothAudioService.stopScanning();
-  }, []);
+  }, [trackEvent, bluetoothState, availableDevices.length]);
 
   const handleConnectDevice = React.useCallback(
     async (device: BluetoothAudioDevice) => {
       if (isConnecting) return;
 
       try {
+        trackEvent('bluetooth_device_connection_started', {
+          timestamp: new Date().toISOString(),
+          deviceId: device.id,
+          deviceName: device.name || 'Unknown Device',
+          hasAudioCapability: device.hasAudioCapability,
+          supportsMicrophoneControl: device.supportsMicrophoneControl,
+          rssi: device.rssi || 0,
+          previousConnectedDevice: connectedDevice?.id || '',
+        });
+
         await bluetoothAudioService.connectToDevice(device.id);
+
+        trackEvent('bluetooth_device_connected', {
+          timestamp: new Date().toISOString(),
+          deviceId: device.id,
+          deviceName: device.name || 'Unknown Device',
+          hasAudioCapability: device.hasAudioCapability,
+          supportsMicrophoneControl: device.supportsMicrophoneControl,
+        });
       } catch (error) {
         console.error('Failed to connect to device:', error);
+        trackEvent('bluetooth_device_connection_failed', {
+          timestamp: new Date().toISOString(),
+          deviceId: device.id,
+          deviceName: device.name || 'Unknown Device',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     },
-    [isConnecting]
+    [isConnecting, trackEvent, connectedDevice]
   );
 
   const handleDisconnectDevice = React.useCallback(async () => {
     try {
+      trackEvent('bluetooth_device_disconnection_started', {
+        timestamp: new Date().toISOString(),
+        deviceId: connectedDevice?.id || '',
+        deviceName: connectedDevice?.name || 'Unknown Device',
+        isAudioRoutingActive,
+      });
+
       await bluetoothAudioService.disconnectDevice();
+
+      trackEvent('bluetooth_device_disconnected', {
+        timestamp: new Date().toISOString(),
+        deviceId: connectedDevice?.id || '',
+        deviceName: connectedDevice?.name || 'Unknown Device',
+      });
     } catch (error) {
       console.error('Failed to disconnect device:', error);
+      trackEvent('bluetooth_device_disconnection_failed', {
+        timestamp: new Date().toISOString(),
+        deviceId: connectedDevice?.id || '',
+        deviceName: connectedDevice?.name || 'Unknown Device',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
-  }, []);
+  }, [trackEvent, connectedDevice, isAudioRoutingActive]);
 
   const handleToggleMicrophone = React.useCallback(async () => {
     if (!currentRoom?.localParticipant) return;
 
     try {
       const newMuteState = !isMicMuted;
+
+      trackEvent('bluetooth_microphone_toggled', {
+        timestamp: new Date().toISOString(),
+        action: newMuteState ? 'mute' : 'unmute',
+        connectedDeviceId: connectedDevice?.id || '',
+        connectedDeviceName: connectedDevice?.name || '',
+        supportsMicrophoneControl: connectedDevice?.supportsMicrophoneControl || false,
+        isLiveKitConnected,
+      });
+
       await currentRoom.localParticipant.setMicrophoneEnabled(!newMuteState);
       setIsMicMuted(newMuteState);
     } catch (error) {
       console.error('Failed to toggle microphone:', error);
+      trackEvent('bluetooth_microphone_toggle_failed', {
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        connectedDeviceId: connectedDevice?.id || '',
+      });
     }
-  }, [currentRoom?.localParticipant, isMicMuted]);
+  }, [currentRoom?.localParticipant, isMicMuted, trackEvent, connectedDevice, isLiveKitConnected]);
+
+  const handleClose = useCallback(() => {
+    if (modalOpenTime !== null) {
+      const timeSpent = Date.now() - modalOpenTime;
+      trackEvent('bluetooth_audio_modal_closed', {
+        timestamp: new Date().toISOString(),
+        timeSpent,
+        hasConnectedDevice: !!connectedDevice,
+        connectedDeviceId: connectedDevice?.id || '',
+        wasScanning: isScanning,
+        closeMethod: 'user_action',
+      });
+    }
+    onClose();
+  }, [modalOpenTime, trackEvent, connectedDevice, isScanning, onClose]);
 
   const renderBluetoothState = () => {
     switch (bluetoothState) {
@@ -296,7 +411,7 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
   const bluetoothStateError = renderBluetoothState();
 
   return (
-    <Actionsheet isOpen={isOpen} onClose={onClose} snapPoints={[60]}>
+    <Actionsheet isOpen={isOpen} onClose={handleClose} snapPoints={[60]}>
       <ActionsheetBackdrop />
       <ActionsheetContent className="bg-white px-4 py-2 dark:bg-gray-800">
         <ActionsheetDragIndicatorWrapper>

@@ -1,7 +1,8 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, FlatList, Image } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -9,6 +10,7 @@ import { FocusAwareStatusBar, SafeAreaView, View } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
 import { useIsFirstTime } from '@/lib/storage';
 
@@ -61,6 +63,7 @@ const Pagination: React.FC<{ currentIndex: number; length: number }> = ({ curren
 export default function Onboarding() {
   const [_, setIsFirstTime] = useIsFirstTime();
   const { status, setIsOnboarding } = useAuthStore();
+  const { trackEvent } = useAnalytics();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -71,9 +74,31 @@ export default function Onboarding() {
     setIsOnboarding();
   }, [setIsOnboarding]);
 
+  // Analytics: Track when the onboarding page is viewed
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent('onboarding_viewed', {
+        timestamp: new Date().toISOString(),
+        currentSlide: currentIndex,
+        totalSlides: onboardingData.length,
+      });
+    }, [trackEvent, currentIndex])
+  );
+
   const handleScroll = (event: { nativeEvent: { contentOffset: { x: number } } }) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    const wasLastIndex = currentIndex;
     setCurrentIndex(index);
+
+    // Analytics: Track slide changes
+    if (index !== wasLastIndex) {
+      trackEvent('onboarding_slide_changed', {
+        timestamp: new Date().toISOString(),
+        fromSlide: wasLastIndex,
+        toSlide: index,
+        slideTitle: onboardingData[index]?.title || 'Unknown',
+      });
+    }
 
     // Show button with animation when on the last slide
     if (index === onboardingData.length - 1) {
@@ -85,6 +110,13 @@ export default function Onboarding() {
 
   const nextSlide = () => {
     if (currentIndex < onboardingData.length - 1) {
+      // Analytics: Track next button clicks
+      trackEvent('onboarding_next_clicked', {
+        timestamp: new Date().toISOString(),
+        currentSlide: currentIndex,
+        slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
+      });
+
       flatListRef.current?.scrollToIndex({
         index: currentIndex + 1,
         animated: true,
@@ -118,6 +150,7 @@ export default function Onboarding() {
         keyExtractor={(item) => item.title}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        testID="onboarding-flatlist"
       />
 
       <Pagination currentIndex={currentIndex} length={onboardingData.length} />
@@ -127,6 +160,13 @@ export default function Onboarding() {
           <View className="flex-row items-center justify-between">
             <Pressable
               onPress={() => {
+                // Analytics: Track skip button clicks
+                trackEvent('onboarding_skip_clicked', {
+                  timestamp: new Date().toISOString(),
+                  currentSlide: currentIndex,
+                  slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
+                });
+
                 setIsFirstTime(false);
                 router.replace('/login');
               }}
@@ -146,7 +186,15 @@ export default function Onboarding() {
               variant="solid"
               action="primary"
               className="w-full bg-primary-500"
+              testID="get-started-button"
               onPress={() => {
+                // Analytics: Track completion
+                trackEvent('onboarding_completed', {
+                  timestamp: new Date().toISOString(),
+                  totalSlides: onboardingData.length,
+                  completionMethod: 'finished',
+                });
+
                 setIsFirstTime(false);
                 router.replace('/login');
               }}

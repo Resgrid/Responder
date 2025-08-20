@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useFocusEffect } from '@react-navigation/native';
 import { render } from '@testing-library/react-native';
 import axios from 'axios';
 import * as Location from 'expo-location';
 import { router, Stack } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -26,6 +27,7 @@ import { Select, SelectBackdrop, SelectContent, SelectIcon, SelectInput, SelectI
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { type DispatchSelection } from '@/stores/dispatch/store';
@@ -103,6 +105,7 @@ export default function NewCall() {
   const { colorScheme } = useColorScheme();
   const { callPriorities, callTypes, isLoading, error, fetchCallPriorities, fetchCallTypes } = useCallsStore();
   const { config } = useCoreStore();
+  const { trackEvent } = useAnalytics();
   const toast = useToast();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -161,8 +164,37 @@ export default function NewCall() {
     fetchCallTypes();
   }, [fetchCallPriorities, fetchCallTypes]);
 
+  // Analytics: Track when the new call page is viewed
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent('call_new_viewed', {
+        timestamp: new Date().toISOString(),
+        priorityCount: callPriorities.length,
+        typeCount: callTypes.length,
+        hasGoogleMapsKey: !!config?.GoogleMapsKey,
+        hasWhat3WordsKey: !!config?.W3WKey,
+      });
+    }, [trackEvent, callPriorities.length, callTypes.length, config?.GoogleMapsKey, config?.W3WKey])
+  );
+
   const onSubmit = async (data: FormValues) => {
     try {
+      // Analytics: Track call creation attempt
+      trackEvent('call_create_attempted', {
+        timestamp: new Date().toISOString(),
+        priority: data.priority,
+        type: data.type,
+        hasNote: !!data.note,
+        hasAddress: !!data.address,
+        hasCoordinates: !!(selectedLocation?.latitude && selectedLocation?.longitude),
+        hasWhat3Words: !!data.what3words,
+        hasPlusCode: !!data.plusCode,
+        hasContactName: !!data.contactName,
+        hasContactInfo: !!data.contactInfo,
+        dispatchEveryone: data.dispatchSelection?.everyone || false,
+        dispatchCount: (data.dispatchSelection?.users.length || 0) + (data.dispatchSelection?.groups.length || 0) + (data.dispatchSelection?.roles.length || 0) + (data.dispatchSelection?.units.length || 0),
+      });
+
       // If we have latitude and longitude, add them to the data
       if (selectedLocation?.latitude && selectedLocation?.longitude) {
         data.latitude = selectedLocation.latitude;
@@ -193,6 +225,16 @@ export default function NewCall() {
         dispatchEveryone: data.dispatchSelection?.everyone,
       });
 
+      // Analytics: Track successful call creation
+      trackEvent('call_create_success', {
+        timestamp: new Date().toISOString(),
+        callId: response?.Id || 'unknown',
+        priority: data.priority,
+        type: data.type,
+        hasLocation: !!(data.latitude && data.longitude),
+        dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
+      });
+
       // Show success toast
       toast.show({
         placement: 'top',
@@ -210,6 +252,14 @@ export default function NewCall() {
     } catch (error) {
       console.error('Error creating call:', error);
 
+      // Analytics: Track call creation failure
+      trackEvent('call_create_failed', {
+        timestamp: new Date().toISOString(),
+        priority: data.priority,
+        type: data.type,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       // Show error toast
       toast.show({
         placement: 'top',
@@ -226,6 +276,14 @@ export default function NewCall() {
 
   // Handle location selection from the full-screen picker
   const handleLocationSelected = (location: { latitude: number; longitude: number; address?: string }) => {
+    // Analytics: Track location selection
+    trackEvent('call_location_selected', {
+      timestamp: new Date().toISOString(),
+      hasAddress: !!location.address,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
+
     setSelectedLocation(location);
     setShowLocationPicker(false);
 
@@ -243,6 +301,17 @@ export default function NewCall() {
 
   // Handle dispatch selection
   const handleDispatchSelection = (selection: DispatchSelection) => {
+    // Analytics: Track dispatch selection
+    trackEvent('call_dispatch_selection_updated', {
+      timestamp: new Date().toISOString(),
+      everyone: selection.everyone,
+      userCount: selection.users.length,
+      groupCount: selection.groups.length,
+      roleCount: selection.roles.length,
+      unitCount: selection.units.length,
+      totalSelected: selection.users.length + selection.groups.length + selection.roles.length + selection.units.length,
+    });
+
     setDispatchSelection(selection);
     setValue('dispatchSelection', selection);
   };
@@ -262,20 +331,6 @@ export default function NewCall() {
     return `${count} ${t('calls.selected')}`;
   };
 
-  /**
-   * Handles address search using Google Maps Geocoding API
-   *
-   * Features:
-   * - Validates empty/null address input and shows error toast
-   * - Uses Google Maps API key from CoreStore configuration
-   * - Handles single result: automatically selects location
-   * - Handles multiple results: shows bottom sheet for user selection
-   * - Handles API errors gracefully with user-friendly messages
-   * - URL encodes addresses properly for special characters
-   * - Shows loading state during API call
-   *
-   * @param address - The address string to geocode
-   */
   const handleAddressSearch = async (address: string) => {
     if (!address.trim()) {
       toast.show({
@@ -291,12 +346,24 @@ export default function NewCall() {
       return;
     }
 
+    // Analytics: Track address search attempt
+    trackEvent('call_address_search_attempted', {
+      timestamp: new Date().toISOString(),
+      hasGoogleMapsKey: !!config?.GoogleMapsKey,
+    });
+
     setIsGeocodingAddress(true);
     try {
       // Get Google Maps API key from CoreStore config
       const apiKey = config?.GoogleMapsKey;
 
       if (!apiKey) {
+        // Analytics: Track configuration error
+        trackEvent('call_address_search_failed', {
+          timestamp: new Date().toISOString(),
+          reason: 'missing_api_key',
+        });
+
         throw new Error('Google Maps API key not configured');
       }
 
@@ -305,6 +372,13 @@ export default function NewCall() {
 
       if (response.data.status === 'OK' && response.data.results.length > 0) {
         const results = response.data.results;
+
+        // Analytics: Track successful address search
+        trackEvent('call_address_search_success', {
+          timestamp: new Date().toISOString(),
+          resultCount: results.length,
+          hasMultipleResults: results.length > 1,
+        });
 
         if (results.length === 1) {
           // Single result - use it directly
@@ -335,6 +409,13 @@ export default function NewCall() {
           setShowAddressSelection(true);
         }
       } else {
+        // Analytics: Track no results found
+        trackEvent('call_address_search_failed', {
+          timestamp: new Date().toISOString(),
+          reason: 'no_results',
+          status: response.data.status,
+        });
+
         // Show error toast for no results
         toast.show({
           placement: 'top',
@@ -349,6 +430,13 @@ export default function NewCall() {
       }
     } catch (error) {
       console.error('Error geocoding address:', error);
+
+      // Analytics: Track search error
+      trackEvent('call_address_search_failed', {
+        timestamp: new Date().toISOString(),
+        reason: 'network_error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
 
       // Show error toast
       toast.show({
@@ -368,6 +456,14 @@ export default function NewCall() {
 
   // Handle address selection from bottom sheet
   const handleAddressSelected = (result: GeocodingResult) => {
+    // Analytics: Track address selection from multiple results
+    trackEvent('call_address_selected_from_results', {
+      timestamp: new Date().toISOString(),
+      selectedAddress: result.formatted_address,
+      latitude: result.geometry.location.lat,
+      longitude: result.geometry.location.lng,
+    });
+
     const newLocation = {
       latitude: result.geometry.location.lat,
       longitude: result.geometry.location.lng,
@@ -391,19 +487,6 @@ export default function NewCall() {
     });
   };
 
-  /**
-   * Handles what3words search using what3words API
-   *
-   * Features:
-   * - Validates empty/null what3words input and shows error toast
-   * - Uses what3words API key from CoreStore configuration
-   * - Handles API errors gracefully with user-friendly messages
-   * - Shows loading state during API call
-   * - Updates coordinates and address fields in form
-   * - Validates what3words format (3 words separated by dots)
-   *
-   * @param what3words - The what3words string to geocode (e.g., "filled.count.soap")
-   */
   const handleWhat3WordsSearch = async (what3words: string) => {
     if (!what3words.trim()) {
       toast.show({
@@ -422,6 +505,12 @@ export default function NewCall() {
     // Validate what3words format - should be 3 words separated by dots
     const w3wRegex = /^[a-z]+\.[a-z]+\.[a-z]+$/;
     if (!w3wRegex.test(what3words.trim().toLowerCase())) {
+      // Analytics: Track format validation error
+      trackEvent('call_what3words_search_failed', {
+        timestamp: new Date().toISOString(),
+        reason: 'invalid_format',
+      });
+
       toast.show({
         placement: 'top',
         render: () => {
@@ -435,12 +524,24 @@ export default function NewCall() {
       return;
     }
 
+    // Analytics: Track what3words search attempt
+    trackEvent('call_what3words_search_attempted', {
+      timestamp: new Date().toISOString(),
+      hasWhat3WordsKey: !!config?.W3WKey,
+    });
+
     setIsGeocodingWhat3Words(true);
     try {
       // Get what3words API key from CoreStore config
       const apiKey = config?.W3WKey;
 
       if (!apiKey) {
+        // Analytics: Track configuration error
+        trackEvent('call_what3words_search_failed', {
+          timestamp: new Date().toISOString(),
+          reason: 'missing_api_key',
+        });
+
         throw new Error('what3words API key not configured');
       }
 
@@ -448,6 +549,11 @@ export default function NewCall() {
       const response = await axios.get<What3WordsResponse>(`https://api.what3words.com/v3/convert-to-coordinates?words=${encodeURIComponent(what3words)}&key=${apiKey}`);
 
       if (response.data.coordinates) {
+        // Analytics: Track successful what3words search
+        trackEvent('call_what3words_search_success', {
+          timestamp: new Date().toISOString(),
+        });
+
         const newLocation = {
           latitude: response.data.coordinates.lat,
           longitude: response.data.coordinates.lng,
@@ -469,6 +575,12 @@ export default function NewCall() {
           },
         });
       } else {
+        // Analytics: Track no results found
+        trackEvent('call_what3words_search_failed', {
+          timestamp: new Date().toISOString(),
+          reason: 'no_results',
+        });
+
         // Show error toast for no results
         toast.show({
           placement: 'top',
@@ -483,6 +595,13 @@ export default function NewCall() {
       }
     } catch (error) {
       console.error('Error geocoding what3words:', error);
+
+      // Analytics: Track search error
+      trackEvent('call_what3words_search_failed', {
+        timestamp: new Date().toISOString(),
+        reason: 'network_error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
 
       // Show error toast
       toast.show({
@@ -500,19 +619,6 @@ export default function NewCall() {
     }
   };
 
-  /**
-   * Handles plus code search using Google Maps Geocoding API
-   *
-   * Features:
-   * - Validates empty/null plus code input and shows error toast
-   * - Uses Google Maps API key from CoreStore configuration
-   * - Handles API errors gracefully with user-friendly messages
-   * - URL encodes plus codes properly for special characters
-   * - Shows loading state during API call
-   * - Updates coordinates and address fields in form
-   *
-   * @param plusCode - The plus code string to geocode
-   */
   const handlePlusCodeSearch = async (plusCode: string) => {
     if (!plusCode.trim()) {
       toast.show({
@@ -528,12 +634,24 @@ export default function NewCall() {
       return;
     }
 
+    // Analytics: Track plus code search attempt
+    trackEvent('call_plus_code_search_attempted', {
+      timestamp: new Date().toISOString(),
+      hasGoogleMapsKey: !!config?.GoogleMapsKey,
+    });
+
     setIsGeocodingPlusCode(true);
     try {
       // Get Google Maps API key from CoreStore config
       const apiKey = config?.GoogleMapsKey;
 
       if (!apiKey) {
+        // Analytics: Track configuration error
+        trackEvent('call_plus_code_search_failed', {
+          timestamp: new Date().toISOString(),
+          reason: 'missing_api_key',
+        });
+
         throw new Error('Google Maps API key not configured');
       }
 
@@ -541,6 +659,11 @@ export default function NewCall() {
       const response = await axios.get<GeocodingResponse>(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(plusCode)}&key=${apiKey}`);
 
       if (response.data.status === 'OK' && response.data.results.length > 0) {
+        // Analytics: Track successful plus code search
+        trackEvent('call_plus_code_search_success', {
+          timestamp: new Date().toISOString(),
+        });
+
         const result = response.data.results[0];
         const newLocation = {
           latitude: result.geometry.location.lat,
@@ -563,6 +686,13 @@ export default function NewCall() {
           },
         });
       } else {
+        // Analytics: Track no results found
+        trackEvent('call_plus_code_search_failed', {
+          timestamp: new Date().toISOString(),
+          reason: 'no_results',
+          status: response.data.status,
+        });
+
         // Show error toast for no results
         toast.show({
           placement: 'top',
@@ -577,6 +707,13 @@ export default function NewCall() {
       }
     } catch (error) {
       console.error('Error geocoding plus code:', error);
+
+      // Analytics: Track search error
+      trackEvent('call_plus_code_search_failed', {
+        timestamp: new Date().toISOString(),
+        reason: 'network_error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
 
       // Show error toast
       toast.show({
@@ -594,19 +731,6 @@ export default function NewCall() {
     }
   };
 
-  /**
-   * Handles coordinates search using Google Maps Reverse Geocoding API
-   *
-   * Features:
-   * - Validates and parses coordinates string (lat,lng format)
-   * - Uses Google Maps API key from CoreStore configuration
-   * - Handles API errors gracefully with user-friendly messages
-   * - Shows loading state during API call
-   * - Updates address field and map location
-   * - Supports various coordinate formats (decimal degrees)
-   *
-   * @param coordinates - The coordinates string to reverse geocode (e.g., "40.7128, -74.0060")
-   */
   const handleCoordinatesSearch = async (coordinates: string) => {
     if (!coordinates.trim()) {
       toast.show({
@@ -627,6 +751,12 @@ export default function NewCall() {
     const match = coordinates.trim().match(coordRegex);
 
     if (!match) {
+      // Analytics: Track format validation error
+      trackEvent('call_coordinates_search_failed', {
+        timestamp: new Date().toISOString(),
+        reason: 'invalid_format',
+      });
+
       toast.show({
         placement: 'top',
         render: () => {
@@ -645,6 +775,14 @@ export default function NewCall() {
 
     // Validate coordinate ranges
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      // Analytics: Track range validation error
+      trackEvent('call_coordinates_search_failed', {
+        timestamp: new Date().toISOString(),
+        reason: 'out_of_range',
+        latitude,
+        longitude,
+      });
+
       toast.show({
         placement: 'top',
         render: () => {
@@ -658,12 +796,28 @@ export default function NewCall() {
       return;
     }
 
+    // Analytics: Track coordinates search attempt
+    trackEvent('call_coordinates_search_attempted', {
+      timestamp: new Date().toISOString(),
+      latitude,
+      longitude,
+      hasGoogleMapsKey: !!config?.GoogleMapsKey,
+    });
+
     setIsGeocodingCoordinates(true);
     try {
       // Get Google Maps API key from CoreStore config
       const apiKey = config?.GoogleMapsKey;
 
       if (!apiKey) {
+        // Analytics: Track configuration error
+        trackEvent('call_coordinates_search_failed', {
+          timestamp: new Date().toISOString(),
+          reason: 'missing_api_key',
+          latitude,
+          longitude,
+        });
+
         throw new Error('Google Maps API key not configured');
       }
 
@@ -671,6 +825,14 @@ export default function NewCall() {
       const response = await axios.get<GeocodingResponse>(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`);
 
       if (response.data.status === 'OK' && response.data.results.length > 0) {
+        // Analytics: Track successful coordinates search with address
+        trackEvent('call_coordinates_search_success', {
+          timestamp: new Date().toISOString(),
+          latitude,
+          longitude,
+          hasAddress: true,
+        });
+
         const result = response.data.results[0];
         const newLocation = {
           latitude,
@@ -693,6 +855,14 @@ export default function NewCall() {
           },
         });
       } else {
+        // Analytics: Track coordinates set without address
+        trackEvent('call_coordinates_search_success', {
+          timestamp: new Date().toISOString(),
+          latitude,
+          longitude,
+          hasAddress: false,
+        });
+
         // Even if no address found, still set the location on the map
         const newLocation = {
           latitude,
@@ -716,6 +886,16 @@ export default function NewCall() {
       }
     } catch (error) {
       console.error('Error reverse geocoding coordinates:', error);
+
+      // Analytics: Track search error but still set location
+      trackEvent('call_coordinates_search_failed', {
+        timestamp: new Date().toISOString(),
+        reason: 'network_error',
+        latitude,
+        longitude,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        locationStillSet: true,
+      });
 
       // Even if geocoding fails, still set the location on the map
       const newLocation = {
@@ -779,7 +959,7 @@ export default function NewCall() {
                   name="name"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <Input>
-                      <InputField placeholder={t('calls.name_placeholder')} value={value} onChangeText={onChange} onBlur={onBlur} />
+                      <InputField testID="name-input" placeholder={t('calls.name_placeholder')} value={value} onChangeText={onChange} onBlur={onBlur} />
                     </Input>
                   )}
                 />
@@ -801,7 +981,7 @@ export default function NewCall() {
                   name="nature"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <Textarea>
-                      <TextareaInput value={value} onChangeText={onChange} onBlur={onBlur} numberOfLines={4} placeholder={t('calls.nature_placeholder')} />
+                      <TextareaInput testID="nature-input" value={value} onChangeText={onChange} onBlur={onBlur} numberOfLines={4} placeholder={t('calls.nature_placeholder')} />
                     </Textarea>
                   )}
                 />
@@ -996,7 +1176,7 @@ export default function NewCall() {
                 {selectedLocation ? (
                   <LocationPicker initialLocation={selectedLocation} onLocationSelected={handleLocationSelected} height={200} />
                 ) : (
-                  <Button onPress={() => setShowLocationPicker(true)} className="w-full">
+                  <Button testID="open-location-picker-button" onPress={() => setShowLocationPicker(true)} className="w-full">
                     <ButtonText>{t('calls.select_location')}</ButtonText>
                   </Button>
                 )}
@@ -1039,7 +1219,7 @@ export default function NewCall() {
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
               <Text className="mb-4 text-lg font-semibold">{t('calls.dispatch_to')}</Text>
-              <Button onPress={() => setShowDispatchModal(true)} className="w-full">
+              <Button testID="open-dispatch-modal-button" onPress={() => setShowDispatchModal(true)} className="w-full">
                 <ButtonText>{getDispatchSummary()}</ButtonText>
               </Button>
             </Card>
@@ -1048,7 +1228,7 @@ export default function NewCall() {
               <Button className="mr-10 flex-1" variant="outline" onPress={() => router.back()}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button className="ml-10 flex-1" variant="solid" action="primary" onPress={handleSubmit(onSubmit)}>
+              <Button testID="create-call-button" className="ml-10 flex-1" variant="solid" action="primary" onPress={handleSubmit(onSubmit)}>
                 <PlusIcon size={18} className="mr-2" />
                 <ButtonText>{t('calls.create')}</ButtonText>
               </Button>

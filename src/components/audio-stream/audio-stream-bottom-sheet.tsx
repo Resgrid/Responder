@@ -1,9 +1,11 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Loader, Volume2, VolumeX } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui/text';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
@@ -15,8 +17,24 @@ import { VStack } from '../ui/vstack';
 export const AudioStreamBottomSheet = () => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const { trackEvent } = useAnalytics();
 
   const { isBottomSheetVisible, setIsBottomSheetVisible, availableStreams, currentStream, isLoadingStreams, isPlaying, isLoading, isBuffering, fetchAvailableStreams, playStream, stopStream } = useAudioStreamStore();
+
+  // Analytics: Track when the audio stream bottom sheet is viewed
+  useFocusEffect(
+    useCallback(() => {
+      if (isBottomSheetVisible) {
+        trackEvent('audio_stream_bottom_sheet_viewed', {
+          timestamp: new Date().toISOString(),
+          availableStreamsCount: availableStreams.length,
+          hasCurrentStream: !!currentStream,
+          currentStreamId: currentStream?.Id || '',
+          isPlaying,
+        });
+      }
+    }, [trackEvent, isBottomSheetVisible, availableStreams.length, currentStream, isPlaying])
+  );
 
   useEffect(() => {
     // Fetch available streams when bottom sheet opens
@@ -29,20 +47,46 @@ export const AudioStreamBottomSheet = () => {
     async (streamId: string) => {
       try {
         if (streamId === 'none') {
+          // Analytics: Track stream stop
+          trackEvent('audio_stream_stopped', {
+            timestamp: new Date().toISOString(),
+            previousStreamId: currentStream?.Id || '',
+            previousStreamName: currentStream?.Name || '',
+            stopMethod: 'manual_selection',
+          });
+
           // Stop current stream
           await stopStream();
         } else {
           // Find and play the selected stream
           const selectedStream = availableStreams.find((s) => s.Id === streamId);
           if (selectedStream) {
+            // Analytics: Track stream start
+            trackEvent('audio_stream_started', {
+              timestamp: new Date().toISOString(),
+              streamId: selectedStream.Id,
+              streamName: selectedStream.Name,
+              streamType: selectedStream.Type || '',
+              previousStreamId: currentStream?.Id || '',
+              selectionMethod: 'dropdown',
+            });
+
             await playStream(selectedStream);
           }
         }
       } catch (error) {
+        // Analytics: Track stream selection error
+        trackEvent('audio_stream_selection_error', {
+          timestamp: new Date().toISOString(),
+          streamId: streamId === 'none' ? '' : streamId,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          actionType: streamId === 'none' ? 'stop' : 'start',
+        });
+
         console.error('Failed to handle stream selection:', error);
       }
     },
-    [availableStreams, stopStream, playStream]
+    [availableStreams, stopStream, playStream, trackEvent, currentStream]
   );
 
   const getCurrentStreamValue = () => {
@@ -160,12 +204,36 @@ export const AudioStreamBottomSheet = () => {
           {/* Action Buttons */}
           <VStack space="sm">
             {!isLoadingStreams && availableStreams.length === 0 ? (
-              <Button onPress={fetchAvailableStreams} variant="outline">
+              <Button
+                onPress={() => {
+                  // Analytics: Track refresh streams action
+                  trackEvent('audio_stream_refresh_clicked', {
+                    timestamp: new Date().toISOString(),
+                    previousStreamsCount: availableStreams.length,
+                  });
+
+                  fetchAvailableStreams();
+                }}
+                variant="outline"
+              >
                 <ButtonText>{t('audio_streams.refresh_streams')}</ButtonText>
               </Button>
             ) : null}
 
-            <Button onPress={() => setIsBottomSheetVisible(false)} variant="outline">
+            <Button
+              onPress={() => {
+                // Analytics: Track bottom sheet close
+                trackEvent('audio_stream_bottom_sheet_closed', {
+                  timestamp: new Date().toISOString(),
+                  hasCurrentStream: !!currentStream,
+                  isPlaying,
+                  timeSpent: Date.now(), // This could be improved with actual time tracking
+                });
+
+                setIsBottomSheetVisible(false);
+              }}
+              variant="outline"
+            >
               <ButtonText>{t('common.close')}</ButtonText>
             </Button>
           </VStack>

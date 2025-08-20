@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
 import { useMessagesStore } from '@/stores/messages/store';
 import { useSecurityStore } from '@/stores/security/store';
@@ -34,7 +35,7 @@ jest.mock('@/components/common/zero-state', () => ({
 }));
 
 jest.mock('@/components/messages/message-card', () => ({
-  MessageCard: ({ message, onPress }: { message: MessageResultData; onPress: (message: MessageResultData) => void }) => {
+  MessageCard: ({ message, onPress, onLongPress }: { message: MessageResultData; onPress: (message: MessageResultData) => void; onLongPress: (message: MessageResultData) => void }) => {
     const React = require('react');
     const { Pressable, Text } = require('react-native');
 
@@ -43,6 +44,7 @@ jest.mock('@/components/messages/message-card', () => ({
       {
         testID: `message-card-${message.MessageId}`,
         onPress: () => onPress(message),
+        onLongPress: () => onLongPress(message),
       },
       React.createElement(Text, {}, message.Subject),
       React.createElement(Text, {}, `From: ${message.SendingName}`)
@@ -89,6 +91,11 @@ jest.mock('@/stores/messages/store', () => ({
 // Mock security store
 jest.mock('@/stores/security/store', () => ({
   useSecurityStore: jest.fn(),
+}));
+
+// Mock analytics hook
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: jest.fn(),
 }));
 
 // Mock other modules
@@ -314,12 +321,36 @@ jest.mock('@/components/ui/actionsheet', () => ({
 
 // Mock lucide icons
 jest.mock('lucide-react-native', () => ({
-  ChevronDown: () => 'ChevronDown',
-  Mail: () => 'Mail',
-  Menu: () => 'Menu',
-  MessageSquarePlus: () => 'MessageSquarePlus',
-  Trash2: () => 'Trash2',
-  X: () => 'X',
+  ChevronDown: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, { testID: 'chevron-down-icon' }, 'ChevronDown');
+  },
+  Mail: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, { testID: 'mail-icon' }, 'Mail');
+  },
+  Menu: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, { testID: 'menu-icon' }, 'Menu');
+  },
+  MessageSquarePlus: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, { testID: 'message-square-plus-icon' }, 'MessageSquarePlus');
+  },
+  Trash2: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, { testID: 'trash2-icon' }, 'Trash2');
+  },
+  X: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, { testID: 'x-icon' }, 'X');
+  },
 }));
 
 // Test data
@@ -387,6 +418,7 @@ const mockStore = {
 
 const mockedUseMessagesStore = useMessagesStore as jest.MockedFunction<typeof useMessagesStore>;
 const mockedUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 // Add getState method to the mocked store
 (mockedUseMessagesStore as any).getState = jest.fn(() => mockStore);
 
@@ -402,10 +434,15 @@ const mockSecurityStore = {
 };
 
 describe('MessagesScreen', () => {
+  const mockTrackEvent = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockedUseMessagesStore.mockReturnValue(mockStore);
     mockedUseSecurityStore.mockReturnValue(mockSecurityStore);
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
   });
 
   it('renders the messages screen correctly', () => {
@@ -633,6 +670,180 @@ describe('MessagesScreen', () => {
 
       // Button should be hidden when permissions are undefined (safe default)
       expect(screen.queryByText('Send First Message')).toBeNull();
+    });
+  });
+
+  describe('Analytics Tracking', () => {
+    it('tracks messages view on mount', () => {
+      render(<MessagesScreen />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('messages_viewed', {
+        timestamp: expect.any(String),
+        currentFilter: 'inbox',
+        messageCount: 2,
+      });
+    });
+
+    it('tracks message selection', () => {
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      const messageCard = screen.getByTestId('message-card-1');
+      fireEvent.press(messageCard);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('message_selected', {
+        timestamp: expect.any(String),
+        messageId: '1',
+        messageType: '0',
+      });
+    });
+
+    it('tracks compose opened from FAB', () => {
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      const composeFab = screen.getByTestId('messages-compose-fab');
+      fireEvent.press(composeFab);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('message_compose_opened', {
+        timestamp: expect.any(String),
+        source: 'fab',
+      });
+    });
+
+    it('tracks compose opened from zero state', () => {
+      mockedUseMessagesStore.mockReturnValue({
+        ...mockStore,
+        getFilteredMessages: jest.fn(() => []),
+      });
+
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      const sendFirstMessageButton = screen.getByText('Send First Message');
+      fireEvent.press(sendFirstMessageButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('message_compose_opened', {
+        timestamp: expect.any(String),
+        source: 'zero_state',
+      });
+    });
+
+    it('tracks search operations', () => {
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      const searchInput = screen.getByPlaceholderText('Search messages...');
+      fireEvent.changeText(searchInput, 'test query');
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('messages_searched', {
+        timestamp: expect.any(String),
+        searchLength: 10,
+        currentFilter: 'inbox',
+      });
+    });
+
+    it('tracks filter changes', () => {
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      // Open filter menu
+      const filterButton = screen.getByTestId('messages-filter-button');
+      fireEvent.press(filterButton);
+
+      // Find and press the "All Messages" filter option
+      const allMessagesOption = screen.getByText('All Messages');
+      fireEvent.press(allMessagesOption);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('messages_filter_changed', {
+        timestamp: expect.any(String),
+        fromFilter: 'inbox',
+        toFilter: 'all',
+      });
+    });
+
+    it('tracks refresh operations', () => {
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      // Simulate pull to refresh
+      const messagesList = screen.getByTestId('messages-list');
+      fireEvent(messagesList, 'refresh');
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('messages_refreshed', {
+        timestamp: expect.any(String),
+        currentFilter: 'inbox',
+      });
+    });
+
+    it('tracks retry button press', () => {
+      mockedUseMessagesStore.mockReturnValue({
+        ...mockStore,
+        error: 'Network error',
+      });
+
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      const retryButton = screen.getByText('Retry');
+      fireEvent.press(retryButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('messages_retry_pressed', {
+        timestamp: expect.any(String),
+        currentFilter: 'inbox',
+      });
+    });
+
+    it('tracks selection mode entry', () => {
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      // Simulate long press on a message to enter selection mode
+      const messageCard = screen.getByTestId('message-card-1');
+      fireEvent(messageCard, 'longPress');
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('message_selection_mode_entered', {
+        timestamp: expect.any(String),
+        messageId: '1',
+      });
+    });
+
+    it('tracks selection mode exit', () => {
+      render(<MessagesScreen />);
+
+      // Clear the view tracking call
+      mockTrackEvent.mockClear();
+
+      // First enter selection mode by long pressing a message
+      const messageCard = screen.getByTestId('message-card-1');
+      fireEvent(messageCard, 'longPress');
+
+      // Clear the selection mode entry tracking call
+      mockTrackEvent.mockClear();
+
+      // Exit selection mode by pressing X button
+      const exitButton = screen.getByTestId('messages-exit-selection-mode');
+      fireEvent.press(exitButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('message_selection_mode_exited', {
+        timestamp: expect.any(String),
+      });
     });
   });
 });

@@ -1,5 +1,5 @@
 import { Asset } from 'expo-asset';
-import { Audio, type AVPlaybackSource, InterruptionModeIOS } from 'expo-av';
+import { Audio, type AVPlaybackSource, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 import { Platform } from 'react-native';
 
 import { logger } from '@/lib/logging';
@@ -42,6 +42,7 @@ class AudioService {
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: true,
         interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
       });
 
       // Pre-load audio assets for production builds

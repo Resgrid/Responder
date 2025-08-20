@@ -1,7 +1,8 @@
+import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { CameraIcon, ChevronLeftIcon, ChevronRightIcon, ImageIcon, PlusIcon, XIcon } from 'lucide-react-native';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, FlatList, Platform, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -9,6 +10,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import { Image } from '@/components/ui/image';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib';
 import { type CallFileResultData } from '@/models/v4/callFiles/callFileResultData';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
@@ -31,6 +33,7 @@ const { width } = Dimensions.get('window');
 
 const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [newImageName, setNewImageName] = useState('');
@@ -39,6 +42,9 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList>(null);
 
+  // Track if modal was actually opened to avoid false close events
+  const wasModalOpenRef = useRef(false);
+
   const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage } = useCallDetailStore();
 
   // Filter valid images and memoize to prevent re-filtering on every render
@@ -46,6 +52,28 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     if (!callImages) return [];
     return callImages.filter((item) => item && (item.Data?.trim() || item.Url?.trim()));
   }, [callImages]);
+
+  // Track analytics when modal becomes visible
+  useFocusEffect(
+    useCallback(() => {
+      if (isOpen) {
+        wasModalOpenRef.current = true;
+        try {
+          trackEvent('call_images_modal_viewed', {
+            timestamp: new Date().toISOString(),
+            callId,
+            imageCount: validImages.length,
+            hasImages: Boolean(validImages.length),
+            isLoading: isLoadingImages,
+            hasError: Boolean(errorImages),
+          });
+        } catch (error) {
+          // Analytics errors should not break the component
+          console.warn('Failed to track call images modal analytics:', error);
+        }
+      }
+    }, [isOpen, trackEvent, callId, validImages.length, isLoadingImages, errorImages])
+  );
 
   useEffect(() => {
     if (isOpen && callId) {
@@ -97,6 +125,18 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     if (!selectedImage) return;
 
     setIsUploading(true);
+
+    // Track upload attempt
+    try {
+      trackEvent('call_images_upload_attempted', {
+        timestamp: new Date().toISOString(),
+        callId,
+        imageName: newImageName || t('callImages.default_name'),
+      });
+    } catch (error) {
+      console.warn('Failed to track image upload attempt analytics:', error);
+    }
+
     try {
       const base64Image = await FileSystem.readAsStringAsync(selectedImage, {
         encoding: FileSystem.EncodingType.Base64,
@@ -111,11 +151,37 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
         null, //lon
         base64Image
       );
+
+      // Track successful upload
+      try {
+        trackEvent('call_images_upload_completed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          imageName: newImageName || t('callImages.default_name'),
+          success: true,
+        });
+      } catch (error) {
+        console.warn('Failed to track image upload completion analytics:', error);
+      }
+
       setSelectedImage(null);
       setNewImageName('');
       setIsAddingImage(false);
     } catch (error) {
       console.error('Error uploading image:', error);
+
+      // Track failed upload
+      try {
+        trackEvent('call_images_upload_completed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          imageName: newImageName || t('callImages.default_name'),
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      } catch (analyticsError) {
+        console.warn('Failed to track image upload failure analytics:', analyticsError);
+      }
     } finally {
       setIsUploading(false);
     }
@@ -124,6 +190,18 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const handleImageError = (itemId: string, errorInfo?: any) => {
     console.log(`Image loading failed for ${itemId}:`, errorInfo);
     setImageErrors((prev) => new Set([...prev, itemId]));
+
+    // Track image loading errors
+    try {
+      trackEvent('call_images_load_error', {
+        timestamp: new Date().toISOString(),
+        callId,
+        imageId: itemId,
+        error: errorInfo?.error?.message || 'Image failed to load',
+      });
+    } catch (error) {
+      console.warn('Failed to track image load error analytics:', error);
+    }
   };
 
   // Helper function to test if URL is accessible
@@ -220,6 +298,21 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const handlePrevious = () => {
     const newIndex = Math.max(0, activeIndex - 1);
     setActiveIndex(newIndex);
+
+    // Track navigation analytics
+    try {
+      trackEvent('call_images_navigation', {
+        timestamp: new Date().toISOString(),
+        callId,
+        direction: 'previous',
+        fromIndex: activeIndex,
+        toIndex: newIndex,
+        totalImages: validImages.length,
+      });
+    } catch (error) {
+      console.warn('Failed to track image navigation analytics:', error);
+    }
+
     try {
       flatListRef.current?.scrollToIndex({
         index: newIndex,
@@ -233,6 +326,21 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const handleNext = () => {
     const newIndex = Math.min(validImages.length - 1, activeIndex + 1);
     setActiveIndex(newIndex);
+
+    // Track navigation analytics
+    try {
+      trackEvent('call_images_navigation', {
+        timestamp: new Date().toISOString(),
+        callId,
+        direction: 'next',
+        fromIndex: activeIndex,
+        toIndex: newIndex,
+        totalImages: validImages.length,
+      });
+    } catch (error) {
+      console.warn('Failed to track image navigation analytics:', error);
+    }
+
     try {
       flatListRef.current?.scrollToIndex({
         index: newIndex,
@@ -242,6 +350,26 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       console.warn('Error scrolling to next image:', error);
     }
   };
+
+  // Handle modal close with analytics tracking
+  const handleClose = useCallback(() => {
+    // Only track close analytics if modal was actually opened
+    if (wasModalOpenRef.current) {
+      try {
+        trackEvent('call_images_modal_closed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          wasManualClose: true,
+          currentImageIndex: activeIndex,
+          totalImages: validImages.length,
+        });
+      } catch (error) {
+        console.warn('Failed to track call images modal close analytics:', error);
+      }
+      wasModalOpenRef.current = false;
+    }
+    onClose();
+  }, [onClose, trackEvent, callId, activeIndex, validImages.length]);
 
   const renderPagination = () => {
     if (!validImages || validImages.length <= 1) return null;
@@ -383,7 +511,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   };
 
   return (
-    <Actionsheet isOpen={isOpen} onClose={onClose} snapPoints={[67]}>
+    <Actionsheet isOpen={isOpen} onClose={handleClose} snapPoints={[67]}>
       <ActionsheetBackdrop />
       <ActionsheetContent className="rounded-t-3x bg-white dark:bg-gray-800">
         <ActionsheetDragIndicatorWrapper>

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { AlertCircle, Bell, MailIcon, MessageCircle, Phone, Users } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, ButtonText } from '@/components/ui/button';
@@ -20,7 +20,7 @@ interface NotificationIconProps {
 const NotificationIcon = ({ type }: { type: NotificationType }) => {
   const iconProps = {
     size: 24,
-    color: '$red500',
+    color: '#EF4444', // Use explicit color instead of token
     testID: 'notification-icon',
   };
 
@@ -42,6 +42,35 @@ export const PushNotificationModal: React.FC = () => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const { isOpen, notification, hideNotificationModal } = usePushNotificationModalStore();
+  const wasModalOpenRef = useRef(false);
+
+  // Track analytics when modal becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!notification) return;
+
+    try {
+      trackEvent('push_notification_modal_viewed', {
+        type: notification.type,
+        id: notification.id,
+        eventCode: notification.eventCode,
+        timestamp: new Date().toISOString(),
+        hasTitle: !!notification.title,
+        hasBody: !!notification.body,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track push notification modal view analytics:', error);
+    }
+  }, [trackEvent, notification]);
+
+  useEffect(() => {
+    if (isOpen && !wasModalOpenRef.current && notification) {
+      wasModalOpenRef.current = true;
+      trackViewAnalytics();
+    } else if (!isOpen) {
+      wasModalOpenRef.current = false;
+    }
+  }, [isOpen, notification, trackViewAnalytics]);
 
   const handleClose = () => {
     if (notification) {

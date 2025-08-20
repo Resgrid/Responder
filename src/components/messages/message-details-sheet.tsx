@@ -1,8 +1,9 @@
 import { Check, Clock, Mail, MailOpen, Reply, Trash2, User, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, useWindowDimensions } from 'react-native';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useMessagesStore } from '@/stores/messages/store';
 
@@ -23,14 +24,13 @@ export const MessageDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const { trackEvent } = useAnalytics();
 
   const [isResponding, setIsResponding] = useState(false);
   const [responseText, setResponseText] = useState('');
   const [responseNote, setResponseNote] = useState('');
 
   const { selectedMessage, isDetailsOpen, isLoading, closeDetails, deleteMessages, respondToMessage } = useMessagesStore();
-
-  if (!selectedMessage) return null;
 
   const formatMessageDate = (dateString: string) => {
     if (!dateString) return t('messages.date_unknown');
@@ -42,18 +42,21 @@ export const MessageDetailsSheet: React.FC = () => {
     }
   };
 
-  const getMessageTypeLabel = (type: number) => {
-    switch (type) {
-      case 0:
-        return t('messages.types.message');
-      case 1:
-        return t('messages.types.poll');
-      case 2:
-        return t('messages.types.alert');
-      default:
-        return t('messages.types.message');
-    }
-  };
+  const getMessageTypeLabel = useCallback(
+    (type: number) => {
+      switch (type) {
+        case 0:
+          return t('messages.types.message');
+        case 1:
+          return t('messages.types.poll');
+        case 2:
+          return t('messages.types.alert');
+        default:
+          return t('messages.types.message');
+      }
+    },
+    [t]
+  );
 
   const getMessageTypeBadgeColor = (type: number) => {
     switch (type) {
@@ -68,16 +71,80 @@ export const MessageDetailsSheet: React.FC = () => {
     }
   };
 
+  // Track analytics when sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedMessage) return;
+
+    try {
+      const hasRecipients = selectedMessage.Recipients && selectedMessage.Recipients.length > 0;
+      const hasResponsedRecipients = hasRecipients && selectedMessage.Recipients.some((r) => r.RespondedOn);
+      const hasExpiration = !!selectedMessage.ExpiredOn;
+      const isExpired = hasExpiration && new Date(selectedMessage.ExpiredOn) < new Date();
+      const canRespond = !selectedMessage.Responded && !isExpired && selectedMessage.Type !== 0;
+
+      trackEvent('message_details_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        messageId: selectedMessage.MessageId,
+        messageType: selectedMessage.Type,
+        messageTypeLabel: getMessageTypeLabel(selectedMessage.Type),
+        hasSubject: !!selectedMessage.Subject,
+        hasBody: !!selectedMessage.Body,
+        hasExpiration,
+        isExpired,
+        hasRecipients,
+        recipientCount: selectedMessage.Recipients?.length || 0,
+        hasResponsedRecipients,
+        isSystemMessage: selectedMessage.IsSystem,
+        userHasResponded: selectedMessage.Responded,
+        canRespond,
+        sendingUserId: selectedMessage.SendingUserId,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track message details sheet view analytics:', error);
+    }
+  }, [trackEvent, selectedMessage, getMessageTypeLabel]);
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isDetailsOpen && selectedMessage) {
+      trackViewAnalytics();
+    }
+  }, [isDetailsOpen, selectedMessage, trackViewAnalytics]);
+
+  if (!selectedMessage) return null;
+
   const handleDelete = () => {
     Alert.alert(t('messages.delete_confirmation_title'), t('messages.delete_single_confirmation_message'), [
       {
         text: t('common.cancel'),
         style: 'cancel',
+        onPress: () => {
+          try {
+            trackEvent('message_details_delete_cancelled', {
+              timestamp: new Date().toISOString(),
+              messageId: selectedMessage.MessageId,
+              messageType: selectedMessage.Type,
+            });
+          } catch (error) {
+            console.warn('Failed to track message delete cancel analytics:', error);
+          }
+        },
       },
       {
         text: t('common.confirm'),
         style: 'destructive',
         onPress: async () => {
+          try {
+            trackEvent('message_details_delete_confirmed', {
+              timestamp: new Date().toISOString(),
+              messageId: selectedMessage.MessageId,
+              messageType: selectedMessage.Type,
+              messageTypeLabel: getMessageTypeLabel(selectedMessage.Type),
+            });
+          } catch (error) {
+            console.warn('Failed to track message delete confirm analytics:', error);
+          }
           await deleteMessages([selectedMessage.MessageId]);
           closeDetails();
         },
@@ -89,6 +156,19 @@ export const MessageDetailsSheet: React.FC = () => {
     if (!responseText.trim()) {
       Alert.alert(t('messages.error'), t('messages.response_required'));
       return;
+    }
+
+    try {
+      trackEvent('message_details_response_sent', {
+        timestamp: new Date().toISOString(),
+        messageId: selectedMessage.MessageId,
+        messageType: selectedMessage.Type,
+        messageTypeLabel: getMessageTypeLabel(selectedMessage.Type),
+        hasNote: !!responseNote.trim(),
+        responseLength: responseText.trim().length,
+      });
+    } catch (error) {
+      console.warn('Failed to track message response analytics:', error);
     }
 
     try {
@@ -132,7 +212,22 @@ export const MessageDetailsSheet: React.FC = () => {
 
             <HStack space="sm" className="items-center">
               {canRespond && !isResponding && (
-                <Pressable className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900" onPress={() => setIsResponding(true)}>
+                <Pressable
+                  className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900"
+                  onPress={() => {
+                    try {
+                      trackEvent('message_details_respond_started', {
+                        timestamp: new Date().toISOString(),
+                        messageId: selectedMessage.MessageId,
+                        messageType: selectedMessage.Type,
+                        messageTypeLabel: getMessageTypeLabel(selectedMessage.Type),
+                      });
+                    } catch (error) {
+                      console.warn('Failed to track message respond start analytics:', error);
+                    }
+                    setIsResponding(true);
+                  }}
+                >
                   <Reply size={20} color="#3B82F6" />
                 </Pressable>
               )}
@@ -255,6 +350,18 @@ export const MessageDetailsSheet: React.FC = () => {
                     <Button
                       variant="outline"
                       onPress={() => {
+                        try {
+                          trackEvent('message_details_respond_cancelled', {
+                            timestamp: new Date().toISOString(),
+                            messageId: selectedMessage.MessageId,
+                            messageType: selectedMessage.Type,
+                            messageTypeLabel: getMessageTypeLabel(selectedMessage.Type),
+                            hadResponse: !!responseText.trim(),
+                            hadNote: !!responseNote.trim(),
+                          });
+                        } catch (error) {
+                          console.warn('Failed to track message respond cancel analytics:', error);
+                        }
                         setIsResponding(false);
                         setResponseText('');
                         setResponseNote('');

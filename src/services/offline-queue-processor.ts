@@ -114,15 +114,15 @@ export class OfflineQueueProcessor {
 
   public async startBackgroundProcessing(): Promise<void> {
     try {
-      // Register background task if not already registered
+      // Task is already defined at module level, just verify it's registered
       const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(QUEUE_PROCESSOR_TASK_NAME);
       if (!isTaskRegistered) {
-        await TaskManager.defineTask(QUEUE_PROCESSOR_TASK_NAME, async () => {
-          await this.processQueue();
+        logger.warn({
+          message: 'Background task not registered, this should not happen as it is defined at module level',
         });
-
+      } else {
         logger.info({
-          message: 'Background queue processor task registered',
+          message: 'Background queue processor task is registered and ready',
         });
       }
 
@@ -331,12 +331,29 @@ export class OfflineQueueProcessor {
       this.networkUnsubscribe = null;
     }
 
-    // Unregister background task
-    TaskManager.isTaskRegisteredAsync(QUEUE_PROCESSOR_TASK_NAME).then((isRegistered) => {
-      if (isRegistered) {
-        TaskManager.unregisterTaskAsync(QUEUE_PROCESSOR_TASK_NAME);
+    // Unregister background task with proper error handling
+    (async () => {
+      try {
+        const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(QUEUE_PROCESSOR_TASK_NAME);
+        if (isTaskRegistered) {
+          await TaskManager.unregisterTaskAsync(QUEUE_PROCESSOR_TASK_NAME);
+          logger.info({
+            message: 'Successfully unregistered background task',
+            context: { taskName: QUEUE_PROCESSOR_TASK_NAME },
+          });
+        } else {
+          logger.debug({
+            message: 'Background task was not registered, no need to unregister',
+            context: { taskName: QUEUE_PROCESSOR_TASK_NAME },
+          });
+        }
+      } catch (error) {
+        logger.error({
+          message: 'Failed to unregister background task during cleanup',
+          context: { taskName: QUEUE_PROCESSOR_TASK_NAME, error },
+        });
       }
-    });
+    })();
 
     logger.info({
       message: 'Offline queue processor cleaned up',

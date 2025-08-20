@@ -99,7 +99,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
 
   const renderDay = (date: Date | null, index: number) => {
     if (!date) {
-      return <View key={index} className="flex-1 h-10 items-center justify-center rounded-lg my-0.5" />;
+      return <View key={index} className="my-0.5 h-10 flex-1 items-center justify-center rounded-lg" />;
     }
 
     const hasEvents = hasEventsOnDate(date);

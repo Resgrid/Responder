@@ -5,6 +5,21 @@ import { Alert } from 'react-native';
 
 import { CallFilesModal } from '../call-files-modal';
 
+// Mock analytics hook
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
+
+// Mock navigation hooks
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((callback: () => void) => {
+    callback();
+  }),
+}));
+
 // Mock the zustand store
 const mockFetchCallFiles = jest.fn();
 const defaultMockFiles = [
@@ -603,6 +618,256 @@ describe('CallFilesModal', () => {
       // Should display formatted dates (exact format may vary by locale)
       const timestampElements = getAllByText(/1\/15\/2023/);
       expect(timestampElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Analytics Tracking', () => {
+    beforeEach(() => {
+      // Reset to default state
+      mockStoreState = {
+        callFiles: defaultMockFiles,
+        isLoadingFiles: false,
+        errorFiles: null,
+        fetchCallFiles: mockFetchCallFiles,
+      };
+    });
+
+    it('tracks modal view analytics when opened', () => {
+      render(<CallFilesModal {...defaultProps} isOpen={true} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_modal_viewed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        fileCount: 2,
+        hasFiles: true,
+        isLoading: false,
+        hasError: false,
+      });
+    });
+
+    it('tracks modal view analytics with no files', () => {
+      mockStoreState = {
+        callFiles: [],
+        isLoadingFiles: false,
+        errorFiles: null,
+        fetchCallFiles: mockFetchCallFiles,
+      };
+
+      render(<CallFilesModal {...defaultProps} isOpen={true} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_modal_viewed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        fileCount: 0,
+        hasFiles: false,
+        isLoading: false,
+        hasError: false,
+      });
+    });
+
+    it('tracks modal view analytics with loading state', () => {
+      mockStoreState = {
+        callFiles: null,
+        isLoadingFiles: true,
+        errorFiles: null,
+        fetchCallFiles: mockFetchCallFiles,
+      };
+
+      render(<CallFilesModal {...defaultProps} isOpen={true} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_modal_viewed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        fileCount: 0,
+        hasFiles: false,
+        isLoading: true,
+        hasError: false,
+      });
+    });
+
+    it('tracks modal view analytics with error state', () => {
+      mockStoreState = {
+        callFiles: [],
+        isLoadingFiles: false,
+        errorFiles: 'Network error',
+        fetchCallFiles: mockFetchCallFiles,
+      };
+
+      render(<CallFilesModal {...defaultProps} isOpen={true} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_modal_viewed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        fileCount: 0,
+        hasFiles: false,
+        isLoading: false,
+        hasError: true,
+      });
+    });
+
+    it('does not track analytics when modal is closed', () => {
+      render(<CallFilesModal {...defaultProps} isOpen={false} />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('tracks close button analytics', () => {
+      const { getByTestId } = render(
+        <CallFilesModal {...defaultProps} isOpen={true} />
+      );
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const closeButton = getByTestId('close-button');
+      fireEvent.press(closeButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_modal_closed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        wasManualClose: true,
+      });
+    });
+
+    it('tracks retry button analytics', () => {
+      mockStoreState = {
+        callFiles: [],
+        isLoadingFiles: false,
+        errorFiles: 'Network error occurred',
+        fetchCallFiles: mockFetchCallFiles,
+      };
+
+      const { getByText } = render(
+        <CallFilesModal {...defaultProps} isOpen={true} />
+      );
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const retryButton = getByText('Retry');
+      fireEvent.press(retryButton);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_retry_pressed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        error: 'Network error occurred',
+      });
+    });
+
+    it('tracks file download start analytics', async () => {
+      const { getByTestId } = render(
+        <CallFilesModal {...defaultProps} isOpen={true} />
+      );
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const fileItem = getByTestId('file-item-file-1');
+      fireEvent.press(fileItem);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_file_download_started', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        fileId: 'file-1',
+        fileName: 'test-document.pdf',
+        fileSize: 1024576,
+        mimeType: 'application/pdf',
+      });
+    });
+
+    it('tracks file download completion analytics', async () => {
+      const mockGetCallAttachmentFile = require('@/api/calls/callFiles').getCallAttachmentFile;
+      const mockWriteAsStringAsync = require('expo-file-system').writeAsStringAsync;
+      const mockShareAsync = require('expo-sharing').shareAsync;
+
+      const { getByTestId } = render(
+        <CallFilesModal {...defaultProps} isOpen={true} />
+      );
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const fileItem = getByTestId('file-item-file-1');
+      fireEvent.press(fileItem);
+
+      // Wait for download to complete
+      await waitFor(() => {
+        expect(mockWriteAsStringAsync).toHaveBeenCalled();
+      }, { timeout: 2000 });
+
+      await waitFor(() => {
+        expect(mockShareAsync).toHaveBeenCalled();
+      }, { timeout: 2000 });
+
+      // Check for completion analytics
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_file_download_completed', {
+        timestamp: expect.any(String),
+        callId: 'test-call-123',
+        fileId: 'file-1',
+        fileName: 'test-document.pdf',
+        fileSize: 1024576,
+        mimeType: 'application/pdf',
+        wasShared: true,
+      });
+    });
+
+    it('tracks file download failure analytics', async () => {
+      const mockGetCallAttachmentFile = require('@/api/calls/callFiles').getCallAttachmentFile;
+      mockGetCallAttachmentFile.mockRejectedValueOnce(new Error('Download failed'));
+
+      const { getByTestId } = render(
+        <CallFilesModal {...defaultProps} isOpen={true} />
+      );
+
+      // Clear the initial view analytics call
+      mockTrackEvent.mockClear();
+
+      const fileItem = getByTestId('file-item-file-1');
+      fireEvent.press(fileItem);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('call_file_download_failed', {
+          timestamp: expect.any(String),
+          callId: 'test-call-123',
+          fileId: 'file-1',
+          fileName: 'test-document.pdf',
+          error: 'Download failed',
+        });
+      });
+    });
+
+    it('handles analytics errors gracefully', () => {
+      // Mock console.warn to suppress the expected warning
+      const originalWarn = console.warn;
+      console.warn = jest.fn();
+
+      // Mock trackEvent to throw an error
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('Analytics error');
+      });
+
+      // Should not throw an error when rendering
+      expect(() => {
+        render(<CallFilesModal {...defaultProps} isOpen={true} />);
+      }).not.toThrow();
+
+      expect(console.warn).toHaveBeenCalledWith('Failed to track call files modal analytics:', expect.any(Error));
+
+      // Restore original console.warn
+      console.warn = originalWarn;
+    });
+
+    it('tracks correct timestamp format', () => {
+      const mockDate = new Date('2024-01-15T10:00:00Z');
+      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+
+      render(<CallFilesModal {...defaultProps} isOpen={true} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_modal_viewed', expect.objectContaining({
+        timestamp: '2024-01-15T10:00:00.000Z',
+      }));
+
+      jest.restoreAllMocks();
     });
   });
 });

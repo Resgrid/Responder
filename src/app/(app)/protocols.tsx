@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { FileText, Search, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,16 +12,27 @@ import { FocusAwareStatusBar } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { View } from '@/components/ui/view';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useProtocolsStore } from '@/stores/protocols/store';
 
 export default function Protocols() {
   const { t } = useTranslation();
   const { protocols, searchQuery, setSearchQuery, selectProtocol, isLoading, fetchProtocols } = useProtocolsStore();
+  const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
     fetchProtocols();
   }, [fetchProtocols]);
+
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      trackEvent('protocols_viewed', {
+        timestamp: new Date().toISOString(),
+      });
+    }, [trackEvent])
+  );
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);

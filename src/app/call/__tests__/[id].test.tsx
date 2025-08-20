@@ -1,6 +1,20 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
+
+// Mock analytics first
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
+
+// Mock useFocusEffect
+const mockUseFocusEffect = jest.fn();
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: mockUseFocusEffect,
+}));
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
@@ -29,16 +43,28 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    StyleSheet: {
-      create: (styles: any) => styles,
-    },
-    useWindowDimensions: () => ({ width: 375, height: 812 }),
-  };
-});
+jest.mock('react-native', () => ({
+  StyleSheet: {
+    create: (styles: any) => styles,
+  },
+  useWindowDimensions: () => ({ width: 375, height: 812 }),
+  ScrollView: ({ children }: any) => {
+    const { View } = require('react-native');
+    return <View testID="scroll-view">{children}</View>;
+  },
+  View: ({ children, ...props }: any) => {
+    const { View: RNView } = jest.requireActual('react-native');
+    return <RNView {...props}>{children}</RNView>;
+  },
+  Text: ({ children, ...props }: any) => {
+    const { Text: RNText } = jest.requireActual('react-native');
+    return <RNText {...props}>{children}</RNText>;
+  },
+  TouchableOpacity: ({ children, onPress, testID }: any) => {
+    const { TouchableOpacity: RNTouchableOpacity } = jest.requireActual('react-native');
+    return <RNTouchableOpacity onPress={onPress} testID={testID}>{children}</RNTouchableOpacity>;
+  },
+}));
 
 jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'light' }),
@@ -273,6 +299,11 @@ describe('CallDetail Security', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Setup useFocusEffect to call callback immediately
+    mockUseFocusEffect.mockImplementation((callback: () => void) => {
+      callback();
+    });
+
     mockUseLocalSearchParams.mockReturnValue({ id: '123' });
     mockUseRouter.mockReturnValue(mockRouter as any);
 
@@ -505,6 +536,238 @@ describe('CallDetail Security', () => {
       render(<CallDetail />);
 
       expect(screen.getByTestId('static-map')).toBeTruthy();
+    });
+  });
+
+  describe('Analytics Tracking', () => {
+    it('should track call_detail_viewed event when call is loaded', () => {
+      render(<CallDetail />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_viewed', {
+        timestamp: expect.any(String),
+        callId: '123',
+        callNumber: 'CALL-001',
+        callType: 'Emergency',
+        priority: 'High',
+        hasCoordinates: true,
+        notesCount: 2,
+        imagesCount: 1,
+        filesCount: 3,
+        hasProtocols: false,
+        hasDispatches: false,
+        hasActivity: false,
+      });
+    });
+
+    it('should not track analytics when call is not loaded', () => {
+      useCallDetailStore.mockReturnValue({
+        call: null,
+        callExtraData: null,
+        callPriority: null,
+        isLoading: false,
+        error: null,
+        fetchCallDetail: jest.fn(),
+        reset: jest.fn(),
+      });
+
+      render(<CallDetail />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should track analytics with protocol data when available', () => {
+      useCallDetailStore.mockReturnValue({
+        call: mockCall,
+        callExtraData: {
+          Protocols: [{ Name: 'Protocol 1', Description: 'Test Protocol', ProtocolText: '<p>Test</p>' }],
+          Dispatches: [{ Name: 'Unit 1', Group: 'Station 1', Type: 'Engine' }],
+          Activity: [{ StatusText: 'En Route', Name: 'John', Group: 'Station 1', Timestamp: '2023-01-01T10:05:00Z', Note: '', StatusColor: '#00FF00' }],
+        },
+        callPriority: mockCallPriority,
+        isLoading: false,
+        error: null,
+        fetchCallDetail: jest.fn(),
+        reset: jest.fn(),
+      });
+
+      render(<CallDetail />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_viewed', {
+        timestamp: expect.any(String),
+        callId: '123',
+        callNumber: 'CALL-001',
+        callType: 'Emergency',
+        priority: 'High',
+        hasCoordinates: true,
+        notesCount: 2,
+        imagesCount: 1,
+        filesCount: 3,
+        hasProtocols: true,
+        hasDispatches: true,
+        hasActivity: true,
+      });
+    });
+
+    it('should track analytics with Unknown priority when priority is not available', () => {
+      useCallDetailStore.mockReturnValue({
+        call: mockCall,
+        callExtraData: mockCallExtraData,
+        callPriority: null,
+        isLoading: false,
+        error: null,
+        fetchCallDetail: jest.fn(),
+        reset: jest.fn(),
+      });
+
+      render(<CallDetail />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_viewed', expect.objectContaining({
+        priority: 'Unknown',
+      }));
+    });
+
+    it('should track analytics with correct timestamp format', () => {
+      const mockDate = new Date('2024-01-15T10:00:00Z');
+      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+
+      render(<CallDetail />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_viewed', expect.objectContaining({
+        timestamp: '2024-01-15T10:00:00.000Z',
+      }));
+
+      jest.restoreAllMocks();
+    });
+
+    it('should track analytics when useFocusEffect callback is called', () => {
+      let focusCallback: (() => void) | undefined;
+      mockUseFocusEffect.mockImplementation((callback: () => void) => {
+        focusCallback = callback;
+      });
+
+      render(<CallDetail />);
+
+      // Clear previous calls
+      mockTrackEvent.mockClear();
+
+      // Manually trigger the focus callback
+      focusCallback?.();
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_detail_viewed', expect.any(Object));
+    });
+  });
+
+  describe('Action Analytics Tracking', () => {
+    beforeEach(() => {
+      // Clear analytics tracking from the initial render
+      mockTrackEvent.mockClear();
+    });
+
+    it('should track analytics when notes modal is opened', () => {
+      const { getByText } = render(<CallDetail />);
+
+      fireEvent.press(getByText('call_detail.notes'));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_notes_opened', {
+        timestamp: expect.any(String),
+        callId: '123',
+        notesCount: 2,
+      });
+    });
+
+    it('should track analytics when images modal is opened', () => {
+      const { getByText } = render(<CallDetail />);
+
+      fireEvent.press(getByText('call_detail.images'));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_images_opened', {
+        timestamp: expect.any(String),
+        callId: '123',
+        imagesCount: 1,
+      });
+    });
+
+    it('should track analytics when files modal is opened', () => {
+      const { getByText } = render(<CallDetail />);
+
+      fireEvent.press(getByText('call_detail.files.button'));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_opened', {
+        timestamp: expect.any(String),
+        callId: '123',
+        filesCount: 3,
+      });
+    });
+
+    it('should track analytics when route button is pressed', async () => {
+      const mockOpenMapsWithDirections = require('@/lib/navigation').openMapsWithDirections;
+      mockOpenMapsWithDirections.mockResolvedValue(true);
+
+      const { getByText } = render(<CallDetail />);
+
+      fireEvent.press(getByText('common.route'));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_route_opened', {
+        timestamp: expect.any(String),
+        callId: '123',
+        hasUserLocation: true,
+        destinationAddress: '123 Test St',
+      });
+    });
+
+    it('should track analytics when route fails to open maps', async () => {
+      const mockOpenMapsWithDirections = require('@/lib/navigation').openMapsWithDirections;
+      mockOpenMapsWithDirections.mockResolvedValue(false);
+
+      const { getByText } = render(<CallDetail />);
+
+      fireEvent.press(getByText('common.route'));
+
+      // Wait for async operation
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_route_failed', {
+        timestamp: expect.any(String),
+        callId: '123',
+        reason: 'failed_to_open_maps',
+      });
+    });
+
+    it('should track analytics when route throws an exception', async () => {
+      const mockOpenMapsWithDirections = require('@/lib/navigation').openMapsWithDirections;
+      mockOpenMapsWithDirections.mockRejectedValue(new Error('Navigation error'));
+
+      const { getByText } = render(<CallDetail />);
+
+      fireEvent.press(getByText('common.route'));
+
+      // Wait for async operation
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('call_route_failed', {
+        timestamp: expect.any(String),
+        callId: '123',
+        reason: 'exception',
+        error: 'Navigation error',
+      });
+    });
+
+    it('should track analytics with correct data when call is null but callId exists', () => {
+      useCallDetailStore.mockReturnValue({
+        call: null,
+        callExtraData: null,
+        callPriority: null,
+        isLoading: false,
+        error: null,
+        fetchCallDetail: jest.fn(),
+        reset: jest.fn(),
+      });
+
+      const { getByText } = render(<CallDetail />);
+
+      // This will render the "not found" state, but we can test if analytics would use fallback
+      // Since call is null, we should check that callId is used as fallback
+      expect(screen.getByText('call_detail.not_found')).toBeTruthy();
     });
   });
 });

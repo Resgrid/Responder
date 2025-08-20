@@ -1,5 +1,6 @@
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import { useFocusEffect } from '@react-navigation/native';
 import { SearchIcon, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +8,7 @@ import { Platform, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 
@@ -34,6 +36,7 @@ interface CallNotesModalProps {
 
 const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const [searchQuery, setSearchQuery] = useState('');
   const [newNote, setNewNote] = useState('');
   const { callNotes, addNote, searchNotes, isNotesLoading, fetchCallNotes } = useCallDetailStore();
@@ -43,6 +46,31 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
   // Bottom sheet ref and snap points
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['67%'], []);
+
+  // Track if modal was actually opened to avoid false close events
+  const wasModalOpenRef = useRef(false);
+
+  // Track analytics when modal becomes visible
+  useFocusEffect(
+    useCallback(() => {
+      if (isOpen) {
+        wasModalOpenRef.current = true;
+        try {
+          trackEvent('call_notes_modal_viewed', {
+            timestamp: new Date().toISOString(),
+            callId,
+            noteCount: callNotes?.length || 0,
+            hasNotes: Boolean(callNotes?.length),
+            isLoading: isNotesLoading,
+            hasSearchQuery: searchQuery.trim().length > 0,
+          });
+        } catch (error) {
+          // Analytics errors should not break the component
+          console.warn('Failed to track call notes modal analytics:', error);
+        }
+      }
+    }, [isOpen, trackEvent, callId, callNotes?.length, isNotesLoading, searchQuery])
+  );
 
   // Fetch call notes when modal opens
   useEffect(() => {
@@ -67,24 +95,93 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
       try {
         await addNote(callId, newNote, currentUser, null, null);
         setNewNote('');
+
+        // Track note addition analytics
+        try {
+          trackEvent('call_note_added', {
+            timestamp: new Date().toISOString(),
+            callId,
+            noteLength: newNote.trim().length,
+            userId: currentUser,
+          });
+        } catch (error) {
+          console.warn('Failed to track note addition analytics:', error);
+        }
       } catch (error) {
         console.error('Failed to add note:', error);
       }
     }
-  }, [newNote, callId, currentUser, addNote]);
+  }, [newNote, callId, currentUser, addNote, trackEvent]);
 
   // Handle sheet changes
   const handleSheetChanges = useCallback(
     (index: number) => {
       if (index === -1) {
+        // Only track close analytics if modal was actually opened
+        if (wasModalOpenRef.current) {
+          try {
+            trackEvent('call_notes_modal_closed', {
+              timestamp: new Date().toISOString(),
+              callId,
+              wasManualClose: false, // This means it was closed by gesture
+              noteCount: callNotes?.length || 0,
+              hadSearchQuery: searchQuery.trim().length > 0,
+            });
+          } catch (error) {
+            console.warn('Failed to track call notes modal close analytics:', error);
+          }
+          wasModalOpenRef.current = false;
+        }
         onClose();
       }
     },
-    [onClose]
+    [onClose, trackEvent, callId, callNotes?.length, searchQuery]
   );
 
   // Render backdrop
   const renderBackdrop = useCallback((props: BottomSheetBackdropProps) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />, []);
+
+  // Handle manual close with analytics tracking
+  const handleManualClose = useCallback(() => {
+    // Only track close analytics if modal was actually opened
+    if (wasModalOpenRef.current) {
+      try {
+        trackEvent('call_notes_modal_closed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          wasManualClose: true,
+          noteCount: callNotes?.length || 0,
+          hadSearchQuery: searchQuery.trim().length > 0,
+        });
+      } catch (error) {
+        console.warn('Failed to track call notes modal close analytics:', error);
+      }
+      wasModalOpenRef.current = false;
+    }
+    onClose();
+  }, [onClose, trackEvent, callId, callNotes?.length, searchQuery]);
+
+  // Handle search query change with analytics tracking
+  const handleSearchQueryChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+
+      // Track search analytics when user actually types something
+      if (query.trim().length > 0 && query.trim().length % 3 === 0) {
+        try {
+          trackEvent('call_notes_search', {
+            timestamp: new Date().toISOString(),
+            callId,
+            searchQuery: query.trim(),
+            resultCount: searchNotes(query.trim()).length,
+          });
+        } catch (error) {
+          console.warn('Failed to track call notes search analytics:', error);
+        }
+      }
+    },
+    [setSearchQuery, trackEvent, callId, searchNotes]
+  );
 
   return (
     <>
@@ -104,7 +201,7 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
           <VStack space="md" className="bg-white dark:bg-gray-800">
             <Box className="w-full flex-row items-center justify-between border-b border-gray-200 px-4 pb-4 pt-2 dark:border-gray-700">
               <Heading size="lg">{t('callNotes.title')}</Heading>
-              <Button variant="link" onPress={onClose} className="p-1" testID="close-button">
+              <Button variant="link" onPress={handleManualClose} className="p-1" testID="close-button">
                 <X size={24} />
               </Button>
             </Box>
@@ -115,7 +212,7 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
                 <InputSlot>
                   <SearchIcon size={20} className="text-gray-500" />
                 </InputSlot>
-                <InputField placeholder={t('callNotes.searchPlaceholder')} value={searchQuery} onChangeText={setSearchQuery} />
+                <InputField placeholder={t('callNotes.searchPlaceholder')} value={searchQuery} onChangeText={handleSearchQueryChange} />
               </Input>
             </Box>
           </VStack>

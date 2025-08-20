@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type UnitResultData } from '@/models/v4/units/unitResultData';
 
 // Mock NativeWind and appearance-related modules first
@@ -29,6 +30,11 @@ const mockUnitsStore = {
 
 jest.mock('@/stores/units/store', () => ({
   useUnitsStore: () => mockUnitsStore,
+}));
+
+// Mock the analytics hook
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: jest.fn(),
 }));
 
 // Mock UI components
@@ -164,12 +170,23 @@ jest.mock('@react-navigation/core', () => ({
   useIsFocused: () => true,
 }));
 
+// Mock navigation with useFocusEffect
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((callback: () => void) => {
+    // Execute the callback immediately in tests
+    callback();
+  }),
+}));
+
 // Mock FocusAwareStatusBar
 jest.mock('@/components/ui/focus-aware-status-bar', () => ({
   FocusAwareStatusBar: () => null,
 }));
 
 import Units from '../home/units';
+
+// Create mock reference for analytics
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
 // Mock data
 const mockUnits: UnitResultData[] = [
@@ -236,6 +253,8 @@ const mockUnits: UnitResultData[] = [
 ];
 
 describe('Units', () => {
+  const mockTrackEvent = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
     Object.assign(mockUnitsStore, {
@@ -243,11 +262,25 @@ describe('Units', () => {
       searchQuery: '',
       isLoading: false,
     });
+
+    // Default mock for analytics
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
   });
 
   it('should fetch units on mount', () => {
     render(<Units />);
     expect(mockUnitsStore.fetchUnits).toHaveBeenCalledTimes(1);
+  });
+
+  it('should track analytics when view becomes visible', () => {
+    render(<Units />);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('units_viewed', {
+      timestamp: expect.any(String),
+    });
+    expect(mockTrackEvent).toHaveBeenCalledTimes(1);
   });
 
   it('should render component without errors when units are provided', () => {
@@ -359,5 +392,34 @@ describe('Units', () => {
     render(<Units />);
 
     expect(screen.queryByText('0')).toBeNull();
+  });
+
+  it('should track analytics with correct timestamp format', () => {
+    const mockDate = new Date('2024-01-15T10:00:00Z');
+    jest.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+
+    render(<Units />);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('units_viewed', {
+      timestamp: '2024-01-15T10:00:00.000Z',
+    });
+
+    jest.restoreAllMocks();
+  });
+
+  it('should maintain stable reference to trackEvent function', () => {
+    const firstTrackEvent = jest.fn();
+    const secondTrackEvent = jest.fn();
+
+    mockUseAnalytics
+      .mockReturnValueOnce({ trackEvent: firstTrackEvent })
+      .mockReturnValueOnce({ trackEvent: secondTrackEvent });
+
+    const { rerender } = render(<Units />);
+    rerender(<Units />);
+
+    // Should be called once per render due to useFocusEffect
+    expect(firstTrackEvent).toHaveBeenCalledTimes(1);
+    expect(secondTrackEvent).toHaveBeenCalledTimes(1);
   });
 }); 

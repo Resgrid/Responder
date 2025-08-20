@@ -3,6 +3,7 @@ import { Alert, DeviceEventEmitter, PermissionsAndroid, Platform } from 'react-n
 import BleManager, { type BleManagerDidUpdateValueForCharacteristicEvent, BleScanCallbackType, BleScanMatchMode, BleScanMode, type BleState, type Peripheral } from 'react-native-ble-manager';
 
 import { logger } from '@/lib/logging';
+import { getItem } from '@/lib/storage';
 import { audioService } from '@/services/audio.service';
 import { type AudioButtonEvent, type BluetoothAudioDevice, type Device, State, useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
@@ -117,8 +118,6 @@ class BluetoothAudioService {
 
     try {
       // Load preferred device from storage
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getItem } = require('@/lib/storage');
       const preferredDevice: { id: string; name: string } | null = getItem('preferredBluetoothDevice');
 
       if (preferredDevice) {

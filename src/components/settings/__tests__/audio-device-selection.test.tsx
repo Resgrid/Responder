@@ -1,3 +1,12 @@
+// Mock all dependencies first to avoid import order issues
+const mockTrackEvent = jest.fn();
+
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
+
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import React from 'react';
@@ -150,11 +159,11 @@ describe('AudioDeviceSelection', () => {
 
       mockStore.availableAudioDevices = [bluetoothMic];
 
-      const { getAllByText } = render(<AudioDeviceSelection />);
+      const { getByTestId } = render(<AudioDeviceSelection />);
 
-      // Find the first device card (should be in microphone section)
-      const deviceCards = getAllByText('Bluetooth Headset');
-      fireEvent.press(deviceCards[0].parent?.parent?.parent as any);
+      // Find the microphone device card and press it
+      const microphoneCard = getByTestId('microphone-bt-mic-1');
+      fireEvent.press(microphoneCard);
 
       expect(mockSetSelectedMicrophone).toHaveBeenCalledWith(bluetoothMic);
     });
@@ -164,11 +173,11 @@ describe('AudioDeviceSelection', () => {
 
       mockStore.availableAudioDevices = [bluetoothSpeaker];
 
-      const { getAllByText } = render(<AudioDeviceSelection />);
+      const { getByTestId } = render(<AudioDeviceSelection />);
 
-      // Find the second device card (should be in speaker section)
-      const deviceCards = getAllByText('Bluetooth Speaker');
-      fireEvent.press(deviceCards[1].parent?.parent?.parent as any);
+      // Find the speaker device card and press it
+      const speakerCard = getByTestId('speaker-bt-speaker-1');
+      fireEvent.press(speakerCard);
 
       expect(mockSetSelectedSpeaker).toHaveBeenCalledWith(bluetoothSpeaker);
     });
@@ -278,6 +287,169 @@ describe('AudioDeviceSelection', () => {
       // Device should appear but with fallback label
       expect(screen.getAllByText('Unknown Device').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Unknown Device').length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('analytics', () => {
+    it('tracks view analytics when component is rendered', () => {
+      const bluetoothMic = createMockDevice('bt-mic-1', 'Bluetooth Headset', 'bluetooth');
+      const selectedSpeaker = createMockDevice('selected-speaker', 'Selected Speaker', 'bluetooth');
+
+      mockStore.availableAudioDevices = [bluetoothMic, selectedSpeaker];
+      mockStore.selectedAudioDevices = {
+        microphone: bluetoothMic,
+        speaker: selectedSpeaker,
+      };
+
+      render(<AudioDeviceSelection showTitle={true} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('audio_device_selection_viewed', {
+        timestamp: expect.any(String),
+        totalDevicesCount: 2,
+        availableMicrophonesCount: 2, // Both devices are available as microphones
+        availableSpeakersCount: 2,
+        hasSelectedMicrophone: true,
+        hasSelectedSpeaker: true,
+        selectedMicrophoneType: 'bluetooth',
+        selectedSpeakerType: 'bluetooth',
+        showTitle: true,
+      });
+    });
+
+    it('tracks view analytics with no selected devices', () => {
+      const bluetoothDevice = createMockDevice('bt-1', 'BT Device', 'bluetooth');
+      mockStore.availableAudioDevices = [bluetoothDevice];
+
+      render(<AudioDeviceSelection showTitle={false} />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('audio_device_selection_viewed', {
+        timestamp: expect.any(String),
+        totalDevicesCount: 1,
+        availableMicrophonesCount: 1,
+        availableSpeakersCount: 1,
+        hasSelectedMicrophone: false,
+        hasSelectedSpeaker: false,
+        selectedMicrophoneType: '',
+        selectedSpeakerType: '',
+        showTitle: false,
+      });
+    });
+
+    it('tracks device selection analytics when microphone is selected', () => {
+      const bluetoothMic = createMockDevice('bt-mic-1', 'Bluetooth Headset', 'bluetooth');
+      mockStore.availableAudioDevices = [bluetoothMic];
+
+      const { getByTestId } = render(<AudioDeviceSelection />);
+
+      // Clear previous analytics calls (the initial view tracking)
+      mockTrackEvent.mockClear();
+
+      // Find and press the microphone device using test ID
+      const microphoneCard = getByTestId('microphone-bt-mic-1');
+      fireEvent.press(microphoneCard);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('audio_device_selected', {
+        timestamp: expect.any(String),
+        deviceId: 'bt-mic-1',
+        deviceName: 'Bluetooth Headset',
+        deviceType: 'microphone',
+        deviceCategory: 'bluetooth',
+        isAvailable: true,
+        wasAlreadySelected: false,
+      });
+
+      expect(mockSetSelectedMicrophone).toHaveBeenCalledWith(bluetoothMic);
+    });
+
+    it('tracks device selection analytics when speaker is selected', () => {
+      const bluetoothSpeaker = createMockDevice('bt-speaker-1', 'Bluetooth Speaker', 'bluetooth');
+      mockStore.availableAudioDevices = [bluetoothSpeaker];
+
+      const { getByTestId } = render(<AudioDeviceSelection />);
+
+      // Clear previous analytics calls (the initial view tracking)
+      mockTrackEvent.mockClear();
+
+      // Find and press the speaker device using test ID
+      const speakerCard = getByTestId('speaker-bt-speaker-1');
+      fireEvent.press(speakerCard);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('audio_device_selected', {
+        timestamp: expect.any(String),
+        deviceId: 'bt-speaker-1',
+        deviceName: 'Bluetooth Speaker',
+        deviceType: 'speaker',
+        deviceCategory: 'bluetooth',
+        isAvailable: true,
+        wasAlreadySelected: false,
+      });
+
+      expect(mockSetSelectedSpeaker).toHaveBeenCalledWith(bluetoothSpeaker);
+    });
+
+    it('tracks device selection analytics for already selected device', () => {
+      const selectedMic = createMockDevice('selected-mic', 'Selected Microphone', 'bluetooth');
+      mockStore.availableAudioDevices = [selectedMic];
+      mockStore.selectedAudioDevices = {
+        microphone: selectedMic,
+        speaker: null,
+      };
+
+      const { getByTestId } = render(<AudioDeviceSelection />);
+
+      // Clear previous analytics calls (the initial view tracking)
+      mockTrackEvent.mockClear();
+
+      // Find and press the already selected microphone using test ID
+      const microphoneCard = getByTestId('microphone-selected-mic');
+      fireEvent.press(microphoneCard);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('audio_device_selected', {
+        timestamp: expect.any(String),
+        deviceId: 'selected-mic',
+        deviceName: 'Selected Microphone',
+        deviceType: 'microphone',
+        deviceCategory: 'bluetooth',
+        isAvailable: true,
+        wasAlreadySelected: true,
+      });
+    });
+
+    it('handles analytics errors gracefully without breaking functionality', () => {
+      const bluetoothMic = createMockDevice('bt-mic-1', 'Bluetooth Headset', 'bluetooth');
+      mockStore.availableAudioDevices = [bluetoothMic];
+
+      // Mock trackEvent to throw an error
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('Analytics error');
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+
+      const { getByTestId } = render(<AudioDeviceSelection />);
+
+      // Device selection should still work despite analytics error
+      const microphoneCard = getByTestId('microphone-bt-mic-1');
+      fireEvent.press(microphoneCard);
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to track audio device selection analytics:', expect.any(Error));
+      expect(mockSetSelectedMicrophone).toHaveBeenCalledWith(bluetoothMic);
+
+      consoleSpy.mockRestore();
+    });
+
+    it('handles view analytics errors gracefully', () => {
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('View analytics error');
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+
+      render(<AudioDeviceSelection />);
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to track audio device selection view analytics:', expect.any(Error));
+
+      consoleSpy.mockRestore();
     });
   });
 });
