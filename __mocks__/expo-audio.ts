@@ -16,3 +16,8 @@ requestRecordingPermissionsAsync.mockResolvedValue({
   expires: 'never',
   status: 'granted',
 });
+// Default export for convenience
+export default {
+  getRecordingPermissionsAsync,
+  requestRecordingPermissionsAsync,
+};

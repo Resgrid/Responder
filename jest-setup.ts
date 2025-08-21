@@ -31,33 +31,8 @@ jest.mock('react-native-css-interop/src/runtime/native/appearance-observables', 
   getColorScheme: jest.fn(() => 'light'),
 }));
 
-// Mock expo-audio globally
-jest.mock('expo-audio', () => ({
-  createAudioPlayer: jest.fn(() => ({
-    play: jest.fn(),
-    pause: jest.fn(),
-    remove: jest.fn(),
-    replace: jest.fn(),
-    seekTo: jest.fn(),
-    playing: false,
-    paused: false,
-    isLoaded: true,
-    duration: 0,
-    currentTime: 0,
-    volume: 1,
-    muted: false,
-    loop: false,
-    playbackRate: 1,
-    id: 1,
-    isAudioSamplingSupported: false,
-    isBuffering: false,
-    shouldCorrectPitch: false,
-  })),
-  useAudioPlayer: jest.fn(),
-  useAudioPlayerStatus: jest.fn(),
-  setAudioModeAsync: jest.fn(),
-  setIsAudioActiveAsync: jest.fn(),
-}));
+// Mock expo-audio manually using the __mocks__/expo-audio.ts file
+jest.mock('expo-audio');
 
 // Mock Platform.OS for React Native
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
@@ -191,6 +166,13 @@ jest.mock('expo-modules-core', () => ({
   NativeUnimoduleProxy: {},
   // Mock requireOptionalNativeModule to prevent errors in expo-asset and expo-av
   requireOptionalNativeModule: jest.fn(() => null),
+  // Provide EventEmitter stub for modules requiring event listeners
+  EventEmitter: jest.fn().mockImplementation(() => ({
+    addListener: jest.fn(),
+    removeAllListeners: jest.fn(),
+    removeSubscription: jest.fn(),
+    emit: jest.fn(),
+  })),
 }));
 // Mock NativeModulesProxy native module in expo-modules-core
 jest.mock('expo-modules-core/src/NativeModulesProxy.native', () => ({

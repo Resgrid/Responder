@@ -8,25 +8,7 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(() => Promise.resolve()),
   isAvailableAsync: jest.fn(() => Promise.resolve(true)),
 }));
-// Mock expo-constants and expo-modules-core to prevent NativeUnimoduleProxy errors
-jest.mock('expo-constants', () => ({
-  manifest: {},
-  appOwnership: 'expo',
-  platform: { ios: {}, android: {} },
-  getWebViewUserAgentAsync: jest.fn(),
-  sessionId: 'test-session',
-  installationId: 'test-installation',
-  deviceId: 'test-device',
-  nativeAppVersion: '1.0.0',
-  nativeBuildVersion: '1',
-  releaseChannel: 'default',
-  executionEnvironment: 'standalone',
-}));
-jest.mock('expo-modules-core', () => ({
-  NativeUnimoduleProxy: {},
-  requireNativeModule: jest.fn(),
-  EventEmitter: jest.fn(),
-}));
+// Removed per-test mocks for 'expo-constants' and 'expo-modules-core'; using global mocks in jest-setup.ts
 // Mock all dependencies first
 jest.mock('@/api/units/unitLocation', () => ({
   setUnitLocation: jest.fn(),

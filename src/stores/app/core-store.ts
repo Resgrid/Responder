@@ -20,8 +20,6 @@ import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData
 import { useCallsStore } from '../calls/store';
 
 interface CoreState {
-  // Currently active unit ID for location service
-  activeUnitId: string | null;
   activeStatuses: StatusesResultData[] | null;
   activeStaffing: StatusesResultData[] | null;
   currentStatus: GetCurrentStatusResultData | null;
@@ -29,6 +27,8 @@ interface CoreState {
   currentStaffing: GetCurrentStaffingResultData | null;
   currentStaffingValue: StatusesResultData | null;
 
+  /** Currently selected unit ID */
+  activeUnitId: string | null;
   activeCallId: string | null;
   activeCall: CallResultData | null;
   activePriority: CallPriorityResultData | null;

@@ -887,7 +887,9 @@ class BluetoothAudioService {
       await this.setupLiveKitAudioRouting(device);
 
       // Play connected device sound
-      await audioService.playConnectedDeviceSound();
+      if (audioService?.playConnectedDeviceSound) {
+        await audioService.playConnectedDeviceSound();
+      }
 
       useBluetoothAudioStore.getState().setIsConnecting(false);
     } catch (error) {
@@ -1446,9 +1448,13 @@ class BluetoothAudioService {
         });
 
         if (currentMuteState) {
-          await audioService.playStartTransmittingSound();
+          if (audioService?.playStartTransmittingSound) {
+            await audioService.playStartTransmittingSound();
+          }
         } else {
-          await audioService.playStopTransmittingSound();
+          if (audioService?.playStopTransmittingSound) {
+            await audioService.playStopTransmittingSound();
+          }
         }
       } catch (error) {
         logger.error({
@@ -1481,9 +1487,13 @@ class BluetoothAudioService {
         });
 
         if (enabled) {
-          await audioService.playStartTransmittingSound();
+          if (audioService?.playStartTransmittingSound) {
+            await audioService.playStartTransmittingSound();
+          }
         } else {
-          await audioService.playStopTransmittingSound();
+          if (audioService?.playStopTransmittingSound) {
+            await audioService.playStopTransmittingSound();
+          }
         }
       } catch (error) {
         logger.error({

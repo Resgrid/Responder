@@ -162,8 +162,11 @@ class WebEncryptedStorage {
 let generalStorage: MMKV | undefined;
 let offlineQueueStorage: MMKV | undefined;
 let webEncryptedStorage: WebEncryptedStorage | undefined;
+let storageInitializing = false;
 
 const initializeStorage = async (): Promise<void> => {
+  if (storageInitializing) return;
+  storageInitializing = true;
   try {
     if (Platform.OS === 'web') {
       // For web, use encrypted localStorage
@@ -216,6 +219,7 @@ const initializeStorage = async (): Promise<void> => {
     offlineQueueStorage = new MMKV({
       id: 'ResgridOfflineQueue',
     });
+    storageInitializing = false;
   }
 };
 

@@ -1,23 +1,7 @@
-import { Platform } from 'react-native';
-import { MMKV } from 'react-native-mmkv';
-
 import { logger } from '../logging';
-import { getGeneralStorage } from './secure-storage';
+import { storage } from './index';
 
 const REALTIME_GEOLOCATION_ENABLED = 'REALTIME_GEOLOCATION_ENABLED';
-
-// Use secure storage
-let storage: MMKV;
-
-const initializeStorage = async () => {
-  storage = await getGeneralStorage();
-};
-
-// Fallback for synchronous access
-storage = Platform.OS === 'web' ? new MMKV({ id: 'ResgridUnit' }) : new MMKV({ id: 'ResgridUnit' });
-
-// Initialize secure storage
-initializeStorage().catch(console.error);
 
 /**
  * Load realtime geolocation state from MMKV storage

@@ -24,6 +24,7 @@ export interface BleManagerDidUpdateValueForCharacteristicEvent {
 const mockPeripherals: Peripheral[] = [];
 let mockState: BleState = 'on';
 let mockIsScanning = false;
+let scanTimerId: ReturnType<typeof setTimeout> | null = null;
 
 const BleManager = {
   start: jest.fn().mockResolvedValue(undefined),
@@ -33,13 +34,18 @@ const BleManager = {
   scan: jest.fn().mockImplementation((serviceUUIDs: string[], duration: number, allowDuplicates: boolean = false) => {
     mockIsScanning = true;
     // Simulate scanning timeout
-    setTimeout(() => {
+    scanTimerId = setTimeout(() => {
       mockIsScanning = false;
+      scanTimerId = null;
     }, duration * 1000);
     return Promise.resolve();
   }),
 
   stopScan: jest.fn().mockImplementation(() => {
+    if (scanTimerId) {
+      clearTimeout(scanTimerId);
+      scanTimerId = null;
+    }
     mockIsScanning = false;
     return Promise.resolve();
   }),
@@ -56,7 +62,9 @@ const BleManager = {
 
   getConnectedPeripherals: jest.fn().mockResolvedValue([]),
 
-  getDiscoveredPeripherals: jest.fn().mockResolvedValue(mockPeripherals),
+  getDiscoveredPeripherals: jest.fn().mockImplementation(() => {
+    return Promise.resolve(mockPeripherals.map((p) => ({ ...p })));
+  }),
 
   isPeripheralConnected: jest.fn().mockResolvedValue(false),
 
@@ -73,7 +81,7 @@ const BleManager = {
     mockPeripherals.length = 0;
   },
 
-  getMockPeripherals: () => [...mockPeripherals],
+  getMockPeripherals: () => mockPeripherals.map((p) => ({ ...p })),
 
   isMockScanning: () => mockIsScanning,
 };
