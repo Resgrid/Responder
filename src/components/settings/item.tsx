@@ -1,5 +1,4 @@
 import { ArrowRight } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 
 import { Pressable, View } from '@/components/ui';
@@ -14,7 +13,6 @@ type ItemProps = {
 };
 
 export const Item = ({ text, value, icon, onPress, textStyle }: ItemProps) => {
-  const { colorScheme } = useColorScheme();
   const isPressable = onPress !== undefined;
   const truncatedValue = value && value.length > 20 ? `${value.substring(0, 20)}...` : value;
 
@@ -28,7 +26,7 @@ export const Item = ({ text, value, icon, onPress, textStyle }: ItemProps) => {
         <Text className="text-neutral-600 dark:text-white">{truncatedValue}</Text>
         {isPressable && (
           <View className="pl-2">
-            <ArrowRight color={colorScheme === 'dark' ? '#A3A3A3' : '#737373'} size={20} />
+            <ArrowRight />
           </View>
         )}
       </View>

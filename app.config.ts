@@ -1,7 +1,25 @@
 /* eslint-disable max-lines-per-function */
 import type { ConfigContext, ExpoConfig } from '@expo/config';
+import type { AppIconBadgeConfig } from 'app-icon-badge/types';
 
 import { ClientEnv, Env } from './env';
+const packageJSON = require('./package.json');
+
+const appIconBadgeConfig: AppIconBadgeConfig = {
+  enabled: Env.APP_ENV !== 'production',
+  badges: [
+    {
+      text: Env.APP_ENV,
+      type: 'banner',
+      color: 'white',
+    },
+    {
+      text: Env.VERSION.toString(),
+      type: 'ribbon',
+      color: 'white',
+    },
+  ],
+};
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -20,22 +38,35 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   assetBundlePatterns: ['**/*'],
   ios: {
+    icon: './assets/ios-icon.png',
+    version: packageJSON.version,
+    buildNumber: packageJSON.version,
     supportsTablet: true,
     bundleIdentifier: Env.BUNDLE_ID,
     requireFullScreen: true,
     infoPlist: {
-      UIBackgroundModes: ['remote-notification', 'audio'],
+      UIBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'],
       ITSAppUsesNonExemptEncryption: false,
+      UIViewControllerBasedStatusBarAppearance: false,
+      NSBluetoothAlwaysUsageDescription: 'Allow Resgrid Responder to connect to bluetooth devices for PTT.',
+      NSMicrophoneUsageDescription: 'Allow Resgrid Responder to access the microphone for voice communication and push-to-talk functionality during emergency response.',
+    },
+    entitlements: {
+      ...((Env.APP_ENV === 'production' || Env.APP_ENV === 'internal') && {
+        'com.apple.developer.usernotifications.critical-alerts': true,
+        'com.apple.developer.usernotifications.time-sensitive': true,
+      }),
     },
   },
   experiments: {
     typedRoutes: true,
   },
   android: {
-    versionCode: Env.ANDROID_VERSION_CODE,
+    version: packageJSON.version,
+    versionCode: parseInt(packageJSON.versionCode),
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#2E3C4B',
+      backgroundColor: '#2484c4',
     },
     softwareKeyboardLayoutMode: 'pan',
     package: Env.PACKAGE,
@@ -59,7 +90,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#2E3C4B',
+        backgroundColor: '#2a7dd5',
         image: './assets/adaptive-icon.png',
         imageWidth: 250,
       },
@@ -77,12 +108,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './assets/notification-icon.png',
-        color: '#2E3C4B',
+        color: '#2a7dd5',
         permissions: {
           ios: {
             allowAlert: true,
             allowBadge: true,
             allowSound: true,
+            allowCriticalAlerts: true,
           },
         },
         sounds: [
@@ -181,6 +213,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           extraMavenRepos: ['../../node_modules/@notifee/react-native/android/libs'],
           targetSdkVersion: 35,
         },
+        ios: {
+          deploymentTarget: '18.1',
+        },
       },
     ],
     [
@@ -211,14 +246,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      'react-native-ble-plx',
-      {
-        isBackgroundEnabled: true,
-        modes: ['peripheral', 'central'],
-        bluetoothAlwaysPermission: 'Allow Resgrid Responder to connect to bluetooth devices',
-      },
-    ],
-    [
       'expo-navigation-bar',
       {
         position: 'relative',
@@ -226,11 +253,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         behavior: 'inset-touch',
       },
     ],
-    'expo-audio',
+    [
+      'expo-audio',
+      {
+        microphonePermission: 'Allow Resgrid Responder to access the microphone for audio input used in PTT and calls.',
+      },
+    ],
+    'react-native-ble-manager',
     '@livekit/react-native-expo-plugin',
     '@config-plugins/react-native-webrtc',
+    '@config-plugins/react-native-callkeep',
     './customGradle.plugin.js',
     './customManifest.plugin.js',
+    ['app-icon-badge', appIconBadgeConfig],
   ],
   extra: {
     ...ClientEnv,

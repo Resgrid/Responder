@@ -4,6 +4,22 @@ import React from 'react';
 
 import { CallProtocolsResultData } from '@/models/v4/callProtocols/callProtocolsResultData';
 
+// Mock analytics
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
+
+// Mock React Navigation
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((callback: () => void) => {
+    // Execute immediately for testing
+    callback();
+  }),
+}));
+
 // Mock the protocols store first
 const mockProtocolsStore = {
   protocols: [],
@@ -567,5 +583,47 @@ describe('Protocols Page', () => {
 
     // Check that the zero state is displayed instead of loading
     expect(screen.queryByText('Loading')).toBeNull();
+  });
+
+  describe('Analytics Tracking', () => {
+    it('should track protocols_viewed event when component mounts', () => {
+      render(<Protocols />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('protocols_viewed', {
+        timestamp: expect.any(String),
+      });
+    });
+
+    it('should track analytics with ISO timestamp format', () => {
+      render(<Protocols />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+      const call = mockTrackEvent.mock.calls[0];
+      expect(call[0]).toBe('protocols_viewed');
+      expect(call[1]).toHaveProperty('timestamp');
+
+      // Verify timestamp is in ISO format
+      const timestamp = (call[1] as any).timestamp;
+      expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    });
+
+    it('should track analytics event only once per mount', () => {
+      render(<Protocols />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('should track analytics with correct timestamp format', () => {
+      const mockDate = new Date('2024-01-15T10:00:00Z');
+      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+
+      render(<Protocols />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('protocols_viewed', {
+        timestamp: '2024-01-15T10:00:00.000Z',
+      });
+
+      jest.restoreAllMocks();
+    });
   });
 });

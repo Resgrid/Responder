@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -23,6 +24,7 @@ import { Select, SelectBackdrop, SelectContent, SelectIcon, SelectInput, SelectI
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -78,6 +80,7 @@ export default function EditCall() {
   const { callPriorities, callTypes, isLoading: callDataLoading, error: callDataError, fetchCallPriorities, fetchCallTypes } = useCallsStore();
   const { call, isLoading: callDetailLoading, error: callDetailError, fetchCallDetail } = useCallDetailStore();
   const { config } = useCoreStore();
+  const { trackEvent } = useAnalytics();
   const toast = useToast();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -140,6 +143,27 @@ export default function EditCall() {
     }
   }, [fetchCallPriorities, fetchCallTypes, fetchCallDetail, callId]);
 
+  // Analytics: Track when edit call page is viewed
+  useFocusEffect(
+    useCallback(() => {
+      if (!callDataLoading && !callDetailLoading && call && callPriorities.length > 0 && callTypes.length > 0) {
+        trackEvent('call_edit_viewed', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          priority: callPriorities.find((p) => p.Id === call.Priority)?.Name || 'Unknown',
+          type: callTypes.find((t) => t.Id === call.Type)?.Name || 'Unknown',
+          priorityCount: callPriorities.length,
+          typeCount: callTypes.length,
+          hasGoogleMapsKey: !!config?.GoogleMapsKey,
+          hasWhat3WordsKey: !!config?.W3WKey,
+          hasAddress: !!call.Address,
+          hasCoordinates: !!(call.Latitude && call.Longitude),
+          hasContactInfo: !!(call.ContactName || call.ContactInfo),
+        });
+      }
+    }, [trackEvent, callDataLoading, callDetailLoading, call, callPriorities, callTypes, callId, config?.GoogleMapsKey, config?.W3WKey])
+  );
+
   // Pre-populate form when call data is loaded
   useEffect(() => {
     if (call) {
@@ -193,6 +217,23 @@ export default function EditCall() {
       const priority = callPriorities.find((p) => p.Name === data.priority);
       const type = callTypes.find((t) => t.Name === data.type);
 
+      // Analytics: Track call update attempt
+      trackEvent('call_update_attempted', {
+        timestamp: new Date().toISOString(),
+        callId: callId || '',
+        priority: data.priority,
+        type: data.type,
+        hasNote: !!data.note,
+        hasAddress: !!data.address,
+        hasCoordinates: !!(data.latitude && data.longitude),
+        hasWhat3Words: !!data.what3words,
+        hasPlusCode: !!data.plusCode,
+        hasContactName: !!data.contactName,
+        hasContactInfo: !!data.contactInfo,
+        dispatchEveryone: data.dispatchSelection?.everyone || false,
+        dispatchCount: (data.dispatchSelection?.users.length || 0) + (data.dispatchSelection?.groups.length || 0) + (data.dispatchSelection?.roles.length || 0) + (data.dispatchSelection?.units.length || 0),
+      });
+
       // Update the call using the store
       await useCallDetailStore.getState().updateCall({
         callId: callId!,
@@ -215,6 +256,16 @@ export default function EditCall() {
         dispatchEveryone: data.dispatchSelection?.everyone,
       });
 
+      // Analytics: Track successful call update
+      trackEvent('call_update_success', {
+        timestamp: new Date().toISOString(),
+        callId: callId || '',
+        priority: data.priority,
+        type: data.type,
+        hasLocation: !!(data.latitude && data.longitude),
+        dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
+      });
+
       // Show success toast
       toast.show({
         placement: 'top',
@@ -231,6 +282,15 @@ export default function EditCall() {
       router.back();
     } catch (error) {
       console.error('Error updating call:', error);
+
+      // Analytics: Track failed call update
+      trackEvent('call_update_failed', {
+        timestamp: new Date().toISOString(),
+        callId: callId || '',
+        priority: data.priority,
+        type: data.type,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
 
       // Show error toast
       toast.show({
@@ -253,12 +313,35 @@ export default function EditCall() {
     if (location.address) {
       setValue('address', location.address);
     }
+
+    // Analytics: Track location selection
+    trackEvent('call_edit_location_selected', {
+      timestamp: new Date().toISOString(),
+      callId: callId || '',
+      hasAddress: !!location.address,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
+
     setShowLocationPicker(false);
   };
 
   const handleDispatchSelection = (selection: DispatchSelection) => {
     setDispatchSelection(selection);
     setValue('dispatchSelection', selection);
+
+    // Analytics: Track dispatch selection
+    trackEvent('call_edit_dispatch_selection_updated', {
+      timestamp: new Date().toISOString(),
+      callId: callId || '',
+      everyone: selection.everyone,
+      userCount: selection.users.length,
+      groupCount: selection.groups.length,
+      roleCount: selection.roles.length,
+      unitCount: selection.units.length,
+      totalSelected: selection.users.length + selection.groups.length + selection.roles.length + selection.units.length,
+    });
+
     setShowDispatchModal(false);
   };
 
@@ -292,11 +375,24 @@ export default function EditCall() {
       return;
     }
 
+    // Analytics: Track address search attempt
+    trackEvent('call_edit_address_search_attempted', {
+      timestamp: new Date().toISOString(),
+      callId: callId || '',
+      hasGoogleMapsKey: !!config?.GoogleMapsKey,
+    });
+
     setIsGeocodingAddress(true);
     try {
       const apiKey = config?.GoogleMapsKey;
 
       if (!apiKey) {
+        // Analytics: Track missing API key
+        trackEvent('call_edit_address_search_failed', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          reason: 'missing_api_key',
+        });
         throw new Error('Google Maps API key not configured');
       }
 
@@ -304,6 +400,14 @@ export default function EditCall() {
 
       if (response.data.status === 'OK' && response.data.results.length > 0) {
         const results = response.data.results;
+
+        // Analytics: Track successful address search
+        trackEvent('call_edit_address_search_success', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          resultCount: results.length,
+          hasMultipleResults: results.length > 1,
+        });
 
         if (results.length === 1) {
           const result = results[0];
@@ -330,6 +434,14 @@ export default function EditCall() {
           setShowAddressSelection(true);
         }
       } else {
+        // Analytics: Track failed address search
+        trackEvent('call_edit_address_search_failed', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          reason: 'no_results',
+          status: response.data.status,
+        });
+
         toast.show({
           placement: 'top',
           render: () => {
@@ -343,6 +455,16 @@ export default function EditCall() {
       }
     } catch (error) {
       console.error('Error geocoding address:', error);
+
+      // Analytics: Track geocoding error (if not already tracked above)
+      if (!(error instanceof Error && error.message.includes('Google Maps API key'))) {
+        trackEvent('call_edit_address_search_failed', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          reason: 'network_error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
 
       toast.show({
         placement: 'top',
@@ -368,6 +490,13 @@ export default function EditCall() {
 
     handleLocationSelected(newLocation);
     setShowAddressSelection(false);
+
+    // Analytics: Track address selection from multiple results
+    trackEvent('call_edit_address_selected', {
+      timestamp: new Date().toISOString(),
+      callId: callId || '',
+      selectedAddress: result.formatted_address,
+    });
 
     toast.show({
       placement: 'top',

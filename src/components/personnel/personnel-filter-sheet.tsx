@@ -1,9 +1,10 @@
 import { Check, Filter, X } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type FilterResultData } from '@/models/v4/personnel/filterResultData';
 import { usePersonnelStore } from '@/stores/personnel/store';
 
@@ -26,6 +27,7 @@ interface FilterGroup {
 export const PersonnelFilterSheet: React.FC = () => {
   const { t } = useTranslation();
   const { filterOptions, selectedFilters, isFilterSheetOpen, isLoadingFilters, closeFilterSheet, toggleFilter } = usePersonnelStore();
+  const { trackEvent } = useAnalytics();
 
   // Group filter options by Type
   const groupedFilterOptions = useMemo((): FilterGroup[] => {
@@ -51,17 +53,66 @@ export const PersonnelFilterSheet: React.FC = () => {
       }));
   }, [filterOptions]);
 
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isFilterSheetOpen && groupedFilterOptions) {
+      try {
+        const filterTypes = groupedFilterOptions.map((group) => group.title);
+        const totalFilterOptions = filterOptions?.length || 0;
+        const activeFilterCount = selectedFilters.length;
+
+        trackEvent('personnel_filter_sheet_viewed', {
+          timestamp: new Date().toISOString(),
+          totalFilterOptions,
+          activeFilterCount,
+          filterTypesAvailable: filterTypes.join(','),
+          hasFiltersApplied: activeFilterCount > 0,
+          isLoading: isLoadingFilters,
+        });
+      } catch (error) {
+        // Analytics errors should not break the component
+        console.warn('Failed to track personnel filter sheet view analytics:', error);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFilterSheetOpen]);
+
+  // Enhanced toggle filter with analytics
+  const handleToggleFilter = useCallback(
+    (filterId: string) => {
+      const isCurrentlySelected = selectedFilters.includes(filterId);
+      const filterItem = filterOptions?.find((f) => f.Id === filterId);
+
+      try {
+        trackEvent('personnel_filter_toggled', {
+          timestamp: new Date().toISOString(),
+          filterId,
+          filterName: filterItem?.Name || '',
+          filterType: filterItem?.Type || '',
+          action: isCurrentlySelected ? 'removed' : 'added',
+          previousActiveCount: selectedFilters.length,
+          newActiveCount: isCurrentlySelected ? selectedFilters.length - 1 : selectedFilters.length + 1,
+        });
+      } catch (error) {
+        console.warn('Failed to track personnel filter toggle analytics:', error);
+      }
+
+      toggleFilter(filterId);
+    },
+    [trackEvent, selectedFilters, filterOptions, toggleFilter]
+  );
+
   const renderFilterItem = ({ item }: { item: FilterResultData }) => {
     const isSelected = selectedFilters.includes(item.Id);
 
     return (
-      <Pressable onPress={() => toggleFilter(item.Id)} className="flex-row items-center justify-between px-4 py-3" testID={`filter-item-${item.Id}`}>
+      <Pressable onPress={() => handleToggleFilter(item.Id)} className="flex-row items-center justify-between px-4 py-3" testID={`filter-item-${item.Id}`}>
         <Text className="flex-1 text-base text-gray-800 dark:text-gray-100">{item.Name}</Text>
         <HStack className="items-center" space="sm">
           {isSelected && <Check size={16} className="text-blue-500" />}
           <Checkbox
             value={isSelected ? 'true' : 'false'}
-            onChange={() => toggleFilter(item.Id)}
+            onChange={() => handleToggleFilter(item.Id)}
             aria-label={`Toggle filter ${item.Name}`}
             testID={`filter-checkbox-${item.Id}`}
             className={isSelected ? 'border-blue-500' : ''}

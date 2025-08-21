@@ -1,6 +1,6 @@
 import { CheckIcon, SearchIcon, UsersIcon, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 
@@ -12,6 +12,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type DispatchSelection, useDispatchStore } from '@/stores/dispatch/store';
 
 interface DispatchSelectionModalProps {
@@ -24,26 +25,179 @@ interface DispatchSelectionModalProps {
 export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ isVisible, onClose, onConfirm, initialSelection }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const { trackEvent } = useAnalytics();
+  const wasModalOpenRef = useRef(false);
   const { data, selection, isLoading, error, searchQuery, fetchDispatchData, setSelection, toggleEveryone, toggleUser, toggleGroup, toggleRole, toggleUnit, setSearchQuery, clearSelection, getFilteredData } =
     useDispatchStore();
 
-  const filteredData = useMemo(() => getFilteredData(), [data, searchQuery]);
+  const filteredData = useMemo(() => getFilteredData(), [getFilteredData]);
+
+  // Track analytics when modal becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    try {
+      trackEvent('dispatch_selection_modal_viewed', {
+        timestamp: new Date().toISOString(),
+        userCount: data.users.length,
+        groupCount: data.groups.length,
+        roleCount: data.roles.length,
+        unitCount: data.units.length,
+        isLoading,
+        hasInitialSelection: !!initialSelection,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track dispatch selection modal view analytics:', error);
+    }
+  }, [trackEvent, data.users.length, data.groups.length, data.roles.length, data.units.length, isLoading, initialSelection]);
 
   useEffect(() => {
-    if (isVisible) {
+    if (isVisible && !wasModalOpenRef.current) {
+      wasModalOpenRef.current = true;
       fetchDispatchData();
       if (initialSelection) {
         setSelection(initialSelection);
       }
+      trackViewAnalytics();
+    } else if (!isVisible) {
+      wasModalOpenRef.current = false;
     }
-  }, [isVisible, initialSelection, fetchDispatchData, setSelection]);
+  }, [isVisible, initialSelection, fetchDispatchData, setSelection, trackViewAnalytics]);
+
+  const handleToggleEveryone = useCallback(() => {
+    const wasSelected = selection.everyone;
+    toggleEveryone();
+    try {
+      trackEvent('dispatch_selection_everyone_toggled', {
+        timestamp: new Date().toISOString(),
+        wasSelected,
+        newState: !wasSelected,
+      });
+    } catch (error) {
+      console.warn('Failed to track everyone toggle analytics:', error);
+    }
+  }, [toggleEveryone, selection.everyone, trackEvent]);
+
+  const handleToggleUser = useCallback(
+    (userId: string) => {
+      const wasSelected = selection.users.includes(userId);
+      toggleUser(userId);
+      try {
+        trackEvent('dispatch_selection_user_toggled', {
+          timestamp: new Date().toISOString(),
+          userId,
+          wasSelected,
+          newState: !wasSelected,
+          currentSelectionCount: selection.users.length,
+        });
+      } catch (error) {
+        console.warn('Failed to track user toggle analytics:', error);
+      }
+    },
+    [toggleUser, selection.users, trackEvent]
+  );
+
+  const handleToggleGroup = useCallback(
+    (groupId: string) => {
+      const wasSelected = selection.groups.includes(groupId);
+      toggleGroup(groupId);
+      try {
+        trackEvent('dispatch_selection_group_toggled', {
+          timestamp: new Date().toISOString(),
+          groupId,
+          wasSelected,
+          newState: !wasSelected,
+          currentSelectionCount: selection.groups.length,
+        });
+      } catch (error) {
+        console.warn('Failed to track group toggle analytics:', error);
+      }
+    },
+    [toggleGroup, selection.groups, trackEvent]
+  );
+
+  const handleToggleRole = useCallback(
+    (roleId: string) => {
+      const wasSelected = selection.roles.includes(roleId);
+      toggleRole(roleId);
+      try {
+        trackEvent('dispatch_selection_role_toggled', {
+          timestamp: new Date().toISOString(),
+          roleId,
+          wasSelected,
+          newState: !wasSelected,
+          currentSelectionCount: selection.roles.length,
+        });
+      } catch (error) {
+        console.warn('Failed to track role toggle analytics:', error);
+      }
+    },
+    [toggleRole, selection.roles, trackEvent]
+  );
+
+  const handleToggleUnit = useCallback(
+    (unitId: string) => {
+      const wasSelected = selection.units.includes(unitId);
+      toggleUnit(unitId);
+      try {
+        trackEvent('dispatch_selection_unit_toggled', {
+          timestamp: new Date().toISOString(),
+          unitId,
+          wasSelected,
+          newState: !wasSelected,
+          currentSelectionCount: selection.units.length,
+        });
+      } catch (error) {
+        console.warn('Failed to track unit toggle analytics:', error);
+      }
+    },
+    [toggleUnit, selection.units, trackEvent]
+  );
+
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      try {
+        trackEvent('dispatch_selection_search', {
+          timestamp: new Date().toISOString(),
+          searchQuery: query,
+          searchLength: query.length,
+        });
+      } catch (error) {
+        console.warn('Failed to track search analytics:', error);
+      }
+    },
+    [setSearchQuery, trackEvent]
+  );
 
   const handleConfirm = () => {
+    try {
+      trackEvent('dispatch_selection_confirmed', {
+        timestamp: new Date().toISOString(),
+        selectionCount: getSelectionCount(),
+        everyoneSelected: selection.everyone,
+        usersSelected: selection.users.length,
+        groupsSelected: selection.groups.length,
+        rolesSelected: selection.roles.length,
+        unitsSelected: selection.units.length,
+        hasSearchQuery: !!searchQuery,
+      });
+    } catch (error) {
+      console.warn('Failed to track dispatch selection confirm analytics:', error);
+    }
     onConfirm(selection);
     onClose();
   };
 
   const handleCancel = () => {
+    try {
+      trackEvent('dispatch_selection_cancelled', {
+        timestamp: new Date().toISOString(),
+        selectionCount: getSelectionCount(),
+        wasModalOpen: wasModalOpenRef.current,
+      });
+    } catch (error) {
+      console.warn('Failed to track dispatch selection cancel analytics:', error);
+    }
     clearSelection();
     onClose();
   };
@@ -82,7 +236,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
       <Box className="p-4">
         <Input>
           <SearchIcon size={20} className="ml-3 mr-2 text-neutral-500" />
-          <InputField placeholder={t('common.search')} value={searchQuery} onChangeText={setSearchQuery} className="flex-1" />
+          <InputField placeholder={t('common.search')} value={searchQuery} onChangeText={handleSearchChange} className="flex-1" />
         </Input>
       </Box>
 
@@ -97,7 +251,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
         <ScrollView className="flex-1 px-4">
           {/* Everyone Option */}
           <Card className={`mb-4 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-            <TouchableOpacity onPress={toggleEveryone}>
+            <TouchableOpacity onPress={handleToggleEveryone}>
               <HStack className="items-center space-x-3">
                 <Box className={`size-6 items-center justify-center rounded border-2 ${selection.everyone ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'}`}>
                   {selection.everyone && <CheckIcon size={16} className="text-white" />}
@@ -118,7 +272,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               </Text>
               {filteredData.users.map((user) => (
                 <Card key={`user-${user.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-                  <TouchableOpacity onPress={() => toggleUser(user.Id)}>
+                  <TouchableOpacity onPress={() => handleToggleUser(user.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${
@@ -145,7 +299,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               </Text>
               {filteredData.groups.map((group) => (
                 <Card key={`group-${group.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-                  <TouchableOpacity onPress={() => toggleGroup(group.Id)}>
+                  <TouchableOpacity onPress={() => handleToggleGroup(group.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${
@@ -172,7 +326,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               </Text>
               {filteredData.roles.map((role) => (
                 <Card key={`role-${role.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-                  <TouchableOpacity onPress={() => toggleRole(role.Id)}>
+                  <TouchableOpacity onPress={() => handleToggleRole(role.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${
@@ -199,7 +353,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               </Text>
               {filteredData.units.map((unit) => (
                 <Card key={`unit-${unit.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-                  <TouchableOpacity onPress={() => toggleUnit(unit.Id)}>
+                  <TouchableOpacity onPress={() => handleToggleUnit(unit.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${

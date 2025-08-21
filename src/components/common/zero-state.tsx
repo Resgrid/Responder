@@ -52,9 +52,21 @@ interface ZeroStateProps {
   isError?: boolean;
 
   /**
-   * Custom class name for additional styling
+   * Custom class name for additional styling of the Center component
    */
   className?: string;
+
+  /**
+   * Custom class name for the root View component
+   * @default "size-full p-6"
+   */
+  viewClassName?: string;
+
+  /**
+   * Custom class name for the Center component (overrides default)
+   * @default "flex-1 p-6"
+   */
+  centerClassName?: string;
 }
 
 /**
@@ -69,6 +81,8 @@ const ZeroState: React.FC<ZeroStateProps> = ({
   children,
   isError = false,
   className = '',
+  viewClassName = 'size-full p-6',
+  centerClassName = 'flex-1 p-6',
 }) => {
   const { t } = useTranslation();
 
@@ -78,8 +92,8 @@ const ZeroState: React.FC<ZeroStateProps> = ({
   const defaultDescription = isError ? t('common.tryAgainLater', 'Please try again later') : t('common.nothingToDisplay', "There's nothing to display at the moment");
 
   return (
-    <View className="size-full p-6">
-      <Center className={`flex-1 p-6 ${className}`} testID="zero-state">
+    <View className={viewClassName}>
+      <Center className={`${centerClassName} ${className}`} testID="zero-state">
         <VStack space="md" className="items-center">
           <Box className="mb-4">
             <Icon size={iconSize} color={isError ? '#ef4444' : iconColor} />

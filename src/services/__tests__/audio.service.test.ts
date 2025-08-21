@@ -35,6 +35,15 @@ jest.mock('expo-av', () => ({
       createAsync: jest.fn(),
     },
   },
+  InterruptionModeIOS: {
+    DoNotMix: 'doNotMix',
+    DuckOthers: 'duckOthers',
+    MixWithOthers: 'mixWithOthers',
+  },
+  InterruptionModeAndroid: {
+    DoNotMix: 'doNotMix',
+    DuckOthers: 'duckOthers',
+  },
 }));
 
 // Mock react-native
@@ -63,7 +72,7 @@ jest.mock('@assets/audio/ui/software_interface_start.mp3', () => 'mocked-connect
 jest.mock('@assets/audio/ui/software_interface_back.mp3', () => 'mocked-disconnected-from-audio-room-sound', { virtual: true });
 
 import { Asset } from 'expo-asset';
-import { Audio } from 'expo-av';
+import { Audio, InterruptionModeIOS } from 'expo-av';
 import { Platform } from 'react-native';
 import { logger } from '@/lib/logging';
 
@@ -110,11 +119,12 @@ describe('AudioService', () => {
 
     it('should set audio mode correctly', () => {
       expect(mockAudioSetAudioModeAsync).toHaveBeenCalledWith({
-        allowsRecordingIOS: false,
-        staysActiveInBackground: false,
+        allowsRecordingIOS: true,
+        staysActiveInBackground: true,
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: true,
+        interruptionModeIOS: 'doNotMix',
       });
     });
 

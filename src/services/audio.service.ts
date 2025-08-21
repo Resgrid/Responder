@@ -1,5 +1,5 @@
 import { Asset } from 'expo-asset';
-import { Audio, type AVPlaybackSource } from 'expo-av';
+import { Audio, type AVPlaybackSource, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 import { Platform } from 'react-native';
 
 import { logger } from '@/lib/logging';
@@ -36,11 +36,13 @@ class AudioService {
     try {
       // Configure audio mode for production builds
       await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        staysActiveInBackground: false,
+        allowsRecordingIOS: true,
+        staysActiveInBackground: true,
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
       });
 
       // Pre-load audio assets for production builds

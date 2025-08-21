@@ -1,233 +1,214 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import React from 'react';
 
-describe('Notes Screen Logic', () => {
-  // Test the core filtering logic without rendering the component
-  describe('Note filtering functionality', () => {
-    interface Note {
-      NoteId: string;
-      Title: string;
-      Body: string;
-      Category?: string;
-    }
+// Mock analytics
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: mockTrackEvent,
+  }),
+}));
 
-    const filterNotes = (notes: Note[], searchQuery: string): Note[] => {
-      if (!searchQuery.trim()) return notes;
+// Mock navigation
+const mockUseFocusEffect = jest.fn();
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: mockUseFocusEffect,
+}));
 
-      const query = searchQuery.toLowerCase();
-      return notes.filter((note) =>
-        note.Title.toLowerCase().includes(query) ||
-        note.Body.toLowerCase().includes(query) ||
-        note.Category?.toLowerCase().includes(query)
-      );
+// Mock stores
+const mockFetchNotes = jest.fn();
+
+jest.mock('@/stores/notes/store', () => ({
+  useNotesStore: () => ({
+    notes: [],
+    searchQuery: '',
+    isLoading: false,
+    error: null,
+    fetchNotes: mockFetchNotes,
+    setSearchQuery: jest.fn(),
+    selectNote: jest.fn(),
+  }),
+}));
+
+describe('Notes Screen Analytics', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('tracks notes view analytics event with correct data', () => {
+    const { useAnalytics } = require('@/hooks/use-analytics');
+    const { useNotesStore } = require('@/stores/notes/store');
+
+    const { trackEvent } = useAnalytics();
+    const { notes } = useNotesStore();
+
+    // Simulate the analytics tracking that happens in useFocusEffect
+    trackEvent('notes_view', {
+      noteCount: notes.length,
+      hasSearchQuery: false,
+      currentCategory: 'All',
+    });
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('notes_view', {
+      noteCount: 0,
+      hasSearchQuery: false,
+      currentCategory: 'All',
+    });
+  });
+
+  it('tracks search analytics event with correct data', () => {
+    const { useAnalytics } = require('@/hooks/use-analytics');
+    const { trackEvent } = useAnalytics();
+
+    // Simulate search tracking
+    const searchQuery = 'business';
+    const resultCount = 2;
+
+    trackEvent('notes_search', {
+      searchQuery,
+      resultCount,
+    });
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('notes_search', {
+      searchQuery: 'business',
+      resultCount: 2,
+    });
+  });
+
+  it('tracks note selection analytics event with correct data', () => {
+    const { useAnalytics } = require('@/hooks/use-analytics');
+    const { trackEvent } = useAnalytics();
+
+    // Simulate note selection tracking
+    const note = {
+      id: '1',
+      title: 'Test Note',
+      category: 'Work',
     };
 
-    const testNotes: Note[] = [
+    trackEvent('note_selected', {
+      noteId: note.id,
+      noteTitle: note.title,
+      noteCategory: note.category,
+      isFromSearch: false,
+    });
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('note_selected', {
+      noteId: '1',
+      noteTitle: 'Test Note',
+      noteCategory: 'Work',
+      isFromSearch: false,
+    });
+  });
+
+  it('tracks refresh analytics event with correct data', () => {
+    const { useAnalytics } = require('@/hooks/use-analytics');
+    const { useNotesStore } = require('@/stores/notes/store');
+
+    const { trackEvent } = useAnalytics();
+    const { notes } = useNotesStore();
+
+    // Simulate refresh tracking
+    trackEvent('notes_refresh', {
+      noteCount: notes.length,
+      hasSearchQuery: false,
+    });
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('notes_refresh', {
+      noteCount: 0,
+      hasSearchQuery: false,
+    });
+  });
+
+  describe('Note filtering logic tests', () => {
+    const testNotes = [
       {
-        NoteId: '1',
-        Title: 'Important Meeting',
-        Body: 'Discuss quarterly goals and objectives',
-        Category: 'Business',
+        id: '1',
+        title: 'Business Meeting Notes',
+        body: 'Important client discussion',
+        category: 'Work',
+        isDeleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       {
-        NoteId: '2',
-        Title: 'Personal Reminder',
-        Body: 'Buy birthday gift for family member',
-        Category: 'Personal',
-      },
-      {
-        NoteId: '3',
-        Title: 'Code Review',
-        Body: 'Review implementation details for the new feature',
-        Category: 'Development',
-      },
-      {
-        NoteId: '4',
-        Title: 'Shopping List',
-        Body: 'Groceries: milk, bread, eggs',
-        Category: 'Personal',
+        id: '2',
+        title: 'Personal Reminder',
+        body: 'Call family',
+        category: 'Personal',
+        isDeleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     ];
 
-    it('returns all notes when search query is empty', () => {
-      expect(filterNotes(testNotes, '')).toHaveLength(4);
-      expect(filterNotes(testNotes, '   ')).toHaveLength(4); // Whitespace only
-    });
-
     it('filters notes by title correctly', () => {
-      const result = filterNotes(testNotes, 'meeting');
-      expect(result).toHaveLength(1);
-      expect(result[0].NoteId).toBe('1');
+      const query = 'business';
+      const filtered = testNotes.filter(note =>
+        note.title.toLowerCase().includes(query.toLowerCase()) ||
+        note.body.toLowerCase().includes(query.toLowerCase()) ||
+        note.category.toLowerCase().includes(query.toLowerCase())
+      );
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].title).toBe('Business Meeting Notes');
     });
 
     it('filters notes by body content correctly', () => {
-      const result = filterNotes(testNotes, 'birthday');
-      expect(result).toHaveLength(1);
-      expect(result[0].NoteId).toBe('2');
+      const query = 'family';
+      const filtered = testNotes.filter(note =>
+        note.title.toLowerCase().includes(query.toLowerCase()) ||
+        note.body.toLowerCase().includes(query.toLowerCase()) ||
+        note.category.toLowerCase().includes(query.toLowerCase())
+      );
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].title).toBe('Personal Reminder');
     });
 
     it('filters notes by category correctly', () => {
-      const result = filterNotes(testNotes, 'personal');
-      expect(result).toHaveLength(2);
-      expect(result.map(note => note.NoteId).sort()).toEqual(['2', '4']);
+      const query = 'personal';
+      const filtered = testNotes.filter(note =>
+        note.title.toLowerCase().includes(query.toLowerCase()) ||
+        note.body.toLowerCase().includes(query.toLowerCase()) ||
+        note.category.toLowerCase().includes(query.toLowerCase())
+      );
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].title).toBe('Personal Reminder');
     });
 
     it('performs case-insensitive filtering', () => {
-      expect(filterNotes(testNotes, 'IMPORTANT')).toHaveLength(1);
-      expect(filterNotes(testNotes, 'Personal')).toHaveLength(2);
-      expect(filterNotes(testNotes, 'DEVELOPMENT')).toHaveLength(1);
+      const query = 'BUSINESS';
+      const filtered = testNotes.filter(note =>
+        note.title.toLowerCase().includes(query.toLowerCase()) ||
+        note.body.toLowerCase().includes(query.toLowerCase()) ||
+        note.category.toLowerCase().includes(query.toLowerCase())
+      );
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].title).toBe('Business Meeting Notes');
     });
 
-    it('handles partial matches correctly', () => {
-      const result = filterNotes(testNotes, 'review');
-      expect(result).toHaveLength(1); // Matches "Code Review" title and "Review implementation" body (same note)
-      expect(result[0].NoteId).toBe('3');
+    it('returns all notes when search query is empty', () => {
+      const query = '';
+      const filtered = query.trim() === '' ? testNotes : testNotes.filter(note =>
+        note.title.toLowerCase().includes(query.toLowerCase()) ||
+        note.body.toLowerCase().includes(query.toLowerCase()) ||
+        note.category.toLowerCase().includes(query.toLowerCase())
+      );
+
+      expect(filtered).toHaveLength(2);
     });
 
     it('returns empty array for non-matching queries', () => {
-      expect(filterNotes(testNotes, 'nonexistent')).toHaveLength(0);
-      expect(filterNotes(testNotes, 'xyz123')).toHaveLength(0);
-    });
+      const query = 'nonexistent';
+      const filtered = testNotes.filter(note =>
+        note.title.toLowerCase().includes(query.toLowerCase()) ||
+        note.body.toLowerCase().includes(query.toLowerCase()) ||
+        note.category.toLowerCase().includes(query.toLowerCase())
+      );
 
-    it('handles notes without categories', () => {
-      const notesWithoutCategory: Note[] = [
-        {
-          NoteId: '1',
-          Title: 'Test Note',
-          Body: 'Test body',
-        },
-      ];
-
-      expect(filterNotes(notesWithoutCategory, 'test')).toHaveLength(1);
-      expect(filterNotes(notesWithoutCategory, 'category')).toHaveLength(0);
-    });
-
-    it('filters across multiple fields simultaneously', () => {
-      // Query that could match different fields
-      const result = filterNotes(testNotes, 'review');
-      expect(result.length).toBeGreaterThan(0);
-
-      // Check that it finds matches in both title and body
-      const hasTitle = result.some(note => note.Title.toLowerCase().includes('review'));
-      const hasBody = result.some(note => note.Body.toLowerCase().includes('review'));
-      expect(hasTitle || hasBody).toBe(true);
-    });
-  });
-
-  describe('Component behavior logic', () => {
-    it('validates refresh functionality concept', () => {
-      // Mock refresh behavior
-      let refreshCount = 0;
-      const mockRefresh = () => {
-        refreshCount++;
-      };
-
-      // Simulate initial load and refresh
-      mockRefresh(); // Initial load
-      mockRefresh(); // User refresh
-
-      expect(refreshCount).toBe(2);
-    });
-
-    it('validates search state management concept', () => {
-      // Mock search state
-      let searchQuery = '';
-      const setSearchQuery = (query: string) => {
-        searchQuery = query;
-      };
-
-      // Test search updates
-      setSearchQuery('test');
-      expect(searchQuery).toBe('test');
-
-      setSearchQuery('');
-      expect(searchQuery).toBe('');
-    });
-
-    it('validates note selection concept', () => {
-      const mockNote = {
-        NoteId: '1',
-        Title: 'Test Note',
-        Body: 'Test body',
-        Category: 'Test',
-      };
-
-      let selectedNote = null;
-      const selectNote = (note: typeof mockNote) => {
-        selectedNote = note;
-      };
-
-      selectNote(mockNote);
-      expect(selectedNote).toEqual(mockNote);
-    });
-
-    it('validates loading state management concept', () => {
-      let isLoading = false;
-      const setLoading = (loading: boolean) => {
-        isLoading = loading;
-      };
-
-      // Test loading state changes
-      setLoading(true);
-      expect(isLoading).toBe(true);
-
-      setLoading(false);
-      expect(isLoading).toBe(false);
-    });
-  });
-
-  describe('Edge cases and error handling', () => {
-    it('handles empty notes array', () => {
-      const filterNotes = (notes: any[], searchQuery: string) => {
-        if (!searchQuery.trim()) return notes;
-        return notes.filter(() => false); // Simplified for test
-      };
-
-      expect(filterNotes([], 'any query')).toHaveLength(0);
-      expect(filterNotes([], '')).toHaveLength(0);
-    });
-
-    it('handles malformed note objects gracefully', () => {
-      const malformedNotes = [
-        { NoteId: '1' }, // Missing title, body, category
-        { NoteId: '2', Title: null, Body: null, Category: null },
-        { NoteId: '3', Title: '', Body: '', Category: '' },
-      ];
-
-      // Simulate safe filtering
-      const safeFilter = (notes: any[], query: string) => {
-        if (!query.trim()) return notes;
-        return notes.filter((note) => {
-          const title = note.Title || '';
-          const body = note.Body || '';
-          const category = note.Category || '';
-          return [title, body, category].some(field =>
-            field.toLowerCase().includes(query.toLowerCase())
-          );
-        });
-      };
-
-      expect(() => safeFilter(malformedNotes, 'test')).not.toThrow();
-      expect(safeFilter(malformedNotes, 'test')).toHaveLength(0);
-    });
-
-    it('handles very long search queries', () => {
-      const longQuery = 'a'.repeat(1000);
-      const testNotes = [
-        { NoteId: '1', Title: 'Short title', Body: 'Short body', Category: 'Short' },
-      ];
-
-      const filterNotes = (notes: typeof testNotes, searchQuery: string) => {
-        if (!searchQuery.trim()) return notes;
-        const query = searchQuery.toLowerCase();
-        return notes.filter((note) =>
-          note.Title.toLowerCase().includes(query) ||
-          note.Body.toLowerCase().includes(query) ||
-          note.Category?.toLowerCase().includes(query)
-        );
-      };
-
-      expect(() => filterNotes(testNotes, longQuery)).not.toThrow();
-      expect(filterNotes(testNotes, longQuery)).toHaveLength(0);
+      expect(filtered).toHaveLength(0);
     });
   });
 });

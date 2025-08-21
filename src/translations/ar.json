@@ -597,6 +597,7 @@
     "send_response": "إرسال الرد",
     "sending": "جاري الإرسال...",
     "sent": "المرسلة",
+    "showing_count": "عرض {{count}} رسائل",
     "subject": "الموضوع",
     "subject_required": "الموضوع مطلوب",
     "title": "الرسائل",

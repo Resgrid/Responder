@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,7 @@ import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -23,6 +25,7 @@ type TabType = 'today' | 'upcoming' | 'calendar';
 
 export default function CalendarScreen() {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const [activeTab, setActiveTab] = useState<TabType>('today');
   const [selectedItem, setSelectedItem] = useState<CalendarItemResultData | null>(null);
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
@@ -49,8 +52,25 @@ export default function CalendarScreen() {
     loadUpcomingCalendarItems();
   }, [loadTodaysCalendarItems, loadUpcomingCalendarItems]);
 
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      trackEvent('calendar_viewed', {
+        timestamp: new Date().toISOString(),
+        activeTab,
+      });
+    }, [trackEvent, activeTab])
+  );
+
   const handleRefresh = async () => {
     clearError();
+
+    // Track analytics for refresh actions
+    trackEvent('calendar_refreshed', {
+      timestamp: new Date().toISOString(),
+      tab: activeTab,
+    });
+
     if (activeTab === 'today') {
       await loadTodaysCalendarItems();
     } else if (activeTab === 'upcoming') {
@@ -62,10 +82,26 @@ export default function CalendarScreen() {
     setSelectedItem(item);
     viewCalendarItemAction(item); // Update store state to match Angular
     setIsDetailsSheetOpen(true);
+
+    // Track analytics for item interaction
+    trackEvent('calendar_item_viewed', {
+      timestamp: new Date().toISOString(),
+      itemId: item.CalendarItemId,
+      itemTitle: item.Title,
+      itemType: item.TypeName,
+      tab: activeTab,
+    });
   };
 
   const handleMonthChange = (startDate: string, endDate: string) => {
     loadCalendarItemsForDateRange(startDate, endDate);
+
+    // Track analytics for month navigation
+    trackEvent('calendar_month_changed', {
+      timestamp: new Date().toISOString(),
+      startDate,
+      endDate,
+    });
   };
 
   const getItemsForSelectedDate = () => {
@@ -78,7 +114,20 @@ export default function CalendarScreen() {
   };
 
   const renderTabButton = (tab: TabType, label: string) => (
-    <Button key={tab} variant={activeTab === tab ? 'solid' : 'outline'} onPress={() => setActiveTab(tab)} className={`flex-1 ${activeTab === tab ? 'bg-primary-600' : 'border-primary-600 bg-transparent'}`}>
+    <Button
+      key={tab}
+      variant={activeTab === tab ? 'solid' : 'outline'}
+      onPress={() => {
+        setActiveTab(tab);
+        // Track analytics for tab changes
+        trackEvent('calendar_tab_changed', {
+          timestamp: new Date().toISOString(),
+          fromTab: activeTab,
+          toTab: tab,
+        });
+      }}
+      className={`flex-1 ${activeTab === tab ? 'bg-primary-600' : 'border-primary-600 bg-transparent'}`}
+    >
       <ButtonText className={activeTab === tab ? 'text-white' : 'text-primary-600'}>{label}</ButtonText>
     </Button>
   );

@@ -92,8 +92,9 @@ const client = z.object({
   RESPOND_MAPBOX_DLKEY: z.string(),
   IS_MOBILE_APP: z.boolean(),
   SENTRY_DSN: z.string(),
-  POSTHOG_API_KEY: z.string(),
-  POSTHOG_HOST: z.string(),
+  APTABASE_URL: z.string(),
+  APTABASE_APP_KEY: z.string(),
+  STORAGE_ENCRYPTION_KEY: z.string().optional(),
 });
 
 const buildTime = z.object({
@@ -127,8 +128,9 @@ const _clientEnv = {
   RESPOND_MAPBOX_PUBKEY: process.env.RESPOND_MAPBOX_PUBKEY || '',
   RESPOND_MAPBOX_DLKEY: process.env.RESPOND_MAPBOX_DLKEY || '',
   SENTRY_DSN: process.env.RESPOND_SENTRY_DSN || '',
-  POSTHOG_API_KEY: process.env.POSTHOG_API_KEY || '',
-  POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
+  APTABASE_APP_KEY: process.env.RESPOND_APTABASE_APP_KEY || '',
+  APTABASE_URL: process.env.RESPOND_APTABASE_URL || '',
+  STORAGE_ENCRYPTION_KEY: process.env.RESPOND_STORAGE_ENCRYPTION_KEY || '',
 };
 
 /**

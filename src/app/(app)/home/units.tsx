@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Filter, Search, Truck, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,16 +17,27 @@ import { Text } from '@/components/ui/text';
 import { UnitCard } from '@/components/units/unit-card';
 import { UnitDetailsSheet } from '@/components/units/unit-details-sheet';
 import { UnitsFilterSheet } from '@/components/units/units-filter-sheet';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useUnitsStore } from '@/stores/units/store';
 
 export default function Units() {
   const { t } = useTranslation();
   const { units, searchQuery, setSearchQuery, selectUnit, isLoading, fetchUnits, selectedFilters, openFilterSheet } = useUnitsStore();
+  const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
     fetchUnits();
   }, [fetchUnits]);
+
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      trackEvent('units_viewed', {
+        timestamp: new Date().toISOString(),
+      });
+    }, [trackEvent])
+  );
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);

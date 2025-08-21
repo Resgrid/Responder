@@ -154,13 +154,15 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
+          androidVersionCode=$((5080345 + ${{ github.run_number }}))
+          echo "Android Version Code: ${androidVersionCode}"
+
           # Fix the main entry in package.json
           if [ -f ./package.json ]; then
             # Create a backup
             cp package.json package.json.bak
             # Update the package.json
-            jq '.version = "7.${{ github.run_number }}"' package.json > package.json.tmp && mv package.json.tmp package.json
-            jq '.versionCode = "7${{ github.run_number }}"' package.json > package.json.tmp && mv package.json.tmp package.json
+            jq --arg version "10.${{ github.run_number }}" --argjson versionCode "$androidVersionCode" '.version = $version | .versionCode = $versionCode' package.json > package.json.tmp && mv package.json.tmp package.json
             echo "Updated package.json versions"
             cat package.json | grep "version"
             cat package.json | grep "versionCode"
@@ -273,3 +275,41 @@ jobs:
           file: ./ResgridRespond-ios-adhoc.ipa
           groups: Resgrid
           notify: on
+
+      - name: 📋 Extract Release Notes from PR Body
+        if: ${{ matrix.platform == 'android' }}
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -eo pipefail
+          # Grab lines after "## Release Notes" until the next header
+          RELEASE_NOTES="$(printf '%s\n' "$PR_BODY" \
+            | awk 'f && /^## /{f=0} /^## Release Notes/{f=1; next} f')"
+          # Use a unique delimiter to write multiline into GITHUB_ENV
+          delimiter="EOF_$(date +%s)_$RANDOM"
+          {
+            echo "RELEASE_NOTES<<$delimiter"
+            printf '%s\n' "${RELEASE_NOTES:-No release notes provided.}"
+            echo "$delimiter"
+          } >> "$GITHUB_ENV"
+
+      - name: 📋 Prepare Release Notes file
+        if: ${{ matrix.platform == 'android' }}
+        run: |
+          {
+            echo "## Version 10.${{ github.run_number }} - $(date +%Y-%m-%d)"
+            echo
+            printf '%s\n' "${RELEASE_NOTES:-No release notes provided.}"
+          } > RELEASE_NOTES.md
+
+      - name: 📦 Create Release
+        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        uses: ncipollo/release-action@v1
+        with:
+          tag: '10.${{ github.run_number }}'
+          commit: ${{ github.sha }}
+          makeLatest: true
+          allowUpdates: true
+          name: '10.${{ github.run_number }}'
+          artifacts: './ResgridRespond-prod.apk'
+          bodyFile: 'RELEASE_NOTES.md'

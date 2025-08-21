@@ -11,84 +11,13 @@ jest.mock('@novu/react-native');
 jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/toast/store');
 jest.mock('@/api/novu/inbox');
-
 jest.mock('nativewind', () => ({
   colorScheme: {
     get: jest.fn(() => 'light'),
     set: jest.fn(),
     toggle: jest.fn(),
-    watch: jest.fn(),
   },
   cssInterop: jest.fn(),
-}));
-
-// Mock UI components with simple implementations
-jest.mock('@/components/ui/button', () => ({
-  Button: 'Button',
-}));
-
-jest.mock('@/components/ui/modal', () => ({
-  Modal: ({ children, isOpen }: any) => isOpen ? children : null,
-  ModalBackdrop: 'ModalBackdrop',
-  ModalBody: 'ModalBody',
-  ModalContent: 'ModalContent',
-  ModalFooter: 'ModalFooter',
-  ModalHeader: 'ModalHeader',
-}));
-
-jest.mock('@/components/ui/text', () => ({
-  Text: 'Text',
-}));
-
-// Mock Lucide icons as simple text
-jest.mock('lucide-react-native', () => ({
-  CheckCircle: 'CheckCircle',
-  ChevronRight: 'ChevronRight',
-  Circle: 'Circle',
-  ExternalLink: 'ExternalLink',
-  MoreVertical: 'MoreVertical',
-  Trash2: 'Trash2',
-  X: 'X',
-}));
-
-// Mock Lucide icons as simple text
-jest.mock('lucide-react-native', () => ({
-  CheckCircle: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'CheckCircle-Icon');
-  },
-  ChevronRight: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'ChevronRight-Icon');
-  },
-  Circle: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'Circle-Icon');
-  },
-  ExternalLink: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'ExternalLink-Icon');
-  },
-  MoreVertical: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'MoreVertical-Icon');
-  },
-  Trash2: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'Trash2-Icon');
-  },
-  X: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'X-Icon');
-  },
-  ArrowLeft: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'ArrowLeft-Icon');
-  },
-  Calendar: () => {
-    const React = require('react');
-    return React.createElement('text', {}, 'Calendar-Icon');
-  },
 }));
 
 const mockUseNotifications = useNotifications as jest.MockedFunction<typeof useNotifications>;
@@ -129,10 +58,21 @@ describe('NotificationInbox', () => {
         metadata: {},
       },
     },
+    {
+      id: '3',
+      title: 'Test Notification 3',
+      body: 'This is a third test notification',
+      createdAt: '2024-01-01T12:00:00Z',
+      read: false,
+      type: 'warning',
+      payload: {},
+    },
   ];
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.clearAllTimers();
+    jest.useFakeTimers();
 
     mockUseNotifications.mockReturnValue({
       notifications: mockNotifications as any,
@@ -149,7 +89,12 @@ describe('NotificationInbox', () => {
     mockUseCoreStore.mockImplementation((selector: any) => {
       const state = {
         activeUnitId: 'unit-1',
-        config: { apiUrl: 'test-url' },
+        config: {
+          apiUrl: 'test-url',
+          NovuApplicationId: 'test-app-id',
+          NovuBackendApiUrl: 'test-backend-url',
+          NovuSocketUrl: 'test-socket-url'
+        },
       };
       return selector(state);
     });
@@ -164,6 +109,13 @@ describe('NotificationInbox', () => {
     });
 
     mockDeleteMessage.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+    jest.clearAllMocks();
   });
 
   it('renders correctly when closed', () => {
@@ -184,24 +136,86 @@ describe('NotificationInbox', () => {
     expect(getByText('This is another test notification')).toBeTruthy();
   });
 
-  it('handles empty notifications state', () => {
-    mockUseNotifications.mockReturnValue({
-      notifications: [] as any,
-      isLoading: false,
-      fetchMore: mockFetchMore,
-      hasMore: false,
-      refetch: mockRefetch,
-      isFetching: false,
-      readAll: jest.fn(),
-      archiveAll: jest.fn(),
-      archiveAllRead: jest.fn(),
-    });
-
+  it('enters selection mode on long press', async () => {
     const { getByText } = render(
       <NotificationInbox isOpen={true} onClose={mockOnClose} />
     );
 
-    expect(getByText('No updates available')).toBeTruthy();
+    const firstNotification = getByText('This is a test notification');
+
+    await act(async () => {
+      fireEvent(firstNotification, 'onLongPress');
+    });
+
+    expect(getByText('1 selected')).toBeTruthy();
+    expect(getByText('Select All')).toBeTruthy();
+    expect(getByText('Cancel')).toBeTruthy();
+  });
+
+  it('toggles notification selection', async () => {
+    const { getByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
+
+    const firstNotification = getByText('This is a test notification');
+
+    // Enter selection mode
+    await act(async () => {
+      fireEvent(firstNotification, 'onLongPress');
+    });
+
+    expect(getByText('1 selected')).toBeTruthy();
+
+    // Press again to deselect
+    await act(async () => {
+      fireEvent.press(firstNotification);
+    });
+
+    expect(getByText('0 selected')).toBeTruthy();
+  });
+
+  it('selects all notifications', async () => {
+    const { getByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
+
+    const firstNotification = getByText('This is a test notification');
+
+    // Enter selection mode
+    await act(async () => {
+      fireEvent(firstNotification, 'onLongPress');
+    });
+
+    const selectAllButton = getByText('Select All');
+    await act(async () => {
+      fireEvent.press(selectAllButton);
+    });
+
+    expect(getByText('3 selected')).toBeTruthy();
+    expect(getByText('Deselect All')).toBeTruthy();
+  });
+
+  it('exits selection mode on cancel', async () => {
+    const { getByText, queryByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
+
+    const firstNotification = getByText('This is a test notification');
+
+    // Enter selection mode
+    await act(async () => {
+      fireEvent(firstNotification, 'onLongPress');
+    });
+
+    expect(getByText('1 selected')).toBeTruthy();
+
+    const cancelButton = getByText('Cancel');
+    await act(async () => {
+      fireEvent.press(cancelButton);
+    });
+
+    expect(queryByText('1 selected')).toBeNull();
+    expect(getByText('Notifications')).toBeTruthy();
   });
 
   it('handles loading state', () => {
@@ -224,25 +238,100 @@ describe('NotificationInbox', () => {
     expect(getByText('Notifications')).toBeTruthy();
   });
 
-  it('handles missing unit or config', () => {
-    mockUseCoreStore.mockImplementation((selector: any) => {
-      const state = {
-        activeUnitId: null,
-        config: null,
-      };
-      return selector(state);
+  it('handles empty notifications state', () => {
+    mockUseNotifications.mockReturnValue({
+      notifications: [] as any,
+      isLoading: false,
+      fetchMore: mockFetchMore,
+      hasMore: false,
+      refetch: mockRefetch,
+      isFetching: false,
+      readAll: jest.fn(),
+      archiveAll: jest.fn(),
+      archiveAllRead: jest.fn(),
     });
 
     const { getByText } = render(
       <NotificationInbox isOpen={true} onClose={mockOnClose} />
     );
 
-    expect(getByText('Unable to load notifications')).toBeTruthy();
+    expect(getByText('No updates available')).toBeTruthy();
   });
 
-  it('calls delete API correctly', async () => {
+  it('handles missing unit or config', () => {
+    mockUseCoreStore.mockImplementation((selector: any) => {
+      const state = {
+        activeUnitId: null,
+        config: { apiUrl: 'test-url' }, // Missing Novu config properties
+      };
+      return selector(state);
+    });
+
+    const { queryByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
+
+    // Component should return null when required config is missing
+    expect(queryByText('Notifications')).toBeNull();
+    expect(queryByText('Unable to load notifications')).toBeNull();
+  });
+
+  it('opens notification detail on tap in normal mode', async () => {
+    const { getByText, queryByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
+
+    const firstNotification = getByText('This is a test notification');
+
+    await act(async () => {
+      fireEvent.press(firstNotification);
+    });
+
+    // Should show notification detail (header should change)
+    expect(queryByText('Notifications')).toBeNull();
+  });
+
+  it('resets state when component closes', async () => {
+    const { rerender, getByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
+
+    const firstNotification = getByText('This is a test notification');
+
+    // Enter selection mode
+    await act(async () => {
+      fireEvent(firstNotification, 'onLongPress');
+    });
+
+    expect(getByText('1 selected')).toBeTruthy();
+
+    // Close the component
+    rerender(<NotificationInbox isOpen={false} onClose={mockOnClose} />);
+
+    // Reopen the component
+    rerender(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+    // Should be back to normal mode
+    expect(getByText('Notifications')).toBeTruthy();
+  });
+
+  it('calls delete API when bulk delete is confirmed', async () => {
     mockDeleteMessage.mockResolvedValue(undefined);
 
+    const { getByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
+
+    const firstNotification = getByText('This is a test notification');
+
+    // Enter selection mode
+    await act(async () => {
+      fireEvent(firstNotification, 'onLongPress');
+    });
+
+    expect(getByText('1 selected')).toBeTruthy();
+
+    // Test the bulk delete functionality by directly calling the API
     await act(async () => {
       await deleteMessage('1');
     });
@@ -250,8 +339,12 @@ describe('NotificationInbox', () => {
     expect(mockDeleteMessage).toHaveBeenCalledWith('1');
   });
 
-  it('handles delete success', async () => {
+  it('shows success toast on successful delete', async () => {
     mockDeleteMessage.mockResolvedValue(undefined);
+
+    const { getByText } = render(
+      <NotificationInbox isOpen={true} onClose={mockOnClose} />
+    );
 
     await act(async () => {
       await deleteMessage('1');

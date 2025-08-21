@@ -1,8 +1,9 @@
 import { endOfMonth, format, parseISO, startOfMonth } from 'date-fns';
 import { Calendar, Clock, Info, Users } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView } from 'react-native';
+import { ScrollView, useWindowDimensions } from 'react-native';
 
 import { Badge, BadgeText } from '@/components/ui/badge';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
@@ -13,6 +14,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useShiftsStore } from '@/stores/shifts/store';
 
 import { ShiftCalendarView } from './shift-calendar-view';
@@ -28,8 +30,13 @@ type TabType = 'info' | 'calendar';
 const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('info');
+  const { trackEvent } = useAnalytics();
+  const { width, height } = useWindowDimensions();
+  const { colorScheme } = useColorScheme();
 
   const { selectedShift, shiftCalendarData, isShiftLoading, isCalendarLoading, selectShiftDay } = useShiftsStore();
+
+  const isLandscape = width > height;
 
   const formatNextDay = useCallback(
     (nextDay: string) => {
@@ -65,9 +72,87 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
     }
   }, []);
 
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedShift) return;
+
+    try {
+      trackEvent('shift_details_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        shiftId: selectedShift.ShiftId || '',
+        shiftName: selectedShift.Name || '',
+        activeTab,
+        isLandscape,
+        colorScheme: colorScheme || 'light',
+        hasNextDay: !!selectedShift.NextDay,
+        personnelCount: selectedShift.PersonnelCount || 0,
+        groupCount: selectedShift.GroupCount || 0,
+        inShift: !!selectedShift.InShift,
+        scheduleType: selectedShift.ScheduleType || 0,
+        assignmentType: selectedShift.AssignmentType || 0,
+        hasRecentDays: !!(selectedShift.Days && selectedShift.Days.length > 0),
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track shift details sheet view analytics:', error);
+    }
+  }, [trackEvent, selectedShift, activeTab, isLandscape, colorScheme]);
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isOpen && selectedShift) {
+      trackViewAnalytics();
+    }
+  }, [isOpen, selectedShift, trackViewAnalytics]);
+
+  // Handle close with analytics
+  const handleClose = useCallback(() => {
+    if (selectedShift) {
+      try {
+        trackEvent('shift_details_sheet_closed', {
+          timestamp: new Date().toISOString(),
+          shiftId: selectedShift.ShiftId || '',
+          shiftName: selectedShift.Name || '',
+          activeTab,
+          isLandscape,
+          colorScheme: colorScheme || 'light',
+        });
+      } catch (error) {
+        // Analytics errors should not break the component
+        console.warn('Failed to track shift details sheet close analytics:', error);
+      }
+    }
+    onClose();
+  }, [trackEvent, selectedShift, activeTab, isLandscape, colorScheme, onClose]);
+
+  // Handle tab changes with analytics
+  const handleTabChange = useCallback(
+    (newTab: TabType) => {
+      const fromTab = activeTab;
+      setActiveTab(newTab);
+
+      if (selectedShift) {
+        try {
+          trackEvent('shift_details_tab_changed', {
+            timestamp: new Date().toISOString(),
+            shiftId: selectedShift.ShiftId || '',
+            shiftName: selectedShift.Name || '',
+            fromTab,
+            toTab: newTab,
+            isLandscape,
+            colorScheme: colorScheme || 'light',
+          });
+        } catch (error) {
+          // Analytics errors should not break the component
+          console.warn('Failed to track shift details tab change analytics:', error);
+        }
+      }
+    },
+    [trackEvent, selectedShift, activeTab, isLandscape, colorScheme]
+  );
+
   const renderTabButton = useCallback(
     (tab: TabType, icon: any, title: string) => (
-      <Button onPress={() => setActiveTab(tab)} variant={activeTab === tab ? 'solid' : 'outline'} action={activeTab === tab ? 'primary' : 'secondary'} className="flex-1">
+      <Button onPress={() => handleTabChange(tab)} variant={activeTab === tab ? 'solid' : 'outline'} action={activeTab === tab ? 'primary' : 'secondary'} className="flex-1">
         <HStack space="xs" className="items-center">
           {React.createElement(icon, {
             size: 16,
@@ -77,7 +162,7 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
         </HStack>
       </Button>
     ),
-    [activeTab]
+    [activeTab, handleTabChange]
   );
 
   const renderShiftInfo = useCallback(() => {
@@ -221,7 +306,7 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
   if (!selectedShift) return null;
 
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={onClose} testID="shift-details-sheet" snapPoints={[80]} minHeight="min-h-[600px]">
+    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} testID="shift-details-sheet" snapPoints={[80]} minHeight="min-h-[600px]">
       <VStack space="md" className="h-full">
         {/* Header */}
         <Box className="border-b border-gray-200 pb-4 dark:border-gray-700">

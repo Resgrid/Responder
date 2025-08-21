@@ -16,11 +16,12 @@ import {
   UserIcon,
   X,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
 
@@ -86,6 +87,7 @@ export const ContactDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const { trackEvent } = useAnalytics();
   const { contacts, selectedContactId, isDetailsOpen, closeDetails } = useContactsStore();
   const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details');
 
@@ -93,6 +95,83 @@ export const ContactDetailsSheet: React.FC = () => {
     if (!selectedContactId) return null;
     return contacts.find((contact) => contact.ContactId === selectedContactId);
   }, [contacts, selectedContactId]);
+
+  // Track analytics when sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedContact) return;
+
+    try {
+      const hasContactInfo =
+        selectedContact.Email ||
+        selectedContact.Phone ||
+        selectedContact.Mobile ||
+        selectedContact.HomePhoneNumber ||
+        selectedContact.CellPhoneNumber ||
+        selectedContact.OfficePhoneNumber ||
+        selectedContact.FaxPhoneNumber;
+
+      const hasLocationInfo =
+        selectedContact.Address ||
+        selectedContact.City ||
+        selectedContact.State ||
+        selectedContact.Zip ||
+        selectedContact.LocationGpsCoordinates ||
+        selectedContact.EntranceGpsCoordinates ||
+        selectedContact.ExitGpsCoordinates;
+
+      const hasSocialMedia =
+        selectedContact.Website ||
+        selectedContact.Twitter ||
+        selectedContact.Facebook ||
+        selectedContact.LinkedIn ||
+        selectedContact.Instagram ||
+        selectedContact.Threads ||
+        selectedContact.Bluesky ||
+        selectedContact.Mastodon;
+
+      trackEvent('contact_details_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        contactId: selectedContact.ContactId,
+        contactType: selectedContact.ContactType === ContactType.Person ? 'person' : 'company',
+        hasContactInfo: !!hasContactInfo,
+        hasLocationInfo: !!hasLocationInfo,
+        hasSocialMedia: !!hasSocialMedia,
+        hasDescription: !!(selectedContact.Description || selectedContact.Notes || selectedContact.OtherInfo),
+        isImportant: !!selectedContact.IsImportant,
+        activeTab,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track contact details sheet view analytics:', error);
+    }
+  }, [trackEvent, selectedContact, activeTab]);
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isDetailsOpen && selectedContact) {
+      trackViewAnalytics();
+    }
+  }, [isDetailsOpen, selectedContact, trackViewAnalytics]);
+
+  // Handle tab changes with analytics
+  const handleTabChange = useCallback(
+    (newTab: 'details' | 'notes') => {
+      const fromTab = activeTab;
+      setActiveTab(newTab);
+
+      try {
+        trackEvent('contact_details_tab_changed', {
+          timestamp: new Date().toISOString(),
+          contactId: selectedContact?.ContactId || '',
+          fromTab,
+          toTab: newTab,
+        });
+      } catch (error) {
+        console.warn('Failed to track contact details tab change analytics:', error);
+      }
+    },
+    [activeTab, selectedContact?.ContactId, trackEvent]
+  );
 
   const handleDelete = async () => {
     if (selectedContactId) {
@@ -186,12 +265,12 @@ export const ContactDetailsSheet: React.FC = () => {
 
           {/* Tab Navigation */}
           <HStack className="mb-4 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
-            <Pressable onPress={() => setActiveTab('details')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'details' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
+            <Pressable onPress={() => handleTabChange('details')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'details' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
               <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'details' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
                 {t('contacts.tabs.details')}
               </Text>
             </Pressable>
-            <Pressable onPress={() => setActiveTab('notes')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'notes' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
+            <Pressable onPress={() => handleTabChange('notes')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'notes' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
               <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'notes' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
                 {t('contacts.tabs.notes')}
               </Text>

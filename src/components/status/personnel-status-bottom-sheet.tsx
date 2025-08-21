@@ -1,9 +1,10 @@
 import { ArrowLeft, ArrowRight, CircleIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity } from 'react-native';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
@@ -21,6 +22,7 @@ import { VStack } from '../ui/vstack';
 
 export const PersonnelStatusBottomSheet = () => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const {
     isOpen,
     currentStep,
@@ -50,6 +52,7 @@ export const PersonnelStatusBottomSheet = () => {
 
   const { activeCall } = useCoreStore();
   const { calls, isLoading: isLoadingCalls, fetchCalls } = useCallsStore();
+  const { colorScheme } = useColorScheme();
 
   // Fetch calls and groups when bottom sheet opens
   React.useEffect(() => {
@@ -60,6 +63,22 @@ export const PersonnelStatusBottomSheet = () => {
   }, [isOpen, fetchCalls, fetchGroups]);
 
   const handleClose = () => {
+    // Track close analytics
+    try {
+      trackEvent('personnel_status_bottom_sheet_closed', {
+        timestamp: new Date().toISOString(),
+        currentStep,
+        selectedStatusId: selectedStatus?.Id ?? 0,
+        responseType,
+        hasSelectedCall: !!selectedCall,
+        hasSelectedGroup: !!selectedGroup,
+        hasNote: note.length > 0,
+        completed: false, // User closed without completing
+      });
+    } catch (error) {
+      console.warn('Failed to track personnel status bottom sheet close analytics:', error);
+    }
+
     reset();
   };
 
@@ -67,6 +86,19 @@ export const PersonnelStatusBottomSheet = () => {
     const call = calls.find((c) => c.CallId === callId);
     if (call) {
       setSelectedCall(call);
+
+      // Track call selection analytics
+      try {
+        trackEvent('personnel_status_call_selected', {
+          timestamp: new Date().toISOString(),
+          callId: call.CallId,
+          callNumber: call.Number || '',
+          callName: call.Name || '',
+          currentStep,
+        });
+      } catch (error) {
+        console.warn('Failed to track call selection analytics:', error);
+      }
     }
   };
 
@@ -74,23 +106,109 @@ export const PersonnelStatusBottomSheet = () => {
     const group = groups.find((g) => g.GroupId === groupId);
     if (group) {
       setSelectedGroup(group);
+
+      // Track group selection analytics
+      try {
+        trackEvent('personnel_status_group_selected', {
+          timestamp: new Date().toISOString(),
+          groupId: group.GroupId,
+          groupName: group.Name || '',
+          groupType: group.GroupType || '',
+          currentStep,
+        });
+      } catch (error) {
+        console.warn('Failed to track group selection analytics:', error);
+      }
     }
   };
 
   const handleNoDestinationSelect = () => {
     setResponseType('none');
+
+    // Track no destination selection analytics
+    try {
+      trackEvent('personnel_status_no_destination_selected', {
+        timestamp: new Date().toISOString(),
+        currentStep,
+        selectedStatusId: selectedStatus?.Id ?? 0,
+      });
+    } catch (error) {
+      console.warn('Failed to track no destination selection analytics:', error);
+    }
   };
 
   const handleNext = () => {
+    // Track step progression analytics
+    try {
+      trackEvent('personnel_status_step_next', {
+        timestamp: new Date().toISOString(),
+        fromStep: currentStep,
+        selectedStatusId: selectedStatus?.Id ?? 0,
+        responseType,
+        hasSelectedCall: !!selectedCall,
+        hasSelectedGroup: !!selectedGroup,
+      });
+    } catch (error) {
+      console.warn('Failed to track step next analytics:', error);
+    }
+
     nextStep();
   };
 
   const handlePrevious = () => {
+    // Track step backward analytics
+    try {
+      trackEvent('personnel_status_step_previous', {
+        timestamp: new Date().toISOString(),
+        fromStep: currentStep,
+        selectedStatusId: selectedStatus?.Id ?? 0,
+        responseType,
+      });
+    } catch (error) {
+      console.warn('Failed to track step previous analytics:', error);
+    }
+
     previousStep();
   };
 
   const handleSubmit = async () => {
+    // Track submission analytics
+    try {
+      trackEvent('personnel_status_submitted', {
+        timestamp: new Date().toISOString(),
+        selectedStatusId: selectedStatus?.Id ?? 0,
+        selectedStatusText: selectedStatus?.Text ?? '',
+        responseType,
+        selectedCallId: selectedCall?.CallId ?? '',
+        selectedGroupId: selectedGroup?.GroupId ?? '',
+        hasNote: note.length > 0,
+        noteLength: note.length,
+        hasRespondingTo: respondingTo.length > 0,
+        respondingToLength: respondingTo.length,
+      });
+    } catch (error) {
+      console.warn('Failed to track submission analytics:', error);
+    }
+
     await submitStatus();
+  };
+
+  const handleTabSelect = (tab: 'calls' | 'stations') => {
+    const fromTab = selectedTab;
+    setSelectedTab(tab);
+
+    // Track tab selection analytics
+    try {
+      trackEvent('personnel_status_tab_changed', {
+        timestamp: new Date().toISOString(),
+        fromTab,
+        toTab: tab,
+        currentStep,
+        selectedStatusId: selectedStatus?.Id ?? 0,
+      });
+    } catch (error) {
+      console.warn('Failed to track tab change analytics:', error);
+    }
   };
 
   // Auto-select active call if available and no destination is selected
@@ -99,6 +217,41 @@ export const PersonnelStatusBottomSheet = () => {
       setSelectedCall(activeCall);
     }
   }, [activeCall, currentStep, responseType, setSelectedCall]);
+
+  // Analytics tracking function
+  const trackViewAnalytics = useCallback(() => {
+    try {
+      trackEvent('personnel_status_bottom_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        currentStep,
+        selectedStatusId: selectedStatus?.Id ?? 0,
+        selectedStatusText: selectedStatus?.Text ?? '',
+        responseType,
+        selectedTab,
+        hasSelectedCall: !!selectedCall,
+        selectedCallId: selectedCall?.CallId ?? '',
+        hasSelectedGroup: !!selectedGroup,
+        selectedGroupId: selectedGroup?.GroupId ?? '',
+        hasNote: note.length > 0,
+        noteLength: note.length,
+        hasRespondingTo: respondingTo.length > 0,
+        availableCallsCount: calls?.length || 0,
+        availableGroupsCount: groups?.length || 0,
+        hasActiveCall: !!activeCall,
+        colorScheme: colorScheme || 'light',
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track personnel status bottom sheet view analytics:', error);
+    }
+  }, [trackEvent, currentStep, selectedStatus, responseType, selectedTab, selectedCall, selectedGroup, note, respondingTo, calls, groups, activeCall, colorScheme]);
+
+  // Track analytics when sheet becomes visible or step changes
+  useEffect(() => {
+    if (isOpen) {
+      trackViewAnalytics();
+    }
+  }, [isOpen, currentStep, trackViewAnalytics]);
 
   const getStepTitle = () => {
     switch (currentStep) {
@@ -149,8 +302,6 @@ export const PersonnelStatusBottomSheet = () => {
     }
   };
 
-  const { colorScheme } = useColorScheme();
-
   return (
     <Actionsheet isOpen={isOpen} onClose={handleClose}>
       <ActionsheetBackdrop />
@@ -191,10 +342,10 @@ export const PersonnelStatusBottomSheet = () => {
 
               {/* Tab Headers */}
               <HStack space="xs" className="mb-4">
-                <TouchableOpacity onPress={() => setSelectedTab('calls')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'calls' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                <TouchableOpacity onPress={() => handleTabSelect('calls')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'calls' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
                   <Text className={`text-center font-semibold ${selectedTab === 'calls' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('personnel.status.calls_tab')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setSelectedTab('stations')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'stations' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                <TouchableOpacity onPress={() => handleTabSelect('stations')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'stations' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
                   <Text className={`text-center font-semibold ${selectedTab === 'stations' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('personnel.status.stations_tab')}</Text>
                 </TouchableOpacity>
               </HStack>

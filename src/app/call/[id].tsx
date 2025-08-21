@@ -1,8 +1,9 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
@@ -19,10 +20,12 @@ import { HStack } from '@/components/ui/hstack';
 import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
 
 import { useCallDetailMenu } from '../../components/calls/call-detail-menu';
@@ -36,6 +39,7 @@ export default function CallDetail() {
   const callId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [coordinates, setCoordinates] = useState<{
@@ -46,6 +50,7 @@ export default function CallDetail() {
     longitude: null,
   });
   const { call, callExtraData, callPriority, isLoading, error, fetchCallDetail, reset } = useCallDetailStore();
+  const { canUserCreateCalls } = useSecurityStore();
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -68,14 +73,35 @@ export default function CallDetail() {
   const openNotesModal = () => {
     useCallDetailStore.getState().fetchCallNotes(callId);
     setIsNotesModalOpen(true);
+
+    // Track analytics for notes modal opening
+    trackEvent('call_notes_opened', {
+      timestamp: new Date().toISOString(),
+      callId: call?.CallId || callId,
+      notesCount: call?.NotesCount || 0,
+    });
   };
 
   const openImagesModal = () => {
     setIsImagesModalOpen(true);
+
+    // Track analytics for images modal opening
+    trackEvent('call_images_opened', {
+      timestamp: new Date().toISOString(),
+      callId: call?.CallId || callId,
+      imagesCount: call?.ImgagesCount || 0,
+    });
   };
 
   const openFilesModal = () => {
     setIsFilesModalOpen(true);
+
+    // Track analytics for files modal opening
+    trackEvent('call_files_opened', {
+      timestamp: new Date().toISOString(),
+      callId: call?.CallId || callId,
+      filesCount: call?.FileCount || 0,
+    });
   };
 
   const handleEditCall = () => {
@@ -98,6 +124,28 @@ export default function CallDetail() {
       fetchCallDetail(callId);
     }
   }, [callId, fetchCallDetail, reset]);
+
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    useCallback(() => {
+      if (call) {
+        trackEvent('call_detail_viewed', {
+          timestamp: new Date().toISOString(),
+          callId: call.CallId,
+          callNumber: call.Number,
+          callType: call.Type,
+          priority: callPriority?.Name || 'Unknown',
+          hasCoordinates: !!(coordinates.latitude && coordinates.longitude),
+          notesCount: call.NotesCount || 0,
+          imagesCount: call.ImgagesCount || 0,
+          filesCount: call.FileCount || 0,
+          hasProtocols: !!callExtraData?.Protocols?.length,
+          hasDispatches: !!callExtraData?.Dispatches?.length,
+          hasActivity: !!callExtraData?.Activity?.length,
+        });
+      }
+    }, [trackEvent, call, callPriority, coordinates, callExtraData])
+  );
 
   useEffect(() => {
     if (call) {
@@ -126,11 +174,26 @@ export default function CallDetail() {
     }
 
     try {
+      // Track analytics for route action
+      trackEvent('call_route_opened', {
+        timestamp: new Date().toISOString(),
+        callId: call?.CallId || callId,
+        hasUserLocation: !!(userLocation.latitude && userLocation.longitude),
+        destinationAddress: call?.Address || '',
+      });
+
       const destinationName = call?.Address || t('call_detail.call_location');
       const success = await openMapsWithDirections(coordinates.latitude, coordinates.longitude, destinationName, userLocation.latitude || undefined, userLocation.longitude || undefined);
 
       if (!success) {
         showToast('error', t('call_detail.failed_to_open_maps'));
+
+        // Track failed route attempt
+        trackEvent('call_route_failed', {
+          timestamp: new Date().toISOString(),
+          callId: call?.CallId || callId,
+          reason: 'failed_to_open_maps',
+        });
       }
     } catch (error) {
       logger.error({
@@ -138,6 +201,14 @@ export default function CallDetail() {
         context: { error, callId, coordinates },
       });
       showToast('error', t('call_detail.failed_to_open_maps'));
+
+      // Track failed route attempt
+      trackEvent('call_route_failed', {
+        timestamp: new Date().toISOString(),
+        callId: call?.CallId || callId,
+        reason: 'exception',
+        error: error instanceof Error ? error.message : 'unknown_error',
+      });
     }
   };
 
@@ -148,7 +219,7 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
           }}
         />
         <View className="size-full flex-1">
@@ -166,7 +237,7 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
           }}
         />
         <View className="size-full flex-1">
@@ -416,7 +487,7 @@ export default function CallDetail() {
         options={{
           title: t('call_detail.title'),
           headerShown: true,
-          headerRight: () => <HeaderRightMenu />,
+          headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
         }}
       />
       <ScrollView className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>

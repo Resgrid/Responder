@@ -4,14 +4,17 @@ import { useTranslation } from 'react-i18next';
 import CallNotesModal from '../call-notes-modal';
 import { useAuthStore } from '@/lib/auth';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useAnalytics } from '@/hooks/use-analytics';
 
 // Mock dependencies
 jest.mock('react-i18next');
 jest.mock('@/lib/auth');
 jest.mock('@/stores/calls/detail-store');
+jest.mock('@/hooks/use-analytics');
 
 // Mock navigation
 jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((fn) => fn()),
   useIsFocused: () => true,
   useNavigation: () => ({
     navigate: jest.fn(),
@@ -103,6 +106,7 @@ jest.mock('lucide-react-native', () => ({
 const mockUseTranslation = useTranslation as jest.MockedFunction<typeof useTranslation>;
 const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
 const mockUseCallDetailStore = useCallDetailStore as jest.MockedFunction<typeof useCallDetailStore>;
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
 describe('CallNotesModal', () => {
   const mockProps = {
@@ -157,6 +161,10 @@ describe('CallNotesModal', () => {
     });
 
     mockUseAuthStore.mockReturnValue(mockAuthStore);
+
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: jest.fn(),
+    });
   });
 
   it('renders correctly when open', () => {

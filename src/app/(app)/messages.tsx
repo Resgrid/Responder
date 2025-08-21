@@ -25,8 +25,10 @@ import { Pressable } from '@/components/ui/pressable';
 import { SafeAreaView } from '@/components/ui/safe-area-view';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
 import { type MessageFilter, useMessagesStore } from '@/stores/messages/store';
+import { useSecurityStore } from '@/stores/security/store';
 
 export default function MessagesScreen() {
   const { t } = useTranslation();
@@ -35,6 +37,9 @@ export default function MessagesScreen() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+
+  const { canUserCreateMessages } = useSecurityStore();
+  const { trackEvent } = useAnalytics();
 
   const {
     isLoading,
@@ -64,6 +69,13 @@ export default function MessagesScreen() {
   // Fetch messages when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      // Track analytics when view becomes visible
+      trackEvent('messages_viewed', {
+        timestamp: new Date().toISOString(),
+        currentFilter,
+        messageCount: filteredMessages.length,
+      });
+
       if (currentFilter === 'sent') {
         fetchSentMessages();
       } else if (currentFilter === 'inbox') {
@@ -73,14 +85,24 @@ export default function MessagesScreen() {
         fetchInboxMessages();
         fetchSentMessages();
       }
-    }, [fetchInboxMessages, fetchSentMessages, currentFilter])
+    }, [fetchInboxMessages, fetchSentMessages, currentFilter, trackEvent, filteredMessages.length])
   );
 
   const handleMessagePress = (message: MessageResultData) => {
     if (isSelectionMode) {
       toggleMessageSelection(message.MessageId);
+      trackEvent('message_selection_toggled', {
+        timestamp: new Date().toISOString(),
+        messageId: message.MessageId,
+        isSelected: !selectedForDeletion.has(message.MessageId),
+      });
     } else {
       selectMessage(message.MessageId);
+      trackEvent('message_selected', {
+        timestamp: new Date().toISOString(),
+        messageId: message.MessageId,
+        messageType: message.Type.toString(),
+      });
     }
   };
 
@@ -88,6 +110,10 @@ export default function MessagesScreen() {
     if (!isSelectionMode) {
       setIsSelectionMode(true);
       toggleMessageSelection(message.MessageId);
+      trackEvent('message_selection_mode_entered', {
+        timestamp: new Date().toISOString(),
+        messageId: message.MessageId,
+      });
     }
   };
 
@@ -99,11 +125,22 @@ export default function MessagesScreen() {
       {
         text: t('common.cancel'),
         style: 'cancel',
+        onPress: () => {
+          trackEvent('message_delete_cancelled', {
+            timestamp: new Date().toISOString(),
+            messageCount: selectedMessages.length,
+          });
+        },
       },
       {
         text: t('common.confirm'),
         style: 'destructive',
         onPress: async () => {
+          trackEvent('messages_deleted', {
+            timestamp: new Date().toISOString(),
+            messageCount: selectedMessages.length,
+            messageIds: selectedMessages.join(','),
+          });
           await deleteMessages(selectedMessages);
           setIsSelectionMode(false);
         },
@@ -114,6 +151,28 @@ export default function MessagesScreen() {
   const exitSelectionMode = () => {
     setIsSelectionMode(false);
     clearSelection();
+    trackEvent('message_selection_mode_exited', {
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const handleOpenCompose = (source: 'fab' | 'zero_state') => {
+    trackEvent('message_compose_opened', {
+      timestamp: new Date().toISOString(),
+      source,
+    });
+    openCompose();
+  };
+
+  const handleSearchQueryChange = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      trackEvent('messages_searched', {
+        timestamp: new Date().toISOString(),
+        searchLength: query.length,
+        currentFilter,
+      });
+    }
   };
 
   const getFilterLabel = (filter: MessageFilter) => {
@@ -168,7 +227,7 @@ export default function MessagesScreen() {
           <HStack space="sm" className="items-center">
             <View className="flex-1">
               <Input variant="outline" className="flex-1">
-                <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={setSearchQuery} testID="messages-search-input" />
+                <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={handleSearchQueryChange} testID="messages-search-input" />
               </Input>
             </View>
             <Pressable className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800" onPress={() => setIsFilterMenuOpen(true)} testID="messages-filter-button">
@@ -186,7 +245,7 @@ export default function MessagesScreen() {
           {isSelectionMode ? (
             <HStack space="sm" className="items-center justify-between">
               <HStack space="sm" className="items-center">
-                <Pressable onPress={exitSelectionMode} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Pressable onPress={exitSelectionMode} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800" testID="messages-exit-selection-mode">
                   <X size={20} className="text-gray-700 dark:text-gray-300" />
                 </Pressable>
               </HStack>
@@ -215,6 +274,10 @@ export default function MessagesScreen() {
             <Text className="text-center text-red-500">{error}</Text>
             <Button
               onPress={() => {
+                trackEvent('messages_retry_pressed', {
+                  timestamp: new Date().toISOString(),
+                  currentFilter,
+                });
                 if (currentFilter === 'sent') {
                   fetchSentMessages();
                 } else if (currentFilter === 'inbox') {
@@ -232,9 +295,11 @@ export default function MessagesScreen() {
           </View>
         ) : filteredMessages.length === 0 && !isLoading ? (
           <ZeroState heading={t('messages.no_messages')} description={t('messages.no_messages_description')} icon={Mail} iconSize={64} iconColor="#9CA3AF">
-            <Button onPress={openCompose} className="bg-primary-600">
-              <ButtonText>{t('messages.send_first_message')}</ButtonText>
-            </Button>
+            {canUserCreateMessages ? (
+              <Button onPress={() => handleOpenCompose('zero_state')} className="bg-primary-600">
+                <ButtonText>{t('messages.send_first_message')}</ButtonText>
+              </Button>
+            ) : null}
           </ZeroState>
         ) : (
           <FlatList
@@ -245,7 +310,12 @@ export default function MessagesScreen() {
             contentContainerStyle={{ paddingBottom: 16 }}
             showsVerticalScrollIndicator={false}
             refreshing={isLoading}
+            testID="messages-list"
             onRefresh={() => {
+              trackEvent('messages_refreshed', {
+                timestamp: new Date().toISOString(),
+                currentFilter,
+              });
               if (currentFilter === 'sent') {
                 fetchSentMessages();
               } else if (currentFilter === 'inbox') {
@@ -277,6 +347,11 @@ export default function MessagesScreen() {
           <ActionsheetContent>
             <ActionsheetItem
               onPress={() => {
+                trackEvent('messages_filter_changed', {
+                  timestamp: new Date().toISOString(),
+                  fromFilter: currentFilter,
+                  toFilter: 'all',
+                });
                 setCurrentFilter('all');
                 setIsFilterMenuOpen(false);
                 // For 'all', fetch both inbox and sent messages
@@ -294,6 +369,11 @@ export default function MessagesScreen() {
 
             <ActionsheetItem
               onPress={() => {
+                trackEvent('messages_filter_changed', {
+                  timestamp: new Date().toISOString(),
+                  fromFilter: currentFilter,
+                  toFilter: 'inbox',
+                });
                 setCurrentFilter('inbox');
                 setIsFilterMenuOpen(false);
                 fetchInboxMessages();
@@ -309,6 +389,11 @@ export default function MessagesScreen() {
 
             <ActionsheetItem
               onPress={() => {
+                trackEvent('messages_filter_changed', {
+                  timestamp: new Date().toISOString(),
+                  fromFilter: currentFilter,
+                  toFilter: 'sent',
+                });
                 setCurrentFilter('sent');
                 setIsFilterMenuOpen(false);
                 fetchSentMessages();
@@ -331,8 +416,8 @@ export default function MessagesScreen() {
         <ComposeMessageSheet />
 
         {/* FAB button for composing new message */}
-        {!isSelectionMode && (
-          <Fab placement="bottom right" size="lg" onPress={openCompose} testID="messages-compose-fab">
+        {!isSelectionMode && canUserCreateMessages && (
+          <Fab placement="bottom right" size="lg" onPress={() => handleOpenCompose('fab')} testID="messages-compose-fab">
             <FabIcon as={MessageSquarePlus} size="lg" />
           </Fab>
         )}

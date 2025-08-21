@@ -1,1 +1,1 @@
-module.exports = require('react-native-gesture-handler/src/mocks.js');
+module.exports = require('react-native-gesture-handler/lib/commonjs/mocks.js');

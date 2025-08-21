@@ -37,7 +37,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
   const { colorScheme } = useColorScheme();
   const router = useRouter();
   const { profile, logout } = useAuthStore();
-  const { isConnected, setIsBottomSheetVisible, toggleMicrophone } = useLiveKitStore();
+  const { isConnected, setIsBottomSheetVisible } = useLiveKitStore();
   const { currentStream, isPlaying, setIsBottomSheetVisible: setAudioStreamBottomSheetVisible } = useAudioStreamStore();
   const { departmentCode } = useSecurityStore();
   const securityStoreState = securityStore();

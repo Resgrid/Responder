@@ -1,8 +1,9 @@
 import { format, parseISO } from 'date-fns';
 import { AlertCircle, CheckCircle, Clock, UserPlus, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useWindowDimensions } from 'react-native';
 
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Box } from '@/components/ui/box';
@@ -13,6 +14,7 @@ import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
 import { type ShiftDayGroupNeedsResultData, type ShiftDaySignupResultData } from '@/models/v4/shifts/shiftDayResultData';
 import { useShiftsStore } from '@/stores/shifts/store';
@@ -25,11 +27,80 @@ interface ShiftDayDetailsSheetProps {
 
 export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
   const { userId } = useAuthStore();
   const { colorScheme } = useColorScheme();
+  const { trackEvent } = useAnalytics();
   const showToast = useToastStore((state) => state.showToast);
 
   const { selectedShiftDay, isShiftDayLoading, isSignupLoading, signupForShift } = useShiftsStore();
+
+  // Analytics tracking function for sheet view
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedShiftDay) return;
+
+    try {
+      const totalSignups = selectedShiftDay.Signups?.length || 0;
+      const totalNeeds =
+        selectedShiftDay.Needs?.reduce((total, group) => {
+          return (
+            total +
+            (group.GroupNeeds?.reduce((groupTotal, role) => {
+              return groupTotal + (role.Needed || 0);
+            }, 0) || 0)
+          );
+        }, 0) || 0;
+
+      const userSignedUp = selectedShiftDay.Signups?.some((signup) => signup.UserId === userId) || false;
+      const hasAvailableNeeds = selectedShiftDay.Needs && selectedShiftDay.Needs.length > 0 && totalNeeds > 0;
+
+      trackEvent('shift_day_details_viewed', {
+        timestamp: new Date().toISOString(),
+        shiftDayId: selectedShiftDay.ShiftDayId,
+        shiftName: selectedShiftDay.ShiftName,
+        shiftType: selectedShiftDay.ShiftType,
+        totalSignups,
+        totalNeeds,
+        signupPercentage: totalNeeds > 0 ? Math.round((totalSignups / totalNeeds) * 100) : 0,
+        userSignedUp,
+        hasAvailableNeeds: !!hasAvailableNeeds,
+        canUserSignUp: !!(hasAvailableNeeds && !userSignedUp),
+        isLandscape,
+        colorScheme: colorScheme || 'light',
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track shift day details view analytics:', error);
+    }
+  }, [trackEvent, selectedShiftDay, userId, isLandscape, colorScheme]);
+
+  // Track analytics when sheet becomes visible
+  useEffect(() => {
+    if (isOpen && selectedShiftDay) {
+      trackViewAnalytics();
+    }
+  }, [isOpen, selectedShiftDay, trackViewAnalytics]);
+
+  // Handle close with analytics
+  const handleClose = useCallback(() => {
+    if (selectedShiftDay) {
+      try {
+        trackEvent('shift_day_details_closed', {
+          timestamp: new Date().toISOString(),
+          shiftDayId: selectedShiftDay.ShiftDayId,
+          shiftName: selectedShiftDay.ShiftName,
+          userSignedUp: selectedShiftDay.Signups?.some((signup) => signup.UserId === userId) || false,
+          isLandscape,
+          colorScheme: colorScheme || 'light',
+        });
+      } catch (error) {
+        // Analytics errors should not break the component
+        console.warn('Failed to track shift day details close analytics:', error);
+      }
+    }
+    onClose();
+  }, [trackEvent, selectedShiftDay, userId, isLandscape, colorScheme, onClose]);
 
   if (!selectedShiftDay) return null;
 
@@ -97,11 +168,55 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   const handleSignup = async () => {
     if (!userId || !selectedShiftDay || !canUserSignUp()) return;
 
+    // Track signup attempt
+    try {
+      trackEvent('shift_day_signup_attempted', {
+        timestamp: new Date().toISOString(),
+        shiftDayId: selectedShiftDay.ShiftDayId,
+        shiftName: selectedShiftDay.ShiftName,
+        userId,
+        isLandscape,
+        colorScheme: colorScheme || 'light',
+      });
+    } catch (error) {
+      console.warn('Failed to track shift day signup attempt analytics:', error);
+    }
+
     try {
       await signupForShift(selectedShiftDay.ShiftDayId, userId);
+
+      // Track successful signup
+      try {
+        trackEvent('shift_day_signup_success', {
+          timestamp: new Date().toISOString(),
+          shiftDayId: selectedShiftDay.ShiftDayId,
+          shiftName: selectedShiftDay.ShiftName,
+          userId,
+          isLandscape,
+          colorScheme: colorScheme || 'light',
+        });
+      } catch (error) {
+        console.warn('Failed to track shift day signup success analytics:', error);
+      }
+
       showToast('success', t('shifts.signup_success'));
-      onClose();
+      handleClose();
     } catch (error) {
+      // Track failed signup
+      try {
+        trackEvent('shift_day_signup_failed', {
+          timestamp: new Date().toISOString(),
+          shiftDayId: selectedShiftDay.ShiftDayId,
+          shiftName: selectedShiftDay.ShiftName,
+          userId,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          isLandscape,
+          colorScheme: colorScheme || 'light',
+        });
+      } catch (analyticsError) {
+        console.warn('Failed to track shift day signup failure analytics:', analyticsError);
+      }
+
       showToast('error', t('shifts.signup_error'));
     }
   };
@@ -163,7 +278,7 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   };
 
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={onClose} isLoading={isShiftDayLoading} loadingText={t('shifts.loading_details')}>
+    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} isLoading={isShiftDayLoading} loadingText={t('shifts.loading_details')}>
       <ScrollView className="flex-1">
         <VStack space="lg" className="p-4">
           {/* Header */}

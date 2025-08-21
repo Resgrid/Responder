@@ -1,8 +1,10 @@
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
+import { useSecurityStore } from '@/stores/security/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
 import { Badge } from '../ui/badge';
@@ -16,8 +18,46 @@ import { VStack } from '../ui/vstack';
 
 export const PersonnelDetailsSheet: React.FC = () => {
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
+  const { canUserViewPII } = useSecurityStore();
+  const { trackEvent } = useAnalytics();
 
   const selectedPersonnel = personnel?.find((person) => person.UserId === selectedPersonnelId);
+
+  // Track analytics when sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedPersonnel) return;
+
+    try {
+      const hasContactInfo = !!(selectedPersonnel.EmailAddress || selectedPersonnel.MobilePhone);
+      const hasGroupInfo = !!selectedPersonnel.GroupName;
+      const hasStatus = !!selectedPersonnel.Status;
+      const hasStaffing = !!selectedPersonnel.Staffing;
+      const hasRoles = !!(selectedPersonnel.Roles && selectedPersonnel.Roles.length > 0);
+      const hasIdentificationNumber = !!selectedPersonnel.IdentificationNumber;
+
+      trackEvent('personnel_details_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        personnelId: selectedPersonnel.UserId,
+        hasContactInfo,
+        hasGroupInfo,
+        hasStatus,
+        hasStaffing,
+        hasRoles,
+        hasIdentificationNumber,
+        roleCount: selectedPersonnel.Roles?.length || 0,
+        canViewPII: !!canUserViewPII,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track personnel details sheet view analytics:', error);
+    }
+  }, [trackEvent, selectedPersonnel, canUserViewPII]);
+
+  useEffect(() => {
+    if (isDetailsOpen && selectedPersonnel) {
+      trackViewAnalytics();
+    }
+  }, [isDetailsOpen, selectedPersonnel, trackViewAnalytics]);
 
   if (!selectedPersonnel || !isDetailsOpen) return null;
 
@@ -51,24 +91,26 @@ export const PersonnelDetailsSheet: React.FC = () => {
             ) : null}
 
             {/* Contact Information Section */}
-            <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-              <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Information</Text>
-              <VStack space="xs">
-                {selectedPersonnel.EmailAddress ? (
-                  <HStack space="xs" className="items-center">
-                    <Mail size={16} className="text-gray-600 dark:text-gray-400" />
-                    <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.EmailAddress}</Text>
-                  </HStack>
-                ) : null}
+            {canUserViewPII ? (
+              <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Information</Text>
+                <VStack space="xs">
+                  {selectedPersonnel.EmailAddress ? (
+                    <HStack space="xs" className="items-center">
+                      <Mail size={16} className="text-gray-600 dark:text-gray-400" />
+                      <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.EmailAddress}</Text>
+                    </HStack>
+                  ) : null}
 
-                {selectedPersonnel.MobilePhone ? (
-                  <HStack space="xs" className="items-center">
-                    <Phone size={16} className="text-gray-600 dark:text-gray-400" />
-                    <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.MobilePhone}</Text>
-                  </HStack>
-                ) : null}
-              </VStack>
-            </Box>
+                  {selectedPersonnel.MobilePhone ? (
+                    <HStack space="xs" className="items-center">
+                      <Phone size={16} className="text-gray-600 dark:text-gray-400" />
+                      <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.MobilePhone}</Text>
+                    </HStack>
+                  ) : null}
+                </VStack>
+              </Box>
+            ) : null}
 
             {/* Group Information */}
             {selectedPersonnel.GroupName ? (

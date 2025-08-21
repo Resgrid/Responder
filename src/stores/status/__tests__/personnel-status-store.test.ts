@@ -4,10 +4,22 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { getAllGroups } from '@/api/groups/groups';
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { useAuthStore } from '@/lib/auth';
-import { useHomeStore } from '@/stores/home/home-store';
+import { offlineQueueProcessor } from '@/services/offline-queue-processor';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useHomeStore } from '@/stores/home/home-store';
 import { useToastStore } from '@/stores/toast/store';
+
 import { usePersonnelStatusBottomSheetStore } from '../personnel-status-store';
+
+// Mock NetInfo
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: {
+    fetch: jest.fn(),
+    addEventListener: jest.fn(),
+    useNetInfo: jest.fn()
+  }
+}));
 
 // Mock the API calls
 jest.mock('@/api/groups/groups');
@@ -16,9 +28,11 @@ jest.mock('@/lib/auth');
 jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/app/location-store');
 jest.mock('@/stores/toast/store');
+jest.mock('@/services/offline-queue-processor');
 
 const mockGetAllGroups = getAllGroups as jest.MockedFunction<typeof getAllGroups>;
 const mockSavePersonnelStatus = savePersonnelStatus as jest.MockedFunction<typeof savePersonnelStatus>;
+const mockOfflineQueueProcessor = offlineQueueProcessor as jest.Mocked<typeof offlineQueueProcessor>;
 
 describe('usePersonnelStatusBottomSheetStore', () => {
 	beforeEach(() => {
@@ -859,6 +873,334 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 
 			// Check loading state is false
 			expect(result.current.isLoading).toBe(false);
+		});
+	});
+
+	describe('Detail-based logic helper methods', () => {
+		it('should correctly determine if destination is required based on Detail value', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			// Detail = 0: No destination needed
+			const statusDetail0 = { 
+				Id: 1, 
+				Text: 'Available', 
+				BColor: '#00FF00', 
+				Type: 1, 
+				StateId: 1, 
+				Color: '#00FF00', 
+				Gps: false, 
+				Note: 0, 
+				Detail: 0 
+			};
+
+			act(() => {
+				result.current.setIsOpen(true, statusDetail0 as any);
+			});
+
+			expect(result.current.isDestinationRequired()).toBe(false);
+
+			// Detail = 1: Station only
+			const statusDetail1 = { ...statusDetail0, Detail: 1 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail1 as any);
+			});
+
+			expect(result.current.isDestinationRequired()).toBe(true);
+
+			// Detail = 2: Call only
+			const statusDetail2 = { ...statusDetail0, Detail: 2 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail2 as any);
+			});
+
+			expect(result.current.isDestinationRequired()).toBe(true);
+
+			// Detail = 3: Both
+			const statusDetail3 = { ...statusDetail0, Detail: 3 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail3 as any);
+			});
+
+			expect(result.current.isDestinationRequired()).toBe(true);
+		});
+
+		it('should correctly determine if calls are allowed based on Detail value', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			// Detail = 0: No calls allowed
+			const statusDetail0 = { 
+				Id: 1, 
+				Text: 'Available', 
+				BColor: '#00FF00', 
+				Type: 1, 
+				StateId: 1, 
+				Color: '#00FF00', 
+				Gps: false, 
+				Note: 0, 
+				Detail: 0 
+			};
+
+			act(() => {
+				result.current.setIsOpen(true, statusDetail0 as any);
+			});
+
+			expect(result.current.areCallsAllowed()).toBe(false);
+
+			// Detail = 1: Station only - no calls allowed
+			const statusDetail1 = { ...statusDetail0, Detail: 1 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail1 as any);
+			});
+
+			expect(result.current.areCallsAllowed()).toBe(false);
+
+			// Detail = 2: Call only - calls allowed
+			const statusDetail2 = { ...statusDetail0, Detail: 2 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail2 as any);
+			});
+
+			expect(result.current.areCallsAllowed()).toBe(true);
+
+			// Detail = 3: Both - calls allowed
+			const statusDetail3 = { ...statusDetail0, Detail: 3 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail3 as any);
+			});
+
+			expect(result.current.areCallsAllowed()).toBe(true);
+		});
+
+		it('should correctly determine if stations are allowed based on Detail value', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			// Detail = 0: No stations allowed
+			const statusDetail0 = { 
+				Id: 1, 
+				Text: 'Available', 
+				BColor: '#00FF00', 
+				Type: 1, 
+				StateId: 1, 
+				Color: '#00FF00', 
+				Gps: false, 
+				Note: 0, 
+				Detail: 0 
+			};
+
+			act(() => {
+				result.current.setIsOpen(true, statusDetail0 as any);
+			});
+
+			expect(result.current.areStationsAllowed()).toBe(false);
+
+			// Detail = 1: Station only - stations allowed
+			const statusDetail1 = { ...statusDetail0, Detail: 1 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail1 as any);
+			});
+
+			expect(result.current.areStationsAllowed()).toBe(true);
+
+			// Detail = 2: Call only - no stations allowed
+			const statusDetail2 = { ...statusDetail0, Detail: 2 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail2 as any);
+			});
+
+			expect(result.current.areStationsAllowed()).toBe(false);
+
+			// Detail = 3: Both - stations allowed
+			const statusDetail3 = { ...statusDetail0, Detail: 3 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail3 as any);
+			});
+
+			expect(result.current.areStationsAllowed()).toBe(true);
+		});
+
+		it('should correctly determine GPS requirements based on Gps field', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			// Gps = false: No GPS required
+			const statusNoGps = { 
+				Id: 1, 
+				Text: 'Available', 
+				BColor: '#00FF00', 
+				Type: 1, 
+				StateId: 1, 
+				Color: '#00FF00', 
+				Gps: false, 
+				Note: 0, 
+				Detail: 0 
+			};
+
+			act(() => {
+				result.current.setIsOpen(true, statusNoGps as any);
+			});
+
+			expect(result.current.getRequiredGpsAccuracy()).toBe(false);
+
+			// Gps = true: GPS required
+			const statusWithGps = { ...statusNoGps, Gps: true };
+			act(() => {
+				result.current.setIsOpen(true, statusWithGps as any);
+			});
+
+			expect(result.current.getRequiredGpsAccuracy()).toBe(true);
+		});
+	});
+
+	describe('GPS validation and offline queue integration', () => {
+		beforeEach(() => {
+			(mockOfflineQueueProcessor.addPersonnelStatusToQueue as jest.MockedFunction<any>) = jest.fn().mockReturnValue('event-123');
+		});
+
+		it('should fail submission when GPS is required but not available', async () => {
+			const mockShowToast = jest.fn();
+			
+			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: jest.fn() });
+			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			(useLocationStore as any).getState = jest.fn().mockReturnValue({ 
+				latitude: null, 
+				longitude: null, 
+				accuracy: null, 
+				altitude: null, 
+				speed: null, 
+				heading: null 
+			});
+
+			const mockStatus = { 
+				Id: 1, 
+				Text: 'Responding', 
+				BColor: '#FF0000', 
+				Type: 1, 
+				StateId: 1, 
+				Color: '#FF0000', 
+				Gps: true, // GPS required
+				Note: 0, 
+				Detail: 0 
+			};
+
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, mockStatus as any);
+			});
+
+			await act(async () => {
+				await result.current.submitStatus();
+			});
+
+			expect(mockShowToast).toHaveBeenCalledWith('error', 'GPS location is required for this status but not available');
+			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+		});
+
+		it('should proceed with submission when GPS is required and available', async () => {
+			const mockShowToast = jest.fn();
+			const mockFetchCurrentUserInfo = jest.fn();
+			
+			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: mockFetchCurrentUserInfo });
+			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			(useLocationStore as any).getState = jest.fn().mockReturnValue({ 
+				latitude: 40.7128, 
+				longitude: -74.0060, 
+				accuracy: 10, 
+				altitude: 100, 
+				speed: 5, // Non-zero speed to avoid empty string
+				heading: 90 
+			});
+
+			const mockStatus = { 
+				Id: 1, 
+				Text: 'Responding', 
+				BColor: '#FF0000', 
+				Type: 1, 
+				StateId: 1, 
+				Color: '#FF0000', 
+				Gps: true, // GPS required
+				Note: 0, 
+				Detail: 0 
+			};
+
+			mockSavePersonnelStatus.mockResolvedValue({} as any);
+
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, mockStatus as any);
+			});
+
+			await act(async () => {
+				await result.current.submitStatus();
+			});
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(
+				expect.objectContaining({
+					UserId: 'user123',
+					Type: '1',
+					Latitude: '40.7128',
+					Longitude: '-74.006',
+					Accuracy: '10',
+					Altitude: '100',
+					Speed: '5',
+					Heading: '90',
+				})
+			);
+			expect(mockShowToast).toHaveBeenCalledWith('success', 'Status updated successfully');
+		});
+
+		it('should add to offline queue when direct submission fails', async () => {
+			const mockShowToast = jest.fn();
+			const mockFetchCurrentUserInfo = jest.fn();
+			
+			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: mockFetchCurrentUserInfo });
+			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			(useLocationStore as any).getState = jest.fn().mockReturnValue({ 
+				latitude: 40.7128, 
+				longitude: -74.0060, 
+				accuracy: 10, 
+				altitude: 100, 
+				speed: 0, 
+				heading: 90 
+			});
+
+			const mockStatus = { 
+				Id: 1, 
+				Text: 'Available', 
+				BColor: '#00FF00', 
+				Type: 1, 
+				StateId: 1, 
+				Color: '#00FF00', 
+				Gps: false, 
+				Note: 0, 
+				Detail: 0 
+			};
+
+			// Make direct submission fail
+			mockSavePersonnelStatus.mockRejectedValue(new Error('Network error'));
+
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, mockStatus as any);
+			});
+
+			await act(async () => {
+				await result.current.submitStatus();
+			});
+
+			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).toHaveBeenCalledWith(
+				expect.objectContaining({
+					UserId: 'user123',
+					Type: '1',
+					Latitude: '40.7128',
+					Longitude: '-74.006',
+				})
+			);
+			expect(mockShowToast).toHaveBeenCalledWith('info', 'Status saved offline and will be submitted when connection is restored');
 		});
 	});
 });

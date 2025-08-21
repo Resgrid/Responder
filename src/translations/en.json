@@ -597,6 +597,7 @@
     "send_response": "Send Response",
     "sending": "Sending...",
     "sent": "Sent",
+    "showing_count": "Showing {{count}} messages",
     "subject": "Subject",
     "subject_required": "Subject is required",
     "title": "Messages",

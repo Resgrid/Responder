@@ -597,6 +597,7 @@
     "send_response": "Enviar Respuesta",
     "sending": "Enviando...",
     "sent": "Enviados",
+    "showing_count": "Mostrando {{count}} mensajes",
     "subject": "Asunto",
     "subject_required": "El asunto es obligatorio",
     "title": "Mensajes",

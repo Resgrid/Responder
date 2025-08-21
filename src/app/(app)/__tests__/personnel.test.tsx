@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { usePersonnelStore } from '@/stores/personnel/store';
 
@@ -79,6 +80,27 @@ jest.mock('@react-navigation/core', () => ({
   }),
 }));
 
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    const React = require('react');
+    React.useEffect(() => {
+      // Call the callback immediately to simulate focus
+      callback();
+    });
+  },
+}));
+
+// Mock the aptabase service
+jest.mock('@/services/aptabase.service', () => ({
+  aptabaseService: {
+    trackEvent: jest.fn(),
+  },
+}));
+
+// Mock analytics hook
+jest.mock('@/hooks/use-analytics');
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
+
 // Mock the personnel store
 jest.mock('@/stores/personnel/store');
 const mockUsePersonnelStore = usePersonnelStore as jest.MockedFunction<typeof usePersonnelStore>;
@@ -95,6 +117,7 @@ describe('Personnel Page', () => {
   const mockSetSearchQuery = jest.fn();
   const mockSelectPersonnel = jest.fn();
   const mockOpenFilterSheet = jest.fn();
+  const mockTrackEvent = jest.fn();
 
   const mockPersonnelData: PersonnelInfoResultData[] = [
     {
@@ -178,6 +201,12 @@ describe('Personnel Page', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock for analytics
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
+
     mockUsePersonnelStore.mockReturnValue(defaultStoreState as any);
   });
 
@@ -723,6 +752,38 @@ describe('Personnel Page', () => {
       render(<Personnel />);
 
       expect(screen.getByText('PersonnelFilterSheet')).toBeTruthy();
+    });
+  });
+
+  describe('Analytics Tracking', () => {
+    it('should track personnel_viewed event when component mounts', () => {
+      render(<Personnel />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_viewed', {
+        timestamp: expect.any(String),
+      });
+    });
+
+    it('should track analytics with ISO timestamp format', () => {
+      render(<Personnel />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+      const call = mockTrackEvent.mock.calls[0];
+      expect(call[0]).toBe('personnel_viewed');
+      expect(call[1]).toHaveProperty('timestamp');
+
+      // Verify timestamp is in ISO format
+      const timestamp = call[1].timestamp;
+      expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    });
+
+    it('should track analytics event on component mount', () => {
+      render(<Personnel />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_viewed', {
+        timestamp: expect.any(String),
+      });
     });
   });
 }); 

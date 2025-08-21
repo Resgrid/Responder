@@ -71,7 +71,7 @@ jest.mock('@/lib/storage', () => ({
 
 // Import after mocks
 import { useCoreStore } from '../core-store';
-import { getConfig } from '@/api/config/config';
+import { getConfig } from '@/api/config';
 import { getAllPersonnelStatuses, getCurrentPersonStatus } from '@/api/satuses';
 import { getAllPersonnelStaffings, getCurrentPersonStaffing } from '@/api/staffing';
 import { useAuthStore } from '@/lib/auth';
@@ -91,16 +91,24 @@ describe('Core Store', () => {
 		// Setup default mock returns
 		mockGetConfig.mockResolvedValue({
 			Data: {
-				W3WKey: 'test-w3w-key',
-				GoogleMapsKey: 'test-maps-key',
-				LoggingKey: 'test-logging-key',
-				MapUrl: 'test-map-url',
-				MapAttribution: 'test-attribution',
-				OpenWeatherApiKey: 'test-weather-key',
-				NovuBackendApiUrl: 'test-novu-backend',
-				NovuSocketUrl: 'test-novu-socket',
-				NovuApplicationId: 'test-novu-app',
-			},
+        W3WKey: 'test-w3w-key',
+        GoogleMapsKey: 'test-maps-key',
+        LoggingKey: 'test-logging-key',
+        MapUrl: 'test-map-url',
+        MapAttribution: 'test-attribution',
+        OpenWeatherApiKey: 'test-weather-key',
+        NovuBackendApiUrl: 'test-novu-backend',
+        NovuSocketUrl: 'test-novu-socket',
+        NovuApplicationId: 'test-novu-app',
+        EventingUrl: '',
+        DirectionsMapKey: '',
+        PersonnelLocationStaleSeconds: 0,
+        UnitLocationStaleSeconds: 0,
+        PersonnelLocationMinMeters: 0,
+        UnitLocationMinMeters: 0,
+        AnalyticsApiKey: '',
+        AnalyticsHost: ''
+      },
 			PageSize: 0,
 			Timestamp: '',
 			Version: '',

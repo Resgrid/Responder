@@ -77,19 +77,19 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   // Get dynamic class names for tabs
   const getTabClassName = (index: number) => {
     const isActive = index === currentIndex;
-    
+
     // Base classes
     let baseClasses = 'flex-1 items-center justify-center flex-row';
-    
+
     // Size-based padding classes
     const sizeClasses = {
       sm: isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
       md: isLandscape ? 'px-4 py-2' : 'px-3 py-1.5',
       lg: isLandscape ? 'px-5 py-2.5' : 'px-4 py-2',
     };
-    
+
     baseClasses += ` ${sizeClasses[size]}`;
-    
+
     // Variant-specific classes
     switch (variant) {
       case 'default':
@@ -103,25 +103,25 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
         baseClasses += isActive ? ' bg-sky-300 rounded-md mx-0.5' : ' bg-gray-100 dark:bg-gray-700 rounded-md mx-0.5';
         break;
     }
-    
+
     return baseClasses;
   };
 
   const getTextClassName = (index: number) => {
     const isActive = index === currentIndex;
-    
+
     // Base text classes
     let textClasses = isActive ? 'font-semibold' : 'font-medium';
-    
+
     // Size-based text classes
     const textSizeClasses = {
       sm: isLandscape ? 'text-xs' : 'text-[10px]',
       md: isLandscape ? 'text-sm' : 'text-xs',
       lg: isLandscape ? 'text-base' : 'text-sm',
     };
-    
+
     textClasses += ` ${textSizeClasses[size]}`;
-    
+
     // Color based on variant and state
     if (variant === 'pills' && isActive) {
       textClasses += ' text-white';
@@ -132,14 +132,14 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     } else {
       textClasses += ' text-gray-600 dark:text-gray-300';
     }
-    
+
     return textClasses;
   };
 
   // Container class names
   const getContainerClassName = () => {
     let containerClasses = 'flex-row flex-1';
-    
+
     switch (variant) {
       case 'default':
       case 'underlined':
@@ -152,7 +152,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
         containerClasses += ' bg-gray-50 dark:bg-gray-800 p-1 rounded-lg';
         break;
     }
-    
+
     return containerClasses;
   };
 

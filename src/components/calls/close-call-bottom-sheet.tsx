@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWindowDimensions } from 'react-native';
 
@@ -11,6 +12,7 @@ import { Select, SelectBackdrop, SelectContent, SelectIcon, SelectInput, SelectI
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useToastStore } from '@/stores/toast/store';
@@ -24,6 +26,7 @@ interface CloseCallBottomSheetProps {
 
 export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOpen, onClose, callId, isLoading = false }) => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -34,11 +37,49 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   const [closeCallNote, setCloseCallNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Track if modal was actually opened to avoid false close events
+  const wasModalOpenRef = useRef(false);
+
+  // Track analytics when modal becomes visible
+  useFocusEffect(
+    useCallback(() => {
+      if (isOpen) {
+        wasModalOpenRef.current = true;
+        try {
+          trackEvent('close_call_bottom_sheet_viewed', {
+            timestamp: new Date().toISOString(),
+            callId,
+            isLoading,
+          });
+        } catch (error) {
+          // Analytics errors should not break the component
+          console.warn('Failed to track close call bottom sheet analytics:', error);
+        }
+      }
+    }, [isOpen, trackEvent, callId, isLoading])
+  );
+
   const handleClose = React.useCallback(() => {
+    // Only track close analytics if modal was actually opened
+    if (wasModalOpenRef.current) {
+      try {
+        trackEvent('close_call_bottom_sheet_closed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          wasManualClose: true,
+          hadCloseCallType: closeCallType.trim().length > 0,
+          hadCloseCallNote: closeCallNote.trim().length > 0,
+        });
+      } catch (error) {
+        console.warn('Failed to track close call bottom sheet close analytics:', error);
+      }
+      wasModalOpenRef.current = false;
+    }
+
     setCloseCallType('');
     setCloseCallNote('');
     onClose();
-  }, [onClose]);
+  }, [onClose, trackEvent, callId, closeCallType, closeCallNote]);
 
   const handleSubmit = React.useCallback(async () => {
     if (!closeCallType) {
@@ -48,12 +89,38 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
 
     setIsSubmitting(true);
     try {
+      // Track call closure attempt analytics
+      try {
+        trackEvent('close_call_attempted', {
+          timestamp: new Date().toISOString(),
+          callId,
+          closeType: parseInt(closeCallType),
+          hasNote: closeCallNote.trim().length > 0,
+          noteLength: closeCallNote.trim().length,
+        });
+      } catch (error) {
+        console.warn('Failed to track close call attempt analytics:', error);
+      }
+
       // Call the closeCall API
       await closeCall({
         callId,
         type: parseInt(closeCallType),
         note: closeCallNote,
       });
+
+      // Track successful call closure analytics
+      try {
+        trackEvent('close_call_succeeded', {
+          timestamp: new Date().toISOString(),
+          callId,
+          closeType: parseInt(closeCallType),
+          hasNote: closeCallNote.trim().length > 0,
+          noteLength: closeCallNote.trim().length,
+        });
+      } catch (error) {
+        console.warn('Failed to track close call success analytics:', error);
+      }
 
       // Show success toast
       showToast('success', t('call_detail.close_call_success'));
@@ -68,12 +135,47 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
       router.back();
     } catch (error) {
       console.error('Error closing call:', error);
+
+      // Track failed call closure analytics
+      try {
+        trackEvent('close_call_failed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          closeType: parseInt(closeCallType),
+          hasNote: closeCallNote.trim().length > 0,
+          noteLength: closeCallNote.trim().length,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      } catch (analyticsError) {
+        console.warn('Failed to track close call failure analytics:', analyticsError);
+      }
+
       // Show error toast
       showToast('error', t('call_detail.close_call_error'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [closeCallType, showToast, t, callId, closeCallNote, handleClose, fetchCalls, router, closeCall]);
+  }, [closeCallType, showToast, t, callId, closeCallNote, handleClose, fetchCalls, router, closeCall, trackEvent]);
+
+  // Handle close call type change with analytics tracking
+  const handleCloseCallTypeChange = useCallback(
+    (value: string) => {
+      setCloseCallType(value);
+
+      // Track analytics for close call type selection
+      try {
+        trackEvent('close_call_type_selected', {
+          timestamp: new Date().toISOString(),
+          callId,
+          closeType: parseInt(value),
+          previousType: closeCallType ? parseInt(closeCallType) : 0,
+        });
+      } catch (error) {
+        console.warn('Failed to track close call type selection analytics:', error);
+      }
+    },
+    [setCloseCallType, trackEvent, callId, closeCallType]
+  );
 
   const isButtonDisabled = isLoading || isSubmitting;
 
@@ -86,7 +188,7 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
           <FormControlLabel>
             <FormControlLabelText>{t('call_detail.close_call_type')}</FormControlLabelText>
           </FormControlLabel>
-          <Select selectedValue={closeCallType} onValueChange={setCloseCallType} testID="close-call-type-select">
+          <Select selectedValue={closeCallType} onValueChange={handleCloseCallTypeChange} testID="close-call-type-select">
             <SelectTrigger>
               <SelectInput placeholder={t('call_detail.close_call_type_placeholder')} />
               <SelectIcon />

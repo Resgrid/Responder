@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { usePersonnelStore } from '@/stores/personnel/store';
+import { useSecurityStore } from '@/stores/security/store';
 
 import { PersonnelDetailsSheet } from '../personnel-details-sheet';
 
@@ -33,8 +35,17 @@ jest.mock('@/lib/utils', () => ({
 jest.mock('@/stores/personnel/store');
 const mockUsePersonnelStore = usePersonnelStore as jest.MockedFunction<typeof usePersonnelStore>;
 
+// Mock the security store
+jest.mock('@/stores/security/store');
+const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
+
+// Mock the analytics hook
+jest.mock('@/hooks/use-analytics');
+const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
+
 describe('PersonnelDetailsSheet', () => {
   const mockCloseDetails = jest.fn();
+  const mockTrackEvent = jest.fn();
 
   const basePersonnel: PersonnelInfoResultData = {
     UserId: '1',
@@ -89,9 +100,20 @@ describe('PersonnelDetailsSheet', () => {
     closeDetails: mockCloseDetails,
   };
 
+  const defaultSecurityState = {
+    canUserViewPII: true,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock for analytics
+    mockUseAnalytics.mockReturnValue({
+      trackEvent: mockTrackEvent,
+    });
+
     mockUsePersonnelStore.mockReturnValue(defaultStoreState as any);
+    mockUseSecurityStore.mockReturnValue(defaultSecurityState as any);
   });
 
   describe('Basic Rendering', () => {
@@ -513,6 +535,67 @@ describe('PersonnelDetailsSheet', () => {
     });
   });
 
+  describe('PII Protection', () => {
+    it('should show contact information when user can view PII', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: true,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(screen.getByText('Contact Information')).toBeTruthy();
+      expect(screen.getByText('john.doe@example.com')).toBeTruthy();
+      expect(screen.getByText('+1234567890')).toBeTruthy();
+    });
+
+    it('should hide contact information when user cannot view PII', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(screen.queryByText('Contact Information')).toBeFalsy();
+      expect(screen.queryByText('john.doe@example.com')).toBeFalsy();
+      expect(screen.queryByText('+1234567890')).toBeFalsy();
+    });
+
+    it('should still show other information when PII is restricted', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      // Should still show name, group, status, staffing, roles
+      expect(screen.getByText('John Doe')).toBeTruthy();
+      expect(screen.getByText('Group')).toBeTruthy();
+      expect(screen.getByText('Fire Department')).toBeTruthy();
+      expect(screen.getByText('Current Status')).toBeTruthy();
+      expect(screen.getByText('Available')).toBeTruthy();
+      expect(screen.getByText('Staffing')).toBeTruthy();
+      expect(screen.getByText('On Duty')).toBeTruthy();
+      expect(screen.getByText('Roles')).toBeTruthy();
+      expect(screen.getByText('Firefighter')).toBeTruthy();
+    });
+
+    it('should handle PII restriction with personnel who have no contact info', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedPersonnelId: '2', // Personnel with minimal data
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(screen.getByText('Jane Smith')).toBeTruthy();
+      expect(screen.queryByText('Contact Information')).toBeFalsy();
+    });
+  });
+
   describe('Actionsheet Props', () => {
     it('should pass correct props to Actionsheet', () => {
       render(<PersonnelDetailsSheet />);
@@ -522,4 +605,224 @@ describe('PersonnelDetailsSheet', () => {
       expect(closeButton).toBeTruthy();
     });
   });
-}); 
+
+  describe('Analytics', () => {
+    it('should track analytics when sheet becomes visible', () => {
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        personnelId: '1',
+        hasContactInfo: true,
+        hasGroupInfo: true,
+        hasStatus: true,
+        hasStaffing: true,
+        hasRoles: true,
+        hasIdentificationNumber: true,
+        roleCount: 3,
+        canViewPII: true,
+      });
+    });
+
+    it('should track analytics with correct data for personnel with minimal data', () => {
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedPersonnelId: '2', // Personnel with minimal data
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        personnelId: '2',
+        hasContactInfo: false,
+        hasGroupInfo: false,
+        hasStatus: false,
+        hasStaffing: false,
+        hasRoles: false,
+        hasIdentificationNumber: false,
+        roleCount: 0,
+        canViewPII: true,
+      });
+    });
+
+    it('should track analytics with canViewPII false when user cannot view PII', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: false,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        personnelId: '1',
+        hasContactInfo: true,
+        hasGroupInfo: true,
+        hasStatus: true,
+        hasStaffing: true,
+        hasRoles: true,
+        hasIdentificationNumber: true,
+        roleCount: 3,
+        canViewPII: false,
+      });
+    });
+
+    it('should track analytics with undefined canViewPII as false', () => {
+      mockUseSecurityStore.mockReturnValue({
+        canUserViewPII: undefined,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        personnelId: '1',
+        hasContactInfo: true,
+        hasGroupInfo: true,
+        hasStatus: true,
+        hasStaffing: true,
+        hasRoles: true,
+        hasIdentificationNumber: true,
+        roleCount: 3,
+        canViewPII: false,
+      });
+    });
+
+    it('should not track analytics when sheet is not open', () => {
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        isDetailsOpen: false,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should not track analytics when no personnel is selected', () => {
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedPersonnelId: null,
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should not track analytics when selected personnel is not found', () => {
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedPersonnelId: 'non-existent-id',
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).not.toHaveBeenCalled();
+    });
+
+    it('should handle analytics errors gracefully', () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      mockTrackEvent.mockImplementation(() => {
+        throw new Error('Analytics error');
+      });
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to track personnel details sheet view analytics:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should track analytics with correct role count', () => {
+      const personnelWithManyRoles = {
+        ...basePersonnel,
+        Roles: ['Captain', 'Firefighter', 'EMT', 'Driver', 'Inspector'],
+      };
+
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        personnel: [personnelWithManyRoles],
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        personnelId: '1',
+        hasContactInfo: true,
+        hasGroupInfo: true,
+        hasStatus: true,
+        hasStaffing: true,
+        hasRoles: true,
+        hasIdentificationNumber: true,
+        roleCount: 5,
+        canViewPII: true,
+      });
+    });
+
+    it('should track analytics with null roles array as 0 count', () => {
+      const personnelWithNullRoles = {
+        ...basePersonnel,
+        Roles: null as any,
+      };
+
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        personnel: [personnelWithNullRoles],
+      } as any);
+
+      render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_details_sheet_viewed', {
+        timestamp: expect.any(String),
+        personnelId: '1',
+        hasContactInfo: true,
+        hasGroupInfo: true,
+        hasStatus: true,
+        hasStaffing: true,
+        hasRoles: false,
+        hasIdentificationNumber: true,
+        roleCount: 0,
+        canViewPII: true,
+      });
+    });
+
+    it('should track analytics only once when component re-renders with same data', () => {
+      const { rerender } = render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+
+      // Re-render with same props
+      rerender(<PersonnelDetailsSheet />);
+
+      // Should still only be called once since dependencies haven't changed
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('should track analytics again when personnel selection changes', () => {
+      const { rerender } = render(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(1);
+      expect(mockTrackEvent).toHaveBeenLastCalledWith('personnel_details_sheet_viewed', expect.objectContaining({
+        personnelId: '1',
+      }));
+
+      // Change selected personnel
+      mockUsePersonnelStore.mockReturnValue({
+        ...defaultStoreState,
+        selectedPersonnelId: '2',
+      } as any);
+
+      rerender(<PersonnelDetailsSheet />);
+
+      expect(mockTrackEvent).toHaveBeenCalledTimes(2);
+      expect(mockTrackEvent).toHaveBeenLastCalledWith('personnel_details_sheet_viewed', expect.objectContaining({
+        personnelId: '2',
+      }));
+    });
+  });
+});

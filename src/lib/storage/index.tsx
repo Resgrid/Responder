@@ -2,7 +2,20 @@ import { Platform } from 'react-native';
 import { MMKV, useMMKVBoolean } from 'react-native-mmkv';
 import { type StateStorage } from 'zustand/middleware';
 
+import { getGeneralStorage } from './secure-storage';
+
 export let storage: MMKV;
+
+// Initialize storage asynchronously
+let storageInitialized = false;
+const initializeStorage = async () => {
+  if (!storageInitialized) {
+    storage = await getGeneralStorage();
+    storageInitialized = true;
+  }
+};
+
+// For synchronous usage, we'll provide a fallback
 if (Platform.OS === 'web') {
   storage = new MMKV({
     id: 'ResgridUnit',
@@ -10,9 +23,14 @@ if (Platform.OS === 'web') {
 } else {
   storage = new MMKV({
     id: 'ResgridUnit',
-    encryptionKey: 'hunter2',
   });
 }
+
+// Initialize secure storage
+initializeStorage().catch((error) => {
+  console.error('Failed to initialize secure storage:', error);
+});
+
 const IS_FIRST_TIME = 'IS_FIRST_TIME';
 
 export function getItem<T>(key: string): T | null {

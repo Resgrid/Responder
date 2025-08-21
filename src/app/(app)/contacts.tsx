@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { ContactIcon, Search, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,16 +12,27 @@ import { FocusAwareStatusBar } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { View } from '@/components/ui/view';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useContactsStore } from '@/stores/contacts/store';
 
 export default function Contacts() {
   const { t } = useTranslation();
   const { contacts, searchQuery, setSearchQuery, selectContact, isLoading, fetchContacts } = useContactsStore();
+  const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
     fetchContacts();
   }, [fetchContacts]);
+
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      trackEvent('contacts_viewed', {
+        timestamp: new Date().toISOString(),
+      });
+    }, [trackEvent])
+  );
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);

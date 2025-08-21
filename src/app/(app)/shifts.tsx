@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,12 +19,14 @@ import { Input, InputField } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
 import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
 import { type ShiftViewMode, useShiftsStore } from '@/stores/shifts/store';
 
 const ShiftsScreen: React.FC = () => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const {
     // Data
     shifts,
@@ -68,9 +71,30 @@ const ShiftsScreen: React.FC = () => {
     }
   }, [currentView, fetchTodaysShifts, fetchAllShifts]);
 
+  // Track analytics when view becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      trackEvent('shifts_viewed', {
+        timestamp: new Date().toISOString(),
+        activeTab: currentView,
+        shiftCount: currentView === 'today' ? todaysShiftDays.length : shifts.length,
+        hasSearchQuery: searchQuery.trim().length > 0,
+      });
+    }, [trackEvent, currentView, todaysShiftDays.length, shifts.length, searchQuery])
+  );
+
   const handleTabChange = useCallback(
     (mode: ShiftViewMode) => {
+      const fromTab = currentView;
       setCurrentView(mode);
+
+      // Track analytics for tab changes
+      trackEvent('shifts_tab_changed', {
+        timestamp: new Date().toISOString(),
+        fromTab,
+        toTab: mode,
+      });
+
       // Fetch appropriate data when tab changes
       if (mode === 'today') {
         fetchTodaysShifts();
@@ -78,20 +102,78 @@ const ShiftsScreen: React.FC = () => {
         fetchAllShifts();
       }
     },
-    [setCurrentView, fetchTodaysShifts, fetchAllShifts]
+    [setCurrentView, fetchTodaysShifts, fetchAllShifts, trackEvent, currentView]
   );
 
   const handleRefresh = useCallback(async () => {
+    // Track analytics for refresh actions
+    trackEvent('shifts_refreshed', {
+      timestamp: new Date().toISOString(),
+      tab: currentView,
+    });
+
     if (currentView === 'today') {
       await fetchTodaysShifts();
     } else {
       await fetchAllShifts();
     }
-  }, [currentView, fetchTodaysShifts, fetchAllShifts]);
+  }, [currentView, fetchTodaysShifts, fetchAllShifts, trackEvent]);
 
-  const renderShiftItem = useCallback(({ item }: { item: ShiftResultData }) => <ShiftCard shift={item} onPress={() => selectShift(item)} />, [selectShift]);
+  const renderShiftItem = useCallback(
+    ({ item }: { item: ShiftResultData }) => (
+      <ShiftCard
+        shift={item}
+        onPress={() => {
+          // Track analytics for shift selection
+          trackEvent('shift_selected', {
+            timestamp: new Date().toISOString(),
+            shiftId: item.ShiftId,
+            shiftName: item.Name,
+            shiftCode: item.Code,
+            tab: currentView,
+          });
+          selectShift(item);
+        }}
+      />
+    ),
+    [selectShift, trackEvent, currentView]
+  );
 
-  const renderShiftDayItem = useCallback(({ item }: { item: ShiftDaysResultData }) => <ShiftDayCard shiftDay={item} onPress={() => selectShiftDay(item)} />, [selectShiftDay]);
+  const renderShiftDayItem = useCallback(
+    ({ item }: { item: ShiftDaysResultData }) => (
+      <ShiftDayCard
+        shiftDay={item}
+        onPress={() => {
+          // Track analytics for shift day selection
+          trackEvent('shift_day_selected', {
+            timestamp: new Date().toISOString(),
+            shiftDayId: item.ShiftDayId,
+            shiftId: item.ShiftId,
+            shiftName: item.ShiftName,
+            tab: currentView,
+          });
+          selectShiftDay(item);
+        }}
+      />
+    ),
+    [selectShiftDay, trackEvent, currentView]
+  );
+
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+
+      // Track analytics for search if query is not empty
+      if (query.trim().length > 0) {
+        trackEvent('shifts_search', {
+          timestamp: new Date().toISOString(),
+          searchQuery: query.trim(),
+          tab: currentView,
+        });
+      }
+    },
+    [setSearchQuery, trackEvent, currentView]
+  );
 
   const renderTabButton = (mode: ShiftViewMode, title: string) => (
     <Button
@@ -107,7 +189,7 @@ const ShiftsScreen: React.FC = () => {
     <View className="px-4 pb-2">
       <Input variant="outline" className="bg-white dark:bg-gray-800">
         <Icon as={Search} className="ml-3 text-gray-400" size="sm" />
-        <InputField placeholder={t('shifts.search_placeholder')} value={searchQuery} onChangeText={setSearchQuery} className="ml-2" />
+        <InputField placeholder={t('shifts.search_placeholder')} value={searchQuery} onChangeText={handleSearchChange} className="ml-2" />
       </Input>
     </View>
   );

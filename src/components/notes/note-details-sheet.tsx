@@ -1,10 +1,11 @@
 import { Calendar, Tag, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useNotesStore } from '@/stores/notes/store';
 
@@ -20,16 +21,80 @@ import { VStack } from '../ui/vstack';
 export const NoteDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const { trackEvent } = useAnalytics();
   const { notes, selectedNoteId, isDetailsOpen, closeDetails, deleteNote } = useNotesStore();
 
   const selectedNote = notes.find((note) => note.NoteId === selectedNoteId);
+
+  // Track analytics when sheet becomes visible
+  const trackViewAnalytics = useCallback(() => {
+    if (!selectedNote) return;
+
+    try {
+      const hasCategory = !!selectedNote.Category;
+      const hasExpiryDate = !!selectedNote.ExpiresOn;
+      const bodyLength = selectedNote.Body?.length || 0;
+      const titleLength = selectedNote.Title?.length || 0;
+
+      trackEvent('note_details_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        noteId: selectedNote.NoteId,
+        hasCategory,
+        hasExpiryDate,
+        bodyLength,
+        titleLength,
+        noteColor: selectedNote.Color || '',
+        hasAddedDate: !!selectedNote.AddedOn,
+      });
+    } catch (error) {
+      // Analytics errors should not break the component
+      console.warn('Failed to track note details sheet view analytics:', error);
+    }
+  }, [trackEvent, selectedNote]);
+
+  useEffect(() => {
+    if (isDetailsOpen && selectedNote) {
+      trackViewAnalytics();
+    }
+  }, [isDetailsOpen, selectedNote, trackViewAnalytics]);
+
+  const handleClose = useCallback(() => {
+    try {
+      trackEvent('note_details_sheet_closed', {
+        timestamp: new Date().toISOString(),
+        noteId: selectedNote?.NoteId || '',
+        wasManualClose: true,
+      });
+    } catch (error) {
+      console.warn('Failed to track note details sheet close analytics:', error);
+    }
+    closeDetails();
+  }, [trackEvent, selectedNote?.NoteId, closeDetails]);
+
+  const handleDelete = useCallback(() => {
+    if (!selectedNote) return;
+
+    try {
+      trackEvent('note_deleted_from_details', {
+        timestamp: new Date().toISOString(),
+        noteId: selectedNote.NoteId,
+        hasCategory: !!selectedNote.Category,
+        bodyLength: selectedNote.Body?.length || 0,
+      });
+    } catch (error) {
+      console.warn('Failed to track note deletion analytics:', error);
+    }
+
+    deleteNote(selectedNote.NoteId);
+    closeDetails();
+  }, [trackEvent, selectedNote, deleteNote, closeDetails]);
 
   if (!selectedNote) return null;
 
   const textColor = colorScheme === 'dark' ? '#E5E7EB' : '#1F2937'; // gray-200 : gray-800
 
   return (
-    <Actionsheet isOpen={isDetailsOpen} onClose={closeDetails} snapPoints={[67]}>
+    <Actionsheet isOpen={isDetailsOpen} onClose={handleClose} snapPoints={[67]} testID="actionsheet">
       <ActionsheetBackdrop />
       <ActionsheetContent className="w-full rounded-t-xl bg-white dark:bg-gray-800">
         <ActionsheetDragIndicatorWrapper>
@@ -41,7 +106,7 @@ export const NoteDetailsSheet: React.FC = () => {
             <Heading size="lg" className="text-gray-800 dark:text-gray-100">
               {selectedNote.Title}
             </Heading>
-            <Button variant="link" onPress={closeDetails} className="p-1">
+            <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
               <X size={24} className="text-gray-600 dark:text-gray-400" />
             </Button>
           </HStack>

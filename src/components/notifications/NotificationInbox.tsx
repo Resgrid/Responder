@@ -9,8 +9,8 @@ import { NotificationDetail } from '@/components/notifications/NotificationDetai
 import { Button } from '@/components/ui/button';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
+import { useAuthStore } from '@/lib/auth';
 import { useCoreStore } from '@/stores/app/core-store';
-import useAuthStore from '@/stores/auth/store';
 import { useToastStore } from '@/stores/toast/store';
 import { type NotificationPayload } from '@/types/notification';
 
@@ -236,8 +236,13 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
     return null;
   }
 
+  // Additional safety check to prevent rendering overlay without proper config
+  if (!userId || !config || !config.NovuApplicationId || !config.NovuBackendApiUrl || !config.NovuSocketUrl) {
+    return null;
+  }
+
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View style={StyleSheet.absoluteFill} pointerEvents={isOpen ? 'auto' : 'none'}>
       {/* Backdrop for tapping outside to close */}
       <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: fadeAnim }]}>
         <Pressable style={styles.backdropPressable} onPress={onClose} />
@@ -338,7 +343,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
 const styles = StyleSheet.create({
   backdrop: {
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 9999,
+    zIndex: 999,
   },
   backdropPressable: {
     width: '100%',
@@ -359,7 +364,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 10000,
+    zIndex: 1000,
   },
   safeArea: {
     flex: 1,

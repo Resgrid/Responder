@@ -110,6 +110,14 @@ describe('Address Search Logic', () => {
     NovuBackendApiUrl: '',
     NovuSocketUrl: '',
     NovuApplicationId: '',
+    EventingUrl: '',
+    DirectionsMapKey: '',
+    PersonnelLocationStaleSeconds: 0,
+    UnitLocationStaleSeconds: 0,
+    PersonnelLocationMinMeters: 0,
+    UnitLocationMinMeters: 0,
+    AnalyticsApiKey: '',
+    AnalyticsHost: ''
   };
 
   beforeEach(() => {
@@ -150,6 +158,14 @@ describe('Address Search Logic', () => {
         NovuBackendApiUrl: '',
         NovuSocketUrl: '',
         NovuApplicationId: '',
+        EventingUrl: '',
+        DirectionsMapKey: '',
+        PersonnelLocationStaleSeconds: 0,
+        UnitLocationStaleSeconds: 0,
+        PersonnelLocationMinMeters: 0,
+        UnitLocationMinMeters: 0,
+        AnalyticsApiKey: '',
+        AnalyticsHost: ''
       };
 
       const result = await performAddressSearch('123 Main St', configWithoutKey);

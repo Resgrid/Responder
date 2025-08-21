@@ -38,10 +38,24 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
 
       set({ isUpdateHubConnected: false, error: null });
 
+      // Get the eventing URL from the core store config
+      const coreState = useCoreStore.getState();
+      const eventingUrl = coreState.config?.EventingUrl;
+
+      if (!eventingUrl) {
+        const errorMessage = 'EventingUrl not available in config. Please ensure config is loaded first.';
+        logger.error({
+          message: errorMessage,
+        });
+        set({ error: new Error(errorMessage) });
+        return;
+      }
+
       // Connect to the eventing hub
-      await signalRService.connectToHub({
+      await signalRService.connectToHubWithEventingUrl({
         name: Env.CHANNEL_HUB_NAME,
-        url: `${Env.CHANNEL_API_URL}${Env.CHANNEL_HUB_NAME}`,
+        eventingUrl: eventingUrl,
+        hubName: Env.CHANNEL_HUB_NAME,
         methods: ['personnelStatusUpdated', 'personnelStaffingUpdated', 'unitStatusUpdated', 'callsUpdated', 'callAdded', 'callClosed', 'onConnected'],
       });
 
@@ -133,10 +147,24 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
 
       set({ isGeolocationHubConnected: false, error: null });
 
+      // Get the eventing URL from the core store config
+      const coreState = useCoreStore.getState();
+      const eventingUrl = coreState.config?.EventingUrl;
+
+      if (!eventingUrl) {
+        const errorMessage = 'EventingUrl not available in config. Please ensure config is loaded first.';
+        logger.error({
+          message: errorMessage,
+        });
+        set({ error: new Error(errorMessage) });
+        return;
+      }
+
       // Connect to the geolocation hub
-      await signalRService.connectToHub({
+      await signalRService.connectToHubWithEventingUrl({
         name: Env.REALTIME_GEO_HUB_NAME,
-        url: `${Env.CHANNEL_API_URL}${Env.REALTIME_GEO_HUB_NAME}`,
+        eventingUrl: eventingUrl,
+        hubName: Env.REALTIME_GEO_HUB_NAME,
         methods: ['onPersonnelLocationUpdated', 'onUnitLocationUpdated', 'onGeolocationConnect'],
       });
 
