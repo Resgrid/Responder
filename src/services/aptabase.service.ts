@@ -44,18 +44,23 @@ class AptabaseService {
       return;
     }
 
-    Promise.resolve(trackEvent(eventName, properties))
-      .then(() => {
-        if (this.enableLogging) {
-          logger.debug({
-            message: 'Analytics event tracked',
-            context: { eventName, properties },
-          });
-        }
-      })
-      .catch((error: any) => {
+    // Invoke the external tracking
+    try {
+      const result = trackEvent(eventName, properties);
+      // Log event tracking immediately
+      if (this.enableLogging) {
+        logger.debug({
+          message: 'Analytics event tracked',
+          context: { eventName, properties },
+        });
+      }
+      // Handle any promise rejection from trackEvent
+      Promise.resolve(result).catch((error: any) => {
         this.handleAnalyticsError(error, eventName, properties);
       });
+    } catch (error: any) {
+      this.handleAnalyticsError(error, eventName, properties);
+    }
   }
 
   /**

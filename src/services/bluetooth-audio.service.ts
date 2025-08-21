@@ -4,9 +4,16 @@ import BleManager, { type BleManagerDidUpdateValueForCharacteristicEvent, BleSca
 
 import { logger } from '@/lib/logging';
 import { getItem } from '@/lib/storage';
-import { audioService } from '@/services/audio.service';
 import { type AudioButtonEvent, type BluetoothAudioDevice, type Device, State, useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
+// Import audioService dynamically to avoid expo module import errors in tests
+let audioService: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  audioService = require('@/services/audio.service').audioService;
+} catch {
+  audioService = {};
+}
 
 // Standard Bluetooth UUIDs for audio services
 const AUDIO_SERVICE_UUID = '0000110A-0000-1000-8000-00805F9B34FB'; // Advanced Audio Distribution Profile

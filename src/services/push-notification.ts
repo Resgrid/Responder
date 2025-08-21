@@ -90,12 +90,12 @@ class PushNotificationService {
   }
 
   private async initialize(): Promise<void> {
-    // Set up Android notification channels
-    await this.setupAndroidNotificationChannels();
-
-    // Set up notification listeners
+    // Set up notification listeners synchronously before channel setup to ensure immediate registration
     this.notificationListener = Notifications.addNotificationReceivedListener(this.handleNotificationReceived);
     this.responseListener = Notifications.addNotificationResponseReceivedListener(this.handleNotificationResponse);
+
+    // Set up Android notification channels
+    await this.setupAndroidNotificationChannels();
 
     logger.info({
       message: 'Push notification service initialized',

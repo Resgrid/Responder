@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
@@ -42,8 +43,10 @@ jest.mock('react-i18next', () => ({
 
 // Mock UI components
 jest.mock('../../ui/actionsheet', () => ({
-  Actionsheet: ({ children, isOpen }: any) =>
-    isOpen ? <div data-testid="actionsheet">{children}</div> : null,
+  Actionsheet: ({ children, isOpen }: any) => {
+    const { View } = require('react-native');
+    return isOpen ? <View testID="actionsheet">{children}</View> : null;
+  },
   ActionsheetBackdrop: ({ children }: any) => <div>{children}</div>,
   ActionsheetContent: ({ children }: any) => <div>{children}</div>,
   ActionsheetDragIndicator: () => <div />,

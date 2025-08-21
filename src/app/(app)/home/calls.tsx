@@ -18,7 +18,7 @@ import { useCallsStore } from '@/stores/calls/store';
 import { useSecurityStore } from '@/stores/security/store';
 
 export default function Calls() {
-  const { calls, isLoading, error, fetchCalls, fetchCallPriorities } = useCallsStore();
+  const { calls, isLoading, error, fetchCalls, fetchCallPriorities, callPriorities } = useCallsStore();
   const { canUserCreateCalls } = useSecurityStore();
   const { trackEvent } = useAnalytics();
   const { t } = useTranslation();
@@ -68,7 +68,7 @@ export default function Calls() {
         data={filteredCalls}
         renderItem={({ item }: { item: CallResultData }) => (
           <Pressable onPress={() => router.push(`/call/${item.CallId}`)}>
-            <CallCard call={item} priority={useCallsStore.getState().callPriorities.find((p: { Id: number }) => p.Id === item.Priority)} />
+            <CallCard call={item} priority={callPriorities.find((p: { Id: number }) => p.Id === item.Priority)} />
           </Pressable>
         )}
         keyExtractor={(item: CallResultData) => item.CallId}

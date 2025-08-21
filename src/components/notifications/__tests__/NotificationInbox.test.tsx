@@ -4,12 +4,14 @@ import { useNotifications } from '@novu/react-native';
 import { NotificationInbox } from '../NotificationInbox';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useToastStore } from '@/stores/toast/store';
+import { useAuthStore } from '@/lib/auth';
 import { deleteMessage } from '@/api/novu/inbox';
 
 // Mock dependencies
 jest.mock('@novu/react-native');
 jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/toast/store');
+jest.mock('@/lib/auth');
 jest.mock('@/api/novu/inbox');
 jest.mock('nativewind', () => ({
   colorScheme: {
@@ -23,6 +25,7 @@ jest.mock('nativewind', () => ({
 const mockUseNotifications = useNotifications as jest.MockedFunction<typeof useNotifications>;
 const mockUseCoreStore = useCoreStore as unknown as jest.MockedFunction<any>;
 const mockUseToastStore = useToastStore as unknown as jest.MockedFunction<any>;
+const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
 const mockDeleteMessage = deleteMessage as jest.MockedFunction<typeof deleteMessage>;
 
 describe('NotificationInbox', () => {
@@ -73,6 +76,12 @@ describe('NotificationInbox', () => {
     jest.clearAllMocks();
     jest.clearAllTimers();
     jest.useFakeTimers();
+
+    // Provide a valid userId through auth store
+    mockUseAuthStore.mockImplementation((selector: any) => {
+      const state = { userId: 'user-1' };
+      return selector(state);
+    });
 
     mockUseNotifications.mockReturnValue({
       notifications: mockNotifications as any,

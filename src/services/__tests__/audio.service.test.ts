@@ -125,6 +125,7 @@ describe('AudioService', () => {
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: true,
         interruptionModeIOS: 'doNotMix',
+        interruptionModeAndroid: 'duckOthers',
       });
     });
 

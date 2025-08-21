@@ -20,6 +20,8 @@ import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData
 import { useCallsStore } from '../calls/store';
 
 interface CoreState {
+  // Currently active unit ID for location service
+  activeUnitId: string | null;
   activeStatuses: StatusesResultData[] | null;
   activeStaffing: StatusesResultData[] | null;
   currentStatus: GetCurrentStatusResultData | null;
@@ -46,6 +48,7 @@ interface CoreState {
 export const useCoreStore = create<CoreState>()(
   persist(
     (set, get) => ({
+      activeUnitId: null,
       activeCallId: null,
       activeCall: null,
       activePriority: null,

@@ -65,6 +65,11 @@ jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   select: jest.fn().mockImplementation((obj) => obj.ios || obj.default),
 }));
 
+// Mock useFocusEffect from react-navigation
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => callback(),
+}));
+
 // Global mocks for common problematic modules
 jest.mock('@notifee/react-native', () => {
   const mockNotifee = {
@@ -169,4 +174,49 @@ jest.mock('react-native-permissions', () => ({
     status: 'granted',
     settings: {},
   }),
+}));
+// Mock expo-secure-store to avoid requireNativeModule errors
+jest.mock('expo-secure-store', () => ({
+  __esModule: true,
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn().mockResolvedValue(undefined),
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+}));
+// Mock expo-constants to prevent NativeModulesProxy errors in tests
+jest.mock('expo-constants', () => ({
+  expoConfig: { extra: {} },
+}));
+// Mock expo-modules-core for NativeUnimoduleProxy
+jest.mock('expo-modules-core', () => ({
+  NativeUnimoduleProxy: {},
+  // Mock requireOptionalNativeModule to prevent errors in expo-asset and expo-av
+  requireOptionalNativeModule: jest.fn(() => null),
+}));
+// Mock NativeModulesProxy native module in expo-modules-core
+jest.mock('expo-modules-core/src/NativeModulesProxy.native', () => ({
+  NativeUnimoduleProxy: {},
+}));
+
+// Mock expo-asset to avoid import issues
+jest.mock('expo-asset', () => ({
+  Asset: {
+    loadAsync: jest.fn().mockResolvedValue([]),
+    fromModule: jest.fn().mockReturnValue({
+      downloadAsync: jest.fn().mockResolvedValue(undefined),
+      localUri: 'mock-uri',
+      uri: 'mock-uri',
+    }),
+  },
+}));
+
+// Mock expo-av to avoid import issues
+jest.mock('expo-av', () => ({
+  Audio: {
+    setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
+    Sound: {
+      createAsync: jest.fn().mockResolvedValue({ sound: { setPositionAsync: jest.fn(), playAsync: jest.fn(), unloadAsync: jest.fn() } }),
+    },
+  },
+  InterruptionModeAndroid: { DuckOthers: 0 },
+  InterruptionModeIOS: { DoNotMix: 0 },
 }));

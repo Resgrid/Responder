@@ -42,14 +42,11 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
   // Check if this is a personnel pin
   const isPersonnelPin = pin.ImagePath && pin.ImagePath.toLowerCase().startsWith('person');
 
-  // Check if pin has valid numeric coordinates
-  const hasCoordinates = pin.Latitude != null && pin.Longitude != null && Number.isFinite(pin.Latitude) && Number.isFinite(pin.Longitude);
+  // Check if pin has valid numeric coordinates (exclude 0,0 as missing)
+  const hasCoordinates = pin.Latitude != null && pin.Longitude != null && Number.isFinite(pin.Latitude) && Number.isFinite(pin.Longitude) && !(pin.Latitude === 0 && pin.Longitude === 0);
 
   // Determine if coordinates should be shown (hide for personnel pins when PII cannot be viewed)
   const shouldShowCoordinates = !isPersonnelPin || canUserViewPII;
-
-  // Determine if routing is allowed (both PII and coordinate checks must pass)
-  const isRoutingAllowed = shouldShowCoordinates && hasCoordinates;
 
   const isCallPin = pin.ImagePath?.toLowerCase() === 'call' || pin.Type === 1;
 
@@ -106,7 +103,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
 
           {pin.InfoWindowContent && (
             <Box>
-              <Text className="text-sm">{shouldShowCoordinates ? pin.InfoWindowContent : t('common.restricted_content')}</Text>
+              <Text className="text-sm">{pin.InfoWindowContent}</Text>
             </Box>
           )}
 
@@ -121,13 +118,11 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
         <Divider className="my-4" />
 
         <VStack className="space-y-3">
-          {/* Route to location button - only available when routing is allowed */}
-          {isRoutingAllowed && (
-            <Button onPress={handleRouteToLocation} variant="outline" className="w-full">
-              <ButtonIcon as={RouteIcon} />
-              <ButtonText>{t('common.route')}</ButtonText>
-            </Button>
-          )}
+          {/* Route to location button - always available, handler will show error if no coords */}
+          <Button onPress={handleRouteToLocation} variant="outline" className="w-full">
+            <ButtonIcon as={RouteIcon} />
+            <ButtonText>{t('common.route')}</ButtonText>
+          </Button>
 
           {/* Call-specific actions */}
           {isCallPin && (

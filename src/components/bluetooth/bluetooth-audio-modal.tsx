@@ -59,7 +59,7 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
   // Track analytics when modal is opened
   useEffect(() => {
     if (isOpen) {
-      const openTime = Date.now();
+      const openTime = new Date().getTime();
       setModalOpenTime(openTime);
 
       trackEvent('bluetooth_audio_modal_viewed', {
@@ -190,7 +190,7 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
 
   const handleClose = useCallback(() => {
     if (modalOpenTime !== null) {
-      const timeSpent = Date.now() - modalOpenTime;
+      const timeSpent = new Date().getTime() - modalOpenTime;
       trackEvent('bluetooth_audio_modal_closed', {
         timestamp: new Date().toISOString(),
         timeSpent,

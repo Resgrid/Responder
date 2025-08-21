@@ -68,14 +68,14 @@ export default function HomeMap() {
       trackEvent('map_viewed', {
         timestamp: new Date().toISOString(),
         isMapLocked: location.isMapLocked,
-        hasLocation: !!(location.latitude && location.longitude),
+        hasLocation: location.latitude != null && location.longitude != null,
       });
 
       // Reset hasUserMovedMap when navigating back to map
       setHasUserMovedMap(false);
 
       // Reset camera to current location when navigating back to map
-      if (isMapReady && location.latitude && location.longitude) {
+      if (isMapReady && location.latitude != null && location.longitude != null) {
         const cameraConfig: any = {
           centerCoordinate: [location.longitude, location.latitude],
           zoomLevel: location.isMapLocked ? 16 : 12,
@@ -131,7 +131,7 @@ export default function HomeMap() {
   }, []);
 
   useEffect(() => {
-    if (isMapReady && location.latitude && location.longitude) {
+    if (isMapReady && location.latitude != null && location.longitude != null) {
       logger.info({
         message: 'Location updated and map is ready',
         context: {
@@ -170,7 +170,7 @@ export default function HomeMap() {
       // When exiting locked mode, reset camera to normal view and reset user interaction state
       setHasUserMovedMap(false);
 
-      if (isMapReady && location.latitude && location.longitude) {
+      if (isMapReady && location.latitude != null && location.longitude != null) {
         cameraRef.current?.setCamera({
           centerCoordinate: [location.longitude, location.latitude],
           zoomLevel: 12,
@@ -226,7 +226,7 @@ export default function HomeMap() {
   };
 
   const handleRecenterMap = () => {
-    if (location.latitude && location.longitude) {
+    if (location.latitude != null && location.longitude != null) {
       const cameraConfig: any = {
         centerCoordinate: [location.longitude, location.latitude],
         zoomLevel: location.isMapLocked ? 16 : 12,
@@ -304,7 +304,7 @@ export default function HomeMap() {
   };
 
   // Show recenter button only when map is not locked and user has moved the map
-  const showRecenterButton = !location.isMapLocked && hasUserMovedMap && location.latitude && location.longitude;
+  const showRecenterButton = !location.isMapLocked && hasUserMovedMap && location.latitude != null && location.longitude != null;
 
   return (
     <>
@@ -342,7 +342,7 @@ export default function HomeMap() {
                 followPitch={location.isMapLocked ? 45 : undefined}
               />
 
-              {location.latitude && location.longitude && (
+              {location.latitude != null && location.longitude != null && (
                 <Mapbox.PointAnnotation id="userLocation" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 0.5 }}>
                   <Animated.View
                     style={[

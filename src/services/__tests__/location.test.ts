@@ -1,3 +1,32 @@
+// Mock expo-secure-store to prevent AFTER_FIRST_UNLOCK errors
+jest.mock('expo-secure-store', () => ({
+  AFTER_FIRST_UNLOCK: 'AFTER_FIRST_UNLOCK',
+  ALWAYS: 'ALWAYS',
+  WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 'WHEN_PASSCODE_SET_THIS_DEVICE_ONLY',
+  getItemAsync: jest.fn(() => Promise.resolve(null)),
+  setItemAsync: jest.fn(() => Promise.resolve()),
+  deleteItemAsync: jest.fn(() => Promise.resolve()),
+  isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+}));
+// Mock expo-constants and expo-modules-core to prevent NativeUnimoduleProxy errors
+jest.mock('expo-constants', () => ({
+  manifest: {},
+  appOwnership: 'expo',
+  platform: { ios: {}, android: {} },
+  getWebViewUserAgentAsync: jest.fn(),
+  sessionId: 'test-session',
+  installationId: 'test-installation',
+  deviceId: 'test-device',
+  nativeAppVersion: '1.0.0',
+  nativeBuildVersion: '1',
+  releaseChannel: 'default',
+  executionEnvironment: 'standalone',
+}));
+jest.mock('expo-modules-core', () => ({
+  NativeUnimoduleProxy: {},
+  requireNativeModule: jest.fn(),
+  EventEmitter: jest.fn(),
+}));
 // Mock all dependencies first
 jest.mock('@/api/units/unitLocation', () => ({
   setUnitLocation: jest.fn(),

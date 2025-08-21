@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+// import Platform from react-native not needed for storage init
 import { MMKV, useMMKVBoolean } from 'react-native-mmkv';
 import { type StateStorage } from 'zustand/middleware';
 
@@ -15,16 +15,8 @@ const initializeStorage = async () => {
   }
 };
 
-// For synchronous usage, we'll provide a fallback
-if (Platform.OS === 'web') {
-  storage = new MMKV({
-    id: 'ResgridUnit',
-  });
-} else {
-  storage = new MMKV({
-    id: 'ResgridUnit',
-  });
-}
+// Synchronous storage fallback initialization
+storage = new MMKV({ id: 'ResgridUnit' });
 
 // Initialize secure storage
 initializeStorage().catch((error) => {

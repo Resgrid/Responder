@@ -1,6 +1,5 @@
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
-import { useFocusEffect } from '@react-navigation/native';
 import { SearchIcon, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,26 +50,23 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
   const wasModalOpenRef = useRef(false);
 
   // Track analytics when modal becomes visible
-  useFocusEffect(
-    useCallback(() => {
-      if (isOpen) {
-        wasModalOpenRef.current = true;
-        try {
-          trackEvent('call_notes_modal_viewed', {
-            timestamp: new Date().toISOString(),
-            callId,
-            noteCount: callNotes?.length || 0,
-            hasNotes: Boolean(callNotes?.length),
-            isLoading: isNotesLoading,
-            hasSearchQuery: searchQuery.trim().length > 0,
-          });
-        } catch (error) {
-          // Analytics errors should not break the component
-          console.warn('Failed to track call notes modal analytics:', error);
-        }
+  useEffect(() => {
+    if (isOpen) {
+      wasModalOpenRef.current = true;
+      try {
+        trackEvent('call_notes_modal_viewed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          noteCount: callNotes?.length || 0,
+          hasNotes: Boolean(callNotes?.length),
+          isLoading: isNotesLoading,
+          hasSearchQuery: searchQuery.trim().length > 0,
+        });
+      } catch (error) {
+        console.warn('Failed to track call notes modal analytics:', error);
       }
-    }, [isOpen, trackEvent, callId, callNotes?.length, isNotesLoading, searchQuery])
-  );
+    }
+  }, [isOpen, trackEvent, callId, callNotes?.length, isNotesLoading, searchQuery]);
 
   // Fetch call notes when modal opens
   useEffect(() => {
@@ -92,21 +88,21 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
 
   const handleAddNote = React.useCallback(async () => {
     if (newNote.trim()) {
+      const noteLen = newNote.trim().length;
+      // Track note addition analytics immediately
+      try {
+        trackEvent('call_note_added', {
+          timestamp: new Date().toISOString(),
+          callId,
+          noteLength: noteLen,
+          userId: currentUser,
+        });
+      } catch (error) {
+        console.warn('Failed to track note addition analytics:', error);
+      }
       try {
         await addNote(callId, newNote, currentUser, null, null);
         setNewNote('');
-
-        // Track note addition analytics
-        try {
-          trackEvent('call_note_added', {
-            timestamp: new Date().toISOString(),
-            callId,
-            noteLength: newNote.trim().length,
-            userId: currentUser,
-          });
-        } catch (error) {
-          console.warn('Failed to track note addition analytics:', error);
-        }
       } catch (error) {
         console.error('Failed to add note:', error);
       }

@@ -1,6 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { useWindowDimensions } from 'react-native';
+
+// Mock useWindowDimensions using jest.spyOn in beforeEach to avoid TurboModule issues
+
+// Mock Platform separately to avoid TurboModule issues
+jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+  OS: 'ios',
+  select: jest.fn().mockImplementation((obj) => obj.ios || obj.default),
+}));
 
 import { useAnalytics } from '@/hooks/use-analytics';
 
@@ -29,14 +36,12 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('nativewind', () => ({
-  useColorScheme: () => ({ colorScheme: 'light' }),
+  useColorScheme: jest.fn(() => ({ colorScheme: 'light' })),
+  cssInterop: jest.fn(),
+  styled: jest.fn(() => (Component: any) => Component),
 }));
 
-jest.mock('react-native', () => ({
-  ...jest.requireActual('react-native'),
-  Platform: { OS: 'ios' },
-  useWindowDimensions: jest.fn(),
-}));
+// Remove duplicate Platform mock since it's already in the react-native mock above
 
 jest.mock('react-hook-form', () => ({
   useForm: () => ({
@@ -72,56 +77,88 @@ jest.mock('@/lib/logging', () => ({
   },
 }));
 
-// Mock UI components more simply
-jest.mock('../../ui/actionsheet', () => ({
-  Actionsheet: ({ children, isOpen }: any) => isOpen ? <div data-testid="actionsheet">{children}</div> : null,
-  ActionsheetBackdrop: ({ children }: any) => <div data-testid="actionsheet-backdrop">{children}</div>,
-  ActionsheetContent: ({ children }: any) => <div data-testid="actionsheet-content">{children}</div>,
-  ActionsheetDragIndicator: () => <div data-testid="drag-indicator" />,
-  ActionsheetDragIndicatorWrapper: ({ children }: any) => <div>{children}</div>,
-}));
+// Mock UI components with React Native components
+jest.mock('../../ui/actionsheet', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Actionsheet: ({ children, isOpen }: any) => isOpen ? React.createElement(View, { testID: 'actionsheet' }, children) : null,
+    ActionsheetBackdrop: ({ children }: any) => React.createElement(View, { testID: 'actionsheet-backdrop' }, children),
+    ActionsheetContent: ({ children }: any) => React.createElement(View, { testID: 'actionsheet-content' }, children),
+    ActionsheetDragIndicator: () => React.createElement(View, { testID: 'drag-indicator' }),
+    ActionsheetDragIndicatorWrapper: ({ children }: any) => React.createElement(View, {}, children),
+  };
+});
 
-jest.mock('../../ui/button', () => ({
-  Button: ({ children, onPress }: any) => <button data-testid="button" onClick={onPress}>{children}</button>,
-  ButtonText: ({ children }: any) => <span>{children}</span>,
-  ButtonSpinner: () => <div data-testid="button-spinner" />,
-}));
+jest.mock('../../ui/button', () => {
+  const React = require('react');
+  const { TouchableOpacity, Text, View } = require('react-native');
+  return {
+    Button: ({ children, onPress }: any) => React.createElement(TouchableOpacity, { testID: 'button', onPress }, children),
+    ButtonText: ({ children }: any) => React.createElement(Text, {}, children),
+    ButtonSpinner: () => React.createElement(View, { testID: 'button-spinner' }),
+  };
+});
 
-jest.mock('../../ui/form-control', () => ({
-  FormControl: ({ children }: any) => <div>{children}</div>,
-  FormControlLabel: ({ children }: any) => <div>{children}</div>,
-  FormControlLabelText: ({ children }: any) => <label>{children}</label>,
-  FormControlHelperText: ({ children }: any) => <div>{children}</div>,
-  FormControlError: ({ children }: any) => <div>{children}</div>,
-  FormControlErrorText: ({ children }: any) => <span>{children}</span>,
-}));
+jest.mock('../../ui/form-control', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return {
+    FormControl: ({ children }: any) => React.createElement(View, {}, children),
+    FormControlLabel: ({ children }: any) => React.createElement(View, {}, children),
+    FormControlLabelText: ({ children }: any) => React.createElement(Text, {}, children),
+    FormControlHelperText: ({ children }: any) => React.createElement(Text, {}, children),
+    FormControlError: ({ children }: any) => React.createElement(View, {}, children),
+    FormControlErrorText: ({ children }: any) => React.createElement(Text, {}, children),
+  };
+});
 
-jest.mock('../../ui/center', () => ({
-  Center: ({ children }: any) => <div>{children}</div>,
-}));
+jest.mock('../../ui/center', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Center: ({ children }: any) => React.createElement(View, {}, children),
+  };
+});
 
-jest.mock('../../ui/hstack', () => ({
-  HStack: ({ children }: any) => <div style={{ display: 'flex' }}>{children}</div>,
-}));
+jest.mock('../../ui/hstack', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    HStack: ({ children }: any) => React.createElement(View, { style: { flexDirection: 'row' } }, children),
+  };
+});
 
-jest.mock('../../ui/input', () => ({
-  Input: ({ children }: any) => <div>{children}</div>,
-  InputField: (props: any) => <input data-testid="input-field" {...props} />,
-}));
+jest.mock('../../ui/input', () => {
+  const React = require('react');
+  const { View, TextInput } = require('react-native');
+  return {
+    Input: ({ children }: any) => React.createElement(View, {}, children),
+    InputField: (props: any) => React.createElement(TextInput, { testID: 'input-field', ...props }),
+  };
+});
 
-jest.mock('../../ui/text', () => ({
-  Text: ({ children }: any) => <div>{children}</div>,
-}));
+jest.mock('../../ui/text', () => {
+  const React = require('react');
+  const { Text: RNText } = require('react-native');
+  return {
+    Text: ({ children }: any) => React.createElement(RNText, {}, children),
+  };
+});
 
-jest.mock('../../ui/vstack', () => ({
-  VStack: ({ children }: any) => <div>{children}</div>,
-}));
+jest.mock('../../ui/vstack', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    VStack: ({ children }: any) => React.createElement(View, { style: { flexDirection: 'column' } }, children),
+  };
+});
 
 describe('ServerUrlBottomSheet', () => {
   const mockTrackEvent = jest.fn();
   const mockOnClose = jest.fn();
   const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
-  const mockUseWindowDimensions = useWindowDimensions as jest.MockedFunction<typeof useWindowDimensions>;
+  // mockUseWindowDimensions is already defined at the top level
 
   const defaultProps = {
     isOpen: true,
@@ -136,8 +173,9 @@ describe('ServerUrlBottomSheet', () => {
       trackEvent: mockTrackEvent,
     });
 
-    // Default mock for window dimensions (portrait)
-    mockUseWindowDimensions.mockReturnValue({
+    // Mock useWindowDimensions using jest.spyOn to avoid TurboModule issues
+    const ReactNative = require('react-native');
+    jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
       width: 375,
       height: 812,
       scale: 2,
@@ -178,8 +216,9 @@ describe('ServerUrlBottomSheet', () => {
     });
 
     it('tracks view analytics with landscape orientation', () => {
-      // Mock landscape dimensions
-      mockUseWindowDimensions.mockReturnValue({
+      // Mock landscape dimensions using jest.spyOn
+      const ReactNative = require('react-native');
+      jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
         width: 812,
         height: 375,
         scale: 2,
