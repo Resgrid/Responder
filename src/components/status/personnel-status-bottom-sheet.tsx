@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CircleIcon } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,6 @@ import { Button, ButtonText } from '../ui/button';
 import { Heading } from '../ui/heading';
 import { HStack } from '../ui/hstack';
 import { Input, InputField } from '../ui/input';
-import { Radio, RadioGroup, RadioIcon, RadioIndicator, RadioLabel } from '../ui/radio';
 import { Spinner } from '../ui/spinner';
 import { Text } from '../ui/text';
 import { Textarea, TextareaInput } from '../ui/textarea';
@@ -282,7 +281,9 @@ export const PersonnelStatusBottomSheet = () => {
   const canProceedFromCurrentStep = () => {
     switch (currentStep) {
       case 'select-responding-to':
-        return true; // Can proceed with any selection including none
+        // "No Destination" is always valid regardless of status Detail value
+        // User can always proceed with any selection (call, station, or none)
+        return true;
       case 'add-note':
         return true; // Note is optional
       case 'confirm':
@@ -311,11 +312,17 @@ export const PersonnelStatusBottomSheet = () => {
         </ActionsheetDragIndicatorWrapper>
 
         <VStack space="md" className="w-full p-4">
-          {/* Step indicator */}
-          <HStack space="sm" className="mb-2 justify-center">
+          {/* Step indicator with close button */}
+          <HStack className="mb-2 items-center justify-between">
+            <VStack className="flex-1" />
             <Text className="text-sm text-gray-500 dark:text-gray-400">
               {t('common.step')} {getStepNumber()} {t('common.of')} 3
             </Text>
+            <VStack className="flex-1 items-end">
+              <TouchableOpacity onPress={handleClose} className="p-1">
+                <X size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+              </TouchableOpacity>
+            </VStack>
           </HStack>
 
           <Heading size="lg" className="mb-4 text-center">
@@ -329,10 +336,18 @@ export const PersonnelStatusBottomSheet = () => {
               {/* No Destination Option */}
               <TouchableOpacity
                 onPress={handleNoDestinationSelect}
-                className={`mb-4 rounded-lg border-2 p-3 ${responseType === 'none' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}
+                className={`mb-4 rounded-lg border-2 p-3 ${responseType === 'none' ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
               >
                 <HStack space="sm" className="items-center">
-                  <CircleIcon size={20} color={responseType === 'none' ? '#3b82f6' : '#9ca3af'} fill={responseType === 'none' ? '#3b82f6' : 'none'} />
+                  <VStack
+                    className="flex size-5 items-center justify-center rounded border-2"
+                    style={{
+                      borderColor: responseType === 'none' ? '#3b82f6' : '#9ca3af',
+                      backgroundColor: responseType === 'none' ? '#3b82f6' : 'transparent',
+                    }}
+                  >
+                    {responseType === 'none' && <Check size={12} color="#fff" />}
+                  </VStack>
                   <VStack className="flex-1">
                     <Text className="font-bold">{t('personnel.status.no_destination')}</Text>
                     <Text className="text-sm text-gray-600 dark:text-gray-400">{t('personnel.status.general_status')}</Text>
@@ -353,7 +368,7 @@ export const PersonnelStatusBottomSheet = () => {
               {/* Tab Content */}
               <ScrollView className="max-h-[300px]">
                 {selectedTab === 'calls' && (
-                  <RadioGroup value={selectedCall?.CallId || ''} onChange={handleCallSelect}>
+                  <VStack space="sm">
                     {isLoadingCalls ? (
                       <VStack space="md" className="w-full items-center justify-center">
                         <Spinner size="large" />
@@ -361,28 +376,38 @@ export const PersonnelStatusBottomSheet = () => {
                       </VStack>
                     ) : calls && calls.length > 0 ? (
                       calls.map((call) => (
-                        <Radio key={call.CallId} value={call.CallId} className="mb-3 py-2">
-                          <RadioIndicator>
-                            <RadioIcon as={CircleIcon} />
-                          </RadioIndicator>
-                          <RadioLabel>
-                            <VStack>
+                        <TouchableOpacity
+                          key={call.CallId}
+                          onPress={() => handleCallSelect(call.CallId)}
+                          className={`mb-3 rounded-lg border-2 p-3 ${selectedCall?.CallId === call.CallId ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                        >
+                          <HStack space="sm" className="items-center">
+                            <VStack
+                              className="flex size-5 items-center justify-center rounded border-2"
+                              style={{
+                                borderColor: selectedCall?.CallId === call.CallId ? '#3b82f6' : '#9ca3af',
+                                backgroundColor: selectedCall?.CallId === call.CallId ? '#3b82f6' : 'transparent',
+                              }}
+                            >
+                              {selectedCall?.CallId === call.CallId && <Check size={12} color="#fff" />}
+                            </VStack>
+                            <VStack className="flex-1">
                               <Text className="font-bold">
                                 {call.Number} - {call.Name}
                               </Text>
                               <Text className="text-sm text-gray-600 dark:text-gray-400">{call.Address}</Text>
                             </VStack>
-                          </RadioLabel>
-                        </Radio>
+                          </HStack>
+                        </TouchableOpacity>
                       ))
                     ) : (
                       <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('calls.no_calls_available')}</Text>
                     )}
-                  </RadioGroup>
+                  </VStack>
                 )}
 
                 {selectedTab === 'stations' && (
-                  <RadioGroup value={selectedGroup?.GroupId || ''} onChange={handleGroupSelect}>
+                  <VStack space="sm">
                     {isLoadingGroups ? (
                       <VStack space="md" className="w-full items-center justify-center">
                         <Spinner size="large" />
@@ -390,23 +415,33 @@ export const PersonnelStatusBottomSheet = () => {
                       </VStack>
                     ) : groups && groups.length > 0 ? (
                       groups.map((group) => (
-                        <Radio key={group.GroupId} value={group.GroupId} className="mb-3 py-2">
-                          <RadioIndicator>
-                            <RadioIcon as={CircleIcon} />
-                          </RadioIndicator>
-                          <RadioLabel>
-                            <VStack>
+                        <TouchableOpacity
+                          key={group.GroupId}
+                          onPress={() => handleGroupSelect(group.GroupId)}
+                          className={`mb-3 rounded-lg border-2 p-3 ${selectedGroup?.GroupId === group.GroupId ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                        >
+                          <HStack space="sm" className="items-center">
+                            <VStack
+                              className="flex size-5 items-center justify-center rounded border-2"
+                              style={{
+                                borderColor: selectedGroup?.GroupId === group.GroupId ? '#3b82f6' : '#9ca3af',
+                                backgroundColor: selectedGroup?.GroupId === group.GroupId ? '#3b82f6' : 'transparent',
+                              }}
+                            >
+                              {selectedGroup?.GroupId === group.GroupId && <Check size={12} color="#fff" />}
+                            </VStack>
+                            <VStack className="flex-1">
                               <Text className="font-bold">{group.Name}</Text>
                               {group.Address && <Text className="text-sm text-gray-600 dark:text-gray-400">{group.Address}</Text>}
                               {group.GroupType && <Text className="text-xs text-gray-500 dark:text-gray-500">{group.GroupType}</Text>}
                             </VStack>
-                          </RadioLabel>
-                        </Radio>
+                          </HStack>
+                        </TouchableOpacity>
                       ))
                     ) : (
                       <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('personnel.status.no_stations_available')}</Text>
                     )}
-                  </RadioGroup>
+                  </VStack>
                 )}
               </ScrollView>
 

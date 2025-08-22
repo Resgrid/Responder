@@ -30,5 +30,5 @@
     }
   },
   "exclude": ["docs", "cli", "android", "lib", "ios", "node_modules", "storybookDocsComponents"],
-  "include": ["src/**/*.ts", "src/**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts", "__mocks__/**/*.ts", "app.config.ts", "jest-setup.ts", "__tests__/**/*.ts", "__tests__/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts", "__mocks__/**/*.ts", "__mocks__/**/*.tsx", "app.config.ts", "jest-setup.ts", "__tests__/**/*.ts", "__tests__/**/*.tsx"]
 }

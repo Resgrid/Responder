@@ -115,15 +115,12 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     }
   },
   nextStep: () => {
-    const { currentStep, isDestinationRequired } = get();
+    const { currentStep } = get();
     switch (currentStep) {
       case 'select-responding-to':
-        if (isDestinationRequired()) {
-          // Need to select destination first
-          return;
-        } else {
-          set({ currentStep: 'add-note' });
-        }
+        // "No Destination" is always valid regardless of status Detail value
+        // User can always proceed with any selection (call, station, or none)
+        set({ currentStep: 'add-note' });
         break;
       case 'add-note':
         set({ currentStep: 'confirm' });

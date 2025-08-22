@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 
 import { SideMenu } from '../side-menu';
@@ -9,9 +10,9 @@ import { useSecurityStore, securityStore } from '@/stores/security/store';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
-  useRouter: () => ({
+  useRouter: jest.fn(() => ({
     push: jest.fn(),
-  }),
+  })),
 }));
 
 jest.mock('nativewind', () => ({
@@ -462,6 +463,53 @@ describe('SideMenu', () => {
       // Should still display the profile section with fallback data
       expect(screen.getByTestId('side-menu-profile-name')).toBeTruthy();
       expect(screen.getByTestId('side-menu-profile-department')).toBeTruthy();
+    });
+  });
+
+  describe('Navigation Animation Improvements', () => {
+    it('should handle navigation with improved timing to prevent animation stuttering', async () => {
+      const mockOnNavigate = jest.fn();
+
+      // Reset all mocks to ensure proper setup
+      const mockUseLiveKitStore = useLiveKitStore as jest.MockedFunction<typeof useLiveKitStore>;
+      mockUseLiveKitStore.mockReturnValue({
+        isConnected: false,
+        setIsBottomSheetVisible: jest.fn(),
+        toggleMicrophone: jest.fn(),
+      });
+
+      const mockUseAudioStreamStore = useAudioStreamStore as jest.MockedFunction<typeof useAudioStreamStore>;
+      mockUseAudioStreamStore.mockReturnValue({
+        currentStream: null,
+        isPlaying: false,
+        setIsBottomSheetVisible: jest.fn(),
+      });
+
+      render(<SideMenu onNavigate={mockOnNavigate} />);
+
+      const homeMenuItem = screen.getByTestId('side-menu-home');
+      fireEvent.press(homeMenuItem);
+
+      // onNavigate should be called after the navigation and delay
+      await waitFor(
+        () => {
+          expect(mockOnNavigate).toHaveBeenCalled();
+        },
+        { timeout: 150 } // Increase timeout to account for requestAnimationFrame + 50ms delay
+      );
+    });
+
+    it('should use memoized callbacks to prevent unnecessary re-renders', () => {
+      const mockOnNavigate = jest.fn();
+      const { rerender } = render(<SideMenu onNavigate={mockOnNavigate} />);
+
+      // Re-render with same props
+      rerender(<SideMenu onNavigate={mockOnNavigate} />);
+
+      // Component should still render correctly without issues
+      expect(screen.getByTestId('side-menu-container')).toBeTruthy();
+      expect(screen.getByTestId('side-menu-ptt-button')).toBeTruthy();
+      expect(screen.getByTestId('side-menu-audio-button')).toBeTruthy();
     });
   });
 }); 

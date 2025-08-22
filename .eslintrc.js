@@ -47,6 +47,13 @@ module.exports = {
     'no-tabs': 'off',
   },
   overrides: [
+    // Configuration for TypeScript declaration files
+    {
+      files: ['**/*.d.ts'],
+      parserOptions: {
+        project: null,
+      },
+    },
     // Configuration for  translations files (i18next)
     {
       files: ['src/translations/*.json'],

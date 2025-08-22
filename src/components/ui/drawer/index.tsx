@@ -202,8 +202,10 @@ const DrawerContent = React.forwardRef<React.ElementRef<typeof UIDrawer.Content>
       animate={animateObj}
       exit={exitObj}
       transition={{
-        type: 'timing',
-        duration: 300,
+        type: 'spring',
+        damping: 20,
+        stiffness: 300,
+        mass: 0.8,
       }}
       {...props}
       className={drawerContentStyle({
