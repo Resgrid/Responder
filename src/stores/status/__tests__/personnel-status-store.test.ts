@@ -204,6 +204,27 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			});
 			expect(result.current.currentStep).toBe('select-responding-to');
 		});
+
+		it('should ensure goToNextStep behaves identically to nextStep', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			// Test that goToNextStep progresses through steps the same way as nextStep
+			act(() => {
+				result.current.goToNextStep(); // select-responding-to -> add-note
+			});
+			expect(result.current.currentStep).toBe('add-note');
+
+			act(() => {
+				result.current.goToNextStep(); // add-note -> confirm
+			});
+			expect(result.current.currentStep).toBe('confirm');
+
+			// Should not progress beyond confirm
+			act(() => {
+				result.current.goToNextStep();
+			});
+			expect(result.current.currentStep).toBe('confirm');
+		});
 	});
 
 	describe('state setters', () => {

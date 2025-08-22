@@ -42,6 +42,7 @@ interface PersonnelStatusBottomSheetStore {
   setIsLoading: (isLoading: boolean) => void;
   fetchGroups: () => Promise<void>;
   nextStep: () => void;
+  goToNextStep: () => void;
   previousStep: () => void;
   submitStatus: () => Promise<void>;
   reset: () => void;
@@ -128,18 +129,7 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     }
   },
   goToNextStep: () => {
-    const { currentStep, isDestinationRequired } = get();
-    switch (currentStep) {
-      case 'select-responding-to':
-        // Always go to note step if destination is not required
-        if (!isDestinationRequired()) {
-          set({ currentStep: 'add-note' });
-        }
-        break;
-      case 'add-note':
-        set({ currentStep: 'confirm' });
-        break;
-    }
+    return get().nextStep();
   },
   previousStep: () => {
     const { currentStep } = get();
