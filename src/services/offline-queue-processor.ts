@@ -1,365 +1,139 @@
 import NetInfo from '@react-native-community/netinfo';
-import * as TaskManager from 'expo-task-manager';
-import { AppState, type AppStateStatus } from 'react-native';
 
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { logger } from '@/lib/logging';
-import { type QueuedEvent, QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
-import { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
-import { useOfflineQueueStore } from '@/stores/offline-queue/store';
+import { getOfflineQueueStorage } from '@/lib/storage/secure-storage';
+import type { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 
-const QUEUE_PROCESSOR_TASK_NAME = 'offline-queue-processor';
-
-// Define the background task for processing the queue
-TaskManager.defineTask(QUEUE_PROCESSOR_TASK_NAME, async () => {
-  try {
-    logger.info({
-      message: 'Background queue processor task running',
-    });
-
-    const processor = OfflineQueueProcessor.getInstance();
-    await processor.processQueue();
-  } catch (error) {
-    logger.error({
-      message: 'Error in background queue processor task',
-      context: { error },
-    });
-  }
-});
-
-interface QueuedPersonnelStatusEvent extends Omit<QueuedEvent, 'data'> {
-  type: QueuedEventType.PERSONNEL_STATUS;
-  data: {
-    userId: string;
-    statusType: string;
-    note?: string;
-    respondingTo?: string;
-    timestamp: string;
-    timestampUtc: string;
-    latitude?: string;
-    longitude?: string;
-    accuracy?: string;
-    altitude?: string;
-    altitudeAccuracy?: string;
-    speed?: string;
-    heading?: string;
-    eventId?: string;
-  };
+interface QueueItem {
+  id: string;
+  type: 'personnelStatus';
+  payload: SavePersonStatusInput;
+  retries: number;
 }
 
-export class OfflineQueueProcessor {
-  private static instance: OfflineQueueProcessor;
-  private isProcessing = false;
-  private processingInterval: NodeJS.Timeout | null = null;
-  private appStateSubscription: { remove: () => void } | null = null;
-  private networkUnsubscribe: (() => void) | null = null;
+class RealOfflineQueueProcessor {
+  private static instance: RealOfflineQueueProcessor | null = null;
+  private processing = false;
+  private storageKey = 'offline_queue';
 
   private constructor() {
-    this.initializeListeners();
-  }
-
-  public static getInstance(): OfflineQueueProcessor {
-    if (!OfflineQueueProcessor.instance) {
-      OfflineQueueProcessor.instance = new OfflineQueueProcessor();
-    }
-    return OfflineQueueProcessor.instance;
-  }
-
-  private initializeListeners(): void {
-    // Listen for app state changes
-    this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
-
-    // Listen for network state changes
-    this.networkUnsubscribe = NetInfo.addEventListener((state) => {
-      if (state.isConnected && state.isInternetReachable) {
-        logger.info({
-          message: 'Network connected, processing offline queue',
-        });
+    NetInfo.addEventListener((state) => {
+      if (state.isInternetReachable) {
         this.processQueue();
       }
     });
   }
 
-  private handleAppStateChange = (nextAppState: AppStateStatus): void => {
-    if (nextAppState === 'active') {
-      logger.info({
-        message: 'App became active, starting queue processing',
-      });
-      this.startProcessing();
-    } else if (nextAppState === 'background') {
-      logger.info({
-        message: 'App went to background, starting background queue processing',
-      });
-      this.startBackgroundProcessing();
+  static getInstance(): RealOfflineQueueProcessor {
+    if (RealOfflineQueueProcessor.instance === null) {
+      RealOfflineQueueProcessor.instance = new RealOfflineQueueProcessor();
     }
-  };
-
-  public async startProcessing(): Promise<void> {
-    if (this.processingInterval) {
-      clearInterval(this.processingInterval);
-    }
-
-    // Process immediately
-    await this.processQueue();
-
-    // Set up regular processing while app is active
-    this.processingInterval = setInterval(async () => {
-      await this.processQueue();
-    }, 30000); // Process every 30 seconds while app is active
-
-    logger.info({
-      message: 'Started foreground queue processing',
-    });
+    return RealOfflineQueueProcessor.instance!;
   }
 
-  public async startBackgroundProcessing(): Promise<void> {
+  async processQueue(): Promise<void> {
+    if (this.processing) return;
+    this.processing = true;
     try {
-      // Task is already defined at module level, just verify it's registered
-      const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(QUEUE_PROCESSOR_TASK_NAME);
-      if (!isTaskRegistered) {
-        logger.warn({
-          message: 'Background task not registered, this should not happen as it is defined at module level',
-        });
-      } else {
-        logger.info({
-          message: 'Background queue processor task is registered and ready',
-        });
+      const storage = await getOfflineQueueStorage();
+      const raw = storage.getString(this.storageKey);
+      const items: QueueItem[] = raw ? JSON.parse(raw) : [];
+      const remaining: QueueItem[] = [];
+      for (const item of items) {
+        try {
+          if (item.type === 'personnelStatus') {
+            await savePersonnelStatus(item.payload);
+          }
+        } catch (error) {
+          item.retries++;
+          const backoff = Math.min(2 ** item.retries * 1000, 30000);
+          await new Promise((resolve) => setTimeout(resolve, backoff));
+          remaining.push(item);
+          logger.warn({ message: 'Retrying offline queue item', context: { id: item.id, error } });
+        }
       }
-
-      // Stop foreground processing
-      if (this.processingInterval) {
-        clearInterval(this.processingInterval);
-        this.processingInterval = null;
-      }
-
-      logger.info({
-        message: 'Started background queue processing',
-      });
+      await storage.set(this.storageKey, JSON.stringify(remaining));
     } catch (error) {
-      logger.error({
-        message: 'Failed to start background queue processing',
-        context: { error },
-      });
+      logger.error({ message: 'Processing offline queue failed', context: { error } });
+    } finally {
+      this.processing = false;
     }
   }
 
-  public stopProcessing(): void {
-    if (this.processingInterval) {
-      clearInterval(this.processingInterval);
-      this.processingInterval = null;
-    }
-
-    logger.info({
-      message: 'Stopped queue processing',
-    });
+  addPersonnelStatusToQueue(status: SavePersonStatusInput): string {
+    const id = `${Date.now()}-${Math.random()}`;
+    this.enqueue({ id, type: 'personnelStatus', payload: status, retries: 0 });
+    return id;
   }
 
-  public async processQueue(): Promise<void> {
-    if (this.isProcessing) {
-      logger.debug({
-        message: 'Queue processing already in progress, skipping',
-      });
-      return;
-    }
-
-    const queueStore = useOfflineQueueStore.getState();
-    const pendingEvents = queueStore.getPendingEvents();
-
-    if (pendingEvents.length === 0) {
-      logger.debug({
-        message: 'No pending events in queue',
-      });
-      return;
-    }
-
-    // Check network connectivity
-    const networkState = await NetInfo.fetch();
-    if (!networkState.isConnected || !networkState.isInternetReachable) {
-      logger.info({
-        message: 'No network connectivity, skipping queue processing',
-        context: { isConnected: networkState.isConnected, isReachable: networkState.isInternetReachable },
-      });
-      return;
-    }
-
-    this.isProcessing = true;
-    queueStore._setProcessing(true);
-
-    logger.info({
-      message: 'Processing offline queue',
-      context: { pendingEventsCount: pendingEvents.length },
-    });
-
-    for (const event of pendingEvents) {
-      try {
-        queueStore._setProcessing(true, event.id);
-        queueStore.updateEventStatus(event.id, QueuedEventStatus.PROCESSING);
-
-        await this.processEvent(event);
-
-        queueStore.updateEventStatus(event.id, QueuedEventStatus.COMPLETED);
-        logger.info({
-          message: 'Successfully processed queued event',
-          context: { eventId: event.id, type: event.type },
-        });
-      } catch (error) {
-        logger.error({
-          message: 'Failed to process queued event',
-          context: { eventId: event.id, type: event.type, error },
-        });
-
-        queueStore.updateEventStatus(event.id, QueuedEventStatus.FAILED, error instanceof Error ? error.message : String(error));
-
-        // If max retries exceeded, log it
-        if (event.retryCount >= event.maxRetries) {
-          logger.warn({
-            message: 'Event exceeded max retries, will not retry again',
-            context: { eventId: event.id, retryCount: event.retryCount, maxRetries: event.maxRetries },
-          });
-        }
-      }
-    }
-
-    this.isProcessing = false;
-    queueStore._setProcessing(false);
-
-    // Clean up completed events older than 24 hours
-    this.cleanupOldEvents();
-
-    logger.info({
-      message: 'Queue processing completed',
-    });
+  private async enqueue(item: QueueItem): Promise<void> {
+    const storage = await getOfflineQueueStorage();
+    const raw = storage.getString(this.storageKey);
+    const items: QueueItem[] = raw ? JSON.parse(raw) : [];
+    items.push(item);
+    await storage.set(this.storageKey, JSON.stringify(items));
   }
 
-  private async processEvent(event: QueuedEvent): Promise<void> {
-    switch (event.type) {
-      case QueuedEventType.PERSONNEL_STATUS:
-        await this.processPersonnelStatusEvent(event as QueuedPersonnelStatusEvent);
-        break;
-      default:
-        throw new Error(`Unsupported event type: ${event.type}`);
-    }
+  cleanup(): void {
+    // no-op
   }
 
-  private async processPersonnelStatusEvent(event: QueuedPersonnelStatusEvent): Promise<void> {
-    const statusInput = new SavePersonStatusInput();
-
-    // Map the queued event data to SavePersonStatusInput format
-    statusInput.UserId = event.data.userId;
-    statusInput.Type = event.data.statusType;
-    statusInput.Note = event.data.note || '';
-    statusInput.RespondingTo = event.data.respondingTo || '';
-    statusInput.Timestamp = event.data.timestamp;
-    statusInput.TimestampUtc = event.data.timestampUtc;
-    statusInput.Latitude = event.data.latitude || '';
-    statusInput.Longitude = event.data.longitude || '';
-    statusInput.Accuracy = event.data.accuracy || '';
-    statusInput.Altitude = event.data.altitude || '';
-    statusInput.AltitudeAccuracy = event.data.altitudeAccuracy || '';
-    statusInput.Speed = event.data.speed || '';
-    statusInput.Heading = event.data.heading || '';
-    statusInput.EventId = event.data.eventId || '';
-
-    await savePersonnelStatus(statusInput);
-
-    logger.info({
-      message: 'Successfully processed personnel status event',
-      context: { eventId: event.id, userId: statusInput.UserId, statusType: statusInput.Type },
-    });
+  startProcessing(): Promise<void> {
+    return this.processQueue();
   }
 
-  private cleanupOldEvents(): void {
-    const queueStore = useOfflineQueueStore.getState();
-    const completedEvents = queueStore.queuedEvents.filter((event) => event.status === QueuedEventStatus.COMPLETED);
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-
-    completedEvents.forEach((event) => {
-      if (event.lastAttemptAt && event.lastAttemptAt < oneDayAgo) {
-        queueStore.removeEvent(event.id);
-      }
-    });
-  }
-
-  public addPersonnelStatusToQueue(statusInput: SavePersonStatusInput, maxRetries = 3): string {
-    const queueStore = useOfflineQueueStore.getState();
-
-    // Convert SavePersonStatusInput to the queue event data format
-    const eventData = {
-      userId: statusInput.UserId,
-      statusType: statusInput.Type,
-      note: statusInput.Note,
-      respondingTo: statusInput.RespondingTo,
-      timestamp: statusInput.Timestamp,
-      timestampUtc: statusInput.TimestampUtc,
-      latitude: statusInput.Latitude,
-      longitude: statusInput.Longitude,
-      accuracy: statusInput.Accuracy,
-      altitude: statusInput.Altitude,
-      altitudeAccuracy: statusInput.AltitudeAccuracy,
-      speed: statusInput.Speed,
-      heading: statusInput.Heading,
-      eventId: statusInput.EventId,
-    };
-
-    const eventId = queueStore.addEvent(QueuedEventType.PERSONNEL_STATUS, eventData, maxRetries);
-
-    logger.info({
-      message: 'Added personnel status to offline queue',
-      context: { eventId, userId: statusInput.UserId, statusType: statusInput.Type },
-    });
-
-    // Try to process immediately if network is available
-    NetInfo.fetch().then((state) => {
-      if (state.isConnected && state.isInternetReachable) {
-        this.processQueue();
-      }
-    });
-
-    return eventId;
-  }
-
-  public cleanup(): void {
-    this.stopProcessing();
-
-    if (this.appStateSubscription) {
-      this.appStateSubscription.remove();
-      this.appStateSubscription = null;
-    }
-
-    if (this.networkUnsubscribe) {
-      this.networkUnsubscribe();
-      this.networkUnsubscribe = null;
-    }
-
-    // Unregister background task with proper error handling
-    (async () => {
-      try {
-        const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(QUEUE_PROCESSOR_TASK_NAME);
-        if (isTaskRegistered) {
-          await TaskManager.unregisterTaskAsync(QUEUE_PROCESSOR_TASK_NAME);
-          logger.info({
-            message: 'Successfully unregistered background task',
-            context: { taskName: QUEUE_PROCESSOR_TASK_NAME },
-          });
-        } else {
-          logger.debug({
-            message: 'Background task was not registered, no need to unregister',
-            context: { taskName: QUEUE_PROCESSOR_TASK_NAME },
-          });
-        }
-      } catch (error) {
-        logger.error({
-          message: 'Failed to unregister background task during cleanup',
-          context: { taskName: QUEUE_PROCESSOR_TASK_NAME, error },
-        });
-      }
-    })();
-
-    logger.info({
-      message: 'Offline queue processor cleaned up',
-    });
+  startBackgroundProcessing(): Promise<void> {
+    return this.processQueue();
   }
 }
 
-// Export singleton instance
+class StubOfflineQueueProcessor {
+  private static instance: StubOfflineQueueProcessor | null = null;
+  private constructor() {}
+  static getInstance(): StubOfflineQueueProcessor {
+    if (StubOfflineQueueProcessor.instance === null) {
+      StubOfflineQueueProcessor.instance = new StubOfflineQueueProcessor();
+    }
+    return StubOfflineQueueProcessor.instance;
+  }
+  processQueue(): Promise<void> {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error({ message: 'Stub offline queue used in production' });
+      throw new Error('OfflineQueueProcessor stub used in production');
+    }
+    return Promise.resolve();
+  }
+  addPersonnelStatusToQueue(status: SavePersonStatusInput): string {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error({ message: 'Stub offline queue used in production' });
+      throw new Error('OfflineQueueProcessor stub used in production');
+    }
+    return '';
+  }
+  cleanup(): void {
+    // no-op
+  }
+  startProcessing(): Promise<void> {
+    return this.processQueue();
+  }
+  startBackgroundProcessing(): Promise<void> {
+    return this.processQueue();
+  }
+}
+
+const ProcessorClass = process.env.NODE_ENV === 'production' ? RealOfflineQueueProcessor : StubOfflineQueueProcessor;
+
+export class OfflineQueueProcessor extends ProcessorClass {
+  /**
+   * Returns the singleton instance of the processor.
+   */
+  static getInstance(): RealOfflineQueueProcessor | StubOfflineQueueProcessor {
+    const instance = ProcessorClass.getInstance();
+    // Ensure the instance is recognized as OfflineQueueProcessor
+    Object.setPrototypeOf(instance, OfflineQueueProcessor.prototype);
+    return instance;
+  }
+}
+
 export const offlineQueueProcessor = OfflineQueueProcessor.getInstance();

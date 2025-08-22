@@ -4,6 +4,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { setPersonLocation } from '@/api/personnel/personnelLocation';
 import { setUnitLocation } from '@/api/units/unitLocation';
+import { useAuthStore } from '@/lib/auth';
 import { registerLocationServiceUpdater } from '@/lib/hooks/use-background-geolocation';
 import { logger } from '@/lib/logging';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
@@ -11,39 +12,42 @@ import { SavePersonnelLocationInput } from '@/models/v4/personnelLocation/savePe
 import { SaveUnitLocationInput } from '@/models/v4/unitLocation/saveUnitLocationInput';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
-import useAuthStore from '@/stores/auth/store';
 
 const LOCATION_TASK_NAME = 'location-updates';
+
+// Helper to safely convert numeric values to strings, guarding against invalid numbers.
+const safeNumericString = (value: number | null | undefined, field: string): string => {
+  // Treat null, undefined, NaN, and Infinity as invalid
+  if (value == null || !isFinite(value)) {
+    logger.warn({ message: `Invalid ${field} value: ${value}, defaulting to '0'` });
+    return '0';
+  }
+  return value.toString();
+};
 
 // Helper function to send location to API
 const sendLocationToAPI = async (location: Location.LocationObject): Promise<void> => {
   try {
-    const userId = useAuthStore.getState().userId;
-
-    if (!userId) {
-      logger.warn({
-        message: 'No active user, skipping location API call',
-      });
+    const unitId = useCoreStore.getState().activeUnitId;
+    if (!unitId) {
+      logger.warn({ message: 'No active unit selected, skipping location API call' });
       return;
     }
-
-    const locationInput = new SavePersonnelLocationInput();
-    locationInput.UserId = userId;
+    const locationInput = new SaveUnitLocationInput();
+    locationInput.UnitId = unitId;
     locationInput.Timestamp = new Date(location.timestamp).toISOString();
     locationInput.Latitude = location.coords.latitude.toString();
     locationInput.Longitude = location.coords.longitude.toString();
-    locationInput.Accuracy = location.coords.accuracy?.toString() || '0';
-    locationInput.Altitude = location.coords.altitude?.toString() || '0';
-    locationInput.AltitudeAccuracy = location.coords.altitudeAccuracy?.toString() || '0';
-    locationInput.Speed = location.coords.speed?.toString() || '0';
-    locationInput.Heading = location.coords.heading?.toString() || '0';
-
-    const result = await setPersonLocation(locationInput);
-
+    locationInput.Accuracy = safeNumericString(location.coords.accuracy, 'accuracy');
+    locationInput.Altitude = safeNumericString(location.coords.altitude, 'altitude');
+    locationInput.AltitudeAccuracy = safeNumericString(location.coords.altitudeAccuracy, 'altitudeAccuracy');
+    locationInput.Speed = safeNumericString(location.coords.speed, 'speed');
+    locationInput.Heading = safeNumericString(location.coords.heading, 'heading');
+    const result = await setUnitLocation(locationInput);
     logger.info({
       message: 'Location successfully sent to API',
       context: {
-        userId: userId,
+        unitId: unitId,
         resultId: result.Id,
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -177,7 +181,7 @@ class LocationService {
         timeInterval: 15000,
         distanceInterval: 10,
       },
-      (location) => {
+      async (location) => {
         logger.info({
           message: 'Foreground location update received',
           context: {
@@ -187,7 +191,7 @@ class LocationService {
           },
         });
         useLocationStore.getState().setLocation(location);
-        sendLocationToAPI(location); // Send to API for foreground updates
+        await sendLocationToAPI(location); // Send to API for foreground updates
       }
     );
 
@@ -212,7 +216,7 @@ class LocationService {
         timeInterval: 60000,
         distanceInterval: 20,
       },
-      (location) => {
+      async (location) => {
         logger.info({
           message: 'Background location update received',
           context: {
@@ -222,7 +226,7 @@ class LocationService {
           },
         });
         useLocationStore.getState().setLocation(location);
-        sendLocationToAPI(location); // Send to API for background updates
+        await sendLocationToAPI(location); // Send to API for background updates
       }
     );
 

@@ -16,7 +16,7 @@ jest.mock('lodash', () => ({
 }));
 
 // Mock API dependencies
-jest.mock('@/api/config/config', () => ({
+jest.mock('@/api/config', () => ({
 	getConfig: jest.fn(),
 }));
 
@@ -294,6 +294,14 @@ describe('Core Store', () => {
 				NovuBackendApiUrl: 'test-novu-backend',
 				NovuSocketUrl: 'test-novu-socket',
 				NovuApplicationId: 'test-novu-app',
+				EventingUrl: '',
+				DirectionsMapKey: '',
+				PersonnelLocationStaleSeconds: 0,
+				UnitLocationStaleSeconds: 0,
+				PersonnelLocationMinMeters: 0,
+				UnitLocationMinMeters: 0,
+				AnalyticsApiKey: '',
+				AnalyticsHost: '',
 			});
 			expect(result.current.activeStatuses).toEqual([
 				{
@@ -361,6 +369,14 @@ describe('Core Store', () => {
 				NovuBackendApiUrl: 'test-novu-backend',
 				NovuSocketUrl: 'test-novu-socket',
 				NovuApplicationId: 'test-novu-app',
+				EventingUrl: '',
+				DirectionsMapKey: '',
+				PersonnelLocationStaleSeconds: 0,
+				UnitLocationStaleSeconds: 0,
+				PersonnelLocationMinMeters: 0,
+				UnitLocationMinMeters: 0,
+				AnalyticsApiKey: '',
+				AnalyticsHost: '',
 			});
 			expect(result.current.currentStatus).toBe(null);
 			expect(result.current.currentStaffing).toBe(null);
@@ -430,6 +446,14 @@ describe('Core Store', () => {
 				NovuBackendApiUrl: 'test-novu-backend',
 				NovuSocketUrl: 'test-novu-socket',
 				NovuApplicationId: 'test-novu-app',
+				EventingUrl: '',
+				DirectionsMapKey: '',
+				PersonnelLocationStaleSeconds: 0,
+				UnitLocationStaleSeconds: 0,
+				PersonnelLocationMinMeters: 0,
+				UnitLocationMinMeters: 0,
+				AnalyticsApiKey: '',
+				AnalyticsHost: '',
 			});
 		});
 

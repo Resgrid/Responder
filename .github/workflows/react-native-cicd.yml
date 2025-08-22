@@ -30,6 +30,10 @@ on:
           - android
           - ios
           - all
+      release_notes:
+        type: string
+        description: 'Manual release notes override'
+        required: false
 
 env:
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -276,30 +280,33 @@ jobs:
           groups: Resgrid
           notify: on
 
-      - name: 📋 Extract Release Notes from PR Body
-        if: ${{ matrix.platform == 'android' }}
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: |
-          set -eo pipefail
-          # Grab lines after "## Release Notes" until the next header
-          RELEASE_NOTES="$(printf '%s\n' "$PR_BODY" \
-            | awk 'f && /^## /{f=0} /^## Release Notes/{f=1; next} f')"
-          # Use a unique delimiter to write multiline into GITHUB_ENV
-          delimiter="EOF_$(date +%s)_$RANDOM"
-          {
-            echo "RELEASE_NOTES<<$delimiter"
-            printf '%s\n' "${RELEASE_NOTES:-No release notes provided.}"
-            echo "$delimiter"
-          } >> "$GITHUB_ENV"
 
       - name: 📋 Prepare Release Notes file
         if: ${{ matrix.platform == 'android' }}
+        env:
+          RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
+          set -eo pipefail
+          # Determine source of release notes: workflow input, PR body, or recent commits
+          if [ -n "$RELEASE_NOTES_INPUT" ]; then
+            NOTES="$RELEASE_NOTES_INPUT"
+          elif [ -n "$PR_BODY" ]; then
+            NOTES="$(printf '%s\n' "$PR_BODY" \
+              | awk 'f && /^## /{exit} /^## Release Notes/{f=1; next} f')"
+          else
+            NOTES="$(git log -n 5 --pretty=format:'- %s')"
+          fi
+          # Fail if no notes extracted
+          if [ -z "$NOTES" ]; then
+            echo "Error: No release notes extracted" >&2
+            exit 1
+          fi
+          # Write header and notes to file
           {
             echo "## Version 10.${{ github.run_number }} - $(date +%Y-%m-%d)"
             echo
-            printf '%s\n' "${RELEASE_NOTES:-No release notes provided.}"
+            printf '%s\n' "$NOTES"
           } > RELEASE_NOTES.md
 
       - name: 📦 Create Release

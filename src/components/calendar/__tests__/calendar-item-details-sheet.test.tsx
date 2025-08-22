@@ -46,19 +46,27 @@ jest.mock('@/components/ui/badge', () => ({
   Badge: 'Badge',
 }));
 
-jest.mock('@/components/ui/bottom-sheet', () => ({
-  CustomBottomSheet: ({ children, isOpen, onClose }: any) =>
-    isOpen ? <div data-testid="bottom-sheet" onClick={onClose}>{children}</div> : null,
-}));
+jest.mock('@/components/ui/bottom-sheet', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    CustomBottomSheet: ({ children, isOpen, onClose }: any) =>
+      isOpen ? <View testID="bottom-sheet">{children}</View> : null,
+  };
+});
 
-jest.mock('@/components/ui/button', () => ({
-  Button: ({ children, onPress, testID, disabled }: any) => (
-    <div data-testid={testID || 'button'} onClick={!disabled ? onPress : undefined}>
-      {children}
-    </div>
-  ),
-  ButtonText: ({ children }: any) => <span>{children}</span>,
-}));
+jest.mock('@/components/ui/button', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+  return {
+    Button: ({ children, onPress, testID, disabled }: any) => (
+      <Pressable testID={testID || 'button'} onPress={!disabled ? onPress : undefined}>
+        {children}
+      </Pressable>
+    ),
+    ButtonText: ({ children }: any) => <Text>{children}</Text>,
+  };
+});
 
 jest.mock('@/components/ui/heading', () => ({
   Heading: ({ children }: any) => <h1>{children}</h1>,
@@ -68,17 +76,23 @@ jest.mock('@/components/ui/hstack', () => ({
   HStack: ({ children }: any) => <div>{children}</div>,
 }));
 
-jest.mock('@/components/ui/input', () => ({
-  Input: ({ children }: any) => <div>{children}</div>,
-  InputField: ({ value, onChangeText, placeholder, testID }: any) => (
-    <input
-      data-testid={testID || 'input-field'}
-      value={value}
-      onChange={(e) => onChangeText?.(e.target.value)}
-      placeholder={placeholder}
-    />
-  ),
-}));
+jest.mock('@/components/ui/input', () => {
+  const React = require('react');
+  const { View, TextInput } = require('react-native');
+  return {
+    Input: ({ children }: any) => <View>{children}</View>,
+    InputField: ({ value, onChangeText, placeholder, testID }: any) => (
+      <TextInput
+        testID={testID || 'input-field'}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        multiline
+        numberOfLines={3}
+      />
+    ),
+  };
+});
 
 jest.mock('@/components/ui/text', () => ({
   Text: ({ children }: any) => <span>{children}</span>,
@@ -397,6 +411,7 @@ describe('CalendarItemDetailsSheet', () => {
 
       // Mock Alert.alert to immediately call the destructive action
       (Alert.alert as jest.Mock).mockImplementation((title, message, buttons) => {
+        if (!Array.isArray(buttons)) return;
         const destructiveButton = buttons.find((b: any) => b.style === 'destructive');
         if (destructiveButton) {
           destructiveButton.onPress();

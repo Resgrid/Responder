@@ -13,6 +13,10 @@ jest.mock('@/api/personnel/personnelStatuses');
 jest.mock('@/lib/auth');
 jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/toast/store');
+// Mock personnel status bottom sheet store to avoid loading offline-queue-processor
+jest.mock('@/stores/status/personnel-status-store', () => ({
+  usePersonnelStatusBottomSheetStore: () => ({ setIsOpen: jest.fn() }),
+}));
 
 // Mock the Loading component
 jest.mock('@/components/common/loading', () => ({
@@ -66,7 +70,7 @@ describe('StatusButtons', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockUseAuthStore.mockReturnValue({
       userId: 'test-user-id',
       // Add other required auth properties
@@ -106,7 +110,7 @@ describe('StatusButtons', () => {
     });
 
     const result = render(<StatusButtons />);
-    
+
     // Should render without errors
     expect(result).toBeTruthy();
   });

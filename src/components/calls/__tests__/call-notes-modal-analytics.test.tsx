@@ -6,12 +6,12 @@ import { useAuthStore } from '@/lib/auth';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useAnalytics } from '@/hooks/use-analytics';
 
-// Mock analytics first
+// Shared mock for analytics tracking
 const mockTrackEvent = jest.fn();
+
+// Mock analytics hook
 jest.mock('@/hooks/use-analytics', () => ({
-  useAnalytics: () => ({
-    trackEvent: mockTrackEvent,
-  }),
+  useAnalytics: () => ({ trackEvent: mockTrackEvent }),
 }));
 
 // Mock useFocusEffect
@@ -82,7 +82,6 @@ const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore
 const mockUseCallDetailStore = useCallDetailStore as jest.MockedFunction<typeof useCallDetailStore>;
 
 describe('CallNotesModal Analytics', () => {
-  const mockTrackEvent = jest.fn();
   const mockFetchCallNotes = jest.fn();
   const mockAddNote = jest.fn();
   const mockSearchNotes = jest.fn();

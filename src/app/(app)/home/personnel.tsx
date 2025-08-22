@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
+// Removed useFocusEffect to simplify analytics tracking on mount
 import { Filter, Search, Users, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,18 +27,12 @@ export default function Personnel() {
   const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
+    // Fetch personnel and track view analytics on mount
     fetchPersonnel();
-  }, [fetchPersonnel]);
-
-  // Track analytics when view becomes visible
-  useFocusEffect(
-    React.useCallback(() => {
-      trackEvent('personnel_viewed', {
-        timestamp: new Date().toISOString(),
-      });
-    }, [trackEvent])
-  );
-
+    trackEvent('personnel_viewed', {
+      timestamp: new Date().toISOString(),
+    });
+  }, [fetchPersonnel, trackEvent]);
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await fetchPersonnel();

@@ -5,6 +5,10 @@ import React from 'react';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
+// Mock offline-queue-processor to avoid syntax errors
+jest.mock('@/services/offline-queue-processor', () => ({
+  offlineQueueProcessor: { processQueue: jest.fn(), addPersonnelStatusToQueue: jest.fn(), cleanup: jest.fn(), startProcessing: jest.fn(), startBackgroundProcessing: jest.fn() },
+}));
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
 import { PersonnelStatusBottomSheet } from '../personnel-status-bottom-sheet';
 

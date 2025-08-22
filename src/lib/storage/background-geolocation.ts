@@ -1,23 +1,13 @@
-import { Platform } from 'react-native';
-import { MMKV } from 'react-native-mmkv';
-
 import { logger } from '../logging';
-import { getGeneralStorage } from './secure-storage';
+import { storage } from './index';
 
 const BACKGROUND_GEOLOCATION_ENABLED = 'BACKGROUND_GEOLOCATION_ENABLED';
 
 // Use secure storage
-let storage: MMKV;
 
-const initializeStorage = async () => {
-  storage = await getGeneralStorage();
-};
+// Using shared storage instance from index.tsx
 
-// Fallback for synchronous access
-storage = Platform.OS === 'web' ? new MMKV({ id: 'ResgridUnit' }) : new MMKV({ id: 'ResgridUnit' });
-
-// Initialize secure storage
-initializeStorage().catch(console.error);
+// Using shared storage instance from index.tsx
 
 /**
  * Load background geolocation state from MMKV storage

@@ -27,6 +27,8 @@ interface CoreState {
   currentStaffing: GetCurrentStaffingResultData | null;
   currentStaffingValue: StatusesResultData | null;
 
+  /** Currently selected unit ID */
+  activeUnitId: string | null;
   activeCallId: string | null;
   activeCall: CallResultData | null;
   activePriority: CallPriorityResultData | null;
@@ -46,6 +48,7 @@ interface CoreState {
 export const useCoreStore = create<CoreState>()(
   persist(
     (set, get) => ({
+      activeUnitId: null,
       activeCallId: null,
       activeCall: null,
       activePriority: null,

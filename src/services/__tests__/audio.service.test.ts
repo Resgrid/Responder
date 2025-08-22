@@ -13,11 +13,6 @@ const mockAsset = {
   uri: 'mock://uri',
 } as any;
 
-// Mock expo-modules-core first to prevent NativeUnimoduleProxy errors
-jest.mock('expo-modules-core', () => ({
-  NativeModulesProxy: {},
-  requireNativeModule: jest.fn(),
-}));
 
 // Mock expo-asset
 jest.mock('expo-asset', () => ({
@@ -125,6 +120,7 @@ describe('AudioService', () => {
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: true,
         interruptionModeIOS: 'doNotMix',
+        interruptionModeAndroid: 'duckOthers',
       });
     });
 

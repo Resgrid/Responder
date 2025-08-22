@@ -32,6 +32,20 @@ import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { type DispatchSelection } from '@/stores/dispatch/store';
 
+// Utility to sanitize error messages for analytics
+const sanitizeErrorString = (error: unknown): string => {
+  if (error instanceof Error) {
+    let str = `${error.name}: ${error.message}`;
+    // Remove control characters and newlines
+    str = str.replace(/[\x00-\x1F\x7F]+/g, ' ').replace(/[\r\n]+/g, ' ');
+    // Collapse whitespace
+    str = str.replace(/\s+/g, ' ').trim();
+    // Truncate to 200 characters
+    return str.length > 200 ? str.slice(0, 200) : str;
+  }
+  return 'Unknown error';
+};
+
 // Define the form schema using zod
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
@@ -186,7 +200,7 @@ export default function NewCall() {
         type: data.type,
         hasNote: !!data.note,
         hasAddress: !!data.address,
-        hasCoordinates: !!(selectedLocation?.latitude && selectedLocation?.longitude),
+        hasCoordinates: selectedLocation != null && Number.isFinite(selectedLocation.latitude) && Number.isFinite(selectedLocation.longitude),
         hasWhat3Words: !!data.what3words,
         hasPlusCode: !!data.plusCode,
         hasContactName: !!data.contactName,
@@ -196,7 +210,7 @@ export default function NewCall() {
       });
 
       // If we have latitude and longitude, add them to the data
-      if (selectedLocation?.latitude && selectedLocation?.longitude) {
+      if (selectedLocation && Number.isFinite(selectedLocation.latitude) && Number.isFinite(selectedLocation.longitude)) {
         data.latitude = selectedLocation.latitude;
         data.longitude = selectedLocation.longitude;
       }
@@ -231,7 +245,7 @@ export default function NewCall() {
         callId: response?.Id || 'unknown',
         priority: data.priority,
         type: data.type,
-        hasLocation: !!(data.latitude && data.longitude),
+        hasLocation: Number.isFinite(data.latitude) && Number.isFinite(data.longitude),
         dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
       });
 
@@ -457,11 +471,14 @@ export default function NewCall() {
   // Handle address selection from bottom sheet
   const handleAddressSelected = (result: GeocodingResult) => {
     // Analytics: Track address selection from multiple results
+    const roundedLat = Number(result.geometry.location.lat.toFixed(3));
+    const roundedLng = Number(result.geometry.location.lng.toFixed(3));
     trackEvent('call_address_selected_from_results', {
       timestamp: new Date().toISOString(),
-      selectedAddress: result.formatted_address,
-      latitude: result.geometry.location.lat,
-      longitude: result.geometry.location.lng,
+      hasAddress: !!result.formatted_address,
+      addressLength: result.formatted_address.length,
+      latitude: roundedLat,
+      longitude: roundedLng,
     });
 
     const newLocation = {
@@ -893,7 +910,7 @@ export default function NewCall() {
         reason: 'network_error',
         latitude,
         longitude,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: sanitizeErrorString(error),
         locationStillSet: true,
       });
 

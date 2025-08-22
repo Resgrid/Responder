@@ -1,3 +1,7 @@
+// Mock audio.service to avoid loading expo modules
+jest.mock('@/services/audio.service', () => ({
+  audioService: {},
+}));
 import { bluetoothAudioService } from '../bluetooth-audio.service';
 import { logger } from '@/lib/logging';
 

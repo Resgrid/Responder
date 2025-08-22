@@ -1,3 +1,14 @@
+// Mock expo-secure-store to prevent AFTER_FIRST_UNLOCK errors
+jest.mock('expo-secure-store', () => ({
+  AFTER_FIRST_UNLOCK: 'AFTER_FIRST_UNLOCK',
+  ALWAYS: 'ALWAYS',
+  WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 'WHEN_PASSCODE_SET_THIS_DEVICE_ONLY',
+  getItemAsync: jest.fn(() => Promise.resolve(null)),
+  setItemAsync: jest.fn(() => Promise.resolve()),
+  deleteItemAsync: jest.fn(() => Promise.resolve()),
+  isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+}));
+// Removed per-test mocks for 'expo-constants' and 'expo-modules-core'; using global mocks in jest-setup.ts
 // Mock all dependencies first
 jest.mock('@/api/units/unitLocation', () => ({
   setUnitLocation: jest.fn(),

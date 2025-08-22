@@ -1,7 +1,15 @@
 import * as Notifications from 'expo-notifications';
-
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 
+// Mock expo-device so tests don't attempt to load native modules
+jest.mock('expo-device', () => ({
+  isDevice: true,
+}));
+
+// Mock auth module to prevent side effects and getBaseApiUrl errors
+jest.mock('@/lib/auth', () => ({
+  useAuthStore: jest.fn(),
+}));
 // Mock the store
 jest.mock('@/stores/push-notification/store', () => ({
   usePushNotificationModalStore: {
@@ -31,6 +39,7 @@ jest.mock('@/lib/logging', () => ({
 
 jest.mock('@/lib/storage/app', () => ({
   getDeviceUuid: jest.fn(),
+  getBaseApiUrl: jest.fn(() => ''),
 }));
 
 jest.mock('@/api/devices/push', () => ({

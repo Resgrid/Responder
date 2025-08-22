@@ -15,12 +15,13 @@ jest.mock('@/hooks/use-analytics', () => ({
 // Mock dependencies
 jest.mock('react-i18next');
 jest.mock('nativewind', () => ({
-  ...jest.requireActual('nativewind'),
   useColorScheme: () => ({
     colorScheme: 'light',
     setColorScheme: jest.fn(),
     toggleColorScheme: jest.fn(),
   }),
+  cssInterop: jest.fn(),
+  styled: jest.fn(() => (Component: any) => Component),
 }));
 
 jest.mock('@/stores/notes/store', () => ({

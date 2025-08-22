@@ -31,38 +31,18 @@ jest.mock('react-native-css-interop/src/runtime/native/appearance-observables', 
   getColorScheme: jest.fn(() => 'light'),
 }));
 
-// Mock expo-audio globally
-jest.mock('expo-audio', () => ({
-  createAudioPlayer: jest.fn(() => ({
-    play: jest.fn(),
-    pause: jest.fn(),
-    remove: jest.fn(),
-    replace: jest.fn(),
-    seekTo: jest.fn(),
-    playing: false,
-    paused: false,
-    isLoaded: true,
-    duration: 0,
-    currentTime: 0,
-    volume: 1,
-    muted: false,
-    loop: false,
-    playbackRate: 1,
-    id: 1,
-    isAudioSamplingSupported: false,
-    isBuffering: false,
-    shouldCorrectPitch: false,
-  })),
-  useAudioPlayer: jest.fn(),
-  useAudioPlayerStatus: jest.fn(),
-  setAudioModeAsync: jest.fn(),
-  setIsAudioActiveAsync: jest.fn(),
-}));
+// Mock expo-audio manually using the __mocks__/expo-audio.ts file
+jest.mock('expo-audio');
 
 // Mock Platform.OS for React Native
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   OS: 'ios',
   select: jest.fn().mockImplementation((obj) => obj.ios || obj.default),
+}));
+
+// Mock useFocusEffect from react-navigation
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => callback(),
 }));
 
 // Global mocks for common problematic modules
@@ -169,4 +149,56 @@ jest.mock('react-native-permissions', () => ({
     status: 'granted',
     settings: {},
   }),
+}));
+// Mock expo-secure-store to avoid requireNativeModule errors
+jest.mock('expo-secure-store', () => ({
+  __esModule: true,
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn().mockResolvedValue(undefined),
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+}));
+// Mock expo-constants to prevent NativeModulesProxy errors in tests
+jest.mock('expo-constants', () => ({
+  expoConfig: { extra: {} },
+}));
+// Mock expo-modules-core for NativeUnimoduleProxy
+jest.mock('expo-modules-core', () => ({
+  NativeUnimoduleProxy: {},
+  // Mock requireOptionalNativeModule to prevent errors in expo-asset and expo-av
+  requireOptionalNativeModule: jest.fn(() => null),
+  // Provide EventEmitter stub for modules requiring event listeners
+  EventEmitter: jest.fn().mockImplementation(() => ({
+    addListener: jest.fn(),
+    removeAllListeners: jest.fn(),
+    removeSubscription: jest.fn(),
+    emit: jest.fn(),
+  })),
+}));
+// Mock NativeModulesProxy native module in expo-modules-core
+jest.mock('expo-modules-core/src/NativeModulesProxy.native', () => ({
+  NativeUnimoduleProxy: {},
+}));
+
+// Mock expo-asset to avoid import issues
+jest.mock('expo-asset', () => ({
+  Asset: {
+    loadAsync: jest.fn().mockResolvedValue([]),
+    fromModule: jest.fn().mockReturnValue({
+      downloadAsync: jest.fn().mockResolvedValue(undefined),
+      localUri: 'mock-uri',
+      uri: 'mock-uri',
+    }),
+  },
+}));
+
+// Mock expo-av to avoid import issues
+jest.mock('expo-av', () => ({
+  Audio: {
+    setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
+    Sound: {
+      createAsync: jest.fn().mockResolvedValue({ sound: { setPositionAsync: jest.fn(), playAsync: jest.fn(), unloadAsync: jest.fn() } }),
+    },
+  },
+  InterruptionModeAndroid: { DuckOthers: 0 },
+  InterruptionModeIOS: { DoNotMix: 0 },
 }));

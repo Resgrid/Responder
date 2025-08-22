@@ -1,3 +1,13 @@
+// Mock react-i18next for translations
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      if (key === 'units.fourWheelDrive') return '4WD';
+      if (key === 'units.specialPermit') return 'Special Permit';
+      return key;
+    },
+  }),
+}));
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import React from 'react';
 
@@ -66,6 +76,17 @@ const mockUnitNoLocation: UnitResultData = {
   Latitude: '',
   Longitude: '',
 };
+
+// Mock react-i18next for translations
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      if (key === 'units.fourWheelDrive') return '4WD';
+      if (key === 'units.specialPermit') return 'Special Permit';
+      return key;
+    },
+  }),
+}));
 
 describe('UnitCard', () => {
   const mockOnPress = jest.fn();
@@ -281,4 +302,4 @@ describe('UnitCard', () => {
     expect(screen.getByText('Fire/Rescue Engine')).toBeTruthy();
     expect(screen.getByText('Special unit with symbols: @#$%')).toBeTruthy();
   });
-}); 
+});

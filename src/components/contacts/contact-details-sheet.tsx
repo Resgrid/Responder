@@ -20,12 +20,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 
+import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
 
-import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
 import { Box } from '../ui/box';
 import { Button, ButtonText } from '../ui/button';
 import { HStack } from '../ui/hstack';

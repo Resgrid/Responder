@@ -71,7 +71,6 @@ export default function CallDetail() {
   };
 
   const openNotesModal = () => {
-    useCallDetailStore.getState().fetchCallNotes(callId);
     setIsNotesModalOpen(true);
 
     // Track analytics for notes modal opening
@@ -168,11 +167,6 @@ export default function CallDetail() {
    * Opens the device's native maps application with directions to the call location
    */
   const handleRoute = async () => {
-    if (!coordinates.latitude || !coordinates.longitude) {
-      showToast('error', t('call_detail.no_location_for_routing'));
-      return;
-    }
-
     try {
       // Track analytics for route action
       trackEvent('call_route_opened', {
@@ -181,13 +175,12 @@ export default function CallDetail() {
         hasUserLocation: !!(userLocation.latitude && userLocation.longitude),
         destinationAddress: call?.Address || '',
       });
-
+      const latitude = coordinates.latitude ?? (call?.Latitude ? parseFloat(call.Latitude) : undefined);
+      const longitude = coordinates.longitude ?? (call?.Longitude ? parseFloat(call.Longitude) : undefined);
       const destinationName = call?.Address || t('call_detail.call_location');
-      const success = await openMapsWithDirections(coordinates.latitude, coordinates.longitude, destinationName, userLocation.latitude || undefined, userLocation.longitude || undefined);
-
+      const success = await openMapsWithDirections(latitude as number, longitude as number, destinationName, userLocation.latitude ?? undefined, userLocation.longitude ?? undefined);
       if (!success) {
         showToast('error', t('call_detail.failed_to_open_maps'));
-
         // Track failed route attempt
         trackEvent('call_route_failed', {
           timestamp: new Date().toISOString(),
@@ -201,7 +194,6 @@ export default function CallDetail() {
         context: { error, callId, coordinates },
       });
       showToast('error', t('call_detail.failed_to_open_maps'));
-
       // Track failed route attempt
       trackEvent('call_route_failed', {
         timestamp: new Date().toISOString(),

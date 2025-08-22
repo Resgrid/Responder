@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { registerUnitDevice } from '@/api/devices/push';
+import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
@@ -90,12 +90,12 @@ class PushNotificationService {
   }
 
   private async initialize(): Promise<void> {
-    // Set up Android notification channels
-    await this.setupAndroidNotificationChannels();
-
-    // Set up notification listeners
+    // Set up notification listeners synchronously before channel setup to ensure immediate registration
     this.notificationListener = Notifications.addNotificationReceivedListener(this.handleNotificationReceived);
     this.responseListener = Notifications.addNotificationResponseReceivedListener(this.handleNotificationResponse);
+
+    // Set up Android notification channels
+    await this.setupAndroidNotificationChannels();
 
     logger.info({
       message: 'Push notification service initialized',
@@ -142,7 +142,7 @@ class PushNotificationService {
     // This would typically involve using a navigation service or dispatching an action
   };
 
-  public async registerForPushNotifications(unitId: string, departmentCode: string): Promise<string | null> {
+  public async registerForPushNotifications(userId: string, departmentCode: string): Promise<string | null> {
     if (!Device.isDevice) {
       logger.warn({
         message: 'Push notifications are not available on simulator/emulator',
@@ -186,13 +186,13 @@ class PushNotificationService {
         message: 'Push notification token obtained',
         context: {
           token: this.pushToken,
-          unitId,
+          userId,
           platform: Platform.OS,
         },
       });
 
-      await registerUnitDevice({
-        UnitId: unitId,
+      await registerDevice({
+        UserId: userId,
         Token: this.pushToken,
         Platform: Platform.OS === 'ios' ? 1 : 2,
         DeviceUuid: getDeviceUuid() || '',
@@ -206,26 +206,6 @@ class PushNotificationService {
         context: { error },
       });
       return null;
-    }
-  }
-
-  // Method to send the token to your backend
-  private async sendTokenToBackend(token: string, unitId: string): Promise<void> {
-    // Implement your API call to register the token with your backend
-    // This is where you would associate the token with the unitId
-    try {
-      // Example implementation:
-      // await api.post('/register-push-token', { token, unitId });
-
-      logger.info({
-        message: 'Push token registered with backend',
-        context: { token, unitId },
-      });
-    } catch (error) {
-      logger.error({
-        message: 'Failed to register push token with backend',
-        context: { error, token, unitId },
-      });
     }
   }
 
@@ -282,11 +262,11 @@ export const pushNotificationService = PushNotificationService.getInstance();
 export const usePushNotifications = () => {
   const userId = useAuthStore((state) => state.userId);
   const rights = securityStore((state) => state.rights);
-  const previousUnitIdRef = useRef<string | null>(null);
+  const previousUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only register if we have an active unit ID and it's different from the previous one
-    if (rights && userId && userId !== previousUnitIdRef.current) {
+    // Only register if we have an active user ID and it's different from the previous one
+    if (rights && userId && userId !== previousUserIdRef.current) {
       pushNotificationService
         .registerForPushNotifications(userId, rights.DepartmentCode)
         .then((token) => {
@@ -304,7 +284,7 @@ export const usePushNotifications = () => {
           });
         });
 
-      previousUnitIdRef.current = userId;
+      previousUserIdRef.current = userId;
     }
 
     // Cleanup function

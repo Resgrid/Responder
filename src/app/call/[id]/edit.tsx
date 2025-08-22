@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
+/* eslint-disable import/order */
+import { SHA256 } from 'crypto-js';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
@@ -81,6 +83,21 @@ export default function EditCall() {
   const { call, isLoading: callDetailLoading, error: callDetailError, fetchCallDetail } = useCallDetailStore();
   const { config } = useCoreStore();
   const { trackEvent } = useAnalytics();
+  // Safe wrapper for analytics that catches errors and promise rejections
+  const safeTrack = React.useCallback(
+    (eventName: string, properties?: Record<string, string | number | boolean>) => {
+      try {
+        const res = trackEvent(eventName, properties);
+        // Handle promise rejections if trackEvent returns a promise
+        Promise.resolve(res).catch((error) => {
+          console.error(`[Analytics] Error tracking event ${eventName}`, error);
+        });
+      } catch (error) {
+        console.error(`[Analytics] Error tracking event ${eventName}`, error);
+      }
+    },
+    [trackEvent]
+  );
   const toast = useToast();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -147,7 +164,7 @@ export default function EditCall() {
   useFocusEffect(
     useCallback(() => {
       if (!callDataLoading && !callDetailLoading && call && callPriorities.length > 0 && callTypes.length > 0) {
-        trackEvent('call_edit_viewed', {
+        safeTrack('call_edit_viewed', {
           timestamp: new Date().toISOString(),
           callId: callId || '',
           priority: callPriorities.find((p) => p.Id === call.Priority)?.Name || 'Unknown',
@@ -161,7 +178,7 @@ export default function EditCall() {
           hasContactInfo: !!(call.ContactName || call.ContactInfo),
         });
       }
-    }, [trackEvent, callDataLoading, callDetailLoading, call, callPriorities, callTypes, callId, config?.GoogleMapsKey, config?.W3WKey])
+    }, [safeTrack, callDataLoading, callDetailLoading, call, callPriorities, callTypes, callId, config?.GoogleMapsKey, config?.W3WKey])
   );
 
   // Pre-populate form when call data is loaded
@@ -218,7 +235,7 @@ export default function EditCall() {
       const type = callTypes.find((t) => t.Name === data.type);
 
       // Analytics: Track call update attempt
-      trackEvent('call_update_attempted', {
+      safeTrack('call_update_attempted', {
         timestamp: new Date().toISOString(),
         callId: callId || '',
         priority: data.priority,
@@ -257,7 +274,7 @@ export default function EditCall() {
       });
 
       // Analytics: Track successful call update
-      trackEvent('call_update_success', {
+      safeTrack('call_update_success', {
         timestamp: new Date().toISOString(),
         callId: callId || '',
         priority: data.priority,
@@ -284,7 +301,7 @@ export default function EditCall() {
       console.error('Error updating call:', error);
 
       // Analytics: Track failed call update
-      trackEvent('call_update_failed', {
+      safeTrack('call_update_failed', {
         timestamp: new Date().toISOString(),
         callId: callId || '',
         priority: data.priority,
@@ -315,7 +332,7 @@ export default function EditCall() {
     }
 
     // Analytics: Track location selection
-    trackEvent('call_edit_location_selected', {
+    safeTrack('call_edit_location_selected', {
       timestamp: new Date().toISOString(),
       callId: callId || '',
       hasAddress: !!location.address,
@@ -331,7 +348,7 @@ export default function EditCall() {
     setValue('dispatchSelection', selection);
 
     // Analytics: Track dispatch selection
-    trackEvent('call_edit_dispatch_selection_updated', {
+    safeTrack('call_edit_dispatch_selection_updated', {
       timestamp: new Date().toISOString(),
       callId: callId || '',
       everyone: selection.everyone,
@@ -376,7 +393,7 @@ export default function EditCall() {
     }
 
     // Analytics: Track address search attempt
-    trackEvent('call_edit_address_search_attempted', {
+    safeTrack('call_edit_address_search_attempted', {
       timestamp: new Date().toISOString(),
       callId: callId || '',
       hasGoogleMapsKey: !!config?.GoogleMapsKey,
@@ -388,7 +405,7 @@ export default function EditCall() {
 
       if (!apiKey) {
         // Analytics: Track missing API key
-        trackEvent('call_edit_address_search_failed', {
+        safeTrack('call_edit_address_search_failed', {
           timestamp: new Date().toISOString(),
           callId: callId || '',
           reason: 'missing_api_key',
@@ -402,7 +419,7 @@ export default function EditCall() {
         const results = response.data.results;
 
         // Analytics: Track successful address search
-        trackEvent('call_edit_address_search_success', {
+        safeTrack('call_edit_address_search_success', {
           timestamp: new Date().toISOString(),
           callId: callId || '',
           resultCount: results.length,
@@ -435,7 +452,7 @@ export default function EditCall() {
         }
       } else {
         // Analytics: Track failed address search
-        trackEvent('call_edit_address_search_failed', {
+        safeTrack('call_edit_address_search_failed', {
           timestamp: new Date().toISOString(),
           callId: callId || '',
           reason: 'no_results',
@@ -458,7 +475,7 @@ export default function EditCall() {
 
       // Analytics: Track geocoding error (if not already tracked above)
       if (!(error instanceof Error && error.message.includes('Google Maps API key'))) {
-        trackEvent('call_edit_address_search_failed', {
+        safeTrack('call_edit_address_search_failed', {
           timestamp: new Date().toISOString(),
           callId: callId || '',
           reason: 'network_error',
@@ -491,11 +508,13 @@ export default function EditCall() {
     handleLocationSelected(newLocation);
     setShowAddressSelection(false);
 
-    // Analytics: Track address selection from multiple results
-    trackEvent('call_edit_address_selected', {
+    // Analytics: Track address selection from multiple results privately
+    const hashedAddress = SHA256(result.formatted_address).toString();
+    safeTrack('call_edit_address_selected', {
       timestamp: new Date().toISOString(),
       callId: callId || '',
-      selectedAddress: result.formatted_address,
+      place_id: result.place_id,
+      hashedAddress,
     });
 
     toast.show({
