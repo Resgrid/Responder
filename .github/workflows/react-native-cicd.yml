@@ -113,7 +113,7 @@ jobs:
     strategy:
       matrix:
         platform: [android, ios]
-    runs-on: ${{ matrix.platform == 'ios' && 'macos-latest' || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-14' || 'ubuntu-latest' }}
     environment: RNBuild
     steps:
       - name: 🏗 Checkout repository
