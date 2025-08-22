@@ -43,6 +43,11 @@ export default function TabLayout() {
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
+
+  // Memoize drawer navigation handler for better performance
+  const handleNavigate = useCallback(() => {
+    setIsOpen(false);
+  }, []);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const { isActive, appState } = useAppLifecycle();
@@ -242,7 +247,7 @@ export default function TabLayout() {
             <DrawerBackdrop onPress={() => setIsOpen(false)} />
             <DrawerContent className="w-4/5 bg-white p-1 dark:bg-gray-900">
               <DrawerBody>
-                <SideMenu onNavigate={() => setIsOpen(false)} />
+                <SideMenu onNavigate={handleNavigate} />
               </DrawerBody>
               <DrawerFooter>
                 <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">

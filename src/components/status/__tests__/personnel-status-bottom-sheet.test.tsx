@@ -189,9 +189,13 @@ jest.mock('lucide-react-native', () => ({
     const { View } = require('react-native');
     return <View testID="arrow-right-icon" />;
   },
-  CircleIcon: () => {
+  Check: () => {
     const { View } = require('react-native');
-    return <View testID="circle-icon" />;
+    return <View testID="check-icon" />;
+  },
+  X: () => {
+    const { View } = require('react-native');
+    return <View testID="x-icon" />;
   },
 }));
 
@@ -280,6 +284,7 @@ describe('PersonnelStatusBottomSheet', () => {
     Id: 1,
     Text: 'Available',
     BColor: '#00FF00',
+    Detail: 0, // 0 = No destination needed, 1 = Station only, 2 = Call only, 3 = Both
   };
 
   beforeEach(() => {
@@ -331,6 +336,7 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(screen.getByText('common.step 1 common.of 3')).toBeTruthy();
       expect(screen.getByText('personnel.status.select_responding_to')).toBeTruthy();
       expect(screen.getByText('personnel.status.select_destination')).toBeTruthy();
+      expect(screen.getByTestId('x-icon')).toBeTruthy(); // Close button should be visible
     });
 
     it('should render "no destination" option', () => {
@@ -1032,8 +1038,9 @@ describe('PersonnelStatusBottomSheet', () => {
       // Clear initial analytics call
       mockTrackEvent.mockClear();
 
-      // Find and click on a call radio button
-      fireEvent.press(screen.getByTestId('radio-1'));
+      // Find and click on a call TouchableOpacity
+      const callOption = screen.getByText('CALL-001 - Test Call 1');
+      fireEvent.press(callOption);
 
       expect(mockTrackEvent).toHaveBeenCalledWith('personnel_status_call_selected', {
         timestamp: expect.any(String),
@@ -1067,8 +1074,9 @@ describe('PersonnelStatusBottomSheet', () => {
       // Clear initial analytics call
       mockTrackEvent.mockClear();
 
-      // Find and click on a group radio button
-      fireEvent.press(screen.getByTestId('radio-1'));
+      // Find and click on a group TouchableOpacity
+      const groupOption = screen.getByText('Station 1');
+      fireEvent.press(groupOption);
 
       expect(mockTrackEvent).toHaveBeenCalledWith('personnel_status_group_selected', {
         timestamp: expect.any(String),

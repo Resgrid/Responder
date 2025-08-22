@@ -1,42 +1,18 @@
-// import Platform from react-native not needed for storage init
-import type { MMKV } from 'react-native-mmkv';
-import { useMMKVBoolean } from 'react-native-mmkv';
-import type { StateStorage } from 'zustand/middleware';
-
-import { getGeneralStorage } from './secure-storage';
+import { Platform } from 'react-native';
+import { MMKV, useMMKVBoolean } from 'react-native-mmkv';
+import { type StateStorage } from 'zustand/middleware';
 
 export let storage: MMKV;
-// In test environment, provide an in-memory storage fallback so tests don't break before async init
-if (process.env.NODE_ENV === 'test') {
-  const memoryMap = new Map<string, string>();
-  storage = {
-    getString: (key: string) => memoryMap.get(key) as string | undefined,
-    set: (key: string, value: string) => {
-      memoryMap.set(key, value);
-    },
-    delete: (key: string) => {
-      memoryMap.delete(key);
-    },
-  } as unknown as MMKV;
+if (Platform.OS === 'web') {
+  storage = new MMKV({
+    id: 'ResgridResponder',
+  });
 } else {
-  // Initialize storage asynchronously
-  let storageInitialized = false;
-  const initializeStorage = async () => {
-    if (storageInitialized) return;
-    storageInitialized = true;
-    try {
-      storage = await getGeneralStorage();
-    } catch (error) {
-      storageInitialized = false;
-      throw error;
-    }
-  };
-  // Initialize secure storage
-  initializeStorage().catch((error) => {
-    console.error('Failed to initialize secure storage:', error);
+  storage = new MMKV({
+    id: 'ResgridResponder',
+    encryptionKey: 'a330fb72-1916-4cc2-99fe-efd4986b254f',
   });
 }
-
 const IS_FIRST_TIME = 'IS_FIRST_TIME';
 
 export function getItem<T>(key: string): T | null {

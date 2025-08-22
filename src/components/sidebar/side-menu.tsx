@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Calendar, CalendarCheck, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map, Megaphone, Mic, Notebook, Settings, Truck, User, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
 
@@ -32,7 +32,7 @@ interface SideMenuProps {
   onNavigate?: () => void;
 }
 
-export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
+export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const router = useRouter();
@@ -108,30 +108,58 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
     },
   ];
 
-  const handleNavigation = (route: string) => {
-    router.push(route as any);
-    onNavigate?.();
-  };
+  const handleNavigation = useCallback(
+    (route: string) => {
+      // Use requestAnimationFrame to ensure navigation happens smoothly
+      requestAnimationFrame(() => {
+        router.push(route as any);
+        // Add a small delay before closing to allow navigation to start
+        setTimeout(() => {
+          onNavigate?.();
+        }, 50);
+      });
+    },
+    [router, onNavigate]
+  );
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await logout();
     onNavigate?.();
-  };
+  }, [logout, onNavigate]);
 
-  const getInitials = (name?: string) => {
+  const getInitials = useCallback((name?: string) => {
     if (!name) return 'U';
     return name
       .split(' ')
       .map((part) => part.charAt(0).toUpperCase())
       .slice(0, 2)
       .join('');
-  };
+  }, []);
 
   // Get user display name and department name from security store
   const displayName = securityStoreState.rights?.FullName || profile?.name || t('common.unknown_user');
   const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
 
   const isDark = colorScheme === 'dark';
+
+  // Memoize audio handlers to prevent re-renders
+  const handlePTTPress = useCallback(() => {
+    if (isConnected) {
+      // If connected, either toggle microphone or re-open bottom sheet
+      // For better UX, let's re-open the bottom sheet to show connection status
+      setIsBottomSheetVisible(true);
+    } else {
+      // Open LiveKit bottom sheet if not connected
+      setIsBottomSheetVisible(true);
+    }
+  }, [isConnected, setIsBottomSheetVisible]);
+
+  const handleAudioStreamPress = useCallback(() => {
+    // Always open the audio stream bottom sheet
+    // If currently playing, it will show the current stream and allow control
+    // If not playing, it will show available streams
+    setAudioStreamBottomSheetVisible(true);
+  }, [setAudioStreamBottomSheetVisible]);
 
   return (
     <Box className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} testID="side-menu-container">
@@ -162,25 +190,15 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
           <HStack space="md" className="px-2">
             {/* PTT Button */}
             <Pressable
-              onPress={() => {
-                if (isConnected) {
-                  // If connected, either toggle microphone or re-open bottom sheet
-                  // For better UX, let's re-open the bottom sheet to show connection status
-                  setIsBottomSheetVisible(true);
-                } else {
-                  // Open LiveKit bottom sheet if not connected
-                  setIsBottomSheetVisible(true);
-                }
-              }}
-              className={`flex-1 rounded-lg border px-3 py-2 ${
-                isConnected
+              onPress={handlePTTPress}
+              className={`flex-1 rounded-lg border px-3 py-2 ${isConnected
                   ? isDark
                     ? 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
                     : 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
                   : isDark
                     ? 'border-green-600 bg-transparent hover:bg-green-900/20 active:bg-green-900/30'
                     : 'border-green-600 bg-transparent hover:bg-green-50 active:bg-green-100'
-              }`}
+                }`}
               testID="side-menu-ptt-button"
               style={({ pressed }) => [
                 {
@@ -196,21 +214,15 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
 
             {/* Audio Stream Button */}
             <Pressable
-              onPress={() => {
-                // Always open the audio stream bottom sheet
-                // If currently playing, it will show the current stream and allow control
-                // If not playing, it will show available streams
-                setAudioStreamBottomSheetVisible(true);
-              }}
-              className={`flex-1 rounded-lg border px-3 py-2 ${
-                currentStream && isPlaying
+              onPress={handleAudioStreamPress}
+              className={`flex-1 rounded-lg border px-3 py-2 ${currentStream && isPlaying
                   ? isDark
                     ? 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
                     : 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
                   : isDark
                     ? 'border-blue-600 bg-transparent hover:bg-blue-900/20 active:bg-blue-900/30'
                     : 'border-blue-600 bg-transparent hover:bg-blue-50 active:bg-blue-100'
-              }`}
+                }`}
               testID="side-menu-audio-button"
               style={({ pressed }) => [
                 {
@@ -258,6 +270,8 @@ export const SideMenu: React.FC<SideMenuProps> = ({ onNavigate }) => {
       <AudioStreamBottomSheet />
     </Box>
   );
-};
+});
+
+SideMenu.displayName = 'SideMenu';
 
 export default SideMenu;
