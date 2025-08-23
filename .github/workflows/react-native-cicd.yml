@@ -276,24 +276,21 @@ jobs:
             ./ResgridRespond-ios-prod.ipa
           retention-days: 7
 
-      - name: 📦 Upload Android build artifacts to Testfairy
+      - name: 📦 Setup Firebase CLI
+        uses: w9jds/setup-firebase@main
+        with:
+          tools-version: 11.9.0
+          firebase_token: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: 📦 Upload Android artifact to Firebase App Distribution
         if: (matrix.platform == 'android')
-        uses: alexfu/testfairy-upload-action@main
-        with:
-          api-key: ${{ secrets.TESTFAIRY_API_KEY }}
-          file: ./ResgridRespond-prod.apk
-          groups: Resgrid
-          notify: on
+        run: |
+          firebase appdistribution:distribute ./ResgridRespond-prod.apk --app ${{ secrets.FIREBASE_RESP_ANDROID_APP_ID }} --groups "testers"
 
-      - name: 📦 Upload iOS build artifacts to Testfairy
+      - name: 📦 Upload iOS artifact to Firebase App Distribution
         if: (matrix.platform == 'ios')
-        uses: alexfu/testfairy-upload-action@main
-        with:
-          api-key: ${{ secrets.TESTFAIRY_API_KEY }}
-          file: ./ResgridRespond-ios-adhoc.ipa
-          groups: Resgrid
-          notify: on
-
+        run: |
+          firebase appdistribution:distribute ./ResgridRespond-ios-adhoc.ipa --app ${{ secrets.FIREBASE_RESP_IOS_APP_ID }} --groups "testers"
 
       - name: 📋 Prepare Release Notes file
         if: ${{ matrix.platform == 'android' }}
