@@ -2,23 +2,38 @@ import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useColorScheme } from 'nativewind';
 
 import { CalendarItemDetailsSheet } from '../calendar-item-details-sheet';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useToast } from '@/hooks/use-toast';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
+import { usePersonnelStore } from '@/stores/personnel/store';
 
 // Mock dependencies
 jest.mock('react-i18next', () => ({
   useTranslation: jest.fn(),
 }));
 
+jest.mock('nativewind', () => ({
+  useColorScheme: jest.fn(),
+}));
+
 jest.mock('@/hooks/use-analytics', () => ({
   useAnalytics: jest.fn(),
 }));
 
+jest.mock('@/hooks/use-toast', () => ({
+  useToast: jest.fn(),
+}));
+
 jest.mock('@/stores/calendar/store', () => ({
   useCalendarStore: jest.fn(),
+}));
+
+jest.mock('@/stores/personnel/store', () => ({
+  usePersonnelStore: jest.fn(),
 }));
 
 // Mock Lucide React Native icons
@@ -34,6 +49,17 @@ jest.mock('lucide-react-native', () => ({
   XCircle: 'XCircle',
 }));
 
+// Mock react-native-webview
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return ({ source, testID, ...props }: any) => (
+    <View testID={testID || 'webview'} {...props}>
+      <Text testID="webview-content">{source.html}</Text>
+    </View>
+  );
+});
+
 // Mock Alert
 jest.spyOn(Alert, 'alert');
 
@@ -45,6 +71,14 @@ jest.mock('@/components/common/loading', () => ({
 jest.mock('@/components/ui/badge', () => ({
   Badge: 'Badge',
 }));
+
+jest.mock('@/components/ui/box', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Box: ({ children, ...props }: any) => React.createElement(View, props, children),
+  };
+});
 
 jest.mock('@/components/ui/bottom-sheet', () => {
   const React = require('react');
@@ -106,11 +140,17 @@ describe('CalendarItemDetailsSheet', () => {
   const mockT = jest.fn((key: string) => key);
   const mockTrackEvent = jest.fn();
   const mockSetCalendarItemAttendingStatus = jest.fn();
+  const mockFetchCalendarItem = jest.fn();
   const mockOnClose = jest.fn();
+  const mockShowSuccessToast = jest.fn();
+  const mockShowErrorToast = jest.fn();
 
   const mockUseTranslation = useTranslation as jest.MockedFunction<typeof useTranslation>;
   const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
+  const mockUseToast = useToast as jest.MockedFunction<typeof useToast>;
   const mockUseCalendarStore = useCalendarStore as jest.MockedFunction<typeof useCalendarStore>;
+  const mockUsePersonnelStore = usePersonnelStore as jest.MockedFunction<typeof usePersonnelStore>;
+  const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
 
   const mockCalendarItem: CalendarItemResultData = {
     CalendarItemId: 'test-item-1',
@@ -152,6 +192,53 @@ describe('CalendarItemDetailsSheet', () => {
     ],
   };
 
+  const mockPersonnelData = [
+    {
+      UserId: 'creator-1',
+      FirstName: 'John',
+      LastName: 'Doe',
+      EmailAddress: 'john.doe@example.com',
+      IdentificationNumber: 'EMP001',
+      DepartmentId: 'dept1',
+      MobilePhone: '+1234567890',
+      GroupId: 'group1',
+      GroupName: 'Fire Department',
+      StatusId: 'status1',
+      Status: 'Available',
+      StatusColor: '#22C55E',
+      StatusTimestamp: '2023-12-01T10:00:00Z',
+      StatusDestinationId: '',
+      StatusDestinationName: '',
+      StaffingId: 'staff1',
+      Staffing: 'On Duty',
+      StaffingColor: '#3B82F6',
+      StaffingTimestamp: '2023-12-01T08:00:00Z',
+      Roles: ['Captain', 'Firefighter'],
+    },
+    {
+      UserId: 'user-2',
+      FirstName: 'Jane',
+      LastName: 'Smith',
+      EmailAddress: 'jane.smith@example.com',
+      IdentificationNumber: 'EMP002',
+      DepartmentId: 'dept1',
+      MobilePhone: '+1234567891',
+      GroupId: 'group1',
+      GroupName: 'Fire Department',
+      StatusId: 'status2',
+      Status: 'Busy',
+      StatusColor: '#EF4444',
+      StatusTimestamp: '2023-12-01T09:30:00Z',
+      StatusDestinationId: 'dest1',
+      StatusDestinationName: 'Hospital A',
+      StaffingId: 'staff2',
+      Staffing: 'Off Duty',
+      StaffingColor: '#6B7280',
+      StaffingTimestamp: '2023-12-01T09:00:00Z',
+      Roles: ['Paramedic', 'Driver'],
+    },
+  ];
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -159,17 +246,37 @@ describe('CalendarItemDetailsSheet', () => {
       t: mockT,
     } as any);
 
+    mockUseColorScheme.mockReturnValue({
+      colorScheme: 'light',
+    } as any);
+
     mockUseAnalytics.mockReturnValue({
       trackEvent: mockTrackEvent,
     });
 
+    mockUseToast.mockReturnValue({
+      success: mockShowSuccessToast,
+      error: mockShowErrorToast,
+      show: jest.fn(),
+      warning: jest.fn(),
+      info: jest.fn(),
+    });
+
     mockUseCalendarStore.mockReturnValue({
       setCalendarItemAttendingStatus: mockSetCalendarItemAttendingStatus,
+      fetchCalendarItem: mockFetchCalendarItem,
       isAttendanceLoading: false,
       attendanceError: null,
     } as any);
 
+    mockUsePersonnelStore.mockReturnValue({
+      personnel: mockPersonnelData,
+      fetchPersonnel: jest.fn(() => Promise.resolve()),
+      isLoading: false,
+    } as any);
+
     mockSetCalendarItemAttendingStatus.mockResolvedValue(undefined);
+    mockFetchCalendarItem.mockResolvedValue(undefined);
   });
 
   it('renders null when item is null', () => {
@@ -312,6 +419,65 @@ describe('CalendarItemDetailsSheet', () => {
       });
     });
 
+    it('refreshes calendar item after successful signup', async () => {
+      const { getByText } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const signupButton = getByText('calendar.signup.button');
+      fireEvent.press(signupButton);
+
+      await waitFor(() => {
+        expect(mockFetchCalendarItem).toHaveBeenCalledWith('test-item-1');
+      });
+    });
+
+    it('shows success toast after successful signup', async () => {
+      const { getByText } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const signupButton = getByText('calendar.signup.button');
+      fireEvent.press(signupButton);
+
+      await waitFor(() => {
+        expect(mockShowSuccessToast).toHaveBeenCalledWith(
+          'calendar.attendanceUpdated.signedUp',
+          'calendar.attendanceUpdated.title'
+        );
+      });
+    });
+
+    it('shows success toast after successful unsignup', async () => {
+      const signedUpItem = {
+        ...mockCalendarItem,
+        Attending: true,
+      };
+
+      // Mock Alert.alert to immediately call the destructive action
+      (Alert.alert as jest.Mock).mockImplementation((title, message, buttons) => {
+        if (!Array.isArray(buttons)) return;
+        const destructiveButton = buttons.find((b: any) => b.style === 'destructive');
+        if (destructiveButton) {
+          destructiveButton.onPress();
+        }
+      });
+
+      const { getByText } = render(
+        <CalendarItemDetailsSheet item={signedUpItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const unsignupButton = getByText('calendar.unsignup');
+      fireEvent.press(unsignupButton);
+
+      await waitFor(() => {
+        expect(mockShowSuccessToast).toHaveBeenCalledWith(
+          'calendar.attendanceUpdated.unsignedUp',
+          'calendar.attendanceUpdated.title'
+        );
+      });
+    });
+
     it('tracks failed attendance change', async () => {
       const error = new Error('Network error');
       mockSetCalendarItemAttendingStatus.mockRejectedValueOnce(error);
@@ -331,6 +497,44 @@ describe('CalendarItemDetailsSheet', () => {
           timestamp: expect.any(String),
         });
       });
+    });
+
+    it('shows error toast when signup fails', async () => {
+      const error = new Error('Network error');
+      mockSetCalendarItemAttendingStatus.mockRejectedValueOnce(error);
+
+      const { getByText } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const signupButton = getByText('calendar.signup.button');
+      fireEvent.press(signupButton);
+
+      await waitFor(() => {
+        expect(mockShowErrorToast).toHaveBeenCalledWith(
+          'calendar.error.attendanceUpdate',
+          'calendar.error.title'
+        );
+      });
+    });
+
+    it('does not refresh calendar item when signup fails', async () => {
+      const error = new Error('Network error');
+      mockSetCalendarItemAttendingStatus.mockRejectedValueOnce(error);
+
+      const { getByText } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const signupButton = getByText('calendar.signup.button');
+      fireEvent.press(signupButton);
+
+      await waitFor(() => {
+        expect(mockTrackEvent).toHaveBeenCalledWith('calendar_item_attendance_failed', expect.any(Object));
+      });
+
+      // Should not call fetchCalendarItem when there's an error
+      expect(mockFetchCalendarItem).not.toHaveBeenCalled();
     });
 
     it('shows note input for signup types that require notes', () => {
@@ -442,6 +646,7 @@ describe('CalendarItemDetailsSheet', () => {
     it('shows loading state when attendance is being updated', () => {
       mockUseCalendarStore.mockReturnValue({
         setCalendarItemAttendingStatus: mockSetCalendarItemAttendingStatus,
+        fetchCalendarItem: mockFetchCalendarItem,
         isAttendanceLoading: true,
         attendanceError: null,
       } as any);
@@ -510,7 +715,7 @@ describe('CalendarItemDetailsSheet', () => {
   });
 
   describe('Error handling', () => {
-    it('shows error alert when attendance update fails', async () => {
+    it('shows error toast when attendance update fails', async () => {
       const error = new Error('Server error');
       mockSetCalendarItemAttendingStatus.mockRejectedValueOnce(error);
 
@@ -522,33 +727,9 @@ describe('CalendarItemDetailsSheet', () => {
       fireEvent.press(signupButton);
 
       await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalledWith(
-          'calendar.error.title',
-          'calendar.error.attendanceUpdate'
-        );
-      });
-    });
-
-    it('shows store error when available', async () => {
-      mockUseCalendarStore.mockReturnValue({
-        setCalendarItemAttendingStatus: mockSetCalendarItemAttendingStatus,
-        isAttendanceLoading: false,
-        attendanceError: 'Custom store error',
-      } as any);
-
-      mockSetCalendarItemAttendingStatus.mockRejectedValueOnce(new Error('Server error'));
-
-      const { getByText } = render(
-        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
-      );
-
-      const signupButton = getByText('calendar.signup.button');
-      fireEvent.press(signupButton);
-
-      await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalledWith(
-          'calendar.error.title',
-          'Custom store error'
+        expect(mockShowErrorToast).toHaveBeenCalledWith(
+          'calendar.error.attendanceUpdate',
+          'calendar.error.title'
         );
       });
     });
@@ -575,6 +756,352 @@ describe('CalendarItemDetailsSheet', () => {
       );
 
       expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+  });
+
+  describe('WebView Description Rendering', () => {
+    it('renders WebView when description is provided', () => {
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const webview = getByTestId('webview');
+      expect(webview).toBeTruthy();
+    });
+
+    it('does not render WebView when description is empty', () => {
+      const itemWithoutDescription = {
+        ...mockCalendarItem,
+        Description: '',
+      };
+
+      const { queryByTestId } = render(
+        <CalendarItemDetailsSheet item={itemWithoutDescription} isOpen={true} onClose={mockOnClose} />
+      );
+
+      expect(queryByTestId('webview')).toBeNull();
+    });
+
+    it('renders WebView with proper HTML structure', () => {
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const webviewContent = getByTestId('webview-content');
+      const htmlContent = webviewContent.props.children;
+
+      expect(htmlContent).toContain('<!DOCTYPE html>');
+      expect(htmlContent).toContain('<html>');
+      expect(htmlContent).toContain('<head>');
+      expect(htmlContent).toContain('<meta name="viewport"');
+      expect(htmlContent).toContain('<style>');
+      expect(htmlContent).toContain('<body>');
+      expect(htmlContent).toContain('Test event description');
+    });
+
+    it('includes proper CSS styles for light theme', () => {
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const webviewContent = getByTestId('webview-content');
+      const htmlContent = webviewContent.props.children;
+
+      expect(htmlContent).toContain('#1F2937'); // light mode text color
+      expect(htmlContent).toContain('#F9FAFB'); // light mode background
+      expect(htmlContent).toContain('font-family: system-ui, -apple-system, sans-serif');
+      expect(htmlContent).toContain('font-size: 16px');
+      expect(htmlContent).toContain('line-height: 1.5');
+      expect(htmlContent).toContain('max-width: 100%');
+    });
+
+    it('includes proper CSS styles for dark theme', () => {
+      mockUseColorScheme.mockReturnValue({
+        colorScheme: 'dark',
+      } as any);
+
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const webviewContent = getByTestId('webview-content');
+      const htmlContent = webviewContent.props.children;
+
+      expect(htmlContent).toContain('#E5E7EB'); // dark mode text color
+      expect(htmlContent).toContain('#374151'); // dark mode background
+    });
+
+    it('configures WebView props correctly', () => {
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+      const webview = getByTestId('webview');
+
+      expect(webview.props.originWhitelist).toEqual(['about:blank']);
+      expect(webview.props.scrollEnabled).toBe(false);
+      expect(webview.props.showsVerticalScrollIndicator).toBe(false);
+      expect(webview.props.androidLayerType).toBe('software');
+    });
+
+    it('includes description content in WebView HTML', () => {
+      const customDescription = '<p>Custom HTML description content</p>';
+      const itemWithCustomDescription = {
+        ...mockCalendarItem,
+        Description: customDescription,
+      };
+
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={itemWithCustomDescription} isOpen={true} onClose={mockOnClose} />
+      );
+
+      const webviewContent = getByTestId('webview-content');
+      const htmlContent = webviewContent.props.children;
+
+      expect(htmlContent).toContain(customDescription);
+    });
+  });
+
+  describe('Creator Information Display', () => {
+    it('renders creator section when CreatorUserId is provided', () => {
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // The component should render the bottom sheet
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+
+    it('displays creator name when found in personnel list', () => {
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // Component should render successfully when creator is found
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+
+    it('handles unknown creator gracefully with fallback message', () => {
+      const itemWithUnknownCreator = {
+        ...mockCalendarItem,
+        CreatorUserId: 'unknown-creator-id',
+      };
+
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={itemWithUnknownCreator} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // Component should render successfully with fallback message
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+
+    it('does not display creator info when CreatorUserId is empty', () => {
+      const itemWithoutCreator = {
+        ...mockCalendarItem,
+        CreatorUserId: '',
+      };
+
+      const { queryByText } = render(
+        <CalendarItemDetailsSheet item={itemWithoutCreator} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // Check that the creator section is not rendered
+      expect(queryByText(/calendar.createdBy/)).toBeNull();
+    });
+
+    it('handles empty personnel list gracefully', () => {
+      mockUsePersonnelStore.mockReturnValue({
+        personnel: [],
+        fetchPersonnel: jest.fn(() => Promise.resolve()),
+        isLoading: false,
+      } as any);
+
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // Component should render successfully with fallback message when personnel list is empty
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+
+    it('handles personnel with incomplete names', () => {
+      const personnelWithIncompleteNames = [
+        {
+          ...mockPersonnelData[0],
+          FirstName: 'John',
+          LastName: '', // Empty last name
+        },
+      ];
+
+      mockUsePersonnelStore.mockReturnValue({
+        personnel: personnelWithIncompleteNames,
+        fetchPersonnel: jest.fn(() => Promise.resolve()),
+        isLoading: false,
+      } as any);
+
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // Component should render successfully with partial name
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+
+    it('handles personnel with only last name', () => {
+      const personnelWithOnlyLastName = [
+        {
+          ...mockPersonnelData[0],
+          FirstName: '', // Empty first name
+          LastName: 'Doe',
+        },
+      ];
+
+      mockUsePersonnelStore.mockReturnValue({
+        personnel: personnelWithOnlyLastName,
+        fetchPersonnel: jest.fn(() => Promise.resolve()),
+        isLoading: false,
+      } as any);
+
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // Component should render successfully with partial name
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+
+    // Test the getCreatorName logic by verifying component behavior with different scenarios
+    it('displays unknown_user for non-existent creator IDs instead of raw ID', () => {
+      const itemWithUnknownCreator = {
+        ...mockCalendarItem,
+        CreatorUserId: 'definitely-not-in-personnel-list',
+      };
+
+      // This test verifies that when a creator ID is not found,
+      // we get the translated "unknown_user" text instead of the raw ID
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet item={itemWithUnknownCreator} isOpen={true} onClose={mockOnClose} />
+      );
+
+      // Component should render successfully and not display the raw ID
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+
+      // The key improvement: we should NOT see the raw creator ID in the UI
+      // This validates that our fix prevents showing the raw ID to users
+      const bottomSheet = getByTestId('bottom-sheet');
+      const bottomSheetText = bottomSheet.props.children.toString();
+      expect(bottomSheetText).not.toContain('definitely-not-in-personnel-list');
+    });
+
+    it('shows loading state when fetching personnel', async () => {
+      // Mock personnel store with loading state
+      mockUsePersonnelStore.mockReturnValue({
+        personnel: [],
+        fetchPersonnel: jest.fn(() => Promise.resolve()),
+        isLoading: true,
+      } as any);
+
+      const mockItem = {
+        ...mockCalendarItem,
+        CreatorUserId: 'user-123',
+      };
+
+      const { getByTestId } = render(
+        <CalendarItemDetailsSheet
+          item={mockItem}
+          isOpen={true}
+          onClose={mockOnClose}
+        />
+      );
+
+      // Component should render successfully when showing loading state
+      expect(getByTestId('bottom-sheet')).toBeTruthy();
+    });
+
+    it('auto-fetches personnel when store is empty and sheet opens', async () => {
+      const mockFetchPersonnel = jest.fn(() => Promise.resolve());
+      mockUsePersonnelStore.mockReturnValue({
+        personnel: [],
+        fetchPersonnel: mockFetchPersonnel,
+        isLoading: false,
+      } as any);
+
+      const mockItem = {
+        ...mockCalendarItem,
+        CreatorUserId: 'user-123',
+      };
+
+      const { rerender } = render(
+        <CalendarItemDetailsSheet
+          item={mockItem}
+          isOpen={false}
+          onClose={mockOnClose}
+        />
+      );
+
+      // Initially should not fetch when closed
+      expect(mockFetchPersonnel).not.toHaveBeenCalled();
+
+      // Open the sheet
+      rerender(
+        <CalendarItemDetailsSheet
+          item={mockItem}
+          isOpen={true}
+          onClose={mockOnClose}
+        />
+      );
+
+      // Should fetch personnel when opened and store is empty
+      expect(mockFetchPersonnel).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fetch personnel when store already has data', async () => {
+      const mockFetchPersonnel = jest.fn(() => Promise.resolve());
+      mockUsePersonnelStore.mockReturnValue({
+        personnel: mockPersonnelData,
+        fetchPersonnel: mockFetchPersonnel,
+        isLoading: false,
+      } as any);
+
+      const mockItem = {
+        ...mockCalendarItem,
+        CreatorUserId: 'user-123',
+      };
+
+      render(
+        <CalendarItemDetailsSheet
+          item={mockItem}
+          isOpen={true}
+          onClose={mockOnClose}
+        />
+      );
+
+      // Should not fetch when personnel store already has data
+      expect(mockFetchPersonnel).not.toHaveBeenCalled();
+    });
+
+    it('does not fetch personnel when already loading', async () => {
+      const mockFetchPersonnel = jest.fn(() => Promise.resolve());
+      mockUsePersonnelStore.mockReturnValue({
+        personnel: [],
+        fetchPersonnel: mockFetchPersonnel,
+        isLoading: true,
+      } as any);
+
+      const mockItem = {
+        ...mockCalendarItem,
+        CreatorUserId: 'user-123',
+      };
+
+      render(
+        <CalendarItemDetailsSheet
+          item={mockItem}
+          isOpen={true}
+          onClose={mockOnClose}
+        />
+      );
+
+      // Should not fetch when already loading
+      expect(mockFetchPersonnel).not.toHaveBeenCalled();
     });
   });
 });

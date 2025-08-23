@@ -75,7 +75,7 @@ export const sendMessage = async (messageData: SendMessageRequest) => {
 };
 
 export const deleteMessage = async (messageId: string) => {
-  const response = await deleteMessageApi.post<DeleteMessageResult>({
+  const response = await deleteMessageApi.delete<DeleteMessageResult>({
     MessageId: messageId,
   });
   return response.data;

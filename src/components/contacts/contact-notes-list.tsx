@@ -1,9 +1,14 @@
 import { AlertTriangleIcon, CalendarIcon, ClockIcon, EyeIcon, EyeOffIcon, ShieldAlertIcon, UserIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Linking, ScrollView, StyleSheet } from 'react-native';
+import { WebView } from 'react-native-webview';
 
+import { useAnalytics } from '@/hooks/use-analytics';
 import { type ContactNoteResultData } from '@/models/v4/contacts/contactNoteResultData';
 import { useContactsStore } from '@/stores/contacts/store';
+import { defaultWebViewProps, generateWebViewHtml } from '@/utils/webview-html';
 
 import { Box } from '../ui/box';
 import { Card } from '../ui/card';
@@ -26,6 +31,10 @@ const ContactNoteCard: React.FC<ContactNoteCardProps> = ({ note }) => {
   const isExpired = note.ExpiresOnUtc && new Date(note.ExpiresOnUtc) < new Date();
   const isInternal = note.Visibility === 0;
 
+  const { colorScheme } = useColorScheme();
+  const textColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const backgroundColor = colorScheme === 'dark' ? '#374151' : '#F9FAFB';
+
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString();
@@ -33,6 +42,10 @@ const ContactNoteCard: React.FC<ContactNoteCardProps> = ({ note }) => {
       return dateString;
     }
   };
+
+  // Fallback display for empty or plain text notes
+  const isPlainText = !note.Note || !/<\/?[a-z][\s\S]*>/i.test(note.Note);
+  const noteContent = note.Note || t('messages.no_content');
 
   return (
     <Card className={`mb-3 p-4 ${isExpired ? 'opacity-60' : ''}`}>
@@ -65,7 +78,33 @@ const ContactNoteCard: React.FC<ContactNoteCardProps> = ({ note }) => {
         </HStack>
 
         {/* Note content */}
-        <Text className="text-base leading-relaxed text-gray-900 dark:text-white">{note.Note}</Text>
+        <Box className="min-h-[200px] rounded bg-gray-50 p-3 dark:bg-gray-800">
+          {isPlainText ? (
+            <Text className="text-gray-800 dark:text-gray-200" selectable>
+              {noteContent}
+            </Text>
+          ) : (
+            <WebView
+              {...defaultWebViewProps}
+              style={styles.webView}
+              source={{
+                html: generateWebViewHtml({
+                  content: noteContent,
+                  isDarkMode: colorScheme === 'dark',
+                }),
+              }}
+              onShouldStartLoadWithRequest={(request) => {
+                const isLocal = request.url.startsWith('about:') || request.url.startsWith('data:');
+                if (isLocal) return true;
+                const allowed = ['http://', 'https://', 'mailto:', 'tel:'];
+                if (allowed.some((s) => request.url.startsWith(s))) {
+                  Linking.openURL(request.url).catch(() => {});
+                }
+                return false;
+              }}
+            />
+          )}
+        </Box>
 
         {/* Expiration warning */}
         {isExpired ? (
@@ -101,6 +140,7 @@ const ContactNoteCard: React.FC<ContactNoteCardProps> = ({ note }) => {
 
 export const ContactNotesList: React.FC<ContactNotesListProps> = ({ contactId }) => {
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const { contactNotes, isNotesLoading, fetchContactNotes } = useContactsStore();
 
   React.useEffect(() => {
@@ -111,6 +151,18 @@ export const ContactNotesList: React.FC<ContactNotesListProps> = ({ contactId })
 
   const notes = contactNotes[contactId] || [];
   const hasNotes = notes.length > 0;
+
+  // Track when contact notes list is rendered
+  React.useEffect(() => {
+    if (contactId) {
+      trackEvent('contact_notes_list_rendered', {
+        contactId: contactId,
+        notesCount: notes.length,
+        hasNotes: hasNotes,
+        isLoading: isNotesLoading,
+      });
+    }
+  }, [trackEvent, contactId, notes.length, hasNotes, isNotesLoading]);
 
   if (isNotesLoading) {
     return (
@@ -152,3 +204,15 @@ export const ContactNotesList: React.FC<ContactNotesListProps> = ({ contactId })
     </VStack>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    backgroundColor: 'transparent',
+  },
+  webView: {
+    height: 200, // Fixed height with scroll capability
+    backgroundColor: 'transparent',
+    width: '100%',
+  },
+});

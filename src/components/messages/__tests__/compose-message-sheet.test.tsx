@@ -37,6 +37,14 @@ jest.mock('react-i18next', () => ({
       if (options && typeof options === 'object' && 'count' in options) {
         return `${key.replace('{{count}}', options.count)}`;
       }
+      // Handle validation keys
+      if (key === 'messages.validation.subject_required') return 'Subject is required';
+      if (key === 'messages.validation.body_required') return 'Message body is required';
+      if (key === 'messages.validation.recipients_required') return 'At least one recipient is required';
+      if (key === 'messages.unsaved_changes') return 'Unsaved Changes';
+      if (key === 'messages.unsaved_changes_message') return 'You have unsaved changes. Are you sure you want to discard them?';
+      if (key === 'common.cancel') return 'Cancel';
+      if (key === 'common.discard') return 'Discard';
       return key;
     },
   }),
@@ -537,6 +545,134 @@ describe('ComposeMessageSheet Analytics', () => {
 
       expect(mockFetchRecipients).not.toHaveBeenCalled();
       expect(mockFetchDispatchData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Form Validation', () => {
+    beforeEach(() => {
+      mockUseMessagesStore.mockReturnValue({
+        ...defaultMockMessagesStore,
+        isComposeOpen: true,
+      });
+    });
+
+    it('should show validation errors when trying to send empty form', async () => {
+      const { getByTestId, getByText } = render(<ComposeMessageSheet />);
+
+      // Try to send without filling any fields
+      const sendButton = getByText('messages.send');
+      fireEvent.press(sendButton);
+
+      await waitFor(() => {
+        expect(getByText('Subject is required')).toBeTruthy();
+        expect(getByText('Message body is required')).toBeTruthy();
+        expect(getByText('At least one recipient is required')).toBeTruthy();
+      });
+
+      // Should not call sendNewMessage
+      expect(mockSendNewMessage).not.toHaveBeenCalled();
+    });
+
+    it('should clear validation errors when user fills fields', async () => {
+      const { getByPlaceholderText, getByText, queryByText } = render(<ComposeMessageSheet />);
+
+      // First trigger validation errors
+      const sendButton = getByText('messages.send');
+      fireEvent.press(sendButton);
+
+      await waitFor(() => {
+        expect(getByText('Subject is required')).toBeTruthy();
+      });
+
+      // Fill subject field
+      const subjectInput = getByPlaceholderText('messages.enter_subject');
+      fireEvent.changeText(subjectInput, 'Test Subject');
+
+      // Subject error should be cleared
+      await waitFor(() => {
+        expect(queryByText('Subject is required')).toBeNull();
+      });
+    });
+
+    it('should clear recipients validation error when user selects recipients', async () => {
+      mockUseMessagesStore.mockReturnValue({
+        ...defaultMockMessagesStore,
+        isComposeOpen: true,
+      });
+
+      const { getByText, queryByText, getByTestId } = render(<ComposeMessageSheet />);
+
+      // First trigger validation errors
+      const sendButton = getByText('messages.send');
+      fireEvent.press(sendButton);
+
+      await waitFor(() => {
+        expect(getByText('At least one recipient is required')).toBeTruthy();
+      });
+
+      // Open recipients sheet to access recipient items
+      const recipientsButton = getByText('messages.select_recipients');
+      fireEvent.press(recipientsButton);
+
+      // Wait for the sheet to open and recipient items to be available
+      await waitFor(() => {
+        expect(getByTestId('recipient-item-user1')).toBeTruthy();
+      });
+
+      // Select a recipient by pressing the recipient item
+      const recipientItem = getByTestId('recipient-item-user1');
+      fireEvent.press(recipientItem);
+
+      // Recipients validation error should be cleared
+      await waitFor(() => {
+        expect(queryByText('At least one recipient is required')).toBeNull();
+      });
+    });
+  });
+
+  describe('Unsaved Changes Confirmation', () => {
+    beforeEach(() => {
+      mockUseMessagesStore.mockReturnValue({
+        ...defaultMockMessagesStore,
+        isComposeOpen: true,
+      });
+    });
+
+    it('should close without confirmation when no changes are made', () => {
+      const { getByTestId } = render(<ComposeMessageSheet />);
+
+      const closeButton = getByTestId('close-button');
+      fireEvent.press(closeButton);
+
+      // Should close immediately without alert
+      expect(mockCloseCompose).toHaveBeenCalled();
+    });
+
+    it('should show confirmation dialog when there are unsaved changes', async () => {
+      const alertSpy = jest.spyOn(Alert, 'alert');
+      const { getByPlaceholderText, getByTestId } = render(<ComposeMessageSheet />);
+
+      // Make some changes
+      const subjectInput = getByPlaceholderText('messages.enter_subject');
+      fireEvent.changeText(subjectInput, 'Test Subject');
+
+      // Try to close
+      const closeButton = getByTestId('close-button');
+      fireEvent.press(closeButton);
+
+      // Should show confirmation dialog
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(
+          'Unsaved Changes',
+          'You have unsaved changes. Are you sure you want to discard them?',
+          expect.arrayContaining([
+            expect.objectContaining({ text: 'Cancel' }),
+            expect.objectContaining({ text: 'Discard' }),
+          ])
+        );
+      });
+
+      alertSpy.mockRestore();
     });
   });
 });

@@ -9,6 +9,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { formatLocalDateString } from '@/lib/utils';
 import { useCalendarStore } from '@/stores/calendar/store';
 
 interface CalendarViewProps {
@@ -27,7 +28,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-    onMonthChange(startOfMonth.toISOString().split('T')[0], endOfMonth.toISOString().split('T')[0]);
+    onMonthChange(formatLocalDateString(startOfMonth), formatLocalDateString(endOfMonth));
   }, [currentDate, onMonthChange]);
 
   const getDaysInMonth = useMemo(() => {
@@ -58,6 +59,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
   const hasEventsOnDate = (date: Date) => {
     const targetDate = date.toDateString();
     return selectedMonthItems.some((item) => {
+      // Use Start field for consistent date handling with .NET backend timezone-aware dates
       const itemDate = new Date(item.Start).toDateString();
       return itemDate === targetDate;
     });
@@ -74,7 +76,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
   };
 
   const handleDatePress = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatLocalDateString(date);
     setSelectedDate(dateString);
   };
 

@@ -59,7 +59,7 @@
     },
     "attendeesCount": "{{count}} حاضر",
     "attendeesCount_plural": "{{count}} حاضرين",
-    "confirmSignup": "تأكيد التسجيل",
+    "confirmSignup": "تأكيد",
     "confirmUnsignup": {
       "message": "هل أنت متأكد من أنك تريد إلغاء حضورك لهذا الحدث؟",
       "title": "تأكيد الإلغاء"
@@ -339,6 +339,7 @@
     "confirm": "تأكيد",
     "delete": "حذف",
     "deleting": "جاري الحذف...",
+    "discard": "تجاهل",
     "done": "تم",
     "edit": "تعديل",
     "error": "خطأ",
@@ -547,7 +548,6 @@
   },
   "messages": {
     "all_messages": "جميع الرسائل",
-    "body_required": "محتوى الرسالة مطلوب",
     "compose": "إنشاء",
     "compose_new_message": "إنشاء رسالة جديدة",
     "date_unknown": "تاريخ غير معروف",
@@ -577,7 +577,6 @@
     "people": "الأشخاص",
     "recipients": "المستقبلين",
     "recipients_count": "{{count}} مستقبل",
-    "recipients_required": "مطلوب مستقبل واحد على الأقل",
     "recipients_selected": "{{count}} مستقبل محدد",
     "respond_failed": "فشل في الرد على الرسالة",
     "respond_to_message": "الرد على الرسالة",
@@ -599,12 +598,18 @@
     "sent": "المرسلة",
     "showing_count": "عرض {{count}} رسائل",
     "subject": "الموضوع",
-    "subject_required": "الموضوع مطلوب",
     "title": "الرسائل",
     "types": {
       "alert": "تنبيه",
       "message": "رسالة",
       "poll": "استطلاع"
+    },
+    "unsaved_changes": "تغييرات غير محفوظة",
+    "unsaved_changes_message": "لديك تغييرات غير محفوظة. هل أنت متأكد أنك تريد تجاهلها؟",
+    "validation": {
+      "body_required": "نص الرسالة مطلوب",
+      "recipients_required": "مطلوب مستلم واحد على الأقل",
+      "subject_required": "الموضوع مطلوب"
     }
   },
   "notes": {

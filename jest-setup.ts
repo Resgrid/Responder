@@ -202,3 +202,18 @@ jest.mock('expo-av', () => ({
   InterruptionModeAndroid: { DuckOthers: 0 },
   InterruptionModeIOS: { DoNotMix: 0 },
 }));
+
+// Mock react-native-webview to avoid TurboModule errors
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const WebView = (props: any) => {
+    return React.createElement(View, props);
+  };
+
+  return {
+    WebView,
+    default: WebView,
+  };
+});

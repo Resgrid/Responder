@@ -1,9 +1,3 @@
-import { renderHook, act } from '@testing-library/react-native';
-
-import { useCalendarStore } from '../store';
-import * as calendarApi from '@/api/calendar/calendar';
-import { CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
-
 // Mock date-fns
 jest.mock('date-fns', () => ({
 	addDays: jest.fn(),
@@ -22,11 +16,10 @@ jest.mock('@/api/calendar/calendar', () => ({
 	setCalendarAttending: jest.fn(),
 }));
 
-const mockedApi = calendarApi as jest.Mocked<typeof calendarApi>;
-
-// Import date-fns functions to mock them
-import * as dateFns from 'date-fns';
-const mockedDateFns = dateFns as jest.Mocked<typeof dateFns>;
+// Mock the utils module
+jest.mock('@/lib/utils', () => ({
+	isSameDate: jest.fn(),
+}));
 
 // Mock the logger
 jest.mock('@/lib/logging', () => ({
@@ -45,13 +38,29 @@ jest.mock('@/lib/storage', () => ({
 	},
 }));
 
+import { renderHook, act } from '@testing-library/react-native';
+
+import { useCalendarStore } from '../store';
+import * as calendarApi from '@/api/calendar/calendar';
+import { CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
+
+const mockedApi = calendarApi as jest.Mocked<typeof calendarApi>;
+
+// Import date-fns functions to mock them
+import * as dateFns from 'date-fns';
+const mockedDateFns = dateFns as jest.Mocked<typeof dateFns>;
+
+// Import utils functions to mock them
+import * as utils from '@/lib/utils';
+const mockedUtils = utils as jest.Mocked<typeof utils>;
+
 const mockCalendarItem = {
 	CalendarItemId: '123',
 	Title: 'Test Event',
-	Start: '2024-01-15T10:00:00Z',
-	StartUtc: '2024-01-15T10:00:00Z',
+	Start: '2024-01-15T10:00:00Z', // Same day as mocked date
+	StartUtc: '2024-01-15T10:00:00Z', // Keep for completeness but not used in filtering
 	End: '2024-01-15T12:00:00Z',
-	EndUtc: '2024-01-15T12:00:00Z',
+	EndUtc: '2024-01-15T12:00:00Z', // Keep for completeness but not used in filtering
 	StartTimezone: 'UTC',
 	EndTimezone: 'UTC',
 	Description: 'Test description',
@@ -115,6 +124,15 @@ describe('Calendar Store', () => {
 			return date instanceof Date ? date.toISOString() : String(date);
 		});
 		
+		// Mock utils functions
+		mockedUtils.isSameDate.mockImplementation((date1: string | Date, date2: string | Date) => {
+			const d1 = new Date(date1);
+			const d2 = new Date(date2);
+			return d1.getFullYear() === d2.getFullYear() && 
+				   d1.getMonth() === d2.getMonth() && 
+				   d1.getDate() === d2.getDate();
+		});
+		
 		// Reset store state
 		useCalendarStore.setState({
 			calendarItems: [],
@@ -136,33 +154,140 @@ describe('Calendar Store', () => {
 		});
 	});
 
-	describe('fetchTodaysItems', () => {
-		it("should fetch today's items successfully", async () => {
+	describe('loadTodaysCalendarItems', () => {
+		beforeEach(() => {
+			// Mock the current date to be consistent
+			jest.useFakeTimers();
+			jest.setSystemTime(new Date('2024-01-15T10:00:00Z'));
+		});
+
+		afterEach(() => {
+			jest.useRealTimers();
+		});
+
+		it('should fetch and filter today\'s items correctly', async () => {
+			// Create test items: one for today, one for tomorrow, one for yesterday
+			const todayItem = {
+				...mockCalendarItem,
+				CalendarItemId: 'today-item',
+				Title: 'Today Event',
+				Start: '2024-01-15T14:00:00Z', // Later today
+				StartUtc: '2024-01-15T14:00:00Z', // Keep for completeness
+				End: '2024-01-15T16:00:00Z',
+				EndUtc: '2024-01-15T16:00:00Z',
+			};
+			
+			const tomorrowItem = {
+				...mockCalendarItem,
+				CalendarItemId: 'tomorrow-item',
+				Title: 'Tomorrow Event',
+				Start: '2024-01-16T10:00:00Z', // Tomorrow
+				StartUtc: '2024-01-16T10:00:00Z', // Keep for completeness
+				End: '2024-01-16T12:00:00Z',
+				EndUtc: '2024-01-16T12:00:00Z',
+			};
+			
+			const yesterdayItem = {
+				...mockCalendarItem,
+				CalendarItemId: 'yesterday-item',
+				Title: 'Yesterday Event',
+				Start: '2024-01-14T10:00:00Z', // Yesterday
+				StartUtc: '2024-01-14T10:00:00Z', // Keep for completeness
+				End: '2024-01-14T12:00:00Z',
+				EndUtc: '2024-01-14T12:00:00Z',
+			};
+
 			const mockResponse = {
-				Data: [mockCalendarItem],
-				PageSize: 0,
-				Timestamp: '2024-01-15T10:00:00Z',
-				Version: '1.0',
-				Node: 'test-node',
-				RequestId: 'test-request',
-				Status: 'success',
-				Environment: 'test',
+				Data: [todayItem, tomorrowItem, yesterdayItem],
+				...createMockBaseResponse(),
+			};
+			mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
+
+			// Mock isSameDate to return true only for the today item
+			mockedUtils.isSameDate.mockImplementation((date1: string | Date, date2: string | Date) => {
+				const d1 = new Date(date1);
+				const d2 = new Date(date2);
+				// Only return true for items on 2024-01-15
+				if (d1.getFullYear() === 2024 && d1.getMonth() === 0 && d1.getDate() === 15 &&
+					d2.getFullYear() === 2024 && d2.getMonth() === 0 && d2.getDate() === 15) {
+					return true;
+				}
+				return false;
+			});
+
+			const { result } = renderHook(() => useCalendarStore());
+
+			await act(async () => {
+				await result.current.loadTodaysCalendarItems();
+			});
+
+			// The method calls getCalendarItemsForDateRange with today's ISO string
+			expect(mockedApi.getCalendarItemsForDateRange).toHaveBeenCalledWith(
+				'2024-01-15T10:00:00.000Z',
+				'2024-01-15T10:00:00.000Z'
+			);
+			
+			// Should only contain today's item after filtering
+			expect(result.current.todayCalendarItems).toHaveLength(1);
+			expect(result.current.todayCalendarItems[0].CalendarItemId).toBe('today-item');
+			expect(result.current.isTodaysLoading).toBe(false);
+			expect(result.current.error).toBeNull();
+		});
+
+		it('should handle empty response correctly', async () => {
+			const mockResponse = {
+				Data: [],
+				...createMockBaseResponse(),
 			};
 			mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
 
 			const { result } = renderHook(() => useCalendarStore());
 
 			await act(async () => {
-				await result.current.fetchTodaysItems();
+				await result.current.loadTodaysCalendarItems();
 			});
 
-			expect(mockedApi.getCalendarItemsForDateRange).toHaveBeenCalledWith(
-				'2024-01-15 00:00:00',
-				'2024-01-15 23:59:59'
-			);
-			expect(result.current.todayCalendarItems).toEqual([mockCalendarItem]);
+			expect(result.current.todayCalendarItems).toEqual([]);
 			expect(result.current.isTodaysLoading).toBe(false);
 			expect(result.current.error).toBeNull();
+		});
+
+		it('should handle timezone differences correctly', async () => {
+			// Test with different timezone formats
+			const todayItemUTC = {
+				...mockCalendarItem,
+				CalendarItemId: 'today-utc',
+				Title: 'Today UTC Event',
+				Start: '2024-01-15T23:30:00Z', // Late today UTC (local time)
+				StartUtc: '2024-01-15T23:30:00Z', // Keep for completeness
+				End: '2024-01-15T23:59:00Z',
+				EndUtc: '2024-01-15T23:59:00Z',
+			};
+			
+			const todayItemLocal = {
+				...mockCalendarItem,
+				CalendarItemId: 'today-local',
+				Title: 'Today Local Event',
+				Start: '2024-01-15T01:30:00-08:00', // Early today PST (local time)
+				StartUtc: '2024-01-15T09:30:00Z', // Keep for completeness
+				End: '2024-01-15T02:30:00-08:00',
+				EndUtc: '2024-01-15T10:30:00Z',
+			};
+
+			const mockResponse = {
+				Data: [todayItemUTC, todayItemLocal],
+				...createMockBaseResponse(),
+			};
+			mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
+
+			const { result } = renderHook(() => useCalendarStore());
+
+			await act(async () => {
+				await result.current.loadTodaysCalendarItems();
+			});
+
+			// Both items should be included as they're on the same date when using UTC values
+			expect(result.current.todayCalendarItems).toHaveLength(2);
 		});
 
 		it("should handle fetch today's items error", async () => {
@@ -171,7 +296,7 @@ describe('Calendar Store', () => {
 			const { result } = renderHook(() => useCalendarStore());
 
 			await act(async () => {
-				await result.current.fetchTodaysItems();
+				await result.current.loadTodaysCalendarItems();
 			});
 
 			expect(result.current.todayCalendarItems).toEqual([]);
@@ -180,7 +305,7 @@ describe('Calendar Store', () => {
 		});
 	});
 
-	describe('fetchUpcomingItems', () => {
+	describe('loadUpcomingCalendarItems', () => {
 		it('should fetch upcoming items successfully', async () => {
 			const mockResponse = {
 				Data: [mockCalendarItem],
@@ -191,7 +316,7 @@ describe('Calendar Store', () => {
 			const { result } = renderHook(() => useCalendarStore());
 
 			await act(async () => {
-				await result.current.fetchUpcomingItems();
+				await result.current.loadUpcomingCalendarItems();
 			});
 
 			expect(mockedApi.getCalendarItemsForDateRange).toHaveBeenCalledWith(
@@ -209,7 +334,7 @@ describe('Calendar Store', () => {
 			const { result } = renderHook(() => useCalendarStore());
 
 			await act(async () => {
-				await result.current.fetchUpcomingItems();
+				await result.current.loadUpcomingCalendarItems();
 			});
 
 			expect(result.current.upcomingCalendarItems).toEqual([]);
@@ -252,7 +377,7 @@ describe('Calendar Store', () => {
 		});
 	});
 
-	describe('setAttendance', () => {
+	describe('setCalendarItemAttendingStatus', () => {
 		it('should update attendance successfully', async () => {
 			mockedApi.setCalendarAttending.mockResolvedValue({
 				Id: '123',
@@ -270,7 +395,7 @@ describe('Calendar Store', () => {
 			const { result } = renderHook(() => useCalendarStore());
 
 			await act(async () => {
-				await result.current.setAttendance('123', true, 'Test note');
+				await result.current.setCalendarItemAttendingStatus('123', 'Test note', 1);
 			});
 
 			expect(result.current.isAttendanceLoading).toBe(false);
@@ -289,7 +414,7 @@ describe('Calendar Store', () => {
 			const { result } = renderHook(() => useCalendarStore());
 
 			await act(async () => {
-				await result.current.setAttendance('123', true);
+				await result.current.setCalendarItemAttendingStatus('123', 'Test note', 1);
 			});
 
 			expect(result.current.isAttendanceLoading).toBe(false);
@@ -297,7 +422,7 @@ describe('Calendar Store', () => {
 		});
 	});
 
-	describe('fetchItemsForDateRange', () => {
+	describe('loadCalendarItemsForDateRange', () => {
 		it('should fetch items for date range successfully', async () => {
 			const mockResponse = {
 				Data: [mockCalendarItem],
@@ -308,7 +433,7 @@ describe('Calendar Store', () => {
 			const { result } = renderHook(() => useCalendarStore());
 
 			await act(async () => {
-				await result.current.fetchItemsForDateRange('2024-01-01', '2024-01-31');
+				await result.current.loadCalendarItemsForDateRange('2024-01-01', '2024-01-31');
 			});
 
 			expect(result.current.selectedMonthItems).toEqual([mockCalendarItem]);
@@ -371,6 +496,16 @@ describe('Calendar Store', () => {
 	});
 
 	describe('init', () => {
+		beforeEach(() => {
+			// Mock the current date to be consistent
+			jest.useFakeTimers();
+			jest.setSystemTime(new Date('2024-01-15T10:00:00Z'));
+		});
+
+		afterEach(() => {
+			jest.useRealTimers();
+		});
+
 		it('should initialize store with all data', async () => {
 			const mockTypesResponse = {
 				Data: [{ CalendarItemTypeId: '1', Name: 'Meeting', Color: '#3B82F6' }],
@@ -386,7 +521,13 @@ describe('Calendar Store', () => {
 			};
 
 			mockedApi.getCalendarItemTypes.mockResolvedValue(mockTypesResponse);
-			mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockTodaysResponse);
+			// Mock different responses for different date ranges
+			mockedApi.getCalendarItemsForDateRange
+				.mockResolvedValueOnce(mockTodaysResponse) // First call for today's items
+				.mockResolvedValueOnce(mockUpcomingResponse); // Second call for upcoming items
+
+			// Mock isSameDate to always return true for simplicity in this test
+			mockedUtils.isSameDate.mockReturnValue(true);
 
 			const { result } = renderHook(() => useCalendarStore());
 
@@ -404,6 +545,13 @@ describe('Calendar Store', () => {
 	describe('Refactored Store Methods', () => {
 		beforeEach(() => {
 			jest.clearAllMocks();
+			// Mock the current date to be consistent
+			jest.useFakeTimers();
+			jest.setSystemTime(new Date('2024-01-15T10:00:00Z'));
+		});
+
+		afterEach(() => {
+			jest.useRealTimers();
 		});
 
 		describe('loadTodaysCalendarItems', () => {
@@ -421,6 +569,9 @@ describe('Calendar Store', () => {
 				};
 				mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
 
+				// Mock isSameDate to return true for all items (simplifying test logic)
+				mockedUtils.isSameDate.mockReturnValue(true);
+
 				const { result } = renderHook(() => useCalendarStore());
 
 				// Act
@@ -430,8 +581,8 @@ describe('Calendar Store', () => {
 
 				// Assert
 				expect(mockedApi.getCalendarItemsForDateRange).toHaveBeenCalledWith(
-					expect.any(String),
-					expect.any(String)
+					'2024-01-15T10:00:00.000Z',
+					'2024-01-15T10:00:00.000Z'
 				);
 				expect(result.current.todayCalendarItems).toEqual([mockCalendarItem]);
 			});
@@ -560,6 +711,117 @@ describe('Calendar Store', () => {
 
 				// Assert
 				expect(result.current.error).toBeNull();
+			});
+		});
+
+		// Tests for legacy aliases
+		describe('Legacy Aliases', () => {
+			it('fetchTodaysItems should call loadTodaysCalendarItems', async () => {
+				// Arrange
+				const mockResponse = {
+					Data: [mockCalendarItem],
+					PageSize: 100,
+					Timestamp: new Date().toISOString(),
+					Version: '1.0',
+					Node: 'test',
+					RequestId: 'test-123',
+					Status: 'Success',
+					Environment: 'test'
+				};
+				mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
+				mockedUtils.isSameDate.mockReturnValue(true);
+
+				const { result } = renderHook(() => useCalendarStore());
+
+				// Act
+				await act(async () => {
+					await result.current.fetchTodaysItems();
+				});
+
+				// Assert
+				expect(mockedApi.getCalendarItemsForDateRange).toHaveBeenCalled();
+				expect(result.current.todayCalendarItems).toEqual([mockCalendarItem]);
+			});
+
+			it('fetchUpcomingItems should call loadUpcomingCalendarItems', async () => {
+				// Arrange
+				const mockResponse = {
+					Data: [mockCalendarItem],
+					PageSize: 100,
+					Timestamp: new Date().toISOString(),
+					Version: '1.0',
+					Node: 'test',
+					RequestId: 'test-123',
+					Status: 'Success',
+					Environment: 'test'
+				};
+				mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
+
+				const { result } = renderHook(() => useCalendarStore());
+
+				// Act
+				await act(async () => {
+					await result.current.fetchUpcomingItems();
+				});
+
+				// Assert
+				expect(mockedApi.getCalendarItemsForDateRange).toHaveBeenCalled();
+				expect(result.current.upcomingCalendarItems).toEqual([mockCalendarItem]);
+			});
+
+			it('fetchItemsForDateRange should call loadCalendarItemsForDateRange', async () => {
+				// Arrange
+				const mockResponse = {
+					Data: [mockCalendarItem],
+					PageSize: 100,
+					Timestamp: new Date().toISOString(),
+					Version: '1.0',
+					Node: 'test',
+					RequestId: 'test-123',
+					Status: 'Success',
+					Environment: 'test'
+				};
+				mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
+
+				const { result } = renderHook(() => useCalendarStore());
+
+				// Act
+				await act(async () => {
+					await result.current.fetchItemsForDateRange('2024-01-01', '2024-01-31');
+				});
+
+				// Assert
+				expect(mockedApi.getCalendarItemsForDateRange).toHaveBeenCalledWith('2024-01-01', '2024-01-31');
+				expect(result.current.selectedMonthItems).toEqual([mockCalendarItem]);
+			});
+
+			it('setAttendance should call setCalendarItemAttendingStatus', async () => {
+				// Arrange
+				const mockResponse = {
+					Id: 'attendance-123',
+					PageSize: 0,
+					Timestamp: new Date().toISOString(),
+					Version: '1.0',
+					Node: 'test',
+					RequestId: 'test-123',
+					Status: 'Success',
+					Environment: 'test'
+				};
+				mockedApi.setCalendarAttending.mockResolvedValue(mockResponse);
+
+				const { result } = renderHook(() => useCalendarStore());
+
+				// Act
+				await act(async () => {
+					await result.current.setAttendance('123', true, 'Test note');
+				});
+
+				// Assert
+				expect(mockedApi.setCalendarAttending).toHaveBeenCalledWith({
+					calendarItemId: '123',
+					note: 'Test note',
+					attending: true
+				});
 			});
 		});
 	});

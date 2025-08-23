@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { getCalendarItem, getCalendarItems, getCalendarItemsForDateRange, getCalendarItemTypes, setCalendarAttending } from '@/api/calendar/calendar';
 import { logger } from '@/lib/logging';
+import { isSameDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { type GetAllCalendarItemTypesResult } from '@/models/v4/calendar/calendarItemTypeResultData';
 
@@ -95,18 +96,42 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     set({ isTodaysLoading: true, error: null });
     try {
       const today = new Date();
-      const startDate = format(startOfDay(today), 'yyyy-MM-dd HH:mm:ss');
-      const endDate = format(endOfDay(today), 'yyyy-MM-dd HH:mm:ss');
+      // Use ISO date format for better timezone handling
+      //const startDate = format(startOfDay(today), "yyyy-MM-dd'T'HH:mm:ss");
+      //const endDate = format(endOfDay(today), "yyyy-MM-dd'T'HH:mm:ss");
 
-      const response = await getCalendarItemsForDateRange(startDate, endDate);
+      logger.info({
+        message: "Loading today's calendar items",
+        context: { todayISO: today.toISOString() },
+      });
+
+      const response = await getCalendarItemsForDateRange(today.toISOString(), today.toISOString());
+
+      // Filter items to ensure they're really for today (additional client-side validation)
+      // Use Start field for date comparison as it contains the timezone-aware date from .NET backend
+      const todayItems = response.Data.filter((item) => {
+        return isSameDate(item.Start, new Date());
+      });
+
       set({
-        todayCalendarItems: response.Data,
+        todayCalendarItems: todayItems,
         isTodaysLoading: false,
         updateCalendarItems: false,
       });
       logger.info({
         message: "Today's calendar items loaded successfully",
-        context: { count: response.Data.length, startDate, endDate },
+        context: {
+          totalCount: response.Data.length,
+          filteredCount: todayItems.length,
+          //startDate,
+          //endDate,
+          items: todayItems.map((item) => ({
+            id: item.CalendarItemId,
+            title: item.Title,
+            start: item.Start,
+            startDate: new Date(item.Start).toDateString(),
+          })),
+        },
       });
     } catch (error) {
       logger.error({

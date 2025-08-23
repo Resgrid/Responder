@@ -40,8 +40,8 @@ export const getCalendarItem = async (calendarItemId: string) => {
  */
 export const setCalendarAttending = async (params: { calendarItemId: string; attending: boolean; note?: string }) => {
   const response = await setCalendarAttendingApi.post<SetCalendarAttendingResult>({
-    CalendarItemId: params.calendarItemId,
-    Attending: params.attending,
+    CalendarEventId: params.calendarItemId,
+    Type: params.attending === true ? 1 : 4,
     Note: params.note || '',
   });
   return response.data;

@@ -59,7 +59,7 @@
     },
     "attendeesCount": "{{count}} attendee",
     "attendeesCount_plural": "{{count}} attendees",
-    "confirmSignup": "Confirm Sign Up",
+    "confirmSignup": "Confirm",
     "confirmUnsignup": {
       "message": "Are you sure you want to cancel your attendance for this event?",
       "title": "Confirm Cancellation"
@@ -339,6 +339,7 @@
     "confirm": "Confirm",
     "delete": "Delete",
     "deleting": "Deleting...",
+    "discard": "Discard",
     "done": "Done",
     "edit": "Edit",
     "error": "Error",
@@ -547,7 +548,6 @@
   },
   "messages": {
     "all_messages": "All Messages",
-    "body_required": "Message body is required",
     "compose": "Compose",
     "compose_new_message": "New Message",
     "date_unknown": "Date unknown",
@@ -577,7 +577,6 @@
     "people": "People",
     "recipients": "Recipients",
     "recipients_count": "{{count}} recipients",
-    "recipients_required": "At least one recipient is required",
     "recipients_selected": "{{count}} recipients selected",
     "respond_failed": "Failed to respond to message",
     "respond_to_message": "Respond to Message",
@@ -599,12 +598,18 @@
     "sent": "Sent",
     "showing_count": "Showing {{count}} messages",
     "subject": "Subject",
-    "subject_required": "Subject is required",
     "title": "Messages",
     "types": {
       "alert": "Alert",
       "message": "Message",
       "poll": "Poll"
+    },
+    "unsaved_changes": "Unsaved Changes",
+    "unsaved_changes_message": "You have unsaved changes. Are you sure you want to discard them?",
+    "validation": {
+      "body_required": "Message body is required",
+      "recipients_required": "At least one recipient is required",
+      "subject_required": "Subject is required"
     }
   },
   "notes": {

@@ -59,7 +59,7 @@
     },
     "attendeesCount": "{{count}} asistente",
     "attendeesCount_plural": "{{count}} asistentes",
-    "confirmSignup": "Confirmar Inscripción",
+    "confirmSignup": "Confirmar",
     "confirmUnsignup": {
       "message": "¿Estás seguro que quieres cancelar tu asistencia a este evento?",
       "title": "Confirmar Cancelación"
@@ -339,6 +339,7 @@
     "confirm": "Confirmar",
     "delete": "Eliminar",
     "deleting": "Eliminando...",
+    "discard": "Descartar",
     "done": "Hecho",
     "edit": "Editar",
     "error": "Error",
@@ -547,7 +548,6 @@
   },
   "messages": {
     "all_messages": "Todos los Mensajes",
-    "body_required": "El cuerpo del mensaje es obligatorio",
     "compose": "Redactar",
     "compose_new_message": "Redactar Nuevo Mensaje",
     "date_unknown": "Fecha desconocida",
@@ -577,7 +577,6 @@
     "people": "Personas",
     "recipients": "Destinatarios",
     "recipients_count": "{{count}} destinatarios",
-    "recipients_required": "Se requiere al menos un destinatario",
     "recipients_selected": "{{count}} destinatarios seleccionados",
     "respond_failed": "Error al responder al mensaje",
     "respond_to_message": "Responder al Mensaje",
@@ -599,12 +598,18 @@
     "sent": "Enviados",
     "showing_count": "Mostrando {{count}} mensajes",
     "subject": "Asunto",
-    "subject_required": "El asunto es obligatorio",
     "title": "Mensajes",
     "types": {
       "alert": "Alerta",
       "message": "Mensaje",
       "poll": "Encuesta"
+    },
+    "unsaved_changes": "Cambios No Guardados",
+    "unsaved_changes_message": "Tienes cambios no guardados. ¿Estás seguro de que quieres descartarlos?",
+    "validation": {
+      "body_required": "El cuerpo del mensaje es obligatorio",
+      "recipients_required": "Se requiere al menos un destinatario",
+      "subject_required": "El asunto es obligatorio"
     }
   },
   "notes": {
