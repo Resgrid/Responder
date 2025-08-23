@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 import { usePersonnelStore } from '@/stores/personnel/store';
+import { sanitizeHtml } from '@/utils/html-sanitizer';
 
 interface CalendarItemDetailsSheetProps {
   item: CalendarItemResultData | null;
@@ -85,7 +86,11 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
     const creator = personnel.find((person) => person.UserId === createdByUserId);
 
     if (creator) {
-      return `${creator.FirstName} ${creator.LastName}`.trim();
+      const fullName = `${creator.FirstName} ${creator.LastName}`.trim();
+      if (fullName) {
+        return fullName;
+      }
+      return t('unknown_user');
     }
 
     // Fallback to a user-friendly message if person not found in personnel list
@@ -278,15 +283,30 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
               <Box className="w-full rounded-lg bg-gray-50 p-1 dark:bg-gray-700">
                 <WebView
                   style={[styles.container, { height: 120 }]}
-                  originWhitelist={['*']}
+                  originWhitelist={['about:blank']}
                   scrollEnabled={false}
                   showsVerticalScrollIndicator={false}
+                  javaScriptEnabled={false}
+                  domStorageEnabled={false}
+                  allowFileAccess={false}
+                  allowUniversalAccessFromFileURLs={false}
+                  onShouldStartLoadWithRequest={(request) => {
+                    // Only allow the initial HTML load with about:blank or data URLs
+                    return request.url === 'about:blank' || request.url.startsWith('data:');
+                  }}
+                  onNavigationStateChange={(navState) => {
+                    // Prevent any navigation away from the initial HTML
+                    if (navState.url !== 'about:blank' && !navState.url.startsWith('data:')) {
+                      return false;
+                    }
+                  }}
                   source={{
                     html: `
                       <!DOCTYPE html>
                       <html>
                         <head>
                           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+                          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
                           <style>
                             body {
                               color: ${colorScheme === 'dark' ? '#E5E7EB' : '#1F2937'};
@@ -302,9 +322,10 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                             }
                           </style>
                         </head>
-                        <body>${item.Description}</body>
+                        <body>${sanitizeHtml(item.Description)}</body>
                       </html>
                     `,
+                    baseUrl: 'about:blank',
                   }}
                   androidLayerType="software"
                   testID="webview"

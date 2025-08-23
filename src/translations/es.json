@@ -548,7 +548,6 @@
   },
   "messages": {
     "all_messages": "Todos los Mensajes",
-    "body_required": "El cuerpo del mensaje es obligatorio",
     "compose": "Redactar",
     "compose_new_message": "Redactar Nuevo Mensaje",
     "date_unknown": "Fecha desconocida",
@@ -578,7 +577,6 @@
     "people": "Personas",
     "recipients": "Destinatarios",
     "recipients_count": "{{count}} destinatarios",
-    "recipients_required": "Se requiere al menos un destinatario",
     "recipients_selected": "{{count}} destinatarios seleccionados",
     "respond_failed": "Error al responder al mensaje",
     "respond_to_message": "Responder al Mensaje",
@@ -600,7 +598,6 @@
     "sent": "Enviados",
     "showing_count": "Mostrando {{count}} mensajes",
     "subject": "Asunto",
-    "subject_required": "El asunto es obligatorio",
     "title": "Mensajes",
     "types": {
       "alert": "Alerta",

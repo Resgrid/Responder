@@ -1,9 +1,3 @@
-import { renderHook, act } from '@testing-library/react-native';
-
-import { useCalendarStore } from '../store';
-import * as calendarApi from '@/api/calendar/calendar';
-import { CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
-
 // Mock date-fns
 jest.mock('date-fns', () => ({
 	addDays: jest.fn(),
@@ -22,20 +16,10 @@ jest.mock('@/api/calendar/calendar', () => ({
 	setCalendarAttending: jest.fn(),
 }));
 
-const mockedApi = calendarApi as jest.Mocked<typeof calendarApi>;
-
 // Mock the utils module
 jest.mock('@/lib/utils', () => ({
 	isSameDate: jest.fn(),
 }));
-
-// Import date-fns functions to mock them
-import * as dateFns from 'date-fns';
-const mockedDateFns = dateFns as jest.Mocked<typeof dateFns>;
-
-// Import utils functions to mock them
-import * as utils from '@/lib/utils';
-const mockedUtils = utils as jest.Mocked<typeof utils>;
 
 // Mock the logger
 jest.mock('@/lib/logging', () => ({
@@ -53,6 +37,22 @@ jest.mock('@/lib/storage', () => ({
 		removeItem: jest.fn(),
 	},
 }));
+
+import { renderHook, act } from '@testing-library/react-native';
+
+import { useCalendarStore } from '../store';
+import * as calendarApi from '@/api/calendar/calendar';
+import { CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
+
+const mockedApi = calendarApi as jest.Mocked<typeof calendarApi>;
+
+// Import date-fns functions to mock them
+import * as dateFns from 'date-fns';
+const mockedDateFns = dateFns as jest.Mocked<typeof dateFns>;
+
+// Import utils functions to mock them
+import * as utils from '@/lib/utils';
+const mockedUtils = utils as jest.Mocked<typeof utils>;
 
 const mockCalendarItem = {
 	CalendarItemId: '123',

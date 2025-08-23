@@ -204,9 +204,16 @@ jest.mock('expo-av', () => ({
 }));
 
 // Mock react-native-webview to avoid TurboModule errors
-jest.mock('react-native-webview', () => ({
-  WebView: () => {
-    const { View } = require('react-native');
-    return View;
-  },
-}));
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const WebView = (props: any) => {
+    return React.createElement(View, props);
+  };
+
+  return {
+    WebView,
+    default: WebView,
+  };
+});

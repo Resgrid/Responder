@@ -833,7 +833,7 @@ describe('CalendarItemDetailsSheet', () => {
       );
       const webview = getByTestId('webview');
 
-      expect(webview.props.originWhitelist).toEqual(['*']);
+      expect(webview.props.originWhitelist).toEqual(['about:blank']);
       expect(webview.props.scrollEnabled).toBe(false);
       expect(webview.props.showsVerticalScrollIndicator).toBe(false);
       expect(webview.props.androidLayerType).toBe('software');

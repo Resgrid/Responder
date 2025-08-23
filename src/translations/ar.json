@@ -548,7 +548,6 @@
   },
   "messages": {
     "all_messages": "جميع الرسائل",
-    "body_required": "محتوى الرسالة مطلوب",
     "compose": "إنشاء",
     "compose_new_message": "إنشاء رسالة جديدة",
     "date_unknown": "تاريخ غير معروف",
@@ -578,7 +577,6 @@
     "people": "الأشخاص",
     "recipients": "المستقبلين",
     "recipients_count": "{{count}} مستقبل",
-    "recipients_required": "مطلوب مستقبل واحد على الأقل",
     "recipients_selected": "{{count}} مستقبل محدد",
     "respond_failed": "فشل في الرد على الرسالة",
     "respond_to_message": "الرد على الرسالة",
@@ -600,7 +598,6 @@
     "sent": "المرسلة",
     "showing_count": "عرض {{count}} رسائل",
     "subject": "الموضوع",
-    "subject_required": "الموضوع مطلوب",
     "title": "الرسائل",
     "types": {
       "alert": "تنبيه",

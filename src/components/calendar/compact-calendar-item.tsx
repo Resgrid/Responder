@@ -21,14 +21,22 @@ export const CompactCalendarItem: React.FC<CompactCalendarItemProps> = ({ item, 
   const { t } = useTranslation();
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString([], {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toLocaleDateString([], {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

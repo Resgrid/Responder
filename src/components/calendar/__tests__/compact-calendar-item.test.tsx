@@ -221,11 +221,11 @@ describe('CompactCalendarItem', () => {
 
   it('calls onPress when pressed', () => {
     const item = createMockItem();
-    const { getByText } = render(
-      <CompactCalendarItem item={item} onPress={mockOnPress} />
+    const { getByTestId } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} testID="compact-calendar-item" />
     );
 
-    fireEvent.press(getByText('Test Event'));
+    fireEvent.press(getByTestId('compact-calendar-item'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 

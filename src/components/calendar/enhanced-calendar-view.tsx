@@ -9,7 +9,7 @@ import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { formatLocalDateString, getTodayLocalString } from '@/lib/utils';
+import { formatLocalDateString, getTodayLocalString, isSameDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -34,9 +34,11 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
 
     // Mark dates that have events
     selectedMonthItems.forEach((item: CalendarItemResultData) => {
-      // Use Start/End fields for consistent date handling with .NET backend timezone-aware dates
-      const startDate = item.Start.split('T')[0]; // Get YYYY-MM-DD format
-      const endDate = item.End.split('T')[0];
+      // Parse full ISO string and format as local YYYY-MM-DD to avoid timezone drift
+      const startDateObj = new Date(item.Start);
+      const endDateObj = new Date(item.End);
+      const startDate = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, '0')}-${String(startDateObj.getDate()).padStart(2, '0')}`;
+      const endDate = `${endDateObj.getFullYear()}-${String(endDateObj.getMonth() + 1).padStart(2, '0')}-${String(endDateObj.getDate()).padStart(2, '0')}`;
 
       // Mark start date
       if (!marked[startDate]) {
@@ -220,9 +222,8 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
           </Text>
           {(() => {
             const eventsForDay = selectedMonthItems.filter((item) => {
-              // Use Start field for consistent date handling with .NET backend timezone-aware dates
-              const itemDate = item.Start.split('T')[0];
-              return itemDate === selectedDate;
+              // Use isSameDate for timezone-safe date comparison with .NET backend timezone-aware dates
+              return selectedDate ? isSameDate(item.Start, selectedDate) : false;
             });
 
             if (eventsForDay.length > 0) {

@@ -1,7 +1,122 @@
-import { generateWebViewHtml, defaultWebViewProps } from '../webview-html';
+import { generateWebViewHtml, defaultWebViewProps, sanitizeHtmlContent } from '../webview-html';
 
 describe('WebView HTML Utility', () => {
+  describe('sanitizeHtmlContent', () => {
+    it('removes script tags completely', () => {
+      const maliciousHtml = '<p>Safe content</p><script>alert("XSS")</script><p>More content</p>';
+      const sanitized = sanitizeHtmlContent(maliciousHtml);
+      
+      expect(sanitized).toContain('<p>Safe content</p>');
+      expect(sanitized).toContain('<p>More content</p>');
+      expect(sanitized).not.toContain('<script>');
+      expect(sanitized).not.toContain('alert');
+    });
+
+    it('removes iframe tags completely', () => {
+      const maliciousHtml = '<p>Content</p><iframe src="https://evil.com"></iframe>';
+      const sanitized = sanitizeHtmlContent(maliciousHtml);
+      
+      expect(sanitized).toContain('<p>Content</p>');
+      expect(sanitized).not.toContain('iframe');
+    });
+
+    it('removes meta refresh tags', () => {
+      const maliciousHtml = '<p>Content</p><meta http-equiv="refresh" content="0;url=https://evil.com">';
+      const sanitized = sanitizeHtmlContent(maliciousHtml);
+      
+      expect(sanitized).toContain('<p>Content</p>');
+      expect(sanitized).not.toContain('meta');
+      expect(sanitized).not.toContain('refresh');
+    });
+
+    it('removes event handler attributes', () => {
+      const maliciousHtml = '<p onclick="alert(\'XSS\')" onmouseover="steal()">Content</p>';
+      const sanitized = sanitizeHtmlContent(maliciousHtml);
+      
+      expect(sanitized).toContain('<p>Content</p>');
+      expect(sanitized).not.toContain('onclick');
+      expect(sanitized).not.toContain('onmouseover');
+    });
+
+    it('neutralizes javascript: URIs in links', () => {
+      const maliciousHtml = '<a href="javascript:alert(\'XSS\')">Click me</a>';
+      const sanitized = sanitizeHtmlContent(maliciousHtml);
+      
+      expect(sanitized).toContain('Click me');
+      expect(sanitized).not.toContain('javascript:');
+    });
+
+    it('neutralizes data: URIs in images', () => {
+      const maliciousHtml = '<img src="data:text/html,<script>alert(\'XSS\')</script>" alt="test">';
+      const sanitized = sanitizeHtmlContent(maliciousHtml);
+      
+      expect(sanitized).toContain('alt="test"');
+      expect(sanitized).not.toContain('data:');
+    });
+
+    it('allows safe HTML tags and attributes', () => {
+      const safeHtml = '<h1>Title</h1><p><strong>Bold</strong> and <em>italic</em> text with <a href="https://example.com">link</a></p><img src="https://example.com/image.jpg" alt="image">';
+      const sanitized = sanitizeHtmlContent(safeHtml);
+      
+      expect(sanitized).toContain('<h1>Title</h1>');
+      expect(sanitized).toContain('<strong>Bold</strong>');
+      expect(sanitized).toContain('<em>italic</em>');
+      expect(sanitized).toContain('<a href="https://example.com">link</a>');
+      expect(sanitized).toContain('<img src="https://example.com/image.jpg" alt="image"');
+    });
+
+    it('allows safe CSS in style attributes', () => {
+      const styledHtml = '<p style="color: #FF0000; font-size: 16px;">Styled text</p>';
+      const sanitized = sanitizeHtmlContent(styledHtml);
+      
+      expect(sanitized).toContain('Styled text');
+      // Note: sanitize-html may modify the exact style formatting, so we check for content
+      expect(sanitized).toContain('color:#FF0000');
+      expect(sanitized).toContain('font-size:16px');
+    });
+
+    it('removes dangerous CSS from style attributes', () => {
+      const maliciousHtml = '<p style="background: url(javascript:alert(\'XSS\'));">Content</p>';
+      const sanitized = sanitizeHtmlContent(maliciousHtml);
+      
+      expect(sanitized).toContain('Content');
+      expect(sanitized).not.toContain('javascript:');
+      expect(sanitized).not.toContain('url(');
+    });
+
+    it('preserves table structure', () => {
+      const tableHtml = '<table><thead><tr><th>Header</th></tr></thead><tbody><tr><td>Cell</td></tr></tbody></table>';
+      const sanitized = sanitizeHtmlContent(tableHtml);
+      
+      expect(sanitized).toContain('<table>');
+      expect(sanitized).toContain('<th>Header</th>');
+      expect(sanitized).toContain('<td>Cell</td>');
+    });
+
+    it('preserves lists', () => {
+      const listHtml = '<ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Numbered 1</li></ol>';
+      const sanitized = sanitizeHtmlContent(listHtml);
+      
+      expect(sanitized).toContain('<ul>');
+      expect(sanitized).toContain('<li>Item 1</li>');
+      expect(sanitized).toContain('<ol>');
+      expect(sanitized).toContain('<li>Numbered 1</li>');
+    });
+  });
+
   describe('generateWebViewHtml', () => {
+    it('sanitizes content before embedding in HTML', () => {
+      const maliciousContent = '<p>Safe content</p><script>alert("XSS")</script>';
+      const html = generateWebViewHtml({
+        content: maliciousContent,
+        isDarkMode: false,
+      });
+
+      expect(html).toContain('<p>Safe content</p>');
+      expect(html).not.toContain('<script>');
+      expect(html).not.toContain('alert("XSS")');
+    });
+
     it('generates HTML with light theme', () => {
       const html = generateWebViewHtml({
         content: '<p>Test content</p>',

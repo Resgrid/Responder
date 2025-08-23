@@ -595,7 +595,12 @@ describe('ComposeMessageSheet Analytics', () => {
     });
 
     it('should clear recipients validation error when user selects recipients', async () => {
-      const { getByText, queryByText } = render(<ComposeMessageSheet />);
+      mockUseMessagesStore.mockReturnValue({
+        ...defaultMockMessagesStore,
+        isComposeOpen: true,
+      });
+
+      const { getByText, queryByText, getByTestId } = render(<ComposeMessageSheet />);
 
       // First trigger validation errors
       const sendButton = getByText('messages.send');
@@ -605,9 +610,23 @@ describe('ComposeMessageSheet Analytics', () => {
         expect(getByText('At least one recipient is required')).toBeTruthy();
       });
 
-      // Mock selecting a recipient (this would be complex to simulate fully)
-      // For now, we'll test the toggleRecipient function behavior
-      expect(queryByText('At least one recipient is required')).toBeTruthy();
+      // Open recipients sheet to access recipient items
+      const recipientsButton = getByText('messages.select_recipients');
+      fireEvent.press(recipientsButton);
+
+      // Wait for the sheet to open and recipient items to be available
+      await waitFor(() => {
+        expect(getByTestId('recipient-item-user1')).toBeTruthy();
+      });
+
+      // Select a recipient by pressing the recipient item
+      const recipientItem = getByTestId('recipient-item-user1');
+      fireEvent.press(recipientItem);
+
+      // Recipients validation error should be cleared
+      await waitFor(() => {
+        expect(queryByText('At least one recipient is required')).toBeNull();
+      });
     });
   });
 

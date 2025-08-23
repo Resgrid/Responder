@@ -315,7 +315,7 @@ export const ComposeMessageSheet: React.FC = () => {
       {recipients.map((recipient) => {
         const isSelected = selectedRecipients.has(recipient.Id);
         return (
-          <Pressable key={recipient.Id} onPress={() => toggleRecipient(recipient.Id)} className="w-full">
+          <Pressable key={recipient.Id} onPress={() => toggleRecipient(recipient.Id)} className="w-full" testID={`recipient-item-${recipient.Id}`}>
             <HStack
               space="md"
               className={`w-full items-center rounded-lg border-2 p-4 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}
