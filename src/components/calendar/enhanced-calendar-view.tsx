@@ -37,8 +37,8 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
       // Parse full ISO string and format as local YYYY-MM-DD to avoid timezone drift
       const startDateObj = new Date(item.Start);
       const endDateObj = new Date(item.End);
-      const startDate = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, '0')}-${String(startDateObj.getDate()).padStart(2, '0')}`;
-      const endDate = `${endDateObj.getFullYear()}-${String(endDateObj.getMonth() + 1).padStart(2, '0')}-${String(endDateObj.getDate()).padStart(2, '0')}`;
+      const startDate = formatLocalDateString(startDateObj);
+      const endDate = formatLocalDateString(endDateObj);
 
       // Mark start date
       if (!marked[startDate]) {
@@ -56,8 +56,9 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
 
       // If it's a multi-day event, mark the range
       if (startDate !== endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        // Use local Date constructors to avoid timezone issues
+        const start = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate());
+        const end = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate());
         const current = new Date(start);
 
         while (current <= end) {
@@ -106,8 +107,8 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
     const monthStr = `${month.year}-${month.month.toString().padStart(2, '0')}`;
     setCurrentMonth(monthStr);
 
-    // Calculate start and end dates for the month
-    const startDate = `${month.year}-${month.month.toString().padStart(2, '0')}-01`;
+    // Calculate start and end dates for the month using local Date constructors
+    const startDate = formatLocalDateString(new Date(month.year, month.month - 1, 1));
     const endDate = formatLocalDateString(new Date(month.year, month.month, 0));
 
     // Load calendar items for the new month
@@ -125,7 +126,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
   // Load current month data on component mount
   useEffect(() => {
     const now = new Date();
-    const startDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
+    const startDate = formatLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
     const endDate = formatLocalDateString(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     loadCalendarItemsForDateRange(startDate, endDate);
   }, [loadCalendarItemsForDateRange]);

@@ -72,9 +72,13 @@ jest.mock('@/components/ui/badge', () => ({
   Badge: 'Badge',
 }));
 
-jest.mock('@/components/ui/box', () => ({
-  Box: ({ children }: any) => <div>{children}</div>,
-}));
+jest.mock('@/components/ui/box', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    Box: ({ children, ...props }: any) => React.createElement(View, props, children),
+  };
+});
 
 jest.mock('@/components/ui/bottom-sheet', () => {
   const React = require('react');

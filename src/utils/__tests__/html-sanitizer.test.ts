@@ -1,4 +1,4 @@
-import { htmlToPlainText, isHtmlSafe, sanitizeHtml } from '@/utils/html-sanitizer';
+import { htmlToPlainText, isHtmlSafe, sanitizeHtml, sanitizeDescription } from '@/utils/html-sanitizer';
 
 describe('HTML Sanitizer', () => {
   describe('sanitizeHtml', () => {
@@ -45,7 +45,8 @@ describe('HTML Sanitizer', () => {
       const input = '<a href="javascript:alert(1)">Click me</a>';
       const result = sanitizeHtml(input);
       expect(result).not.toContain('javascript:');
-      expect(result).toContain('<a href="">Click me</a>');
+      // sanitize-html removes the href attribute entirely when it contains javascript:
+      expect(result).toContain('<a>Click me</a>');
     });
 
     it('should handle empty or null input', () => {

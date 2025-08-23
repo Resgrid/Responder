@@ -1,5 +1,7 @@
 import sanitizeHtml from 'sanitize-html';
 
+import { strictSanitizeConfig } from '@/utils/html-sanitizer';
+
 interface WebViewHtmlOptions {
   content: string;
   isDarkMode: boolean;
@@ -12,101 +14,11 @@ interface WebViewHtmlOptions {
 
 /**
  * Sanitizes HTML content to prevent XSS attacks and other security vulnerabilities.
- * Uses a strict allowlist of safe tags and attributes, removing dangerous elements
- * like scripts, iframes, meta refresh, event handlers, and data/javascript URIs.
+ * Uses the centralized strict sanitization configuration from html-sanitizer.ts
+ * for consistent security across the entire application.
  */
 export const sanitizeHtmlContent = (html: string): string => {
-  return sanitizeHtml(html, {
-    // Allowed tags - only safe, commonly used HTML elements
-    allowedTags: [
-      'p',
-      'div',
-      'span',
-      'br',
-      'hr',
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'strong',
-      'b',
-      'em',
-      'i',
-      'u',
-      's',
-      'small',
-      'sub',
-      'sup',
-      'ul',
-      'ol',
-      'li',
-      'blockquote',
-      'pre',
-      'code',
-      'table',
-      'thead',
-      'tbody',
-      'tr',
-      'th',
-      'td',
-      'a',
-      'img',
-      'dl',
-      'dt',
-      'dd',
-    ],
-    // Allowed attributes per tag
-    allowedAttributes: {
-      a: ['href', 'title'],
-      img: ['src', 'alt', 'title', 'width', 'height'],
-      table: ['width', 'cellpadding', 'cellspacing'],
-      th: ['scope', 'colspan', 'rowspan'],
-      td: ['colspan', 'rowspan'],
-      // Allow basic styling attributes for formatting
-      '*': ['style', 'class'],
-    },
-    // Allowed URL schemes - exclude dangerous ones
-    allowedSchemes: ['http', 'https', 'mailto', 'tel'],
-    // Disallow all data: and javascript: URIs
-    allowedSchemesByTag: {
-      img: ['http', 'https'], // Only allow http/https for images
-      a: ['http', 'https', 'mailto', 'tel'], // Allow common safe protocols for links
-    },
-    // Allow only safe CSS properties to prevent CSS-based attacks
-    allowedStyles: {
-      '*': {
-        color: [/^#[0-9a-f]{3,6}$/i, /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/i, /^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[0-9.]+\s*\)$/i],
-        'background-color': [/^#[0-9a-f]{3,6}$/i, /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/i, /^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[0-9.]+\s*\)$/i],
-        'font-size': [/^\d+(?:px|em|rem|%|pt)$/i],
-        'font-weight': [/^(?:normal|bold|lighter|bolder|\d+)$/i],
-        'text-align': [/^(?:left|right|center|justify)$/i],
-        'text-decoration': [/^(?:none|underline|overline|line-through)$/i],
-        margin: [/^\d+(?:px|em|rem|%)(?:\s+\d+(?:px|em|rem|%))*$/i],
-        padding: [/^\d+(?:px|em|rem|%)(?:\s+\d+(?:px|em|rem|%))*$/i],
-        border: [/^[\d\s]+(?:px|em|rem)\s+(?:solid|dashed|dotted)\s+#[0-9a-f]{3,6}$/i],
-        width: [/^\d+(?:px|em|rem|%)$/i],
-        height: [/^\d+(?:px|em|rem|%)$/i],
-      },
-    },
-    // Remove any attributes starting with "on" (event handlers)
-    transformTags: {
-      '*': (tagName, attribs) => {
-        const cleanAttribs: { [key: string]: string } = {};
-        Object.keys(attribs).forEach((key) => {
-          // Remove event handler attributes
-          if (!key.toLowerCase().startsWith('on')) {
-            cleanAttribs[key] = attribs[key];
-          }
-        });
-        return {
-          tagName,
-          attribs: cleanAttribs,
-        };
-      },
-    },
-  });
+  return sanitizeHtml(html, strictSanitizeConfig);
 };
 
 /**

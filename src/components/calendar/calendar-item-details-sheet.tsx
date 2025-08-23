@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 import { usePersonnelStore } from '@/stores/personnel/store';
-import { sanitizeHtml } from '@/utils/html-sanitizer';
+import { sanitizeHtmlContent } from '@/utils/webview-html';
 
 interface CalendarItemDetailsSheetProps {
   item: CalendarItemResultData | null;
@@ -322,7 +322,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                             }
                           </style>
                         </head>
-                        <body>${sanitizeHtml(item.Description)}</body>
+                        <body>${sanitizeHtmlContent(item.Description)}</body>
                       </html>
                     `,
                     baseUrl: 'about:blank',

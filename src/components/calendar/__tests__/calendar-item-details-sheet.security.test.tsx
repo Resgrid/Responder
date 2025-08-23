@@ -126,8 +126,12 @@ jest.mock('@/components/ui/vstack', () => ({
 }));
 
 // Mock HTML sanitizer
-jest.mock('@/utils/html-sanitizer', () => ({
-  sanitizeHtml: (html: string) => html ? html.replace(/<script[^>]*>.*?<\/script>/gi, '') : '',
+jest.mock('@/utils/webview-html', () => ({
+  sanitizeHtmlContent: (html: string) => {
+    if (!html) return '';
+    // Strip script tags robustly with non-greedy pattern that handles newlines and nested content
+    return html.replace(/<script\s*[^>]*>[\s\S]*?<\/script\s*>/gi, '');
+  },
 }));
 
 const mockItem: CalendarItemResultData = {
