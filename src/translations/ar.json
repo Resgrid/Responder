@@ -59,7 +59,7 @@
     },
     "attendeesCount": "{{count}} حاضر",
     "attendeesCount_plural": "{{count}} حاضرين",
-    "confirmSignup": "تأكيد التسجيل",
+    "confirmSignup": "تأكيد",
     "confirmUnsignup": {
       "message": "هل أنت متأكد من أنك تريد إلغاء حضورك لهذا الحدث؟",
       "title": "تأكيد الإلغاء"
@@ -339,6 +339,7 @@
     "confirm": "تأكيد",
     "delete": "حذف",
     "deleting": "جاري الحذف...",
+    "discard": "تجاهل",
     "done": "تم",
     "edit": "تعديل",
     "error": "خطأ",
@@ -605,6 +606,13 @@
       "alert": "تنبيه",
       "message": "رسالة",
       "poll": "استطلاع"
+    },
+    "unsaved_changes": "تغييرات غير محفوظة",
+    "unsaved_changes_message": "لديك تغييرات غير محفوظة. هل أنت متأكد أنك تريد تجاهلها؟",
+    "validation": {
+      "body_required": "نص الرسالة مطلوب",
+      "recipients_required": "مطلوب مستلم واحد على الأقل",
+      "subject_required": "الموضوع مطلوب"
     }
   },
   "notes": {

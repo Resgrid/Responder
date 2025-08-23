@@ -1,8 +1,12 @@
 import { Calendar, CheckCircle, Clock, MapPin, Users } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { StyleSheet } from 'react-native';
+import WebView from 'react-native-webview';
 
 import { Badge } from '@/components/ui/badge';
+import { Box } from '@/components/ui/box';
 import { Card, CardContent } from '@/components/ui/card';
 import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
@@ -10,6 +14,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
+import { defaultWebViewProps, generateWebViewHtml } from '@/utils/webview-html';
 
 interface CalendarCardProps {
   item: CalendarItemResultData;
@@ -19,6 +24,7 @@ interface CalendarCardProps {
 
 export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testID }) => {
   const { t } = useTranslation();
+  const { colorScheme } = useColorScheme();
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], {
@@ -46,6 +52,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
 
   const canSignUp = item.SignupType > 0 && !item.LockEditing;
   const isSignedUp = item.Attending;
+  const isDarkMode = colorScheme === 'dark';
 
   return (
     <Pressable onPress={onPress} testID={testID} className="mb-3">
@@ -55,7 +62,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
             {/* Header with type and attendance status */}
             <HStack className="items-start justify-between">
               <VStack className="flex-1">
-                <Heading size="sm" className="text-typography-900 dark:text-typography-50" numberOfLines={2}>
+                <Heading size="sm" className="text-gray-600 dark:text-gray-300" numberOfLines={2}>
                   {item.Title}
                 </Heading>
                 {item.TypeName ? (
@@ -64,22 +71,22 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
                   </Badge>
                 ) : null}
               </VStack>
-              {isSignedUp && canSignUp ? <CheckCircle size={20} color="#10B981" className="ml-2 mt-1" /> : null}
+              {isSignedUp && canSignUp ? <CheckCircle size={20} className="ml-2 mt-1 text-success-500 dark:text-success-400" /> : null}
             </HStack>
 
             {/* Date and Time */}
             <HStack className="items-center" space="sm">
-              <Calendar size={16} color="#6B7280" />
-              <Text className="text-sm text-typography-600 dark:text-typography-300">{formatDate(item.Start)}</Text>
-              <Clock size={16} color="#6B7280" className="ml-2" />
-              <Text className="text-sm text-typography-600 dark:text-typography-300">{getEventDuration()}</Text>
+              <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
+              <Text className="text-sm text-gray-600 dark:text-gray-300">{formatDate(item.Start)}</Text>
+              <Clock size={16} className="ml-2 text-gray-500 dark:text-gray-400" />
+              <Text className="text-sm text-gray-600 dark:text-gray-300">{getEventDuration()}</Text>
             </HStack>
 
             {/* Location */}
             {item.Location ? (
               <HStack className="items-center" space="sm">
-                <MapPin size={16} color="#6B7280" />
-                <Text className="flex-1 text-sm text-typography-600 dark:text-typography-300" numberOfLines={1}>
+                <MapPin size={16} className="text-gray-500 dark:text-gray-400" />
+                <Text className="flex-1 text-sm text-gray-600 dark:text-gray-300" numberOfLines={1}>
                   {item.Location}
                 </Text>
               </HStack>
@@ -87,23 +94,37 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
 
             {/* Description preview */}
             {item.Description ? (
-              <Text className="text-sm text-typography-500 dark:text-typography-400" numberOfLines={2}>
-                {item.Description}
-              </Text>
+              <Box className="w-full rounded bg-gray-50 p-1 dark:bg-gray-700">
+                <WebView
+                  style={styles.webView}
+                  {...defaultWebViewProps}
+                  scrollEnabled={false}
+                  source={{
+                    html: generateWebViewHtml({
+                      content: item.Description,
+                      isDarkMode,
+                      fontSize: 14,
+                      lineHeight: 1.4,
+                      padding: 6,
+                    }),
+                  }}
+                  testID="description-webview"
+                />
+              </Box>
             ) : null}
 
             {/* Attendees count */}
             {item.Attendees && item.Attendees.length > 0 ? (
               <HStack className="items-center" space="sm">
-                <Users size={16} color="#6B7280" />
-                <Text className="text-sm text-typography-600 dark:text-typography-300">{t('calendar.attendeesCount', { count: item.Attendees.length })}</Text>
+                <Users size={16} className="text-gray-500 dark:text-gray-400" />
+                <Text className="text-sm text-gray-600 dark:text-gray-300">{t('calendar.attendeesCount', { count: item.Attendees.length })}</Text>
               </HStack>
             ) : null}
 
             {/* Signup info */}
             {canSignUp ? (
-              <HStack className="items-center justify-between border-t border-outline-100 pt-2 dark:border-outline-700">
-                <Text className="text-sm text-typography-500 dark:text-typography-400">{t('calendar.signupAvailable')}</Text>
+              <HStack className="items-center justify-between border-t border-gray-200 pt-2 dark:border-gray-700">
+                <Text className="text-sm text-gray-500 dark:text-gray-400">{t('calendar.signupAvailable')}</Text>
                 {isSignedUp ? (
                   <Badge action="success" variant="solid">
                     <Text className="text-xs text-white">{t('calendar.signedUp')}</Text>
@@ -121,3 +142,11 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  webView: {
+    height: 60, // Compact height for card preview
+    backgroundColor: 'transparent',
+    width: '100%',
+  },
+});

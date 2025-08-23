@@ -191,14 +191,15 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
             {/* PTT Button */}
             <Pressable
               onPress={handlePTTPress}
-              className={`flex-1 rounded-lg border px-3 py-2 ${isConnected
+              className={`flex-1 rounded-lg border px-3 py-2 ${
+                isConnected
                   ? isDark
                     ? 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
                     : 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
                   : isDark
                     ? 'border-green-600 bg-transparent hover:bg-green-900/20 active:bg-green-900/30'
                     : 'border-green-600 bg-transparent hover:bg-green-50 active:bg-green-100'
-                }`}
+              }`}
               testID="side-menu-ptt-button"
               style={({ pressed }) => [
                 {
@@ -215,14 +216,15 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
             {/* Audio Stream Button */}
             <Pressable
               onPress={handleAudioStreamPress}
-              className={`flex-1 rounded-lg border px-3 py-2 ${currentStream && isPlaying
+              className={`flex-1 rounded-lg border px-3 py-2 ${
+                currentStream && isPlaying
                   ? isDark
                     ? 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
                     : 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
                   : isDark
                     ? 'border-blue-600 bg-transparent hover:bg-blue-900/20 active:bg-blue-900/30'
                     : 'border-blue-600 bg-transparent hover:bg-blue-50 active:bg-blue-100'
-                }`}
+              }`}
               testID="side-menu-audio-button"
               style={({ pressed }) => [
                 {

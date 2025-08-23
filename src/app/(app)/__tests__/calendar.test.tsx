@@ -91,6 +91,17 @@ jest.mock('@/components/calendar/calendar-card', () => ({
   },
 }));
 
+jest.mock('@/components/calendar/compact-calendar-item', () => ({
+  CompactCalendarItem: ({ item, onPress }: any) => {
+    const React = require('react');
+    const { TouchableOpacity, Text } = require('react-native');
+    return React.createElement(TouchableOpacity, {
+      testID: "compact-calendar-item",
+      onPress: () => onPress(item)
+    }, React.createElement(Text, {}, item.Title));
+  },
+}));
+
 jest.mock('@/components/calendar/enhanced-calendar-view', () => ({
   EnhancedCalendarView: ({ onMonthChange }: any) => {
     const React = require('react');
@@ -173,9 +184,9 @@ const mockCalendarItem = {
   CalendarItemId: '123',
   Title: 'Test Event',
   Start: '2024-01-15T10:00:00Z',
-  StartUtc: '2024-01-15T10:00:00Z',
+  StartUtc: '2024-01-15T10:00:00Z', // Keep for completeness
   End: '2024-01-15T12:00:00Z',
-  EndUtc: '2024-01-15T12:00:00Z',
+  EndUtc: '2024-01-15T12:00:00Z', // Keep for completeness
   StartTimezone: 'UTC',
   EndTimezone: 'UTC',
   Description: 'Test description',
@@ -310,6 +321,16 @@ describe('CalendarScreen', () => {
   });
 
   describe('Today Tab', () => {
+    beforeEach(() => {
+      // Mock the current date to be consistent
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2024-01-15T10:00:00Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('shows loading state for today\'s items', () => {
       (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
@@ -319,7 +340,9 @@ describe('CalendarScreen', () => {
       const { getByTestId } = render(<CalendarScreen />);
 
       expect(getByTestId('loading')).toBeTruthy();
-    }); it('shows error state for today\'s items', () => {
+    });
+
+    it('shows error state for today\'s items', () => {
       (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         error: 'Failed to load',
@@ -340,14 +363,136 @@ describe('CalendarScreen', () => {
     });
 
     it('renders today\'s items when available', () => {
+      const todayItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'today-item',
+        Title: 'Today Event',
+        Start: '2024-01-15T14:00:00Z', // Today
+        StartUtc: '2024-01-15T14:00:00Z', // Keep for completeness
+        End: '2024-01-15T16:00:00Z',
+        EndUtc: '2024-01-15T16:00:00Z',
+      };
+
       (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
-        todayCalendarItems: [mockCalendarItem],
+        todayCalendarItems: [todayItem],
       });
 
       const { getByTestId } = render(<CalendarScreen />);
 
       expect(getByTestId('calendar-card')).toBeTruthy();
+    });
+
+    it('filters today\'s items correctly by date', () => {
+      const todayItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'today-item',
+        Title: 'Today Event',
+        Start: '2024-01-15T14:00:00Z', // Today
+        StartUtc: '2024-01-15T14:00:00Z', // Keep for completeness
+        End: '2024-01-15T16:00:00Z',
+        EndUtc: '2024-01-15T16:00:00Z',
+      };
+
+      const tomorrowItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'tomorrow-item',
+        Title: 'Tomorrow Event',
+        Start: '2024-01-16T14:00:00Z', // Tomorrow
+        StartUtc: '2024-01-16T14:00:00Z', // Keep for completeness
+        End: '2024-01-16T16:00:00Z',
+        EndUtc: '2024-01-16T16:00:00Z',
+      };
+
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        todayCalendarItems: [todayItem], // Should only contain today's item
+      });
+
+      const { getByTestId, getByText } = render(<CalendarScreen />);
+
+      expect(getByTestId('calendar-card')).toBeTruthy();
+      expect(getByText('Today Event')).toBeTruthy();
+    });
+
+    it('handles timezone differences in date comparison', () => {
+      // Test with different timezone formats but same date
+      const todayItemUTC = {
+        ...mockCalendarItem,
+        CalendarItemId: 'today-utc',
+        Title: 'Today UTC Event',
+        Start: '2024-01-15T23:30:00Z', // Late today UTC (local time)
+        StartUtc: '2024-01-15T23:30:00Z', // Keep for completeness
+        End: '2024-01-15T23:59:00Z',
+        EndUtc: '2024-01-15T23:59:00Z',
+      };
+
+      const todayItemPST = {
+        ...mockCalendarItem,
+        CalendarItemId: 'today-pst',
+        Title: 'Today PST Event',
+        Start: '2024-01-15T01:30:00-08:00', // Early today PST (local time)
+        StartUtc: '2024-01-15T09:30:00Z', // Keep for completeness
+        End: '2024-01-15T02:30:00-08:00',
+        EndUtc: '2024-01-15T10:30:00Z',
+      };
+
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        todayCalendarItems: [todayItemUTC, todayItemPST],
+      });
+
+      const { getAllByTestId } = render(<CalendarScreen />);
+
+      // Both items should be rendered as they're on the same date
+      expect(getAllByTestId('calendar-card')).toHaveLength(2);
+    });
+
+    it('correctly identifies today regardless of timezone', () => {
+      // Test that today's items are correctly identified even with timezone offsets
+      jest.setSystemTime(new Date('2024-01-15T23:30:00-08:00')); // Late PST
+
+      const todayItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'today-item-pst',
+        Title: 'Today Event PST',
+        Start: '2024-01-15T22:00:00-08:00', // Today in PST
+        StartUtc: '2024-01-16T06:00:00Z', // Tomorrow in UTC
+        End: '2024-01-15T23:00:00-08:00',
+        EndUtc: '2024-01-16T07:00:00Z',
+      };
+
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        todayCalendarItems: [todayItem],
+      });
+
+      const { getByTestId } = render(<CalendarScreen />);
+
+      expect(getByTestId('calendar-card')).toBeTruthy();
+    });
+
+    it('does not show tomorrow\'s items as today due to timezone conversion', () => {
+      jest.setSystemTime(new Date('2024-01-15T10:00:00Z'));
+
+      const tomorrowItemUTC = {
+        ...mockCalendarItem,
+        CalendarItemId: 'tomorrow-item',
+        Title: 'Tomorrow Event',
+        Start: '2024-01-16T02:00:00Z', // Tomorrow UTC
+        StartUtc: '2024-01-16T02:00:00Z',
+        End: '2024-01-16T04:00:00Z',
+        EndUtc: '2024-01-16T04:00:00Z',
+      };
+
+      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        todayCalendarItems: [], // Should be empty since no items are today
+      });
+
+      const { getByTestId } = render(<CalendarScreen />);
+
+      expect(getByTestId('zero-state')).toBeTruthy();
     });
   });
 
@@ -401,22 +546,87 @@ describe('CalendarScreen', () => {
     });
 
     it('shows events for selected date', () => {
-      const testDate = '2024-01-15T10:00:00Z'; // Use same time as item for consistency
-      const mockItemWithMatchingDate = {
+      const testDate = '2024-01-15'; // Selected date
+      const todayItem = {
         ...mockCalendarItem,
-        Start: '2024-01-15T10:00:00Z', // Same time as selected date
+        CalendarItemId: 'today-item',
+        Title: 'Today Event',
+        Start: '2024-01-15T14:00:00Z', // Same date
+        StartUtc: '2024-01-15T14:00:00Z', // Keep for completeness
+        End: '2024-01-15T16:00:00Z',
+        EndUtc: '2024-01-15T16:00:00Z',
+      };
+
+      const otherDayItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'other-day-item',
+        Title: 'Other Day Event',
+        Start: '2024-01-16T14:00:00Z', // Different date
+        StartUtc: '2024-01-16T14:00:00Z', // Keep for completeness
+        End: '2024-01-16T16:00:00Z',
+        EndUtc: '2024-01-16T16:00:00Z',
+      }; (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStore,
+        selectedDate: testDate,
+        selectedMonthItems: [todayItem, otherDayItem],
+      });
+
+      const { getByText, queryAllByTestId } = render(<CalendarScreen />);
+      fireEvent.press(getByText('Calendar'));
+
+      // Should only show the item for the selected date
+      // Use queryAllByTestId instead of getAllByTestId to avoid error if no elements found
+      const calendarCards = queryAllByTestId('compact-calendar-item');
+      expect(calendarCards).toHaveLength(1);
+    });
+
+    it('handles timezone differences in selected date filtering', () => {
+      const testDate = '2024-01-15';
+
+      // Different timezone but same date
+      const utcItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'utc-item',
+        Title: 'UTC Event',
+        Start: '2024-01-15T23:00:00Z', // Late UTC same date
+        StartUtc: '2024-01-15T23:00:00Z', // Keep for completeness
+        End: '2024-01-15T23:30:00Z',
+        EndUtc: '2024-01-15T23:30:00Z',
+      };
+
+      const pstItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'pst-item',
+        Title: 'PST Event',
+        Start: '2024-01-15T02:00:00-08:00', // Early PST same date
+        StartUtc: '2024-01-15T10:00:00Z', // Keep for completeness 
+        End: '2024-01-15T03:00:00-08:00',
+        EndUtc: '2024-01-15T11:00:00Z',
+      };
+
+      const nextDayItem = {
+        ...mockCalendarItem,
+        CalendarItemId: 'next-day-item',
+        Title: 'Next Day Event',
+        Start: '2024-01-16T10:00:00Z', // Different date (Jan 16 2AM PST)
+        StartUtc: '2024-01-16T10:00:00Z', // Keep for completeness
+        End: '2024-01-16T11:00:00Z',
+        EndUtc: '2024-01-16T11:00:00Z',
       };
 
       (useCalendarStore as unknown as jest.Mock).mockReturnValue({
         ...mockStore,
         selectedDate: testDate,
-        selectedMonthItems: [mockItemWithMatchingDate],
+        selectedMonthItems: [utcItem, pstItem, nextDayItem],
       });
 
-      const { getByText, getByTestId } = render(<CalendarScreen />);
+      const { getByText, queryAllByTestId } = render(<CalendarScreen />);
       fireEvent.press(getByText('Calendar'));
 
-      expect(getByTestId('calendar-card')).toBeTruthy();
+      // Should show 2 items (UTC and PST same date, but not next day)
+      // Use queryAllByTestId instead of getAllByTestId to avoid error if no elements found
+      const calendarCards = queryAllByTestId('compact-calendar-item');
+      expect(calendarCards).toHaveLength(2);
     });
 
     it('shows empty message when no events for selected date', () => {

@@ -59,7 +59,7 @@
     },
     "attendeesCount": "{{count}} asistente",
     "attendeesCount_plural": "{{count}} asistentes",
-    "confirmSignup": "Confirmar Inscripción",
+    "confirmSignup": "Confirmar",
     "confirmUnsignup": {
       "message": "¿Estás seguro que quieres cancelar tu asistencia a este evento?",
       "title": "Confirmar Cancelación"
@@ -339,6 +339,7 @@
     "confirm": "Confirmar",
     "delete": "Eliminar",
     "deleting": "Eliminando...",
+    "discard": "Descartar",
     "done": "Hecho",
     "edit": "Editar",
     "error": "Error",
@@ -605,6 +606,13 @@
       "alert": "Alerta",
       "message": "Mensaje",
       "poll": "Encuesta"
+    },
+    "unsaved_changes": "Cambios No Guardados",
+    "unsaved_changes_message": "Tienes cambios no guardados. ¿Estás seguro de que quieres descartarlos?",
+    "validation": {
+      "body_required": "El cuerpo del mensaje es obligatorio",
+      "recipients_required": "Se requiere al menos un destinatario",
+      "subject_required": "El asunto es obligatorio"
     }
   },
   "notes": {

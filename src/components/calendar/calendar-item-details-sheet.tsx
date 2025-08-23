@@ -1,11 +1,14 @@
 import { AlertCircle, Calendar, CheckCircle, Clock, FileText, MapPin, User, Users, XCircle } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
+import WebView from 'react-native-webview';
 
 import { Loading } from '@/components/common/loading';
 import { Badge } from '@/components/ui/badge';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
+import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
@@ -13,8 +16,10 @@ import { Input, InputField } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useToast } from '@/hooks/use-toast';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
+import { usePersonnelStore } from '@/stores/personnel/store';
 
 interface CalendarItemDetailsSheetProps {
   item: CalendarItemResultData | null;
@@ -24,11 +29,15 @@ interface CalendarItemDetailsSheetProps {
 
 export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> = ({ item, isOpen, onClose }) => {
   const { t } = useTranslation();
+  const { colorScheme } = useColorScheme();
   const [signupNote, setSignupNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
 
-  const { setCalendarItemAttendingStatus, isAttendanceLoading, attendanceError } = useCalendarStore();
+  const { setCalendarItemAttendingStatus, isAttendanceLoading, attendanceError, fetchCalendarItem } = useCalendarStore();
+  const { personnel, fetchPersonnel, isLoading: isPersonnelLoading } = usePersonnelStore();
   const { trackEvent } = useAnalytics();
+  const { success: showSuccessToast, error: showErrorToast } = useToast();
 
   // Track analytics when sheet becomes visible
   useEffect(() => {
@@ -49,10 +58,42 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
     }
   }, [isOpen, item, trackEvent]);
 
+  // Auto-fetch personnel when component mounts and personnel store is empty
+  useEffect(() => {
+    if (isOpen && personnel.length === 0 && !isPersonnelLoading) {
+      setIsInitializing(true);
+      fetchPersonnel().finally(() => {
+        setIsInitializing(false);
+      });
+    }
+  }, [isOpen, personnel.length, isPersonnelLoading, fetchPersonnel]);
+
   if (!item) return null;
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
+  const getCreatorName = (createdByUserId: string): string => {
+    // Show loading if we're initializing or loading personnel
+    if (isInitializing || isPersonnelLoading) {
+      return t('loading');
+    }
+
+    // If no creator ID, show unknown
+    if (!createdByUserId) {
+      return t('unknown_user');
+    }
+
+    // Find the creator in the personnel list
+    const creator = personnel.find((person) => person.UserId === createdByUserId);
+
+    if (creator) {
+      return `${creator.FirstName} ${creator.LastName}`.trim();
+    }
+
+    // Fallback to a user-friendly message if person not found in personnel list
+    return t('unknown_user');
+  };
+
+  const formatDateTime = (dateTime: string): { date: string; time: string } => {
+    const date = new Date(dateTime);
     return {
       date: date.toLocaleDateString([], {
         weekday: 'long',
@@ -119,6 +160,10 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
       });
 
       await setCalendarItemAttendingStatus(item.CalendarItemId, signupNote, status);
+
+      // Refresh the calendar item data to get the latest state from server
+      await fetchCalendarItem(item.CalendarItemId);
+
       setSignupNote('');
       setShowNoteInput(false);
 
@@ -131,8 +176,8 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
         timestamp: new Date().toISOString(),
       });
 
-      // Show success message
-      Alert.alert(t('calendar.attendanceUpdated.title'), attending ? t('calendar.attendanceUpdated.signedUp') : t('calendar.attendanceUpdated.unsignedUp'));
+      // Show success toast message
+      showSuccessToast(attending ? t('calendar.attendanceUpdated.signedUp') : t('calendar.attendanceUpdated.unsignedUp'), t('calendar.attendanceUpdated.title'));
     } catch (error) {
       // Track attendance change failure
       trackEvent('calendar_item_attendance_failed', {
@@ -142,7 +187,8 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
         timestamp: new Date().toISOString(),
       });
 
-      Alert.alert(t('calendar.error.title'), attendanceError || t('calendar.error.attendanceUpdate'));
+      // Show error toast message
+      showErrorToast(t('calendar.error.attendanceUpdate'), t('calendar.error.title'));
     }
   };
 
@@ -229,7 +275,41 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                   {t('calendar.description')}
                 </Heading>
               </HStack>
-              <Text className="leading-6 text-gray-600 dark:text-gray-300">{item.Description}</Text>
+              <Box className="w-full rounded-lg bg-gray-50 p-1 dark:bg-gray-700">
+                <WebView
+                  style={[styles.container, { height: 120 }]}
+                  originWhitelist={['*']}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                  source={{
+                    html: `
+                      <!DOCTYPE html>
+                      <html>
+                        <head>
+                          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+                          <style>
+                            body {
+                              color: ${colorScheme === 'dark' ? '#E5E7EB' : '#1F2937'};
+                              font-family: system-ui, -apple-system, sans-serif;
+                              margin: 0;
+                              padding: 8px;
+                              font-size: 16px;
+                              line-height: 1.5;
+                              background-color: ${colorScheme === 'dark' ? '#374151' : '#F9FAFB'};
+                            }
+                            * {
+                              max-width: 100%;
+                            }
+                          </style>
+                        </head>
+                        <body>${item.Description}</body>
+                      </html>
+                    `,
+                  }}
+                  androidLayerType="software"
+                  testID="webview"
+                />
+              </Box>
             </VStack>
           ) : null}
 
@@ -238,7 +318,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
             <HStack className="mb-6 items-center">
               <User size={18} color="#6B7280" />
               <Text className="ml-2 text-gray-600 dark:text-gray-300">
-                {t('calendar.createdBy')}: {item.CreatorUserId}
+                {t('calendar.createdBy')}: {getCreatorName(item.CreatorUserId)}
               </Text>
             </HStack>
           ) : null}
@@ -317,3 +397,10 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
     </CustomBottomSheet>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    backgroundColor: 'transparent',
+  },
+});

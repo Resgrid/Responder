@@ -9,6 +9,7 @@ import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { formatLocalDateString, getTodayLocalString } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -33,6 +34,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
 
     // Mark dates that have events
     selectedMonthItems.forEach((item: CalendarItemResultData) => {
+      // Use Start/End fields for consistent date handling with .NET backend timezone-aware dates
       const startDate = item.Start.split('T')[0]; // Get YYYY-MM-DD format
       const endDate = item.End.split('T')[0];
 
@@ -57,7 +59,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
         const current = new Date(start);
 
         while (current <= end) {
-          const dateStr = current.toISOString().split('T')[0];
+          const dateStr = formatLocalDateString(current);
           if (!marked[dateStr]) {
             marked[dateStr] = {
               marked: true,
@@ -104,7 +106,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
 
     // Calculate start and end dates for the month
     const startDate = `${month.year}-${month.month.toString().padStart(2, '0')}-01`;
-    const endDate = new Date(month.year, month.month, 0).toISOString().split('T')[0];
+    const endDate = formatLocalDateString(new Date(month.year, month.month, 0));
 
     // Load calendar items for the new month
     loadCalendarItemsForDateRange(startDate, endDate);
@@ -113,8 +115,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
   };
 
   const goToToday = () => {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocalString();
     setSelectedDate(todayStr);
     setCurrentMonth(todayStr.slice(0, 7));
   };
@@ -123,7 +124,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
   useEffect(() => {
     const now = new Date();
     const startDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    const endDate = formatLocalDateString(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     loadCalendarItemsForDateRange(startDate, endDate);
   }, [loadCalendarItemsForDateRange]);
 
@@ -204,16 +205,22 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
         <View className="border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
           <Text className="text-sm font-medium text-gray-900 dark:text-white">
             {t('calendar.selectedDate.title', {
-              date: new Date(selectedDate).toLocaleDateString([], {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              }),
+              date: (() => {
+                // Parse the date string properly to avoid timezone issues
+                const [year, month, day] = selectedDate.split('-').map(Number);
+                const localDate = new Date(year, month - 1, day); // month is 0-indexed
+                return localDate.toLocaleDateString([], {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                });
+              })(),
             })}
           </Text>
           {(() => {
             const eventsForDay = selectedMonthItems.filter((item) => {
+              // Use Start field for consistent date handling with .NET backend timezone-aware dates
               const itemDate = item.Start.split('T')[0];
               return itemDate === selectedDate;
             });

@@ -23,11 +23,35 @@ jest.mock('@/stores/calendar/store', () => ({
     attendanceError: null,
   }),
 }));
+jest.mock('@/stores/personnel/store', () => ({
+  usePersonnelStore: () => ({
+    personnel: [{ UserId: 'mock-user', FirstName: 'Mock', LastName: 'User' }], // Non-empty to prevent fetching
+    fetchPersonnel: jest.fn().mockResolvedValue(undefined),
+    isLoading: false,
+  }),
+}));
 
 // Mock React Native
-jest.mock('react-native', () => ({
-  Alert: { alert: jest.fn() },
-  ScrollView: ({ children }: any) => children,
+jest.mock('react-native', () => {
+  const React = require('react');
+  return {
+    Alert: { alert: jest.fn() },
+    ScrollView: ({ children }: any) => children,
+    StyleSheet: { create: (styles: any) => styles },
+    View: ({ children, ...props }: any) => React.createElement('View', props, children),
+  };
+});
+
+// Mock react-native-webview
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return ({ children, ...props }: any) => <View {...props}>{children}</View>;
+});
+
+// Mock nativewind
+jest.mock('nativewind', () => ({
+  useColorScheme: () => ({ colorScheme: 'light' }),
 }));
 
 // Mock all UI components
@@ -41,6 +65,10 @@ jest.mock('@/components/common/loading', () => ({
 
 jest.mock('@/components/ui/badge', () => ({
   Badge: ({ children }: any) => children,
+}));
+
+jest.mock('@/components/ui/box', () => ({
+  Box: ({ children }: any) => children,
 }));
 
 jest.mock('@/components/ui/bottom-sheet', () => ({

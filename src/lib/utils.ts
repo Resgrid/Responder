@@ -236,6 +236,54 @@ export function formatDateForDisplay(date: Date, format: string): string {
   return format;
 }
 
+/**
+ * Format a date to YYYY-MM-DD string in local timezone
+ * This prevents timezone conversion issues when working with calendar dates
+ */
+export function formatLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get today's date as a local date string (YYYY-MM-DD)
+ * This ensures we get the current date in the user's timezone
+ */
+export function getTodayLocalString(): string {
+  return formatLocalDateString(new Date());
+}
+
+export function isSameDate(date1: string | Date, date2: string | Date): boolean {
+  // Helper function to create a date from string, handling date-only strings as local dates
+  const createDate = (date: string | Date): Date => {
+    if (date instanceof Date) {
+      return date;
+    }
+
+    // If it's a date-only string (YYYY-MM-DD), treat it as local date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [year, month, day] = date.split('-').map(Number);
+      return new Date(year, month - 1, day); // Month is 0-indexed
+    }
+
+    // Otherwise, parse as usual (handles ISO strings with time)
+    return new Date(date);
+  };
+
+  const d1 = createDate(date1);
+  const d2 = createDate(date2);
+
+  // Use local date methods for comparison to match user's timezone context
+  // This ensures calendar items appear on the correct day as intended by the backend
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+}
+
+export function isToday(date: string | Date): boolean {
+  return isSameDate(date, new Date());
+}
+
 export function formatDateString(date: Date): string {
   const day = date.getDate(); // yields date
   const month = date.getMonth() + 1; // yields month (add one as '.getMonth()' is zero indexed)

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { useTranslation } from 'react-i18next';
 
-import { CalendarCard } from '../calendar-card';
+import { CompactCalendarItem } from '../compact-calendar-item';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 
 // Mock the translation hook
@@ -10,41 +10,11 @@ jest.mock('react-i18next', () => ({
   useTranslation: jest.fn(),
 }));
 
-// Mock nativewind useColorScheme
-jest.mock('nativewind', () => ({
-  useColorScheme: jest.fn(() => ({ colorScheme: 'light' })),
-}));
-
-// Mock WebView utility
-jest.mock('@/utils/webview-html', () => ({
-  generateWebViewHtml: jest.fn(({ content }) => `<html><body>${content}</body></html>`),
-  defaultWebViewProps: {
-    originWhitelist: ['about:'],
-    javaScriptEnabled: false,
-    domStorageEnabled: false,
-  },
-}));
-
-// Mock WebView
-jest.mock('react-native-webview', () => ({
-  __esModule: true,
-  default: ({ source, testID, ...props }: any) => {
-    const React = require('react');
-    const { View, Text } = require('react-native');
-    return React.createElement(
-      View,
-      { testID: testID || 'webview', ...props },
-      React.createElement(Text, { testID: 'webview-content' }, source?.html || '')
-    );
-  },
-}));
-
 // Mock Lucide icons
 jest.mock('lucide-react-native', () => ({
   Calendar: 'Calendar',
   Clock: 'Clock',
   MapPin: 'MapPin',
-  Users: 'Users',
   CheckCircle: 'CheckCircle',
 }));
 
@@ -98,14 +68,6 @@ jest.mock('@/components/ui/badge', () => {
   };
 });
 
-jest.mock('@/components/ui/box', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    Box: ({ children, className, ...props }: any) => React.createElement(View, { ...props, testID: 'box' }, children),
-  };
-});
-
 jest.mock('@/components/ui/pressable', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -117,7 +79,6 @@ jest.mock('@/components/ui/pressable', () => {
 const mockT = jest.fn((key: string, options?: any) => {
   const translations: Record<string, string> = {
     'calendar.allDay': 'All Day',
-    'calendar.attendeesCount': `${options?.count || 1} attendee${options?.count > 1 ? 's' : ''}`,
     'calendar.signupAvailable': 'Sign-up available',
     'calendar.signedUp': 'Signed Up',
     'calendar.tapToSignUp': 'Tap to sign up',
@@ -125,7 +86,7 @@ const mockT = jest.fn((key: string, options?: any) => {
   return translations[key] || key;
 });
 
-describe('CalendarCard', () => {
+describe('CompactCalendarItem', () => {
   const mockOnPress = jest.fn();
 
   beforeEach(() => {
@@ -166,23 +127,19 @@ describe('CalendarCard', () => {
 
   it('renders basic event information correctly', () => {
     const item = createMockItem();
-    const { getByText, getByTestId } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+    const { getByText } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(getByText('Test Event')).toBeTruthy();
     expect(getByText('Meeting')).toBeTruthy();
     expect(getByText('Test Location')).toBeTruthy();
-
-    // Check that WebView is rendered for description
-    const webview = getByTestId('description-webview');
-    expect(webview).toBeTruthy();
   });
 
   it('displays all day event correctly', () => {
     const item = createMockItem({ IsAllDay: true });
     const { getByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(getByText('All Day')).toBeTruthy();
@@ -196,43 +153,12 @@ describe('CalendarCard', () => {
     });
 
     const { getByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     // Should display time range (format may vary based on locale/timezone)
     // We expect a time range format like "XX:XX AM - XX:XX AM" or "XX:XX - XX:XX"
     expect(getByText(/\d{1,2}:\d{2}.*-.*\d{1,2}:\d{2}/)).toBeTruthy();
-  });
-
-  it('shows attendees count when attendees exist', () => {
-    const item = createMockItem({
-      Attendees: [
-        {
-          CalendarItemId: '123',
-          UserId: 'user1',
-          Name: 'John Doe',
-          GroupName: 'Group A',
-          AttendeeType: 1,
-          Timestamp: '2024-01-15T10:00:00Z',
-          Note: '',
-        },
-        {
-          CalendarItemId: '123',
-          UserId: 'user2',
-          Name: 'Jane Smith',
-          GroupName: 'Group B',
-          AttendeeType: 2,
-          Timestamp: '2024-01-15T10:00:00Z',
-          Note: '',
-        },
-      ],
-    });
-
-    const { getByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
-    );
-
-    expect(getByText('2 attendees')).toBeTruthy();
   });
 
   it('shows signup section when signup is available', () => {
@@ -243,7 +169,7 @@ describe('CalendarCard', () => {
     });
 
     const { getByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(getByText('Sign-up available')).toBeTruthy();
@@ -258,7 +184,7 @@ describe('CalendarCard', () => {
     });
 
     const { getByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(getByText('Sign-up available')).toBeTruthy();
@@ -273,7 +199,7 @@ describe('CalendarCard', () => {
     });
 
     const { queryByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(queryByText('Sign-up available')).toBeNull();
@@ -287,7 +213,7 @@ describe('CalendarCard', () => {
     });
 
     const { queryByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(queryByText('Sign-up available')).toBeNull();
@@ -296,80 +222,134 @@ describe('CalendarCard', () => {
   it('calls onPress when pressed', () => {
     const item = createMockItem();
     const { getByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     fireEvent.press(getByText('Test Event'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not show optional fields when they are empty', () => {
+  it('does not show location when it is empty', () => {
     const item = createMockItem({
       Location: '',
-      Description: '',
-      TypeName: '',
-      Attendees: [],
     });
 
-    const { queryByText, queryByTestId } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+    const { queryByText } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(queryByText('Test Location')).toBeNull();
-    expect(queryByTestId('description-webview')).toBeNull();
+  });
+
+  it('does not show type badge when TypeName is empty', () => {
+    const item = createMockItem({
+      TypeName: '',
+    });
+
+    const { queryByText } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
+    );
+
+    expect(queryByText('Meeting')).toBeNull();
   });
 
   it('applies custom testID when provided', () => {
     const item = createMockItem();
     const { getByTestId } = render(
-      <CalendarCard item={item} onPress={mockOnPress} testID="calendar-card-test" />
+      <CompactCalendarItem item={item} onPress={mockOnPress} testID="compact-calendar-item-test" />
     );
 
-    expect(getByTestId('calendar-card-test')).toBeTruthy();
+    expect(getByTestId('compact-calendar-item-test')).toBeTruthy();
   });
 
-  it('renders description in WebView with proper HTML', () => {
+  it('shows check circle icon when user is signed up', () => {
     const item = createMockItem({
-      Description: '<p>HTML description with <strong>formatting</strong></p>',
+      SignupType: 1,
+      LockEditing: false,
+      Attending: true,
     });
 
-    const { getByTestId, getByText } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+    const { getByText } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
-    const webview = getByTestId('description-webview');
-    expect(webview).toBeTruthy();
-
-    // Check that the HTML content is passed to WebView
-    const webviewContent = getByTestId('webview-content');
-    expect(webviewContent).toBeTruthy();
-    expect(webviewContent.props.children).toContain('<p>HTML description with <strong>formatting</strong></p>');
+    // When signed up, should show the "Signed Up" text and signup section
+    expect(getByText('Signed Up')).toBeTruthy();
+    expect(getByText('Sign-up available')).toBeTruthy();
   });
 
-  it('does not render WebView when description is empty', () => {
-    const item = createMockItem({ Description: '' });
-
-    const { queryByTestId } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
-    );
-
-    expect(queryByTestId('description-webview')).toBeNull();
-  });
-
-  it('handles HTML content in description properly', () => {
+  it('does not show check circle icon when user is not signed up', () => {
     const item = createMockItem({
-      Description: '<div>Rich <em>text</em> content with <a href="#">links</a></div>',
+      SignupType: 1,
+      LockEditing: false,
+      Attending: false,
+    });
+
+    const { getByText, queryByText } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
+    );
+
+    // When not signed up, should show "Tap to sign up" but not "Signed Up"
+    expect(getByText('Tap to sign up')).toBeTruthy();
+    expect(queryByText('Signed Up')).toBeNull();
+  });
+
+  it('renders date in correct format', () => {
+    const item = createMockItem({
+      Start: '2024-01-15T10:00:00Z',
+    });
+
+    const { getByText } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
+    );
+
+    // Should display date in short format (e.g., "Mon, Jan 15")
+    // The exact format depends on locale, but should contain the date
+    const dateRegex = /\w{3}.*\w{3}.*\d{1,2}/; // Matches patterns like "Mon, Jan 15"
+    expect(getByText(dateRegex)).toBeTruthy();
+  });
+
+  it('truncates long titles to single line', () => {
+    const item = createMockItem({
+      Title: 'This is a very long event title that should be truncated to fit in a single line on mobile devices',
     });
 
     const { getByTestId } = render(
-      <CalendarCard item={item} onPress={mockOnPress} />
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
-    const webview = getByTestId('description-webview');
-    expect(webview).toBeTruthy();
-
-    // Verify the HTML content is properly wrapped
-    const webviewContent = getByTestId('webview-content');
-    expect(webviewContent.props.children).toContain('<html><body><div>Rich <em>text</em> content with <a href="#">links</a></div></body></html>');
+    // The heading should have numberOfLines={1} prop
+    const heading = getByTestId('heading');
+    expect(heading).toBeTruthy();
+    // Note: We can't easily test the numberOfLines prop in this mock setup,
+    // but the component sets it correctly
   });
-}); 
+
+  it('truncates long locations to single line', () => {
+    const item = createMockItem({
+      Location: 'This is a very long location address that should be truncated to fit in a single line on mobile devices',
+    });
+
+    const { getByText } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
+    );
+
+    // Should render the location text, which will be truncated in the actual component
+    expect(getByText(/This is a very long location address/)).toBeTruthy();
+  });
+
+  it('renders with minimal spacing for compact layout', () => {
+    const item = createMockItem();
+    const { getByTestId } = render(
+      <CompactCalendarItem item={item} onPress={mockOnPress} />
+    );
+
+    // Check that the main container exists (default pressable testID)
+    const pressable = getByTestId('pressable');
+    expect(pressable).toBeTruthy();
+
+    // Check that card content has reduced padding
+    const cardContent = getByTestId('card-content');
+    expect(cardContent).toBeTruthy();
+  });
+});

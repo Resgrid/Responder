@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CalendarCard } from '@/components/calendar/calendar-card';
 import { CalendarItemDetailsSheet } from '@/components/calendar/calendar-item-details-sheet';
+import { CompactCalendarItem } from '@/components/calendar/compact-calendar-item';
 import { EnhancedCalendarView } from '@/components/calendar/enhanced-calendar-view';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
@@ -18,6 +19,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { isSameDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -106,10 +108,10 @@ export default function CalendarScreen() {
 
   const getItemsForSelectedDate = () => {
     if (!selectedDate) return [];
-    const targetDate = new Date(selectedDate).toDateString();
+
     return selectedMonthItems.filter((item) => {
-      const itemDate = new Date(item.Start).toDateString();
-      return itemDate === targetDate;
+      // Use Start field for consistent date comparison with .NET backend timezone-aware dates
+      return isSameDate(item.Start, selectedDate);
     });
   };
 
@@ -133,6 +135,8 @@ export default function CalendarScreen() {
   );
 
   const renderCalendarItem = ({ item }: { item: CalendarItemResultData }) => <CalendarCard item={item} onPress={() => handleItemPress(item)} />;
+
+  const renderCompactCalendarItem = ({ item }: { item: CalendarItemResultData }) => <CompactCalendarItem item={item} onPress={() => handleItemPress(item)} />;
 
   const renderTodayTab = () => {
     if (isTodaysLoading) {
@@ -204,20 +208,13 @@ export default function CalendarScreen() {
         <EnhancedCalendarView onMonthChange={handleMonthChange} />
         {selectedDate ? (
           <View className="flex-1 border-t border-gray-200 dark:border-gray-800">
-            <VStack className="p-4">
-              <Heading size="sm" className="mb-3">
-                {t('calendar.selectedDate.title', {
-                  date: new Date(selectedDate).toLocaleDateString(),
-                })}
-              </Heading>
-              {isLoading ? (
-                <Loading text={t('calendar.loading.date')} />
-              ) : getItemsForSelectedDate().length === 0 ? (
-                <Text className="py-8 text-center text-gray-500 dark:text-gray-400">{t('calendar.selectedDate.empty')}</Text>
-              ) : (
-                <FlatList data={getItemsForSelectedDate()} renderItem={renderCalendarItem} keyExtractor={(item) => item.CalendarItemId} showsVerticalScrollIndicator={false} />
-              )}
-            </VStack>
+            {isLoading ? (
+              <Loading text={t('calendar.loading.date')} />
+            ) : getItemsForSelectedDate().length === 0 ? (
+              <Text className="py-8 text-center text-gray-500 dark:text-gray-400">{t('calendar.selectedDate.empty')}</Text>
+            ) : (
+              <FlatList data={getItemsForSelectedDate()} renderItem={renderCompactCalendarItem} keyExtractor={(item) => item.CalendarItemId} showsVerticalScrollIndicator={false} />
+            )}
           </View>
         ) : (
           <View className="flex-1 items-center justify-center">
