@@ -105,7 +105,6 @@ export default function TabLayout() {
     });
 
     try {
-      // Initialize core app data
       await useCoreStore.getState().init();
       await useCallsStore.getState().init();
       //await useCalendarStore.getState().init();
@@ -166,13 +165,7 @@ export default function TabLayout() {
 
   // Handle splash screen hiding
   useEffect(() => {
-    if (status !== 'idle' && !hasHiddenSplash.current) {
-      const timer = setTimeout(() => {
-        hideSplash();
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
+    hideSplash();
   }, [status, hideSplash]);
 
   // Handle app initialization - simplified logic
@@ -218,7 +211,6 @@ export default function TabLayout() {
   const userId = useAuthStore((state) => state.userId);
 
   if (isFirstTime) {
-    //setIsOnboarding();
     return <Redirect href="/onboarding" />;
   }
   if (status === 'signedOut') {

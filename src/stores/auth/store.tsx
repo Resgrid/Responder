@@ -5,10 +5,27 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { logger } from '@/lib/logging';
 
 import { loginRequest, refreshTokenRequest } from '../../lib/auth/api';
-import type { AuthResponse, AuthState, LoginCredentials } from '../../lib/auth/types';
+import type { AuthResponse, AuthStatus, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { setItem, zustandStorage } from '../../lib/storage';
+
+export interface AuthState {
+  accessToken: string | null;
+  refreshToken: string | null;
+  refreshTokenExpiresOn: string | null;
+  status: AuthStatus;
+  error: string | null;
+  profile: ProfileModel | null;
+  userId: string | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshAccessToken: () => Promise<void>;
+  hydrate: () => void;
+  isFirstTime: boolean;
+  isAuthenticated: () => boolean;
+  setIsOnboarding: () => void;
+}
 
 const useAuthStore = create<AuthState>()(
   persist(
@@ -127,11 +144,24 @@ const useAuthStore = create<AuthState>()(
               userId: profileData.sub,
             });
           } else {
-            get().logout();
+            get()
+              .logout()
+              .catch((error) => {
+                logger.error({
+                  message: 'Failed to logout during hydration',
+                  context: { error },
+                });
+              });
           }
         } catch (e) {
-          // catch error here
-          // Maybe sign_out user!
+          get()
+            .logout()
+            .catch((error) => {
+              logger.error({
+                message: 'Failed to logout during hydration',
+                context: { error },
+              });
+            });
         }
       },
       isAuthenticated: (): boolean => {
