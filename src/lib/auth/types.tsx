@@ -37,20 +37,3 @@ export interface ProfileModel {
 }
 
 export type AuthStatus = 'idle' | 'signedIn' | 'signedOut' | 'loading' | 'error' | 'onboarding';
-
-export interface AuthState {
-  accessToken: string | null;
-  refreshToken: string | null;
-  refreshTokenExpiresOn: string | null;
-  status: AuthStatus;
-  error: string | null;
-  profile: ProfileModel | null;
-  userId: string | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshAccessToken: () => Promise<void>;
-  hydrate: () => void;
-  isFirstTime: boolean;
-  isAuthenticated: () => boolean;
-  setIsOnboarding: () => void;
-}

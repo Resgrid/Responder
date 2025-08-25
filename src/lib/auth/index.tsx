@@ -19,3 +19,5 @@ export const useAuth = () => {
     hydrate: store.hydrate,
   };
 };
+
+export const hydrateAuth = () => useAuthStore.getState().hydrate();
