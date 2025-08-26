@@ -107,6 +107,8 @@ const useAuthStore = create<AuthState>()(
           error: null,
           profile: null,
           isFirstTime: true,
+          userId: null,
+          refreshTokenExpiresOn: null,
         });
       },
 
@@ -172,6 +174,8 @@ const useAuthStore = create<AuthState>()(
               error: null,
               profile: null,
               isFirstTime: true,
+              userId: null,
+              refreshTokenExpiresOn: null,
             });
           }
         } catch (e) {
@@ -185,6 +189,8 @@ const useAuthStore = create<AuthState>()(
             error: null,
             profile: null,
             isFirstTime: true,
+            userId: null,
+            refreshTokenExpiresOn: null,
           });
         }
       },
