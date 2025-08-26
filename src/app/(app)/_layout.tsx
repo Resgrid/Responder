@@ -68,14 +68,15 @@ export default function TabLayout() {
       hasHiddenSplash.current = true;
       logger.info({
         message: 'Splash screen hidden',
+        context: { status },
       });
     } catch (error) {
       logger.error({
         message: 'Failed to hide splash screen',
-        context: { error },
+        context: { error, status },
       });
     }
-  }, []);
+  }, [status]);
 
   // Initialize push notifications
   usePushNotifications();
@@ -105,7 +106,6 @@ export default function TabLayout() {
     });
 
     try {
-      // Initialize core app data
       await useCoreStore.getState().init();
       await useCallsStore.getState().init();
       //await useCalendarStore.getState().init();
@@ -164,14 +164,28 @@ export default function TabLayout() {
     hasInitialized: hasInitialized.current,
   });
 
-  // Handle splash screen hiding
+  // Handle splash screen hiding - only hide when auth status is settled
   useEffect(() => {
-    if (status !== 'idle' && !hasHiddenSplash.current) {
-      const timer = setTimeout(() => {
-        hideSplash();
-      }, 1000);
+    logger.info({
+      message: 'Splash screen effect triggered',
+      context: { status, hasHiddenSplash: hasHiddenSplash.current },
+    });
 
-      return () => clearTimeout(timer);
+    // Only hide splash when status is settled (not 'idle' or 'loading')
+    if (status === 'signedIn' || status === 'signedOut' || status === 'onboarding') {
+      logger.info({
+        message: 'Auth status settled, hiding splash screen',
+        context: { status },
+      });
+
+      // Add debounce to smooth rendering on slow devices
+      const splashTimeout = setTimeout(() => {
+        hideSplash();
+      }, 200); // 200ms debounce for optimal performance
+
+      return () => {
+        clearTimeout(splashTimeout);
+      };
     }
   }, [status, hideSplash]);
 
@@ -218,10 +232,16 @@ export default function TabLayout() {
   const userId = useAuthStore((state) => state.userId);
 
   if (isFirstTime) {
-    //setIsOnboarding();
+    logger.info({
+      message: 'Is first time navigating to onboarding',
+    });
+
     return <Redirect href="/onboarding" />;
-  }
-  if (status === 'signedOut') {
+  } else if (status === 'signedOut') {
+    logger.info({
+      message: 'Is not first time but user is not signed in, redirecting to login',
+    });
+
     return <Redirect href="/login" />;
   }
 

@@ -62,7 +62,7 @@ const Pagination: React.FC<{ currentIndex: number; length: number }> = ({ curren
 
 export default function Onboarding() {
   const [_, setIsFirstTime] = useIsFirstTime();
-  const { status, setIsOnboarding } = useAuthStore();
+  //const { setIsOnboarding } = useAuthStore();
   const { trackEvent } = useAnalytics();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -70,9 +70,9 @@ export default function Onboarding() {
   const buttonOpacity = useSharedValue(0);
   const { colorScheme } = useColorScheme();
 
-  useEffect(() => {
-    setIsOnboarding();
-  }, [setIsOnboarding]);
+  //useEffect(() => {
+  //  setIsOnboarding();
+  //}, [setIsOnboarding]);
 
   // Analytics: Track when the onboarding page is viewed
   useFocusEffect(

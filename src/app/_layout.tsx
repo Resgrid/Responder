@@ -23,6 +23,7 @@ import { AptabaseProviderWrapper } from '@/components/common/aptabase-provider';
 import { LiveKitBottomSheet } from '@/components/livekit';
 import { PushNotificationModal } from '@/components/push-notification/push-notification-modal';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import { hydrateAuth, useAuth } from '@/lib/auth';
 import { loadKeepAliveState } from '@/lib/hooks/use-keep-alive';
 import { loadSelectedTheme } from '@/lib/hooks/use-selected-theme';
 import { logger } from '@/lib/logging';
@@ -30,6 +31,9 @@ import { getDeviceUuid, setDeviceUuid } from '@/lib/storage/app';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
 import { uuidv4 } from '@/lib/utils';
 import { appInitializationService } from '@/services/app-initialization.service';
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 export { ErrorBoundary } from 'expo-router';
 export const navigationRef = createNavigationContainerRef();
@@ -71,11 +75,10 @@ registerGlobals();
 loadSelectedTheme();
 
 //useAuth().hydrate();
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+
 // Set the animation options. This is optional.
 SplashScreen.setOptions({
-  duration: 1000,
+  duration: 2000,
   fade: true,
 });
 
@@ -99,6 +102,8 @@ function RootLayout() {
     if (ref?.current) {
       navigationIntegration.registerNavigationContainer(ref);
     }
+
+    hydrateAuth();
 
     // Clear the badge count on app startup
     Notifications.setBadgeCountAsync(0)
