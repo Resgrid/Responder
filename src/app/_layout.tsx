@@ -32,6 +32,9 @@ import { loadBackgroundGeolocationState } from '@/lib/storage/background-geoloca
 import { uuidv4 } from '@/lib/utils';
 import { appInitializationService } from '@/services/app-initialization.service';
 
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
+
 export { ErrorBoundary } from 'expo-router';
 export const navigationRef = createNavigationContainerRef();
 
@@ -72,10 +75,7 @@ registerGlobals();
 loadSelectedTheme();
 
 //useAuth().hydrate();
-hydrateAuth();
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
 // Set the animation options. This is optional.
 SplashScreen.setOptions({
   duration: 2000,
@@ -102,6 +102,8 @@ function RootLayout() {
     if (ref?.current) {
       navigationIntegration.registerNavigationContainer(ref);
     }
+
+    hydrateAuth();
 
     // Clear the badge count on app startup
     Notifications.setBadgeCountAsync(0)

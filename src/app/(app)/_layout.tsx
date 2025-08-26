@@ -68,14 +68,15 @@ export default function TabLayout() {
       hasHiddenSplash.current = true;
       logger.info({
         message: 'Splash screen hidden',
+        context: { status },
       });
     } catch (error) {
       logger.error({
         message: 'Failed to hide splash screen',
-        context: { error },
+        context: { error, status },
       });
     }
-  }, []);
+  }, [status]);
 
   // Initialize push notifications
   usePushNotifications();
@@ -163,9 +164,29 @@ export default function TabLayout() {
     hasInitialized: hasInitialized.current,
   });
 
-  // Handle splash screen hiding
+  // Handle splash screen hiding - only hide when auth status is settled
   useEffect(() => {
-    hideSplash();
+    logger.info({
+      message: 'Splash screen effect triggered',
+      context: { status, hasHiddenSplash: hasHiddenSplash.current },
+    });
+
+    // Only hide splash when status is settled (not 'idle' or 'loading')
+    if (status === 'signedIn' || status === 'signedOut' || status === 'onboarding') {
+      logger.info({
+        message: 'Auth status settled, hiding splash screen',
+        context: { status },
+      });
+
+      // Add debounce to smooth rendering on slow devices
+      const splashTimeout = setTimeout(() => {
+        hideSplash();
+      }, 200); // 200ms debounce for optimal performance
+
+      return () => {
+        clearTimeout(splashTimeout);
+      };
+    }
   }, [status, hideSplash]);
 
   // Handle app initialization - simplified logic
@@ -211,9 +232,16 @@ export default function TabLayout() {
   const userId = useAuthStore((state) => state.userId);
 
   if (isFirstTime) {
+    logger.info({
+      message: 'Is first time navigating to onboarding',
+    });
+
     return <Redirect href="/onboarding" />;
-  }
-  if (status === 'signedOut') {
+  } else if (status === 'signedOut') {
+    logger.info({
+      message: 'Is not first time but user is not signed in, redirecting to login',
+    });
+
     return <Redirect href="/login" />;
   }
 
