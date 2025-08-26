@@ -33,6 +33,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
+  splash: {
+    image: './assets/adaptive-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#2484c4',
+  },
   updates: {
     fallbackToCacheTimeout: 0,
   },

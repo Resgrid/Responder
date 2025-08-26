@@ -60,24 +60,6 @@ export default function TabLayout() {
   const lastSignedInStatus = useRef<string | null>(null);
   const parentRef = useRef(null);
 
-  const hideSplash = useCallback(async () => {
-    if (hasHiddenSplash.current) return;
-
-    try {
-      await SplashScreen.hideAsync();
-      hasHiddenSplash.current = true;
-      logger.info({
-        message: 'Splash screen hidden',
-        context: { status },
-      });
-    } catch (error) {
-      logger.error({
-        message: 'Failed to hide splash screen',
-        context: { error, status },
-      });
-    }
-  }, [status]);
-
   // Initialize push notifications
   usePushNotifications();
 
@@ -163,31 +145,6 @@ export default function TabLayout() {
     isSignedIn: status === 'signedIn',
     hasInitialized: hasInitialized.current,
   });
-
-  // Handle splash screen hiding - only hide when auth status is settled
-  useEffect(() => {
-    logger.info({
-      message: 'Splash screen effect triggered',
-      context: { status, hasHiddenSplash: hasHiddenSplash.current },
-    });
-
-    // Only hide splash when status is settled (not 'idle' or 'loading')
-    if (status === 'signedIn' || status === 'signedOut' || status === 'onboarding') {
-      logger.info({
-        message: 'Auth status settled, hiding splash screen',
-        context: { status },
-      });
-
-      // Add debounce to smooth rendering on slow devices
-      const splashTimeout = setTimeout(() => {
-        hideSplash();
-      }, 200); // 200ms debounce for optimal performance
-
-      return () => {
-        clearTimeout(splashTimeout);
-      };
-    }
-  }, [status, hideSplash]);
 
   // Handle app initialization - simplified logic
   useEffect(() => {

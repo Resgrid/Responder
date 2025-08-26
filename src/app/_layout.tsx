@@ -33,7 +33,7 @@ import { uuidv4 } from '@/lib/utils';
 import { appInitializationService } from '@/services/app-initialization.service';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+//SplashScreen.preventAutoHideAsync();
 
 export { ErrorBoundary } from 'expo-router';
 export const navigationRef = createNavigationContainerRef();
