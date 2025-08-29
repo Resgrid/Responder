@@ -32,6 +32,7 @@ jest.mock('@/lib/storage/background-geolocation', () => ({
 }));
 jest.mock('@/lib/storage/realtime-geolocation', () => ({
   loadRealtimeGeolocationState: jest.fn(),
+  saveRealtimeGeolocationState: jest.fn(),
 }));
 
 // Create mock store states
@@ -102,7 +103,7 @@ import { registerLocationServiceUpdater } from '@/lib/hooks/use-background-geolo
 import { registerLocationServiceRealtimeUpdater } from '@/lib/hooks/use-realtime-geolocation';
 import { logger } from '@/lib/logging';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
-import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
+import { loadRealtimeGeolocationState, saveRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { SaveUnitLocationInput } from '@/models/v4/unitLocation/saveUnitLocationInput';
 
 // Import the service after mocks are set up
@@ -115,6 +116,7 @@ const mockRegisterLocationServiceRealtimeUpdater = registerLocationServiceRealti
 const mockLogger = logger as jest.Mocked<typeof logger>;
 const mockLoadBackgroundGeolocationState = loadBackgroundGeolocationState as jest.MockedFunction<typeof loadBackgroundGeolocationState>;
 const mockLoadRealtimeGeolocationState = loadRealtimeGeolocationState as jest.MockedFunction<typeof loadRealtimeGeolocationState>;
+const mockSaveRealtimeGeolocationState = saveRealtimeGeolocationState as jest.MockedFunction<typeof saveRealtimeGeolocationState>;
 const mockTaskManager = TaskManager as jest.Mocked<typeof TaskManager>;
 const mockAppState = AppState as jest.Mocked<typeof AppState>;
 const mockLocation = Location as jest.Mocked<typeof Location>;
@@ -232,11 +234,12 @@ describe('LocationService', () => {
   });
 
   describe('Permission Requests', () => {
-    it('should request both foreground and background permissions', async () => {
+    it('should request foreground permissions and only check background permissions', async () => {
       const result = await locationService.requestPermissions();
 
       expect(mockLocation.requestForegroundPermissionsAsync).toHaveBeenCalled();
-      expect(mockLocation.requestBackgroundPermissionsAsync).toHaveBeenCalled();
+      expect(mockLocation.getBackgroundPermissionsAsync).toHaveBeenCalled();
+      expect(mockLocation.requestBackgroundPermissionsAsync).not.toHaveBeenCalled();
       expect(result).toBe(true);
     });
 
@@ -361,7 +364,7 @@ describe('LocationService', () => {
       });
     });
 
-    it('should handle location updates and send to store and API', async () => {
+    it('should handle location updates and send to store only (API sending handled by TaskManager)', async () => {
       // Enable realtime geolocation for this test
       mockLoadRealtimeGeolocationState.mockResolvedValue(true);
       
@@ -372,7 +375,8 @@ describe('LocationService', () => {
       await locationCallback(mockLocationObject);
 
       expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
-      expect(mockSetUnitLocation).toHaveBeenCalledWith(expect.any(SaveUnitLocationInput));
+      // API sending is now handled by TaskManager only, not by foreground updates
+      expect(mockSetUnitLocation).not.toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Foreground location update received',
         context: {
@@ -393,24 +397,16 @@ describe('LocationService', () => {
     it('should start background updates when not already active', async () => {
       await locationService.startBackgroundUpdates();
 
-      expect(mockLocation.watchPositionAsync).toHaveBeenCalledWith(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 60000,
-          distanceInterval: 20,
-        },
-        expect.any(Function)
-      );
-
-      expect(mockLocationStoreState.setBackgroundEnabled).toHaveBeenCalledWith(true);
+      // Background updates now skip watchPositionAsync setup
+      expect(mockLocation.watchPositionAsync).not.toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith({
-        message: 'Starting background location updates',
+        message: 'Background location updates handled by TaskManager, skipping watchPosition setup',
       });
     });
 
     it('should not start background updates if already active', async () => {
-      (locationService as any).backgroundSubscription = mockLocationSubscription;
-
+      // This test is no longer relevant since we removed backgroundSubscription
+      // The method now checks only isBackgroundGeolocationEnabled
       await locationService.startBackgroundUpdates();
 
       expect(mockLocation.watchPositionAsync).not.toHaveBeenCalled();
@@ -443,40 +439,36 @@ describe('LocationService', () => {
     });
 
     it('should stop background updates correctly', async () => {
-      (locationService as any).backgroundSubscription = mockLocationSubscription;
-
       await locationService.stopBackgroundUpdates();
 
-      expect(mockLocationSubscription.remove).toHaveBeenCalled();
+      // Background updates are now handled by TaskManager, no watchPosition cleanup needed
       expect(mockLocationStoreState.setBackgroundEnabled).toHaveBeenCalledWith(false);
-      expect(mockLogger.info).toHaveBeenCalledWith({
-        message: 'Stopping background location updates',
-      });
     });
 
     it('should handle background location updates and send to API', async () => {
-      // Set realtime geolocation enabled for this test
+      // This test is no longer relevant since we removed watchPositionAsync for background updates
+      // Background location updates are now handled entirely by TaskManager
       (locationService as any).isRealtimeGeolocationEnabled = true;
       
       await locationService.startBackgroundUpdates();
 
-      // Get the callback function
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(mockLocationObject);
-
-      expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
-      expect(mockSetUnitLocation).toHaveBeenCalledWith(expect.any(SaveUnitLocationInput));
+      // Verify that watchPositionAsync is not called for background updates
+      expect(mockLocation.watchPositionAsync).not.toHaveBeenCalled();
     });
   });
 
-  describe('API Integration', () => {
+  describe('API Integration - sendLocationToAPI function', () => {
+    // These tests verify that the sendLocationToAPI function works correctly
+    // This function is called by TaskManager
+    
     it('should send location data to API with correct format', async () => {
       // Enable realtime geolocation for this test
       mockLoadRealtimeGeolocationState.mockResolvedValue(true);
       
-      await locationService.startLocationUpdates();
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(mockLocationObject);
+      // Import the sendLocationToAPI function specifically for testing
+      const { sendLocationToAPI } = require('../location');
+      
+      await sendLocationToAPI(mockLocationObject, true);
 
       expect(mockSetUnitLocation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -494,9 +486,6 @@ describe('LocationService', () => {
     });
 
     it('should handle null values in location data', async () => {
-      // Enable realtime geolocation for this test
-      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
-      
       const locationWithNulls: Location.LocationObject = {
         coords: {
           latitude: 37.7749,
@@ -510,9 +499,9 @@ describe('LocationService', () => {
         timestamp: Date.now(),
       };
 
-      await locationService.startLocationUpdates();
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(locationWithNulls);
+      const { sendLocationToAPI } = require('../location');
+      
+      await sendLocationToAPI(locationWithNulls, true);
 
       expect(mockSetUnitLocation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -526,13 +515,11 @@ describe('LocationService', () => {
     });
 
     it('should skip API call if no active unit is selected', async () => {
-      // Enable realtime geolocation but set no active unit
-      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
       mockCoreStoreState.activeUnitId = null;
 
-      await locationService.startLocationUpdates();
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(mockLocationObject);
+      const { sendLocationToAPI } = require('../location');
+      
+      await sendLocationToAPI(mockLocationObject, true);
 
       expect(mockSetUnitLocation).not.toHaveBeenCalled();
       expect(mockLogger.warn).toHaveBeenCalledWith({
@@ -543,15 +530,24 @@ describe('LocationService', () => {
       mockCoreStoreState.activeUnitId = 'unit-123';
     });
 
+    it('should skip API call when realtime geolocation is disabled', async () => {
+      const { sendLocationToAPI } = require('../location');
+      
+      await sendLocationToAPI(mockLocationObject, false);
+
+      expect(mockSetUnitLocation).not.toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith({
+        message: 'Realtime geolocation disabled, skipping API call',
+      });
+    });
+
     it('should handle API errors gracefully', async () => {
-      // Enable realtime geolocation for this test
-      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
       const apiError = new Error('API Error');
       mockSetUnitLocation.mockRejectedValue(apiError);
 
-      await locationService.startLocationUpdates();
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(mockLocationObject);
+      const { sendLocationToAPI } = require('../location');
+      
+      await sendLocationToAPI(mockLocationObject, true);
 
       expect(mockLogger.error).toHaveBeenCalledWith({
         message: 'Failed to send location to API',
@@ -564,14 +560,12 @@ describe('LocationService', () => {
     });
 
     it('should log successful API calls', async () => {
-      // Enable realtime geolocation for this test
-      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
       // Reset mock to resolved value
       mockSetUnitLocation.mockResolvedValue(mockApiResponse);
 
-      await locationService.startLocationUpdates();
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(mockLocationObject);
+      const { sendLocationToAPI } = require('../location');
+      
+      await sendLocationToAPI(mockLocationObject, true);
 
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Location successfully sent to API',
@@ -586,6 +580,38 @@ describe('LocationService', () => {
   });
 
   describe('Background Geolocation Setting Updates', () => {
+    it('should request background permission when enabling background geolocation', async () => {
+      await locationService.updateBackgroundGeolocationSetting(true);
+
+      expect(mockLocation.requestBackgroundPermissionsAsync).toHaveBeenCalled();
+      expect(mockLocation.startLocationUpdatesAsync).toHaveBeenCalledWith(
+        'location-updates',
+        expect.objectContaining({
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 15000,
+          distanceInterval: 10,
+        })
+      );
+    });
+
+    it('should disable background geolocation if background permission is denied', async () => {
+      mockLocation.requestBackgroundPermissionsAsync.mockResolvedValue({
+        status: 'denied' as any,
+        expires: 'never',
+        granted: false,
+        canAskAgain: true,
+      });
+
+      await locationService.updateBackgroundGeolocationSetting(true);
+
+      expect(mockLocation.requestBackgroundPermissionsAsync).toHaveBeenCalled();
+      expect(mockLocation.startLocationUpdatesAsync).not.toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith({
+        message: 'Background location permission not granted, cannot enable background geolocation',
+        context: { backgroundStatus: 'denied' },
+      });
+    });
+
     it('should enable background tracking and register task', async () => {
       await locationService.updateBackgroundGeolocationSetting(true);
 
@@ -620,12 +646,13 @@ describe('LocationService', () => {
   describe('Cleanup', () => {
     it('should stop all location updates', async () => {
       (locationService as any).locationSubscription = mockLocationSubscription;
-      (locationService as any).backgroundSubscription = mockLocationSubscription;
+      // backgroundSubscription is no longer used
       mockTaskManager.isTaskRegisteredAsync.mockResolvedValue(true);
 
       await locationService.stopLocationUpdates();
 
-      expect(mockLocationSubscription.remove).toHaveBeenCalledTimes(2);
+      // Only one subscription to remove now (foreground)
+      expect(mockLocationSubscription.remove).toHaveBeenCalledTimes(1);
       expect(mockLocation.stopLocationUpdatesAsync).toHaveBeenCalledWith('location-updates');
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'All location updates stopped',
@@ -652,6 +679,7 @@ describe('LocationService', () => {
       await locationService.updateRealtimeGeolocationSetting(true);
 
       expect((locationService as any).isRealtimeGeolocationEnabled).toBe(true);
+      expect(mockSaveRealtimeGeolocationState).toHaveBeenCalledWith(true);
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Realtime geolocation setting updated to: true',
         context: { enabled: true },
@@ -662,6 +690,7 @@ describe('LocationService', () => {
       await locationService.updateRealtimeGeolocationSetting(false);
 
       expect((locationService as any).isRealtimeGeolocationEnabled).toBe(false);
+      expect(mockSaveRealtimeGeolocationState).toHaveBeenCalledWith(false);
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Realtime geolocation setting updated to: false',
         context: { enabled: false },
@@ -670,7 +699,21 @@ describe('LocationService', () => {
   });
 
   describe('Location Updates with Realtime Control', () => {
-    it('should send location to API when realtime geolocation is enabled', async () => {
+    it('should always update local store regardless of realtime setting (foreground updates)', async () => {
+      mockLoadRealtimeGeolocationState.mockResolvedValue(false);
+
+      await locationService.startLocationUpdates();
+
+      // Get the callback function passed to watchPositionAsync
+      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
+      await locationCallback(mockLocationObject);
+
+      expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
+      // Foreground updates should not send to API - that's TaskManager's job
+      expect(mockSetUnitLocation).not.toHaveBeenCalled();
+    });
+
+    it('should always update local store regardless of realtime setting (enabled)', async () => {
       mockLoadRealtimeGeolocationState.mockResolvedValue(true);
 
       await locationService.startLocationUpdates();
@@ -680,48 +723,8 @@ describe('LocationService', () => {
       await locationCallback(mockLocationObject);
 
       expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
-      expect(mockSetUnitLocation).toHaveBeenCalledWith(expect.any(SaveUnitLocationInput));
-      expect(mockLogger.info).toHaveBeenCalledWith({
-        message: 'Location successfully sent to API',
-        context: {
-          unitId: 'unit-123',
-          resultId: mockApiResponse.Id,
-          latitude: mockLocationObject.coords.latitude,
-          longitude: mockLocationObject.coords.longitude,
-        },
-      });
-    });
-
-    it('should not send location to API when realtime geolocation is disabled', async () => {
-      mockLoadRealtimeGeolocationState.mockResolvedValue(false);
-
-      await locationService.startLocationUpdates();
-
-      // Get the callback function passed to watchPositionAsync
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(mockLocationObject);
-
-      expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
+      // Foreground updates should not send to API - that's TaskManager's job
       expect(mockSetUnitLocation).not.toHaveBeenCalled();
-      expect(mockLogger.debug).toHaveBeenCalledWith({
-        message: 'Realtime geolocation disabled, skipping API call',
-        context: {
-          latitude: mockLocationObject.coords.latitude,
-          longitude: mockLocationObject.coords.longitude,
-        },
-      });
-    });
-
-    it('should always update local store regardless of realtime setting', async () => {
-      mockLoadRealtimeGeolocationState.mockResolvedValue(false);
-
-      await locationService.startLocationUpdates();
-
-      // Get the callback function passed to watchPositionAsync
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
-      await locationCallback(mockLocationObject);
-
-      expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
     });
 
     it('should register both background and realtime updaters on construction', () => {

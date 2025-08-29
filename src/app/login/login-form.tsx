@@ -50,10 +50,6 @@ export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = und
   } = useForm<FormType>({
     resolver: zodResolver(loginFormSchema),
   });
-  const [validated] = useState({
-    usernameValid: true,
-    passwordValid: true,
-  });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showServerUrl, setShowServerUrl] = useState(false);
@@ -84,13 +80,11 @@ export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = und
       <View className="flex-1 justify-center p-4">
         <View className="items-center justify-center">
           <Image style={{ width: '96%' }} source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} resizeMode="contain" />
-          <Text className="pb-6 text-center text-4xl font-bold">Sign In</Text>
+          <Text className="pb-6 text-center text-4xl font-bold">{t('login.title')}</Text>
 
-          <Text className="mb-6 max-w-xl text-center text-gray-500">
-            To login in to the Resgrid Responder app, please enter your username and password. Resgrid Responder is an app designed to allow a person to interact with their orginization in the Resgrid system.
-          </Text>
+          <Text className="mb-6 max-w-xl text-center text-gray-500">{t('login.login_button_description')}</Text>
         </View>
-        <FormControl isInvalid={!!errors?.username || !validated.usernameValid} className="w-full">
+        <FormControl isInvalid={!!errors?.username} className="w-full">
           <FormControlLabel>
             <FormControlLabelText>{t('login.username')}</FormControlLabelText>
           </FormControlLabel>
@@ -98,16 +92,6 @@ export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = und
             defaultValue=""
             name="username"
             control={control}
-            rules={{
-              validate: async (value) => {
-                try {
-                  await loginFormSchema.parseAsync({ username: value });
-                  return true;
-                } catch (error: any) {
-                  return error.message;
-                }
-              },
-            }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input>
                 <InputField
@@ -125,11 +109,11 @@ export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = und
           />
           <FormControlError>
             <FormControlErrorIcon as={AlertTriangle} className="text-red-500" />
-            <FormControlErrorText className="text-red-500">{errors?.username?.message || (!validated.usernameValid && 'Username not found')}</FormControlErrorText>
+            <FormControlErrorText className="text-red-500">{errors?.username?.message}</FormControlErrorText>
           </FormControlError>
         </FormControl>
         {/* Label Message */}
-        <FormControl isInvalid={!!errors.password || !validated.passwordValid} className="w-full">
+        <FormControl isInvalid={!!errors.password} className="w-full">
           <FormControlLabel>
             <FormControlLabelText>{t('login.password')}</FormControlLabelText>
           </FormControlLabel>
@@ -137,16 +121,6 @@ export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = und
             defaultValue=""
             name="password"
             control={control}
-            rules={{
-              validate: async (value) => {
-                try {
-                  await loginFormSchema.parseAsync({ password: value });
-                  return true;
-                } catch (error: any) {
-                  return error.message;
-                }
-              },
-            }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input>
                 <InputField
@@ -168,7 +142,7 @@ export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = und
           />
           <FormControlError>
             <FormControlErrorIcon as={AlertTriangle} className="text-red-500" />
-            <FormControlErrorText className="text-red-500">{errors?.password?.message || (!validated.passwordValid && t('login.password_incorrect'))}</FormControlErrorText>
+            <FormControlErrorText className="text-red-500">{errors?.password?.message}</FormControlErrorText>
           </FormControlError>
         </FormControl>
 
@@ -179,7 +153,7 @@ export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = und
           </Button>
         ) : (
           <Button className="mt-8 w-full" variant="solid" action="primary" onPress={handleSubmit(onSubmit)}>
-            <ButtonText>Log in</ButtonText>
+            <ButtonText>{t('login.login_button')}</ButtonText>
           </Button>
         )}
 

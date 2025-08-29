@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import React from 'react';
 
 import { NotificationButton } from '../NotificationButton';
@@ -6,6 +6,17 @@ import { NotificationButton } from '../NotificationButton';
 // Mock the Novu hook
 jest.mock('@novu/react-native', () => ({
   useCounts: jest.fn(),
+}));
+
+// Mock react-i18next
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      if (key === 'settings.notifications_badge_overflow') return '99+';
+      if (key === 'settings.notifications_button') return 'Notifications';
+      return key;
+    },
+  }),
 }));
 
 // Mock lucide-react-native
@@ -75,6 +86,7 @@ describe('NotificationButton', () => {
     render(<NotificationButton onPress={mockOnPress} />);
 
     expect(screen.getByTestId('notification-button')).toBeTruthy();
+    expect(screen.getByTestId('notification-badge')).toBeTruthy();
     expect(screen.getByText('5')).toBeTruthy();
   });
 
@@ -138,6 +150,33 @@ describe('NotificationButton', () => {
       render(<NotificationButton onPress={mockOnPress} />);
 
       expect(screen.getByTestId('notification-button')).toBeTruthy();
+      expect(screen.getByTestId('notification-badge')).toBeTruthy();
+    });
+
+    it('should have proper accessibility role and label with notifications', () => {
+      useCounts.mockReturnValue({
+        isLoading: false,
+        counts: [{ count: 5 }],
+      });
+
+      render(<NotificationButton onPress={mockOnPress} />);
+
+      const button = screen.getByTestId('notification-button');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe('Notifications, 5 unread');
+    });
+
+    it('should have proper accessibility label without notifications', () => {
+      useCounts.mockReturnValue({
+        isLoading: false,
+        counts: [{ count: 0 }],
+      });
+
+      render(<NotificationButton onPress={mockOnPress} />);
+
+      const button = screen.getByTestId('notification-button');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe('Notifications');
     });
 
     it('should be pressable', () => {
@@ -152,6 +191,24 @@ describe('NotificationButton', () => {
       // The button should be rendered and be a valid React element
       expect(button).toBeTruthy();
       expect(button.type).toBeDefined();
+
+      // Test the onPress handler
+      fireEvent.press(button);
+      expect(mockOnPress).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Internationalization', () => {
+    it('should use translated text for badge overflow', () => {
+      useCounts.mockReturnValue({
+        isLoading: false,
+        counts: [{ count: 150 }],
+      });
+
+      render(<NotificationButton onPress={mockOnPress} />);
+
+      expect(screen.getByText('99+')).toBeTruthy();
+      expect(screen.getByTestId('notification-badge')).toBeTruthy();
     });
   });
 });

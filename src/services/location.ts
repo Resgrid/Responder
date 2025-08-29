@@ -9,7 +9,7 @@ import { registerLocationServiceUpdater } from '@/lib/hooks/use-background-geolo
 import { registerLocationServiceRealtimeUpdater } from '@/lib/hooks/use-realtime-geolocation';
 import { logger } from '@/lib/logging';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
-import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
+import { loadRealtimeGeolocationState, saveRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { SavePersonnelLocationInput } from '@/models/v4/personnelLocation/savePersonnelLocationInput';
 import { SaveUnitLocationInput } from '@/models/v4/unitLocation/saveUnitLocationInput';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -29,6 +29,15 @@ const safeNumericString = (value: number | null | undefined, field: string): str
 
 // Helper function to send location to API
 const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEnabled: boolean): Promise<void> => {
+  // Check location accuracy early - skip if accuracy is poor (> 100 meters)
+  if (location.coords.accuracy != null && location.coords.accuracy > 100) {
+    logger.debug({
+      message: 'Skipping low-accuracy location',
+      context: { accuracy: location.coords.accuracy },
+    });
+    return;
+  }
+
   // Always update local store regardless of realtime setting
   useLocationStore.getState().setLocation(location);
 
@@ -36,10 +45,6 @@ const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEn
   if (!isRealtimeEnabled) {
     logger.debug({
       message: 'Realtime geolocation disabled, skipping API call',
-      context: {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      },
     });
     return;
   }
@@ -117,7 +122,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 class LocationService {
   private static instance: LocationService;
   private locationSubscription: Location.LocationSubscription | null = null;
-  private backgroundSubscription: Location.LocationSubscription | null = null;
   private appStateSubscription: { remove: () => void } | null = null;
   private isBackgroundGeolocationEnabled = false;
   private isRealtimeGeolocationEnabled = false;
@@ -145,19 +149,11 @@ class LocationService {
       message: 'Location service handling app state change',
       context: { nextAppState, backgroundEnabled: this.isBackgroundGeolocationEnabled },
     });
-
-    if (this.isBackgroundGeolocationEnabled) {
-      if (nextAppState === 'background') {
-        await this.startBackgroundUpdates();
-      } else if (nextAppState === 'active') {
-        await this.stopBackgroundUpdates();
-      }
-    }
   };
 
   async requestPermissions(): Promise<boolean> {
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
-    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+    const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
 
     logger.info({
       message: 'Location permissions requested',
@@ -224,7 +220,8 @@ class LocationService {
             heading: location.coords.heading,
           },
         });
-        await sendLocationToAPI(location, this.isRealtimeGeolocationEnabled);
+        // Location sending is handled by TaskManager, so we only update the local store
+        useLocationStore.getState().setLocation(location);
       }
     );
 
@@ -238,7 +235,7 @@ class LocationService {
   }
 
   async startBackgroundUpdates(): Promise<void> {
-    if (this.backgroundSubscription || !this.isBackgroundGeolocationEnabled) {
+    if (!this.isBackgroundGeolocationEnabled) {
       return;
     }
 
@@ -252,45 +249,23 @@ class LocationService {
       return;
     }
 
+    // Skip watchPositionAsync setup when running in background mode
+    // Background tracking relies solely on TaskManager.startLocationUpdatesAsync
     logger.info({
-      message: 'Starting background location updates',
+      message: 'Background location updates handled by TaskManager, skipping watchPosition setup',
     });
-
-    this.backgroundSubscription = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 60000,
-        distanceInterval: 20,
-      },
-      async (location) => {
-        logger.info({
-          message: 'Background location update received',
-          context: {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            heading: location.coords.heading,
-          },
-        });
-        await sendLocationToAPI(location, this.isRealtimeGeolocationEnabled);
-      }
-    );
-
-    useLocationStore.getState().setBackgroundEnabled(true);
+    return;
   }
 
   async stopBackgroundUpdates(): Promise<void> {
-    if (this.backgroundSubscription) {
-      logger.info({
-        message: 'Stopping background location updates',
-      });
-      await this.backgroundSubscription.remove();
-      this.backgroundSubscription = null;
-    }
+    // Background updates are handled by TaskManager, no watchPosition to clean up
     useLocationStore.getState().setBackgroundEnabled(false);
   }
 
   async updateRealtimeGeolocationSetting(enabled: boolean): Promise<void> {
     this.isRealtimeGeolocationEnabled = enabled;
+
+    await saveRealtimeGeolocationState(enabled);
 
     logger.info({
       message: `Realtime geolocation setting updated to: ${enabled}`,
@@ -302,6 +277,17 @@ class LocationService {
     this.isBackgroundGeolocationEnabled = enabled;
 
     if (enabled) {
+      // Request background permissions when enabling background geolocation
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus !== 'granted') {
+        logger.warn({
+          message: 'Background location permission not granted, cannot enable background geolocation',
+          context: { backgroundStatus },
+        });
+        this.isBackgroundGeolocationEnabled = false;
+        return;
+      }
+
       // Register the task if not already registered
       const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
       if (!isTaskRegistered) {
@@ -364,3 +350,6 @@ class LocationService {
 }
 
 export const locationService = LocationService.getInstance();
+
+// Export for testing
+export { sendLocationToAPI };

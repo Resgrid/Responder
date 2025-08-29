@@ -518,12 +518,12 @@
     "processingRequest": "Processing your request..."
   },
   "login": {
+    "change_server_url": "Change Server URL",
     "errorModal": {
       "confirmButton": "OK",
       "message": "Please check your username and password and try again.",
       "title": "Login Failed"
     },
-    "change_server_url": "Change Server URL",
     "login": "Login",
     "login_button": "Login",
     "login_button_description": "Login to your account to continue",
@@ -722,6 +722,8 @@
     "no_units_available": "No units available",
     "none_selected": "None Selected",
     "notifications": "Push Notifications",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Notifications",
     "notifications_description": "Enable notifications to receive alerts and updates",
     "notifications_enable": "Enable Notifications",
     "password": "Password",

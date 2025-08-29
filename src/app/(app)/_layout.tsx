@@ -180,13 +180,22 @@ export default function TabLayout() {
       logger.info({
         message: 'User signed out, stopping location tracking',
       });
-      locationService.stopLocationUpdates().catch((error) => {
-        logger.error({
-          message: 'Failed to stop location tracking on sign out',
-          context: { error },
-        });
-      });
-      hasInitialized.current = false;
+
+      (async () => {
+        try {
+          await locationService.stopLocationUpdates();
+          logger.info({
+            message: 'Location tracking stopped successfully',
+            context: { reason: 'user_signed_out' },
+          });
+          hasInitialized.current = false;
+        } catch (error) {
+          logger.error({
+            message: 'Failed to stop location tracking on sign out',
+            context: { error },
+          });
+        }
+      })();
     }
 
     // Update last known status
