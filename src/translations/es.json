@@ -523,6 +523,7 @@
       "message": "Por favor, comprueba tu nombre de usuario y contraseña e inténtalo de nuevo.",
       "title": "Inicio de sesión fallido"
     },
+    "change_server_url": "Cambiar URL del servidor",
     "login": "Iniciar sesión",
     "login_button": "Iniciar sesión",
     "login_button_description": "Inicia sesión en tu cuenta para continuar",

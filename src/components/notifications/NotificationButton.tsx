@@ -22,7 +22,7 @@ export const NotificationButton = ({ onPress }: NotificationButtonProps) => {
   return (
     <Pressable onPress={onPress} className="mr-2 p-2" testID="notification-button">
       <View className="relative">
-        <BellIcon size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+        <BellIcon size={24} className="text-gray-700 dark:text-gray-300" strokeWidth={2} />
 
         {counts?.[0]?.count && counts?.[0]?.count > 0 ? (
           <View className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-red-500">

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, EyeIcon, EyeOffIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { SubmitHandler } from 'react-hook-form';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -9,12 +9,14 @@ import { Image, Keyboard } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as z from 'zod';
 
+import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { View } from '@/components/ui';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { FormControl, FormControlError, FormControlErrorIcon, FormControlErrorText, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import colors from '@/constants/colors';
+import { useAnalytics } from '@/hooks/use-analytics';
 
 const loginFormSchema = z.object({
   username: z
@@ -37,9 +39,10 @@ export type LoginFormProps = {
   error?: string;
 };
 
-export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = undefined }: LoginFormProps) => {
+export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = undefined }: LoginFormProps) => {
   const { colorScheme } = useColorScheme();
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const {
     control,
     handleSubmit,
@@ -53,6 +56,7 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showServerUrl, setShowServerUrl] = useState(false);
 
   const handleState = () => {
     setShowPassword((showState) => {
@@ -63,6 +67,17 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
     Keyboard.dismiss();
     handleSubmit(onSubmit)();
   };
+
+  const handleServerUrlPress = useCallback(() => {
+    try {
+      trackEvent('login_server_url_pressed', {
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.warn('Failed to track login server URL press analytics:', error);
+    }
+    setShowServerUrl(true);
+  }, [trackEvent]);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={10}>
@@ -167,7 +182,14 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
             <ButtonText>Log in</ButtonText>
           </Button>
         )}
+
+        {/* Server URL Change Button */}
+        <Button className="mt-14 w-full" variant="outline" onPress={handleServerUrlPress}>
+          <ButtonText className="text-sm">{t('login.change_server_url')}</ButtonText>
+        </Button>
       </View>
+
+      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} />
     </KeyboardAvoidingView>
   );
 };

@@ -26,6 +26,7 @@ import { useIsFirstTime } from '@/lib/storage';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
 import { audioService } from '@/services/audio.service';
 import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
+import { locationService } from '@/services/location';
 import { offlineQueueService } from '@/services/offline-queue.service';
 import { usePushNotifications } from '@/services/push-notification';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -107,6 +108,20 @@ export default function TabLayout() {
       // Initialize offline queue service
       await offlineQueueService.initialize();
 
+      // Start location tracking when user is logged in
+      try {
+        await locationService.startLocationUpdates();
+        logger.info({
+          message: 'Location tracking started successfully after login',
+        });
+      } catch (error) {
+        logger.error({
+          message: 'Failed to start location tracking after login',
+          context: { error },
+        });
+        // Don't fail initialization if location tracking fails
+      }
+
       logger.info({
         message: 'App initialization completed successfully',
       });
@@ -158,6 +173,20 @@ export default function TabLayout() {
         },
       });
       initializeApp();
+    }
+
+    // Stop location tracking when user signs out
+    if (status === 'signedOut' && lastSignedInStatus.current === 'signedIn') {
+      logger.info({
+        message: 'User signed out, stopping location tracking',
+      });
+      locationService.stopLocationUpdates().catch((error) => {
+        logger.error({
+          message: 'Failed to stop location tracking on sign out',
+          context: { error },
+        });
+      });
+      hasInitialized.current = false;
     }
 
     // Update last known status

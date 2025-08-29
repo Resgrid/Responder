@@ -5,16 +5,30 @@ import { useSignalRStore } from '@/stores/signalr/signalr-store';
 
 import { logger } from '../logging';
 import { storage } from '../storage';
+import { getRealtimeGeolocationStorageKey, saveRealtimeGeolocationState } from '../storage/realtime-geolocation';
 
-const REALTIME_GEOLOCATION_STORAGE_KEY = 'realtime-geolocation-enabled';
+// Define a type for the location service update function
+type LocationServiceRealtimeUpdater = (enabled: boolean) => Promise<void>;
+
+// Global variable to hold the location service update function
+let locationServiceRealtimeUpdater: LocationServiceRealtimeUpdater | null = null;
+
+/**
+ * Register the location service realtime updater function
+ * This should be called from the location service to register its update function
+ */
+export const registerLocationServiceRealtimeUpdater = (updater: LocationServiceRealtimeUpdater) => {
+  locationServiceRealtimeUpdater = updater;
+};
 
 /**
  * Hook for managing realtime geolocation functionality
  * This hook manages the connection to the SignalR geolocation hub
  * When enabled, the app will receive real-time location updates from other personnel/units
+ * and will also send location updates to the API
  */
 export const useRealtimeGeolocation = () => {
-  const [realtimeGeolocationEnabled, _setRealtimeGeolocationEnabled] = useMMKVBoolean(REALTIME_GEOLOCATION_STORAGE_KEY, storage);
+  const [realtimeGeolocationEnabled, _setRealtimeGeolocationEnabled] = useMMKVBoolean(getRealtimeGeolocationStorageKey(), storage);
 
   const { isGeolocationHubConnected, connectGeolocationHub, disconnectGeolocationHub } = useSignalRStore();
 
@@ -22,6 +36,12 @@ export const useRealtimeGeolocation = () => {
     async (enabled: boolean) => {
       try {
         _setRealtimeGeolocationEnabled(enabled);
+        saveRealtimeGeolocationState(enabled);
+
+        // Update the location service if the updater is registered
+        if (locationServiceRealtimeUpdater) {
+          await locationServiceRealtimeUpdater(enabled);
+        }
 
         // Connect or disconnect from the SignalR geolocation hub
         if (enabled) {

@@ -6,8 +6,10 @@ import { setPersonLocation } from '@/api/personnel/personnelLocation';
 import { setUnitLocation } from '@/api/units/unitLocation';
 import { useAuthStore } from '@/lib/auth';
 import { registerLocationServiceUpdater } from '@/lib/hooks/use-background-geolocation';
+import { registerLocationServiceRealtimeUpdater } from '@/lib/hooks/use-realtime-geolocation';
 import { logger } from '@/lib/logging';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
+import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { SavePersonnelLocationInput } from '@/models/v4/personnelLocation/savePersonnelLocationInput';
 import { SaveUnitLocationInput } from '@/models/v4/unitLocation/saveUnitLocationInput';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -26,7 +28,22 @@ const safeNumericString = (value: number | null | undefined, field: string): str
 };
 
 // Helper function to send location to API
-const sendLocationToAPI = async (location: Location.LocationObject): Promise<void> => {
+const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEnabled: boolean): Promise<void> => {
+  // Always update local store regardless of realtime setting
+  useLocationStore.getState().setLocation(location);
+
+  // Only send to API if realtime geolocation is enabled
+  if (!isRealtimeEnabled) {
+    logger.debug({
+      message: 'Realtime geolocation disabled, skipping API call',
+      context: {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      },
+    });
+    return;
+  }
+
   try {
     const unitId = useCoreStore.getState().activeUnitId;
     if (!unitId) {
@@ -87,11 +104,12 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
         },
       });
 
-      // Update local store
+      // Always update local store
       useLocationStore.getState().setLocation(location);
 
-      // Send to API
-      await sendLocationToAPI(location);
+      // Load current realtime state and send to API if enabled
+      const isRealtimeEnabled = await loadRealtimeGeolocationState();
+      await sendLocationToAPI(location, isRealtimeEnabled);
     }
   }
 });
@@ -102,11 +120,13 @@ class LocationService {
   private backgroundSubscription: Location.LocationSubscription | null = null;
   private appStateSubscription: { remove: () => void } | null = null;
   private isBackgroundGeolocationEnabled = false;
+  private isRealtimeGeolocationEnabled = false;
 
   private constructor() {
     this.initializeAppStateListener();
     // Register this service's update function to avoid circular dependency
     registerLocationServiceUpdater(this.updateBackgroundGeolocationSetting.bind(this));
+    registerLocationServiceRealtimeUpdater(this.updateRealtimeGeolocationSetting.bind(this));
   }
 
   static getInstance(): LocationService {
@@ -126,10 +146,12 @@ class LocationService {
       context: { nextAppState, backgroundEnabled: this.isBackgroundGeolocationEnabled },
     });
 
-    if (nextAppState === 'background' && this.isBackgroundGeolocationEnabled) {
-      await this.startBackgroundUpdates();
-    } else if (nextAppState === 'active') {
-      await this.stopBackgroundUpdates();
+    if (this.isBackgroundGeolocationEnabled) {
+      if (nextAppState === 'background') {
+        await this.startBackgroundUpdates();
+      } else if (nextAppState === 'active') {
+        await this.stopBackgroundUpdates();
+      }
     }
   };
 
@@ -145,7 +167,9 @@ class LocationService {
       },
     });
 
-    return foregroundStatus === 'granted' && backgroundStatus === 'granted';
+    // Only require foreground permissions for basic location tracking
+    // Background permissions are only needed when background geolocation is enabled
+    return foregroundStatus === 'granted';
   }
 
   async startLocationUpdates(): Promise<void> {
@@ -154,24 +178,34 @@ class LocationService {
       throw new Error('Location permissions not granted');
     }
 
-    // Load background geolocation setting
+    // Load background and realtime geolocation settings
     this.isBackgroundGeolocationEnabled = await loadBackgroundGeolocationState();
+    this.isRealtimeGeolocationEnabled = await loadRealtimeGeolocationState();
 
     // Check if task is already registered for background updates
     const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
     if (!isTaskRegistered && this.isBackgroundGeolocationEnabled) {
-      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 15000,
-        distanceInterval: 10,
-        foregroundService: {
-          notificationTitle: 'Location Tracking',
-          notificationBody: 'Tracking your location in the background',
-        },
-      });
-      logger.info({
-        message: 'Background location task registered',
-      });
+      // Check background permission before registering background task
+      const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
+      if (backgroundStatus === 'granted') {
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 15000,
+          distanceInterval: 10,
+          foregroundService: {
+            notificationTitle: 'Location Tracking',
+            notificationBody: 'Tracking your location in the background',
+          },
+        });
+        logger.info({
+          message: 'Background location task registered',
+        });
+      } else {
+        logger.warn({
+          message: 'Background location permission not granted, skipping background task registration',
+          context: { backgroundStatus },
+        });
+      }
     }
 
     // Start foreground updates
@@ -190,19 +224,31 @@ class LocationService {
             heading: location.coords.heading,
           },
         });
-        useLocationStore.getState().setLocation(location);
-        await sendLocationToAPI(location); // Send to API for foreground updates
+        await sendLocationToAPI(location, this.isRealtimeGeolocationEnabled);
       }
     );
 
     logger.info({
       message: 'Foreground location updates started',
-      context: { backgroundEnabled: this.isBackgroundGeolocationEnabled },
+      context: {
+        backgroundEnabled: this.isBackgroundGeolocationEnabled,
+        realtimeEnabled: this.isRealtimeGeolocationEnabled,
+      },
     });
   }
 
   async startBackgroundUpdates(): Promise<void> {
     if (this.backgroundSubscription || !this.isBackgroundGeolocationEnabled) {
+      return;
+    }
+
+    // Check background permission before starting background updates
+    const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
+    if (backgroundStatus !== 'granted') {
+      logger.warn({
+        message: 'Background location permission not granted, skipping background updates',
+        context: { backgroundStatus },
+      });
       return;
     }
 
@@ -225,8 +271,7 @@ class LocationService {
             heading: location.coords.heading,
           },
         });
-        useLocationStore.getState().setLocation(location);
-        await sendLocationToAPI(location); // Send to API for background updates
+        await sendLocationToAPI(location, this.isRealtimeGeolocationEnabled);
       }
     );
 
@@ -242,6 +287,15 @@ class LocationService {
       this.backgroundSubscription = null;
     }
     useLocationStore.getState().setBackgroundEnabled(false);
+  }
+
+  async updateRealtimeGeolocationSetting(enabled: boolean): Promise<void> {
+    this.isRealtimeGeolocationEnabled = enabled;
+
+    logger.info({
+      message: `Realtime geolocation setting updated to: ${enabled}`,
+      context: { enabled },
+    });
   }
 
   async updateBackgroundGeolocationSetting(enabled: boolean): Promise<void> {
