@@ -518,6 +518,7 @@
     "processingRequest": "Processing your request..."
   },
   "login": {
+    "change_server_url": "Change Server URL",
     "errorModal": {
       "confirmButton": "OK",
       "message": "Please check your username and password and try again.",
@@ -721,6 +722,8 @@
     "no_units_available": "No units available",
     "none_selected": "None Selected",
     "notifications": "Push Notifications",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Notifications",
     "notifications_description": "Enable notifications to receive alerts and updates",
     "notifications_enable": "Enable Notifications",
     "password": "Password",

@@ -518,6 +518,7 @@
     "processingRequest": "جاري معالجة طلبك..."
   },
   "login": {
+    "change_server_url": "تغيير عنوان URL للخادم",
     "errorModal": {
       "confirmButton": "موافق",
       "message": "يرجى التحقق من اسم المستخدم وكلمة المرور والمحاولة مرة أخرى.",
@@ -721,6 +722,8 @@
     "no_units_available": "لا توجد وحدات متاحة",
     "none_selected": "لم يتم اختيار أي شيء",
     "notifications": "الإشعارات",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "الإشعارات",
     "notifications_description": "تفعيل الإشعارات لتلقي التنبيهات والتحديثات",
     "notifications_enable": "تفعيل الإشعارات",
     "password": "كلمة المرور",

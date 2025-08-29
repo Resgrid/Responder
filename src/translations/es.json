@@ -518,6 +518,7 @@
     "processingRequest": "Procesando su solicitud..."
   },
   "login": {
+    "change_server_url": "Cambiar URL del servidor",
     "errorModal": {
       "confirmButton": "Aceptar",
       "message": "Por favor, comprueba tu nombre de usuario y contraseña e inténtalo de nuevo.",
@@ -720,9 +721,11 @@
     "more": "Más",
     "no_units_available": "No hay unidades disponibles",
     "none_selected": "Ninguna seleccionada",
-    "notifications": "Notificaciones push",
-    "notifications_description": "Activa las notificaciones para recibir alertas y actualizaciones",
-    "notifications_enable": "Activar notificaciones",
+    "notifications": "Notificaciones Push",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Notificaciones",
+    "notifications_description": "Habilitar notificaciones para recibir alertas y actualizaciones",
+    "notifications_enable": "Habilitar Notificaciones",
     "password": "Contraseña",
     "preferences": "Preferencias",
     "privacy": "Política de privacidad",

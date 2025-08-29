@@ -73,12 +73,6 @@ class BluetoothAudioService {
         message: 'Initializing Bluetooth Audio Service',
       });
 
-      // Initialize BLE Manager
-      await BleManager.start({ showAlert: false });
-      this.setupEventListeners();
-
-      this.isInitialized = true;
-
       // Check if we have permissions
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) {
@@ -87,6 +81,12 @@ class BluetoothAudioService {
         });
         return;
       }
+
+      // Initialize BLE Manager
+      await BleManager.start({ showAlert: false });
+      this.setupEventListeners();
+
+      this.isInitialized = true;
 
       // Check Bluetooth state
       const state = await this.checkBluetoothState();
@@ -315,9 +315,12 @@ class BluetoothAudioService {
   }
 
   async requestPermissions(): Promise<boolean> {
+    // Add delay to prevent conflicts with other permission requests during app startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     if (Platform.OS === 'android') {
       try {
-        const permissions = [PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN, PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT, PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
+        const permissions = [PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN, PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT];
 
         const results = await PermissionsAndroid.requestMultiple(permissions);
 

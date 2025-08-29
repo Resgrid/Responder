@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, EyeIcon, EyeOffIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { SubmitHandler } from 'react-hook-form';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -9,12 +9,14 @@ import { Image, Keyboard } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as z from 'zod';
 
+import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { View } from '@/components/ui';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { FormControl, FormControlError, FormControlErrorIcon, FormControlErrorText, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import colors from '@/constants/colors';
+import { useAnalytics } from '@/hooks/use-analytics';
 
 const loginFormSchema = z.object({
   username: z
@@ -37,9 +39,10 @@ export type LoginFormProps = {
   error?: string;
 };
 
-export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = undefined }: LoginFormProps) => {
+export const LoginForm = ({ onSubmit = () => { }, isLoading = false, error = undefined }: LoginFormProps) => {
   const { colorScheme } = useColorScheme();
   const { t } = useTranslation();
+  const { trackEvent } = useAnalytics();
   const {
     control,
     handleSubmit,
@@ -47,12 +50,9 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
   } = useForm<FormType>({
     resolver: zodResolver(loginFormSchema),
   });
-  const [validated] = useState({
-    usernameValid: true,
-    passwordValid: true,
-  });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showServerUrl, setShowServerUrl] = useState(false);
 
   const handleState = () => {
     setShowPassword((showState) => {
@@ -64,18 +64,27 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
     handleSubmit(onSubmit)();
   };
 
+  const handleServerUrlPress = useCallback(() => {
+    try {
+      trackEvent('login_server_url_pressed', {
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.warn('Failed to track login server URL press analytics:', error);
+    }
+    setShowServerUrl(true);
+  }, [trackEvent]);
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={10}>
       <View className="flex-1 justify-center p-4">
         <View className="items-center justify-center">
           <Image style={{ width: '96%' }} source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} resizeMode="contain" />
-          <Text className="pb-6 text-center text-4xl font-bold">Sign In</Text>
+          <Text className="pb-6 text-center text-4xl font-bold">{t('login.title')}</Text>
 
-          <Text className="mb-6 max-w-xl text-center text-gray-500">
-            To login in to the Resgrid Responder app, please enter your username and password. Resgrid Responder is an app designed to allow a person to interact with their orginization in the Resgrid system.
-          </Text>
+          <Text className="mb-6 max-w-xl text-center text-gray-500">{t('login.login_button_description')}</Text>
         </View>
-        <FormControl isInvalid={!!errors?.username || !validated.usernameValid} className="w-full">
+        <FormControl isInvalid={!!errors?.username} className="w-full">
           <FormControlLabel>
             <FormControlLabelText>{t('login.username')}</FormControlLabelText>
           </FormControlLabel>
@@ -83,16 +92,6 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
             defaultValue=""
             name="username"
             control={control}
-            rules={{
-              validate: async (value) => {
-                try {
-                  await loginFormSchema.parseAsync({ username: value });
-                  return true;
-                } catch (error: any) {
-                  return error.message;
-                }
-              },
-            }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input>
                 <InputField
@@ -110,11 +109,11 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
           />
           <FormControlError>
             <FormControlErrorIcon as={AlertTriangle} className="text-red-500" />
-            <FormControlErrorText className="text-red-500">{errors?.username?.message || (!validated.usernameValid && 'Username not found')}</FormControlErrorText>
+            <FormControlErrorText className="text-red-500">{errors?.username?.message}</FormControlErrorText>
           </FormControlError>
         </FormControl>
         {/* Label Message */}
-        <FormControl isInvalid={!!errors.password || !validated.passwordValid} className="w-full">
+        <FormControl isInvalid={!!errors.password} className="w-full">
           <FormControlLabel>
             <FormControlLabelText>{t('login.password')}</FormControlLabelText>
           </FormControlLabel>
@@ -122,16 +121,6 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
             defaultValue=""
             name="password"
             control={control}
-            rules={{
-              validate: async (value) => {
-                try {
-                  await loginFormSchema.parseAsync({ password: value });
-                  return true;
-                } catch (error: any) {
-                  return error.message;
-                }
-              },
-            }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input>
                 <InputField
@@ -153,7 +142,7 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
           />
           <FormControlError>
             <FormControlErrorIcon as={AlertTriangle} className="text-red-500" />
-            <FormControlErrorText className="text-red-500">{errors?.password?.message || (!validated.passwordValid && t('login.password_incorrect'))}</FormControlErrorText>
+            <FormControlErrorText className="text-red-500">{errors?.password?.message}</FormControlErrorText>
           </FormControlError>
         </FormControl>
 
@@ -164,10 +153,17 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
           </Button>
         ) : (
           <Button className="mt-8 w-full" variant="solid" action="primary" onPress={handleSubmit(onSubmit)}>
-            <ButtonText>Log in</ButtonText>
+            <ButtonText>{t('login.login_button')}</ButtonText>
           </Button>
         )}
+
+        {/* Server URL Change Button */}
+        <Button className="mt-14 w-full" variant="outline" onPress={handleServerUrlPress}>
+          <ButtonText className="text-sm">{t('login.change_server_url')}</ButtonText>
+        </Button>
       </View>
+
+      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} />
     </KeyboardAvoidingView>
   );
 };

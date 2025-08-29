@@ -105,29 +105,8 @@ export default function HomeMap() {
   );
 
   useEffect(() => {
-    const startLocationTracking = async () => {
-      try {
-        await locationService.startLocationUpdates();
-        logger.info({
-          message: 'Location tracking started successfully',
-        });
-      } catch (error) {
-        logger.error({
-          message: 'HomeMapPage: Failed to start location tracking. ' + JSON.stringify(error),
-          context: {
-            error,
-          },
-        });
-
-        useToastStore.getState().showToast('error', 'Failed to start location tracking');
-      }
-    };
-
-    startLocationTracking();
-
-    return () => {
-      locationService.stopLocationUpdates();
-    };
+    // Location tracking is now handled at the app level when user is logged in
+    // No need to start/stop here as it should persist across screen changes
   }, []);
 
   useEffect(() => {

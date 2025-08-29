@@ -31,11 +31,42 @@ jest.mock('@/services/audio.service', () => ({
   },
 }));
 
+// Mock PermissionsAndroid
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'android',
+  },
+  PermissionsAndroid: {
+    PERMISSIONS: {
+      BLUETOOTH_SCAN: 'android.permission.BLUETOOTH_SCAN',
+      BLUETOOTH_CONNECT: 'android.permission.BLUETOOTH_CONNECT',
+      ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
+    },
+    RESULTS: {
+      GRANTED: 'granted',
+      DENIED: 'denied',
+    },
+    requestMultiple: jest.fn(),
+  },
+  DeviceEventEmitter: {
+    addListener: jest.fn(),
+  },
+  Alert: {
+    alert: jest.fn(),
+  },
+}));
+
 import { bluetoothAudioService } from '../bluetooth-audio.service';
+import { Platform, PermissionsAndroid } from 'react-native';
 
 describe('BluetoothAudioService Refactoring', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should be defined and accessible', () => {
@@ -55,6 +86,91 @@ describe('BluetoothAudioService Refactoring', () => {
     expect(typeof bluetoothAudioService.stopScanning).toBe('function');
     expect(typeof bluetoothAudioService.connectToDevice).toBe('function');
     expect(typeof bluetoothAudioService.disconnectDevice).toBe('function');
+  });
+
+  describe('Permission Requests', () => {
+    it('should add 500ms delay before requesting permissions', async () => {
+      const mockRequestMultiple = PermissionsAndroid.requestMultiple as jest.Mock;
+      mockRequestMultiple.mockResolvedValue({
+        'android.permission.BLUETOOTH_SCAN': 'granted',
+        'android.permission.BLUETOOTH_CONNECT': 'granted',
+        'android.permission.ACCESS_FINE_LOCATION': 'granted',
+      });
+
+      const service = bluetoothAudioService as any;
+      const startTime = Date.now();
+      
+      // Start the permission request
+      const permissionPromise = service.requestPermissions();
+      
+      // Fast-forward time by 500ms
+      jest.advanceTimersByTime(500);
+      
+      // Wait for the promise to resolve
+      const result = await permissionPromise;
+      
+      expect(result).toBe(true);
+      expect(mockRequestMultiple).toHaveBeenCalled();
+    });
+
+    it('should return true for iOS without requesting permissions', async () => {
+      // Mock iOS platform
+      (Platform as any).OS = 'ios';
+      
+      const service = bluetoothAudioService as any;
+      
+      // Start the permission request
+      const permissionPromise = service.requestPermissions();
+      
+      // Fast-forward time by 500ms to handle the delay
+      jest.advanceTimersByTime(500);
+      
+      const result = await permissionPromise;
+      
+      expect(result).toBe(true);
+      expect(PermissionsAndroid.requestMultiple).not.toHaveBeenCalled();
+      
+      // Reset to Android for other tests
+      (Platform as any).OS = 'android';
+    });
+
+    it('should handle permission request failures gracefully', async () => {
+      const mockRequestMultiple = PermissionsAndroid.requestMultiple as jest.Mock;
+      mockRequestMultiple.mockRejectedValue(new Error('Permission request failed'));
+
+      const service = bluetoothAudioService as any;
+      
+      // Start the permission request
+      const permissionPromise = service.requestPermissions();
+      
+      // Fast-forward time by 500ms
+      jest.advanceTimersByTime(500);
+      
+      const result = await permissionPromise;
+      
+      expect(result).toBe(false);
+    });
+
+    it('should return false when some permissions are denied', async () => {
+      const mockRequestMultiple = PermissionsAndroid.requestMultiple as jest.Mock;
+      mockRequestMultiple.mockResolvedValue({
+        'android.permission.BLUETOOTH_SCAN': 'granted',
+        'android.permission.BLUETOOTH_CONNECT': 'denied',
+        'android.permission.ACCESS_FINE_LOCATION': 'granted',
+      });
+
+      const service = bluetoothAudioService as any;
+      
+      // Start the permission request
+      const permissionPromise = service.requestPermissions();
+      
+      // Fast-forward time by 500ms
+      jest.advanceTimersByTime(500);
+      
+      const result = await permissionPromise;
+      
+      expect(result).toBe(false);
+    });
   });
 
   describe('Preferred Device Connection Refactoring', () => {
