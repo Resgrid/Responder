@@ -38,9 +38,6 @@ const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEn
     return;
   }
 
-  // Always update local store regardless of realtime setting
-  useLocationStore.getState().setLocation(location);
-
   // Only send to API if realtime geolocation is enabled
   if (!isRealtimeEnabled) {
     logger.debug({

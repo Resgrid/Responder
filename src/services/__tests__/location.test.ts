@@ -485,6 +485,75 @@ describe('LocationService', () => {
       );
     });
 
+    it('should skip sending when location accuracy is greater than 100 meters', async () => {
+      // Enable realtime geolocation for this test
+      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
+      
+      // Create a low-accuracy location object
+      const lowAccuracyLocation: Location.LocationObject = {
+        coords: {
+          latitude: 37.7749,
+          longitude: -122.4194,
+          altitude: 10.5,
+          accuracy: 150, // Low accuracy - should be skipped
+          altitudeAccuracy: 2.0,
+          heading: 90.0,
+          speed: 15.5,
+        },
+        timestamp: Date.now(),
+      };
+
+      // Import the sendLocationToAPI function specifically for testing
+      const { sendLocationToAPI } = require('../location');
+      
+      // Call sendLocationToAPI with low accuracy location
+      await sendLocationToAPI(lowAccuracyLocation, true);
+
+      // Verify that the API was not called due to low accuracy
+      expect(mockSetUnitLocation).not.toHaveBeenCalled();
+      
+      // Verify that debug log was called for skipping low accuracy
+      expect(mockLogger.debug).toHaveBeenCalledWith({
+        message: 'Skipping low-accuracy location',
+        context: { accuracy: 150 },
+      });
+    });
+
+    it('should send location when accuracy is within acceptable range (≤100 meters)', async () => {
+      // Enable realtime geolocation for this test
+      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
+      
+      // Create a high-accuracy location object
+      const highAccuracyLocation: Location.LocationObject = {
+        coords: {
+          latitude: 37.7749,
+          longitude: -122.4194,
+          altitude: 10.5,
+          accuracy: 50, // Good accuracy - should be sent
+          altitudeAccuracy: 2.0,
+          heading: 90.0,
+          speed: 15.5,
+        },
+        timestamp: Date.now(),
+      };
+
+      // Import the sendLocationToAPI function specifically for testing
+      const { sendLocationToAPI } = require('../location');
+      
+      // Call sendLocationToAPI with good accuracy location
+      await sendLocationToAPI(highAccuracyLocation, true);
+
+      // Verify that the API was called with good accuracy
+      expect(mockSetUnitLocation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          UnitId: 'unit-123',
+          Latitude: highAccuracyLocation.coords.latitude.toString(),
+          Longitude: highAccuracyLocation.coords.longitude.toString(),
+          Accuracy: highAccuracyLocation.coords.accuracy?.toString(),
+        })
+      );
+    });
+
     it('should handle null values in location data', async () => {
       const locationWithNulls: Location.LocationObject = {
         coords: {
@@ -528,6 +597,81 @@ describe('LocationService', () => {
 
       // Reset for other tests
       mockCoreStoreState.activeUnitId = 'unit-123';
+    });
+
+    it('should skip API call when location accuracy is exactly 101 meters (boundary test)', async () => {
+      // Enable realtime geolocation for this test
+      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
+      
+      // Create a location object with accuracy exactly at boundary
+      const boundaryAccuracyLocation: Location.LocationObject = {
+        coords: {
+          latitude: 37.7749,
+          longitude: -122.4194,
+          altitude: 10.5,
+          accuracy: 101, // Just over the threshold - should be skipped
+          altitudeAccuracy: 2.0,
+          heading: 90.0,
+          speed: 15.5,
+        },
+        timestamp: Date.now(),
+      };
+
+      // Import the sendLocationToAPI function specifically for testing
+      const { sendLocationToAPI } = require('../location');
+      
+      // Call sendLocationToAPI with boundary accuracy location
+      await sendLocationToAPI(boundaryAccuracyLocation, true);
+
+      // Verify that the API was not called due to low accuracy
+      expect(mockSetUnitLocation).not.toHaveBeenCalled();
+      
+      // Verify that debug log was called for skipping low accuracy
+      expect(mockLogger.debug).toHaveBeenCalledWith({
+        message: 'Skipping low-accuracy location',
+        context: { accuracy: 101 },
+      });
+    });
+
+    it('should send location when accuracy is null (null accuracy should be allowed)', async () => {
+      // Enable realtime geolocation for this test
+      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
+      
+      // Create a location object with null accuracy
+      const nullAccuracyLocation: Location.LocationObject = {
+        coords: {
+          latitude: 37.7749,
+          longitude: -122.4194,
+          altitude: 10.5,
+          accuracy: null, // Null accuracy - should be allowed
+          altitudeAccuracy: 2.0,
+          heading: 90.0,
+          speed: 15.5,
+        },
+        timestamp: Date.now(),
+      };
+
+      // Import the sendLocationToAPI function specifically for testing
+      const { sendLocationToAPI } = require('../location');
+      
+      // Call sendLocationToAPI with null accuracy location
+      await sendLocationToAPI(nullAccuracyLocation, true);
+
+      // Verify that the API was called with null accuracy (converted to '0')
+      expect(mockSetUnitLocation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          UnitId: 'unit-123',
+          Latitude: nullAccuracyLocation.coords.latitude.toString(),
+          Longitude: nullAccuracyLocation.coords.longitude.toString(),
+          Accuracy: '0', // null should be converted to '0'
+        })
+      );
+      
+      // Verify that the debug log for skipping was NOT called
+      expect(mockLogger.debug).not.toHaveBeenCalledWith({
+        message: 'Skipping low-accuracy location',
+        context: { accuracy: null },
+      });
     });
 
     it('should skip API call when realtime geolocation is disabled', async () => {
