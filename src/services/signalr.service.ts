@@ -422,10 +422,17 @@ class SignalRService {
   }
 
   private handleConnectionClose(hubName: string): void {
-    const attempts = this.reconnectAttempts.get(hubName) || 0;
+    // Immediately set the hub status to RECONNECTING
+    this.hubStates.set(hubName, HubConnectingState.RECONNECTING);
+    this.reconnectingHubs.add(hubName);
 
-    // Reset attempt counter and start recursive reconnection process
+    // Remove the closed/stale connection object so invoke() cannot pick it up
+    this.connections.delete(hubName);
+
+    // Reset the reconnect attempts counter to 0
     this.reconnectAttempts.set(hubName, 0);
+
+    // Start the reconnection process
     this.attemptReconnection(hubName, 0);
   }
 
