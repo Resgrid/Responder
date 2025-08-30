@@ -6,6 +6,35 @@ global.window = {};
 // @ts-ignore
 global.window = global;
 
+// Setup timer mocks for React Native environment
+Object.defineProperty(global, 'setTimeout', {
+  value: jest.fn((fn, delay) => {
+    const id = Math.random();
+    setImmediate(() => fn());
+    return id;
+  }),
+  writable: true,
+});
+
+Object.defineProperty(global, 'clearTimeout', {
+  value: jest.fn(),
+  writable: true,
+});
+
+Object.defineProperty(global, 'setInterval', {
+  value: jest.fn((fn, delay) => {
+    const id = Math.random();
+    setImmediate(() => fn());
+    return id;
+  }),
+  writable: true,
+});
+
+Object.defineProperty(global, 'clearInterval', {
+  value: jest.fn(),
+  writable: true,
+});
+
 // Mock React Native Appearance for NativeWind
 jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
   getColorScheme: jest.fn(() => 'light'),

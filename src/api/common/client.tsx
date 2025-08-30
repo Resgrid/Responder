@@ -120,9 +120,9 @@ export const api = axiosInstance;
 // Helper function to create API endpoints
 export const createApiEndpoint = (endpoint: string) => {
   return {
-    get: <T,>(params?: Record<string, unknown>) => api.get<T>(endpoint, { params }),
-    post: <T,>(data: Record<string, unknown>) => api.post<T>(endpoint, data),
-    put: <T,>(data: Record<string, unknown>) => api.put<T>(endpoint, data),
-    delete: <T,>(params?: Record<string, unknown>) => api.delete<T>(endpoint, { params }),
+    get: <T,>(params?: Record<string, unknown>, signal?: AbortSignal) => api.get<T>(endpoint, { params, signal }),
+    post: <T,>(data: Record<string, unknown>, signal?: AbortSignal) => api.post<T>(endpoint, data, { signal }),
+    put: <T,>(data: Record<string, unknown>, signal?: AbortSignal) => api.put<T>(endpoint, data, { signal }),
+    delete: <T,>(params?: Record<string, unknown>, signal?: AbortSignal) => api.delete<T>(endpoint, { params, signal }),
   };
 };
