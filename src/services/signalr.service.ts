@@ -32,6 +32,7 @@ class SignalRService {
   private connections: Map<string, HubConnection> = new Map();
   private reconnectAttempts: Map<string, number> = new Map();
   private hubConfigs: Map<string, SignalRHubConnectConfig> = new Map();
+  private directHubConfigs: Map<string, SignalRHubConfig> = new Map();
   private connectionLocks: Map<string, Promise<void>> = new Map();
   private reconnectingHubs: Set<string> = new Set();
   private hubStates: Map<string, HubConnectingState> = new Map();
@@ -365,6 +366,9 @@ class SignalRService {
       this.connections.set(config.name, connection);
       this.reconnectAttempts.set(config.name, 0);
 
+      // Store the legacy hub config for reconnection purposes
+      this.directHubConfigs.set(config.name, config);
+
       // Clear the direct-connecting state on successful connection
       this.setHubState(config.name, HubConnectingState.IDLE);
 
@@ -390,7 +394,9 @@ class SignalRService {
       const currentAttempts = attempts + 1;
 
       const hubConfig = this.hubConfigs.get(hubName);
-      if (hubConfig) {
+      const directHubConfig = this.directHubConfigs.get(hubName);
+
+      if (hubConfig || directHubConfig) {
         logger.info({
           message: `Scheduling reconnection attempt ${currentAttempts}/${this.MAX_RECONNECT_ATTEMPTS} for hub: ${hubName}`,
         });
@@ -399,7 +405,9 @@ class SignalRService {
           try {
             // Check if the hub config was removed (e.g., by explicit disconnect)
             const currentHubConfig = this.hubConfigs.get(hubName);
-            if (!currentHubConfig) {
+            const currentDirectHubConfig = this.directHubConfigs.get(hubName);
+
+            if (!currentHubConfig && !currentDirectHubConfig) {
               logger.debug({
                 message: `Hub ${hubName} config was removed, skipping reconnection attempt`,
               });
@@ -443,7 +451,12 @@ class SignalRService {
               // This is now safe because we have the reconnecting flag set
               this.connections.delete(hubName);
 
-              await this.connectToHubWithEventingUrl(currentHubConfig);
+              // Use the appropriate reconnection method based on the config type
+              if (currentHubConfig) {
+                await this.connectToHubWithEventingUrl(currentHubConfig);
+              } else if (currentDirectHubConfig) {
+                await this.connectToHub(currentDirectHubConfig);
+              }
 
               // Clear reconnecting state on successful reconnection
               this.setHubState(hubName, HubConnectingState.IDLE);
@@ -489,6 +502,7 @@ class SignalRService {
       this.connections.delete(hubName);
       this.reconnectAttempts.delete(hubName);
       this.hubConfigs.delete(hubName);
+      this.directHubConfigs.delete(hubName);
       this.setHubState(hubName, HubConnectingState.IDLE);
     }
   }
@@ -527,6 +541,7 @@ class SignalRService {
         this.connections.delete(hubName);
         this.reconnectAttempts.delete(hubName);
         this.hubConfigs.delete(hubName);
+        this.directHubConfigs.delete(hubName);
         this.setHubState(hubName, HubConnectingState.IDLE);
         logger.info({
           message: `Disconnected from hub: ${hubName}`,
@@ -543,6 +558,7 @@ class SignalRService {
       this.setHubState(hubName, HubConnectingState.IDLE);
       this.reconnectAttempts.delete(hubName);
       this.hubConfigs.delete(hubName);
+      this.directHubConfigs.delete(hubName);
     }
   }
 

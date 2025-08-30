@@ -1,6 +1,6 @@
 import { ConnectionState, type LocalParticipant, type Participant, type RemoteParticipant, Room, type RoomConnectOptions, RoomEvent, type RoomOptions } from 'livekit-client'; // livekit-react-native re-exports these
 import { Platform } from 'react-native';
-import create from 'zustand';
+import { create } from 'zustand';
 
 import { logger } from '../../../lib/logging';
 import { callKeepService } from '../../../services/callkeep.service.ios';

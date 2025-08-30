@@ -155,11 +155,11 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
 
   describe('Room Connection with CallKeep', () => {
     beforeEach(() => {
-      // Mock successful connection flow
+      // Mock successful connection flow with proper async handling
       mockRoom.on.mockImplementation((event: any, callback: any) => {
         if (event === 'connectionStateChanged') {
-          // Simulate connected state immediately
-          setImmediate(() => callback('connected'));
+          // Store the callback for manual triggering
+          (mockRoom as any)._connectionStateCallback = callback;
         }
         return mockRoom;
       });
@@ -170,8 +170,11 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       
       await act(async () => {
         await result.current.actions.connectToRoom('general-chat', 'test-participant');
-        // Wait for the connection state change event to fire
-        await new Promise(resolve => setImmediate(resolve));
+        
+        // Manually trigger the connection state change
+        if ((mockRoom as any)._connectionStateCallback) {
+          (mockRoom as any)._connectionStateCallback('connected');
+        }
       });
 
       expect(mockCallKeepService.startCall).toHaveBeenCalledWith('general-chat');
@@ -183,6 +186,11 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       
       await act(async () => {
         await result.current.actions.connectToRoom('dev-team-sync', 'test-participant');
+        
+        // Manually trigger the connection state change
+        if ((mockRoom as any)._connectionStateCallback) {
+          (mockRoom as any)._connectionStateCallback('connected');
+        }
       });
 
       expect(mockCallKeepService.startCall).not.toHaveBeenCalled();
@@ -196,8 +204,11 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       
       await act(async () => {
         await result.current.actions.connectToRoom('general-chat', 'test-participant');
-        // Wait for the connection state change event to fire
-        await new Promise(resolve => setImmediate(resolve));
+        
+        // Manually trigger the connection state change
+        if ((mockRoom as any)._connectionStateCallback) {
+          (mockRoom as any)._connectionStateCallback('connected');
+        }
       });
 
       expect(mockLogger.warn).toHaveBeenCalledWith({

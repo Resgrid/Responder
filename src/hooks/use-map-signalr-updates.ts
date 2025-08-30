@@ -10,6 +10,7 @@ const DEBOUNCE_DELAY = 1000;
 
 export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData[]) => void) => {
   const lastProcessedTimestamp = useRef<number>(0);
+  const lastProcessedTimestampRef = useRef<number | undefined>(undefined);
   const isUpdating = useRef<boolean>(false);
   const pendingTimestamp = useRef<number | null>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -20,6 +21,18 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
   const fetchAndUpdateMarkers = useCallback(
     async (requestedTimestamp?: number) => {
       const timestampToProcess = requestedTimestamp || lastUpdateTimestamp;
+
+      // Early return guard: avoid re-fetching the same timestamp
+      if (timestampToProcess === undefined || timestampToProcess === lastProcessedTimestampRef.current) {
+        logger.debug({
+          message: 'Skipping duplicate timestamp fetch',
+          context: {
+            timestampToProcess,
+            lastProcessedTimestamp: lastProcessedTimestampRef.current,
+          },
+        });
+        return;
+      }
 
       // If a fetch is in progress, queue the latest timestamp for processing after completion
       if (isUpdating.current) {
@@ -71,6 +84,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
 
         // Update the last processed timestamp after successful API call
         lastProcessedTimestamp.current = timestampToProcess;
+        lastProcessedTimestampRef.current = timestampToProcess;
       } catch (error) {
         // Don't log aborted requests as errors
         if (error instanceof Error && error.name === 'AbortError') {
@@ -103,6 +117,10 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
         if (pendingTimestamp.current !== null) {
           const nextTimestamp = pendingTimestamp.current;
           pendingTimestamp.current = null;
+          // Clear the ref if we're about to process a newer timestamp
+          if (nextTimestamp > (lastProcessedTimestampRef.current || 0)) {
+            lastProcessedTimestampRef.current = undefined;
+          }
           logger.debug({
             message: 'Processing queued timestamp after fetch completion',
             context: { nextTimestamp },

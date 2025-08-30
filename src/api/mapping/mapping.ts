@@ -3,7 +3,7 @@ import { type GetMapLayersResult } from '@/models/v4/mapping/getMapLayersResult'
 
 import { createApiEndpoint } from '../common/client';
 
-const getMayLayersApi = createApiEndpoint('/Mapping/GetMayLayers');
+const getMayLayersApi = createApiEndpoint('/Mapping/GetMapLayers');
 
 const getMapDataAndMarkersApi = createApiEndpoint('/Mapping/GetMapDataAndMarkers');
 
