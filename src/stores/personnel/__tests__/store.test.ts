@@ -120,6 +120,8 @@ describe('Personnel Store', () => {
 		});
 
 		it('should set loading state during fetch', async () => {
+			jest.useRealTimers(); // Use real timers for this test to avoid timing issues
+			
 			mockGetAllPersonnelInfos.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ Data: mockPersonnelData } as any), 100)));
 
 			const { fetchPersonnel } = usePersonnelStore.getState();
@@ -132,6 +134,8 @@ describe('Personnel Store', () => {
 
 			// Check loading state is cleared after completion
 			expect(usePersonnelStore.getState().isLoading).toBe(false);
+			
+			jest.useFakeTimers(); // Restore fake timers
 		});
 
 		it('should handle fetch error', async () => {

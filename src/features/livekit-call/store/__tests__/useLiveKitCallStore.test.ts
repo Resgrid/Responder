@@ -95,9 +95,9 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
     // Reset the store to initial state
     useLiveKitCallStore.setState({
       availableRooms: [
-        { id: 'emergency-channel', name: 'Emergency Channel' },
-        { id: 'tactical-1', name: 'Tactical 1' },
-        { id: 'dispatch', name: 'Dispatch' },
+        { id: 'general-chat', name: 'General Chat' },
+        { id: 'dev-team-sync', name: 'Dev Team Sync' },
+        { id: 'product-updates', name: 'Product Updates' },
       ],
       selectedRoomForJoining: null,
       currentRoomId: null,
@@ -155,11 +155,11 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
 
   describe('Room Connection with CallKeep', () => {
     beforeEach(() => {
-      // Mock successful connection flow
+      // Mock successful connection flow with proper async handling
       mockRoom.on.mockImplementation((event: any, callback: any) => {
         if (event === 'connectionStateChanged') {
-          // Simulate connected state
-          setTimeout(() => callback('connected'), 0);
+          // Store the callback for manual triggering
+          (mockRoom as any)._connectionStateCallback = callback;
         }
         return mockRoom;
       });
@@ -169,12 +169,15 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       const { result } = renderHook(() => useLiveKitCallStore());
       
       await act(async () => {
-        await result.current.actions.connectToRoom('emergency-channel', 'test-participant');
-        // Wait for the connection state change event to fire
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await result.current.actions.connectToRoom('general-chat', 'test-participant');
+        
+        // Manually trigger the connection state change
+        if ((mockRoom as any)._connectionStateCallback) {
+          (mockRoom as any)._connectionStateCallback('connected');
+        }
       });
 
-      expect(mockCallKeepService.startCall).toHaveBeenCalledWith('emergency-channel');
+      expect(mockCallKeepService.startCall).toHaveBeenCalledWith('general-chat');
     });
 
     it('should not start CallKeep call on Android', async () => {
@@ -182,7 +185,12 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       const { result } = renderHook(() => useLiveKitCallStore());
       
       await act(async () => {
-        await result.current.actions.connectToRoom('emergency-channel', 'test-participant');
+        await result.current.actions.connectToRoom('dev-team-sync', 'test-participant');
+        
+        // Manually trigger the connection state change
+        if ((mockRoom as any)._connectionStateCallback) {
+          (mockRoom as any)._connectionStateCallback('connected');
+        }
       });
 
       expect(mockCallKeepService.startCall).not.toHaveBeenCalled();
@@ -195,14 +203,17 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       const { result } = renderHook(() => useLiveKitCallStore());
       
       await act(async () => {
-        await result.current.actions.connectToRoom('emergency-channel', 'test-participant');
-        // Wait for the connection state change event to fire
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await result.current.actions.connectToRoom('general-chat', 'test-participant');
+        
+        // Manually trigger the connection state change
+        if ((mockRoom as any)._connectionStateCallback) {
+          (mockRoom as any)._connectionStateCallback('connected');
+        }
       });
 
       expect(mockLogger.warn).toHaveBeenCalledWith({
         message: 'Failed to start CallKeep call (background audio may not work)',
-        context: { error, roomId: 'emergency-channel' },
+        context: { error, roomId: 'general-chat' },
       });
     });
   });
@@ -345,6 +356,7 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       const { result } = renderHook(() => useLiveKitCallStore());
       
       expect(result.current.availableRooms).toHaveLength(3);
+      expect(result.current.availableRooms[0]).toEqual({ id: 'general-chat', name: 'General Chat' });
       expect(result.current.selectedRoomForJoining).toBeNull();
       expect(result.current.currentRoomId).toBeNull();
       expect(result.current.isConnecting).toBe(false);
@@ -430,6 +442,8 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
         message: 'Error setting microphone state',
         context: { error, enabled: true },
       });
+      
+      // Check that error state was set after the await completes
       expect(result.current.error).toBe('Could not change microphone state.');
     });
 
@@ -500,7 +514,6 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
   });
 
   describe('Error Handling', () => {
-    describe('Error Handling', () => {
     it('should handle room initialization errors', async () => {
       // Make the Room constructor throw an error
       MockedRoom.mockImplementationOnce(() => {
@@ -521,19 +534,6 @@ describe('useLiveKitCallStore with CallKeep Integration', () => {
       expect(result.current.isConnecting).toBe(false);
       expect(result.current.isConnected).toBe(false);
     });
-
-    it('should handle basic error state management', async () => {
-      const { result } = renderHook(() => useLiveKitCallStore());
-
-      // Test basic error clearing functionality since token fetching isn't implemented
-      act(() => {
-        // Set an error state and then clear it
-        result.current.actions._clearError();
-      });
-
-      expect(result.current.error).toBeNull();
-    });
-  });
 
     it('should handle basic error state management', async () => {
       const { result } = renderHook(() => useLiveKitCallStore());

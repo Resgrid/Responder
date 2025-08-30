@@ -12,21 +12,25 @@ jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'light' }),
 }));
 
-// Mock React Native APIs with isolated mocking
-jest.mock('react-native/Libraries/Settings/Settings.ios', () => ({}));
-jest.mock('react-native/Libraries/Settings/NativeSettingsManager', () => ({
-  getConstants: () => ({}),
-  get: jest.fn(),
-  set: jest.fn(),
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios',
+    select: jest.fn().mockImplementation((obj) => obj.ios || obj.default),
+  },
+  ScrollView: ({ children, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('View', { testID: 'scroll-view', ...props }, children);
+  },
+  useWindowDimensions: () => ({
+    width: 400,
+    height: 800,
+  }),
 }));
 
-// Partial mock of React Native - preserve all original exports and only override Platform.OS
-jest.mock('react-native', () => ({
-  ...jest.requireActual('react-native'),
-  Platform: {
-    ...jest.requireActual('react-native').Platform,
-    OS: 'ios',
-  },
+jest.mock('@/hooks/use-analytics', () => ({
+  useAnalytics: () => ({
+    trackEvent: jest.fn(),
+  }),
 }));
 
 jest.mock('react-hook-form', () => ({

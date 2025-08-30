@@ -3,12 +3,12 @@ import { type GetMapLayersResult } from '@/models/v4/mapping/getMapLayersResult'
 
 import { createApiEndpoint } from '../common/client';
 
-const getMayLayersApi = createApiEndpoint('/Mapping/GetMayLayers');
+const getMayLayersApi = createApiEndpoint('/Mapping/GetMapLayers');
 
 const getMapDataAndMarkersApi = createApiEndpoint('/Mapping/GetMapDataAndMarkers');
 
-export const getMapDataAndMarkers = async () => {
-  const response = await getMapDataAndMarkersApi.get<GetMapDataAndMarkersResult>();
+export const getMapDataAndMarkers = async (signal?: AbortSignal) => {
+  const response = await getMapDataAndMarkersApi.get<GetMapDataAndMarkersResult>(undefined, signal);
   return response.data;
 };
 

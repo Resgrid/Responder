@@ -6,6 +6,17 @@ global.window = {};
 // @ts-ignore
 global.window = global;
 
+// Enable Jest fake timers globally for proper timer handling
+jest.useFakeTimers();
+
+// Polyfill setImmediate if needed (for React Native environment)
+if (typeof global.setImmediate === 'undefined') {
+  // @ts-ignore - Simple polyfill for setImmediate
+  global.setImmediate = (callback: (...args: any[]) => void, ...args: any[]) => {
+    return setTimeout(callback, 0, ...args);
+  };
+}
+
 // Mock React Native Appearance for NativeWind
 jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
   getColorScheme: jest.fn(() => 'light'),
