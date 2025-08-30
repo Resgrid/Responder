@@ -200,9 +200,9 @@ describe('SignalRService', () => {
 
       await signalRService.connectToHubWithEventingUrl(geoConfig);
 
-      // Should properly encode the token in the URL
+      // Should properly encode the token in the URL (URLSearchParams uses + encoding for spaces)
       expect(mockBuilderInstance.withUrl).toHaveBeenCalledWith(
-        'https://api.example.com/geolocationHub?access_token=token%20with%20spaces%20%26%20special%20chars',
+        'https://api.example.com/geolocationHub?access_token=token+with+spaces+%26+special+chars',
         {}
       );
     });
@@ -223,9 +223,9 @@ describe('SignalRService', () => {
 
       await signalRService.connectToHubWithEventingUrl(geoConfig);
 
-      // Should properly encode all special characters in the token
+      // Should properly encode all special characters in the token (URLSearchParams uses + encoding for spaces)
       expect(mockBuilderInstance.withUrl).toHaveBeenCalledWith(
-        'https://api.example.com/geolocationHub?access_token=Bearer%20eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9%2B%2F%3D%3F%23%26',
+        'https://api.example.com/geolocationHub?access_token=Bearer+eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9%2B%2F%3D%3F%23%26',
         {}
       );
     });
@@ -404,8 +404,10 @@ describe('SignalRService', () => {
       });
     });
 
-    it('should do nothing if hub is not connected', async () => {
-      await signalRService.invoke('nonExistentHub', 'testMethod', {});
+    it('should throw error if hub is not connected', async () => {
+      await expect(signalRService.invoke('nonExistentHub', 'testMethod', {})).rejects.toThrow(
+        'Cannot invoke method testMethod on hub nonExistentHub: hub is not connected'
+      );
 
       expect(mockConnection.invoke).not.toHaveBeenCalled();
     });
@@ -534,19 +536,27 @@ describe('SignalRService', () => {
       // Get the onclose callback
       const onCloseCallback = mockConnection.onclose.mock.calls[0][0];
       
-      // Simulate multiple failed reconnection attempts
-      for (let i = 0; i < 6; i++) {
+      // Mock connectToHubWithEventingUrl to fail during reconnection attempts
+      const connectSpy = jest.spyOn(signalRService, 'connectToHubWithEventingUrl');
+      connectSpy.mockRejectedValue(new Error('Connection failed'));
+      
+      // Simulate multiple failed reconnection attempts (5 max attempts)
+      for (let i = 0; i < 5; i++) {
         onCloseCallback();
         jest.advanceTimersByTime(5000);
         await jest.runAllTicks();
       }
       
+      // One more close event to trigger max attempts reached
+      onCloseCallback();
+      
       // Should log max attempts reached error
       expect(mockLogger.error).toHaveBeenCalledWith({
-        message: `Max reconnection attempts reached for hub: ${mockConfig.name}`,
+        message: `Max reconnection attempts (5) reached for hub: ${mockConfig.name}`,
       });
       
       jest.useRealTimers();
+      connectSpy.mockRestore();
     });
 
     it('should reset reconnection attempts on successful reconnection', async () => {
@@ -593,10 +603,10 @@ describe('SignalRService', () => {
       // Should have attempted to refresh token
       expect(mockRefreshAccessToken).toHaveBeenCalled();
       
-      // Should have logged the failure
+      // Should have logged the failure with maxAttempts included
       expect(mockLogger.error).toHaveBeenCalledWith({
         message: `Failed to refresh token or reconnect to hub: ${mockConfig.name}`,
-        context: { error: expect.any(Error), attempts: 1 },
+        context: { error: expect.any(Error), attempts: 1, maxAttempts: 5 },
       });
       
       // Should NOT have called connectToHubWithEventingUrl due to token refresh failure

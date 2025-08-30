@@ -7,8 +7,8 @@ const getMayLayersApi = createApiEndpoint('/Mapping/GetMayLayers');
 
 const getMapDataAndMarkersApi = createApiEndpoint('/Mapping/GetMapDataAndMarkers');
 
-export const getMapDataAndMarkers = async () => {
-  const response = await getMapDataAndMarkersApi.get<GetMapDataAndMarkersResult>();
+export const getMapDataAndMarkers = async (signal?: AbortSignal) => {
+  const response = await getMapDataAndMarkersApi.get<GetMapDataAndMarkersResult>(undefined, signal);
   return response.data;
 };
 
