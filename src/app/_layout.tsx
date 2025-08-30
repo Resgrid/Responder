@@ -1,3 +1,5 @@
+// Import URL polyfill at the very top to ensure URL is available globally
+import 'react-native-url-polyfill/auto';
 // Import  global CSS file
 import '../../global.css';
 import '../lib/i18n';
