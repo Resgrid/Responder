@@ -229,7 +229,7 @@ describe('Calendar Store', () => {
 			
 			// Should only contain today's item after filtering
 			expect(result.current.todayCalendarItems).toHaveLength(1);
-			expect(result.current.todayCalendarItems[0].CalendarItemId).toBe('today-item');
+			expect(result.current.todayCalendarItems[0]?.CalendarItemId).toBe('today-item');
 			expect(result.current.isTodaysLoading).toBe(false);
 			expect(result.current.error).toBeNull();
 		});
@@ -402,9 +402,9 @@ describe('Calendar Store', () => {
 			expect(result.current.attendanceError).toBeNull();
 
 			// Check that attendance was updated in all arrays
-			expect(result.current.todayCalendarItems[0].Attending).toBe(true);
-			expect(result.current.upcomingCalendarItems[0].Attending).toBe(true);
-			expect(result.current.selectedMonthItems[0].Attending).toBe(true);
+			expect(result.current.todayCalendarItems[0]?.Attending).toBe(true);
+			expect(result.current.upcomingCalendarItems[0]?.Attending).toBe(true);
+			expect(result.current.selectedMonthItems[0]?.Attending).toBe(true);
 			expect(result.current.viewCalendarItem?.Attending).toBe(true);
 		});
 

@@ -36,7 +36,7 @@ export const ThemeItem = () => {
         <Text>{t('settings.theme.title')}</Text>
       </View>
       <View className="flex-row items-center">
-        <Select onValueChange={onSelect} selectedValue={theme?.value}>
+        <Select onValueChange={onSelect} selectedValue={theme?.value ?? null}>
           <SelectTrigger>
             <SelectInput placeholder="Select option" />
             <SelectIcon as={ChevronDownIcon} className="mr-3" />

@@ -4,7 +4,7 @@ declare module '@gluestack-ui/modal' {
   interface InterfaceModalProps {
     children?: React.ReactNode;
   }
-  
+
   interface IModalContentProps {
     children?: React.ReactNode;
   }
@@ -15,7 +15,7 @@ declare module '@gluestack-ui/actionsheet' {
     children?: React.ReactNode;
     testID?: string;
   }
-  
+
   interface InterfaceActionsheetContentProps {
     children?: React.ReactNode;
   }
@@ -38,20 +38,12 @@ declare module 'src/components/ui/drawer' {
   interface IDrawerProps {
     children?: React.ReactNode;
   }
-  
+
   interface IDrawerContentProps {
     children?: React.ReactNode;
   }
-  
+
   interface IDrawerBackdropProps {
     onPress?: () => void;
-  }
-}
-
-// Missing tailwind-variants config type
-declare module 'tailwind-variants/dist/config' {
-  export interface TVConfig<V = {}, EV = V> {
-    // Basic config structure
-    [key: string]: any;
   }
 }

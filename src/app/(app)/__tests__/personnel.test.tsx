@@ -512,8 +512,8 @@ describe('Personnel Page', () => {
 
       // Verify the personnel data is as expected
       const storeReturn = mockUsePersonnelStore.mock.results[mockUsePersonnelStore.mock.results.length - 1];
-      expect(storeReturn.value.personnel).toEqual(mockPersonnelData);
-      expect(storeReturn.value.personnel).toHaveLength(3);
+      expect(storeReturn?.value.personnel).toEqual(mockPersonnelData);
+      expect(storeReturn?.value.personnel).toHaveLength(3);
     });
   });
 

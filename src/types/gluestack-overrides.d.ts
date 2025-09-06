@@ -34,7 +34,7 @@ declare module '@gluestack-ui/tooltip' {
 }
 
 // Drawer props (uses modal internally)
-declare module 'src/components/ui/drawer' {
+declare module '@/components/ui/drawer' {
   interface IDrawerProps {
     children?: React.ReactNode;
   }
@@ -45,13 +45,5 @@ declare module 'src/components/ui/drawer' {
 
   interface IDrawerBackdropProps {
     onPress?: () => void;
-  }
-}
-
-// Missing tailwind-variants config type
-declare module 'tailwind-variants/dist/config' {
-  export interface TVConfig<V = {}, EV = V> {
-    // Basic config structure
-    [key: string]: any;
   }
 }

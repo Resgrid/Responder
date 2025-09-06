@@ -21,9 +21,9 @@ export interface QueuedEvent {
   retryCount: number;
   maxRetries: number;
   createdAt: number;
-  lastAttemptAt?: number;
-  nextRetryAt?: number;
-  error?: string;
+  lastAttemptAt?: number | undefined;
+  nextRetryAt?: number | undefined;
+  error?: string | undefined;
 }
 
 export interface QueuedPersonnelStatusEvent extends Omit<QueuedEvent, 'data'> {

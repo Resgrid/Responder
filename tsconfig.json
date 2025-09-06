@@ -12,24 +12,45 @@
     "target": "esnext",
     "lib": ["esnext", "dom"],
     "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
     "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@env": ["./src/lib/env.js"],
       "@assets/*": ["./assets/*"],
-      "tailwind.config": ["./tailwind.config.js"]
+      "tailwind.config": ["./tailwind.config.js"],
+      "@gluestack-ui/nativewind-utils/tva": ["./node_modules/@gluestack-ui/nativewind-utils/tva/index.d.ts"],
+      "@gluestack-ui/nativewind-utils/withStates": ["./node_modules/@gluestack-ui/nativewind-utils/withStates/index.d.ts"],
+      "@gluestack-ui/nativewind-utils/withStyleContext": ["./node_modules/@gluestack-ui/nativewind-utils/withStyleContext/index.d.ts"],
+      "@gluestack-ui/nativewind-utils/IsWeb": ["./node_modules/@gluestack-ui/nativewind-utils/IsWeb/index.d.ts"],
+      "@gluestack-ui/nativewind-utils/*": ["./node_modules/@gluestack-ui/nativewind-utils/*/index.d.ts"],
+      "tailwind-variants/dist/config": ["./node_modules/tailwind-variants/dist/config.d.ts"]
     },
     "esModuleInterop": true,
-    "checkJs": true,
     "typeRoots": ["./node_modules/@types", "./types"],
-    "noImplicitAny": false
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedModules": true
   },
   "ts-node": {
     "compilerOptions": {
       "module": "commonjs"
     }
   },
-  "exclude": ["docs", "cli", "android", "lib", "ios", "node_modules", "storybookDocsComponents"],
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts", "__mocks__/**/*.ts", "__mocks__/**/*.tsx", "app.config.ts", "jest-setup.ts", "__tests__/**/*.ts", "__tests__/**/*.tsx"]
+  "exclude": [
+    "docs", 
+    "cli", 
+    "android", 
+    "lib", 
+    "ios", 
+    "node_modules",
+    "storybookDocsComponents",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/node_modules/**"
+  ],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts", "__mocks__/**/*.ts", "__mocks__/**/*.tsx", "app.config.ts", "jest-setup.ts", "__tests__/**/*.ts", "__tests__/**/*.tsx", "test-actionsheet.tsx"]
 }

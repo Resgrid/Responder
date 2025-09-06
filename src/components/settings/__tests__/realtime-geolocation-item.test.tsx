@@ -13,7 +13,7 @@ jest.mock('../../ui/alert', () => {
   return {
     Alert: ({ children }: any) => mockReact.createElement('div', { 'data-testid': 'alert' }, children),
     AlertIcon: ({ as: Component }: any) => null,
-    AlertText: ({ children }: any) => mockReact.createElement('span', { 'data-testid': 'alert-text' }, children),
+    AlertText: ({ children }: any) => mockReact.createElement('span', { testID: 'alert-text', 'data-testid': 'alert-text' }, children),
   };
 });
 
@@ -21,11 +21,13 @@ jest.mock('../../ui/switch', () => {
   const mockReact = require('react');
   return {
     Switch: (props: any) => {
-      // Create a mock switch that calls onValueChange when clicked
-      return mockReact.createElement('button', {
-        'data-testid': 'switch',
-        onClick: () => props.onValueChange && props.onValueChange(!props.value),
-        'data-value': props.value
+      // Create a mock switch that calls onValueChange when pressed (React Native style)
+      return mockReact.createElement('Pressable', {
+        testID: 'switch',
+        onPress: () => props.onValueChange && props.onValueChange(!props.value),
+        'data-value': props.value,
+        accessible: true,
+        accessibilityRole: 'switch'
       }, `Switch: ${props.value ? 'On' : 'Off'}`);
     },
   };
@@ -71,6 +73,7 @@ const mockT = jest.fn((key: string) => {
   const translations: Record<string, string> = {
     'settings.realtime_geolocation': 'Realtime Geolocation',
     'settings.realtime_geolocation_warning': 'This feature connects to the real-time location hub to receive location updates from other personnel and units. It requires an active network connection.',
+    'settings.realtime_geolocation_connecting': 'Connecting to hub...',
   };
   return translations[key] || key;
 });
@@ -138,7 +141,13 @@ describe('RealtimeGeolocationItem', () => {
 
     // Verify the correct state is used - when enabled but not connected
     expect(mockT).toHaveBeenCalledWith('settings.realtime_geolocation_warning');
-    // The component should render the "Connecting" state
+
+    // Assert that the translation key for the warning text is requested
+    expect(mockT).toHaveBeenCalledWith('settings.realtime_geolocation_warning');
+
+    // Assert that the rendered output contains the "Connecting to hub..." text
+    const alertText = screen.getByTestId('alert-text');
+    expect(alertText).toHaveTextContent('This feature connects to the real-time location hub to receive location updates from other personnel and units. It requires an active network connection. Connecting to hub...');
   });
 
   it('shows "Connected to hub." when enabled and connected', () => {
@@ -149,20 +158,45 @@ describe('RealtimeGeolocationItem', () => {
 
     // Verify the correct state is used - when enabled and connected
     expect(mockT).toHaveBeenCalledWith('settings.realtime_geolocation_warning');
-    // The component should render the "Connected" state
+
+    // Assert that the UI shows the connected state
+    const alertText = screen.getByTestId('alert-text');
+    expect(alertText).toHaveTextContent('This feature connects to the real-time location hub to receive location updates from other personnel and units. It requires an active network connection. Connected to hub.');
   });
 
-  it('calls setRealtimeGeolocationEnabled when switch is toggled', async () => {
-    const TestWrapper = () => {
-      const { setRealtimeGeolocationEnabled } = require('@/lib/hooks/use-realtime-geolocation').useRealtimeGeolocation();
-      React.useEffect(() => {
-        // Simulate switch toggle by calling the function directly
-        setRealtimeGeolocationEnabled(true);
-      }, [setRealtimeGeolocationEnabled]);
-      return null;
-    };
+  it('calls setRealtimeGeolocationEnabled when switch is pressed with fireEvent.press', async () => {
+    mockUseRealtimeGeolocation.isRealtimeGeolocationEnabled = false;
 
-    render(<TestWrapper />);
+    render(<RealtimeGeolocationItem />);
+
+    const switchElement = screen.getByTestId('switch');
+    fireEvent.press(switchElement);
+
+    await waitFor(() => {
+      expect(mockSetRealtimeGeolocationEnabled).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it('calls setRealtimeGeolocationEnabled with false when enabled switch is pressed', async () => {
+    mockUseRealtimeGeolocation.isRealtimeGeolocationEnabled = true;
+
+    render(<RealtimeGeolocationItem />);
+
+    const switchElement = screen.getByTestId('switch');
+    fireEvent.press(switchElement);
+
+    await waitFor(() => {
+      expect(mockSetRealtimeGeolocationEnabled).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it('calls setRealtimeGeolocationEnabled when switch is toggled from off to on', async () => {
+    mockUseRealtimeGeolocation.isRealtimeGeolocationEnabled = false;
+
+    render(<RealtimeGeolocationItem />);
+
+    const switchElement = screen.getByTestId('switch');
+    fireEvent.press(switchElement);
 
     await waitFor(() => {
       expect(mockSetRealtimeGeolocationEnabled).toHaveBeenCalledWith(true);
@@ -173,18 +207,12 @@ describe('RealtimeGeolocationItem', () => {
     mockSetRealtimeGeolocationEnabled.mockRejectedValueOnce(new Error('Network error'));
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-    const TestWrapper = () => {
-      const { setRealtimeGeolocationEnabled } = require('@/lib/hooks/use-realtime-geolocation').useRealtimeGeolocation();
-      React.useEffect(() => {
-        // Simulate an error during toggle
-        setRealtimeGeolocationEnabled(true).catch(() => {
-          console.error('Failed to toggle realtime geolocation:', new Error('Network error'));
-        });
-      }, [setRealtimeGeolocationEnabled]);
-      return null;
-    };
+    mockUseRealtimeGeolocation.isRealtimeGeolocationEnabled = false;
 
-    render(<TestWrapper />);
+    render(<RealtimeGeolocationItem />);
+
+    const switchElement = screen.getByTestId('switch');
+    fireEvent.press(switchElement);
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to toggle realtime geolocation:', expect.any(Error));

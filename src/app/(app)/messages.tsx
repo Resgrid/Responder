@@ -16,7 +16,7 @@ import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetItem, 
 import { Badge } from '@/components/ui/badge';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer';
+import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer/index';
 import { Fab, FabIcon } from '@/components/ui/fab';
 import { FlatList } from '@/components/ui/flat-list';
 import { HStack } from '@/components/ui/hstack';

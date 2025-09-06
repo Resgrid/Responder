@@ -5,6 +5,7 @@ import { deleteMessage, getInboxMessages, getMessage, getRecipients, getSentMess
 import { logger } from '@/lib/logging';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
+import type { ApiResponse } from '@/types/api';
 
 export type MessageFilter = 'all' | 'inbox' | 'sent';
 
@@ -75,7 +76,7 @@ export const useMessagesStore = create<MessagesState>()(
     fetchInboxMessages: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await getInboxMessages();
+        const response = (await getInboxMessages()) as ApiResponse<MessageResultData[]>;
         set({
           inboxMessages: response.Data || [],
           isLoading: false,
@@ -92,7 +93,7 @@ export const useMessagesStore = create<MessagesState>()(
     fetchSentMessages: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await getSentMessages();
+        const response = (await getSentMessages()) as ApiResponse<MessageResultData[]>;
         set({
           sentMessages: response.Data || [],
           isLoading: false,
@@ -125,7 +126,7 @@ export const useMessagesStore = create<MessagesState>()(
     fetchMessageDetails: async (messageId: string) => {
       set({ isLoading: true, error: null });
       try {
-        const response = await getMessage(messageId);
+        const response = (await getMessage(messageId)) as ApiResponse<MessageResultData>;
         set({
           selectedMessage: response.Data,
           selectedMessageId: messageId,

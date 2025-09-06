@@ -52,19 +52,24 @@ export class CallKeepService {
     }
 
     try {
-      const options = {
-        ios: {
-          appName: config.appName,
-          maximumCallGroups: config.maximumCallGroups.toString(),
-          maximumCallsPerCallGroup: config.maximumCallsPerCallGroup.toString(),
-          includesCallsInRecents: config.includesCallsInRecents,
-          supportsVideo: config.supportsVideo,
-          ringtoneSound: config.ringtoneSound,
-          audioSession: {
-            categoryOptions: AudioSessionCategoryOption.allowAirPlay + AudioSessionCategoryOption.allowBluetooth + AudioSessionCategoryOption.allowBluetoothA2DP + AudioSessionCategoryOption.defaultToSpeaker,
-            mode: AudioSessionMode.voiceChat,
-          },
+      const iosOptions: any = {
+        appName: config.appName,
+        maximumCallGroups: config.maximumCallGroups.toString(),
+        maximumCallsPerCallGroup: config.maximumCallsPerCallGroup.toString(),
+        includesCallsInRecents: config.includesCallsInRecents,
+        supportsVideo: config.supportsVideo,
+        audioSession: {
+          categoryOptions: AudioSessionCategoryOption.allowAirPlay + AudioSessionCategoryOption.allowBluetooth + AudioSessionCategoryOption.allowBluetoothA2DP + AudioSessionCategoryOption.defaultToSpeaker,
+          mode: AudioSessionMode.voiceChat,
         },
+      };
+
+      if (config.ringtoneSound) {
+        iosOptions.ringtoneSound = config.ringtoneSound;
+      }
+
+      const options = {
+        ios: iosOptions,
         android: {
           alertTitle: 'Permissions required',
           alertDescription: 'This application needs to access your phone accounts',

@@ -180,7 +180,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-location',
       {
-        locationWhenInUsePermission: 'Allow Resgird Responder to show current location on map.',
+        locationWhenInUsePermission: 'Allow Resgrid Responder to show current location on map.',
         locationAlwaysAndWhenInUsePermission: 'Allow Resgrid Responder to use your location.',
         locationAlwaysPermission: 'Resgrid Responder needs to track your location',
         isIosBackgroundLocationEnabled: true,

@@ -36,7 +36,7 @@ const PrimitiveIcon = React.forwardRef<React.ElementRef<typeof Svg>, IPrimitiveI
     if (AsComp) {
       return <AsComp ref={ref} fill={fill} {...props} {...sizeProps} stroke={colorProps} />;
     }
-    return <Svg ref={ref} height={height} width={width} fill={fill} stroke={colorProps} {...props} />;
+    return <Svg ref={ref} height={height || 24} width={width || 24} fill={fill || 'none'} stroke={colorProps} {...props} />;
   }
 );
 
@@ -51,7 +51,7 @@ const UIActionsheet = createActionsheet({
   Backdrop: AnimatedPressable as any,
   Content: Motion.View as any,
   DragIndicator: View as any,
-  IndicatorWrapper: View as any,
+  DragIndicatorWrapper: View as any,
   Item: Pressable as any,
   ItemText: Text as any,
   ScrollView: ScrollView as any,

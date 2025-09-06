@@ -31,60 +31,60 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
   const [isLoading, setIsLoading] = useState(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [address, setAddress] = useState<string | undefined>(undefined);
-  const [isMounted, setIsMounted] = useState(true);
+  const isMountedRef = useRef(true);
 
-  const reverseGeocode = React.useCallback(
-    async (latitude: number, longitude: number) => {
-      if (!isMounted) return;
+  const reverseGeocode = React.useCallback(async (latitude: number, longitude: number) => {
+    if (!isMountedRef.current) return;
 
-      setIsReverseGeocoding(true);
-      try {
-        const result = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
+    setIsReverseGeocoding(true);
+    try {
+      const result = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
 
-        if (!isMounted) return;
+      if (!isMountedRef.current) return;
 
-        if (result && result.length > 0) {
-          const { street, name, city, region, country, postalCode } = result[0];
-          let addressParts: string[] = [];
+      if (result && result.length > 0) {
+        const locationResult = result[0];
+        if (!locationResult) return;
 
-          if (street) addressParts.push(street);
-          if (name && name !== street) addressParts.push(name);
-          if (city) addressParts.push(city);
-          if (region) addressParts.push(region);
-          if (postalCode) addressParts.push(postalCode);
-          if (country) addressParts.push(country);
+        const { street, name, city, region, country, postalCode } = locationResult;
+        let addressParts: string[] = [];
 
-          setAddress(addressParts.join(', '));
-        } else {
-          setAddress(undefined);
-        }
-      } catch (error) {
-        console.error('Error reverse geocoding:', error);
-        if (isMounted) setAddress(undefined);
-      } finally {
-        if (isMounted) setIsReverseGeocoding(false);
+        if (street) addressParts.push(street);
+        if (name && name !== street) addressParts.push(name);
+        if (city) addressParts.push(city);
+        if (region) addressParts.push(region);
+        if (postalCode) addressParts.push(postalCode);
+        if (country) addressParts.push(country);
+
+        setAddress(addressParts.join(', '));
+      } else {
+        setAddress(undefined);
       }
-    },
-    [isMounted]
-  );
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      if (isMountedRef.current) setAddress(undefined);
+    } finally {
+      if (isMountedRef.current) setIsReverseGeocoding(false);
+    }
+  }, []);
 
   const getUserLocation = React.useCallback(async () => {
-    if (!isMounted) return;
+    if (!isMountedRef.current) return;
 
     setIsLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         console.error('Location permission not granted');
-        if (isMounted) setIsLoading(false);
+        if (isMountedRef.current) setIsLoading(false);
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
 
       const newLocation = {
         latitude: location.coords.latitude,
@@ -94,7 +94,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       reverseGeocode(newLocation.latitude, newLocation.longitude);
 
       // Move camera to user location
-      if (cameraRef.current && isMounted) {
+      if (cameraRef.current && isMountedRef.current) {
         cameraRef.current.setCamera({
           centerCoordinate: [location.coords.longitude, location.coords.latitude],
           zoomLevel: 15,
@@ -104,12 +104,12 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     } catch (error) {
       console.error('Error getting location:', error);
     } finally {
-      if (isMounted) setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
-  }, [isMounted, reverseGeocode]);
+  }, [reverseGeocode]);
 
   useEffect(() => {
-    setIsMounted(true);
+    isMountedRef.current = true;
 
     if (initialLocation) {
       setCurrentLocation(initialLocation);
@@ -119,7 +119,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     }
 
     return () => {
-      setIsMounted(false);
+      isMountedRef.current = false;
     };
   }, [initialLocation, getUserLocation, reverseGeocode]);
 
@@ -135,10 +135,19 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
 
   const handleConfirmLocation = () => {
     if (currentLocation) {
-      onLocationSelected({
+      const locationData: {
+        latitude: number;
+        longitude: number;
+        address?: string;
+      } = {
         ...currentLocation,
-        address,
-      });
+      };
+
+      if (address) {
+        locationData.address = address;
+      }
+
+      onLocationSelected(locationData);
       onClose();
     }
   };

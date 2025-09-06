@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { getCurrentUsersRights } from '@/api/security/security';
 import { type DepartmentRightsResultData } from '@/models/v4/security/departmentRightsResultData';
+import type { ApiResponse } from '@/types/api';
 
 import { zustandStorage } from '../../lib/storage';
 
@@ -19,7 +20,7 @@ export const securityStore = create<SecurityState>()(
       rights: null,
       getRights: async () => {
         try {
-          const response = await getCurrentUsersRights();
+          const response = (await getCurrentUsersRights()) as ApiResponse<DepartmentRightsResultData>;
 
           set({
             rights: response.Data,

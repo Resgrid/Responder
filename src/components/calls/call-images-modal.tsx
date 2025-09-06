@@ -101,8 +101,11 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       allowsEditing: true,
       quality: 0.8,
     });
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+    if (!result.canceled && result.assets.length > 0) {
+      const firstAsset = result.assets[0];
+      if (firstAsset) {
+        setSelectedImage(firstAsset.uri);
+      }
     }
   };
 
@@ -116,8 +119,11 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       allowsEditing: true,
       quality: 0.8,
     });
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+    if (!result.canceled && result.assets.length > 0) {
+      const firstAsset = result.assets[0];
+      if (firstAsset) {
+        setSelectedImage(firstAsset.uri);
+      }
     }
   };
 

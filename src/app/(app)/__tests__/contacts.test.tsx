@@ -371,11 +371,11 @@ describe('Contacts Page', () => {
 
       expect(mockTrackEvent).toHaveBeenCalledTimes(1);
       const call = mockTrackEvent.mock.calls[0];
-      expect(call[0]).toBe('contacts_viewed');
-      expect(call[1]).toHaveProperty('timestamp');
+      expect(call?.[0]).toBe('contacts_viewed');
+      expect(call?.[1]).toHaveProperty('timestamp');
 
       // Verify timestamp is in ISO format
-      const timestamp = (call[1] as { timestamp: string }).timestamp;
+      const timestamp = (call?.[1] as { timestamp: string } | undefined)?.timestamp;
       expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     });
 

@@ -36,7 +36,7 @@ import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-s
 
 export default function CallDetail() {
   const { id } = useLocalSearchParams();
-  const callId = Array.isArray(id) ? id[0] : id;
+  const callId = (Array.isArray(id) ? id[0] : id) as string; // Assert that we'll always have a callId
   const router = useRouter();
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
@@ -76,7 +76,7 @@ export default function CallDetail() {
     // Track analytics for notes modal opening
     trackEvent('call_notes_opened', {
       timestamp: new Date().toISOString(),
-      callId: call?.CallId || callId,
+      callId: call?.CallId || callId || '',
       notesCount: call?.NotesCount || 0,
     });
   };
@@ -87,7 +87,7 @@ export default function CallDetail() {
     // Track analytics for images modal opening
     trackEvent('call_images_opened', {
       timestamp: new Date().toISOString(),
-      callId: call?.CallId || callId,
+      callId: call?.CallId || callId || '',
       imagesCount: call?.ImgagesCount || 0,
     });
   };
@@ -98,7 +98,7 @@ export default function CallDetail() {
     // Track analytics for files modal opening
     trackEvent('call_files_opened', {
       timestamp: new Date().toISOString(),
-      callId: call?.CallId || callId,
+      callId: call?.CallId || callId || '',
       filesCount: call?.FileCount || 0,
     });
   };
@@ -156,8 +156,8 @@ export default function CallDetail() {
       } else if (call.Geolocation) {
         const [lat, lng] = call.Geolocation.split(',');
         setCoordinates({
-          latitude: parseFloat(lat),
-          longitude: parseFloat(lng),
+          latitude: lat ? parseFloat(lat) : 0,
+          longitude: lng ? parseFloat(lng) : 0,
         });
       }
     }
@@ -171,7 +171,7 @@ export default function CallDetail() {
       // Track analytics for route action
       trackEvent('call_route_opened', {
         timestamp: new Date().toISOString(),
-        callId: call?.CallId || callId,
+        callId: call?.CallId || callId || '',
         hasUserLocation: !!(userLocation.latitude && userLocation.longitude),
         destinationAddress: call?.Address || '',
       });
@@ -184,7 +184,7 @@ export default function CallDetail() {
         // Track failed route attempt
         trackEvent('call_route_failed', {
           timestamp: new Date().toISOString(),
-          callId: call?.CallId || callId,
+          callId: call?.CallId || callId || '',
           reason: 'failed_to_open_maps',
         });
       }
@@ -197,7 +197,7 @@ export default function CallDetail() {
       // Track failed route attempt
       trackEvent('call_route_failed', {
         timestamp: new Date().toISOString(),
-        callId: call?.CallId || callId,
+        callId: call?.CallId || callId || '',
         reason: 'exception',
         error: error instanceof Error ? error.message : 'unknown_error',
       });
@@ -211,7 +211,7 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
+            ...(canUserCreateCalls && { headerRight: () => <HeaderRightMenu /> }),
           }}
         />
         <View className="size-full flex-1">
@@ -229,7 +229,7 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
+            ...(canUserCreateCalls && { headerRight: () => <HeaderRightMenu /> }),
           }}
         />
         <View className="size-full flex-1">
@@ -479,7 +479,7 @@ export default function CallDetail() {
         options={{
           title: t('call_detail.title'),
           headerShown: true,
-          headerRight: canUserCreateCalls ? () => <HeaderRightMenu /> : undefined,
+          ...(canUserCreateCalls && { headerRight: () => <HeaderRightMenu /> }),
         }}
       />
       <ScrollView className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>

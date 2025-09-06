@@ -4,6 +4,7 @@ import { getAllPersonnelInfos, getPersonnelFilterOptions } from '@/api/personnel
 import { loadPersonnelFilterOptions, savePersonnelFilterOptions } from '@/lib/storage/personnel-filter';
 import { type FilterResultData } from '@/models/v4/personnel/filterResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
+import type { ApiResponse } from '@/types/api';
 
 interface PersonnelState {
   personnel: PersonnelInfoResultData[];
@@ -53,7 +54,7 @@ export const usePersonnelStore = create<PersonnelState>((set, get) => ({
       set({ isLoading: true, error: null });
       const { selectedFilters } = get();
       const filterString = selectedFilters.length > 0 ? selectedFilters.join(',') : '';
-      const response = await getAllPersonnelInfos(filterString);
+      const response = (await getAllPersonnelInfos(filterString)) as ApiResponse<PersonnelInfoResultData[]>;
       set({ personnel: response.Data || [], isLoading: false });
     } catch (error) {
       set({

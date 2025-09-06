@@ -550,7 +550,7 @@ jest.mock('react-native-mmkv', () => {
 
   const useMMKVBoolean = jest.fn().mockImplementation((key: string) => {
     const value = mockStorage.get(key);
-    const boolValue = value === 'true' || value === true || value === undefined;
+    const boolValue = value !== undefined ? value === 'true' || value === true : false;
     const setter = jest.fn().mockImplementation((newValue: boolean) => {
       mockStorage.set(key, newValue);
     });

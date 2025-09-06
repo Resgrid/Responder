@@ -9,7 +9,7 @@ import React from 'react';
 import { Dimensions, Pressable, ScrollView, View } from 'react-native';
 
 const AnimatedPressable = createMotionAnimatedComponent(Pressable);
-const SCOPE = 'MODAL';
+const SCOPE = 'DRAWER';
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 const sizes: { [key: string]: number } = {
@@ -32,6 +32,11 @@ const UIDrawer = createDrawer({
 
 cssInterop(AnimatedPressable as any, { className: 'style' });
 cssInterop(Motion.View as any, { className: 'style' });
+cssInterop(UIDrawer as any, { className: 'style' });
+cssInterop(UIDrawer.Body as any, { className: 'style' });
+cssInterop(UIDrawer.CloseButton as any, { className: 'style' });
+cssInterop(UIDrawer.Footer as any, { className: 'style' });
+cssInterop(UIDrawer.Header as any, { className: 'style' });
 
 const drawerStyle = tva({
   base: 'w-full h-full web:pointer-events-none relative',
@@ -182,8 +187,8 @@ const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdro
 const DrawerContent = React.forwardRef<React.ElementRef<typeof UIDrawer.Content>, IDrawerContentProps>(({ className, ...props }, ref) => {
   const { size: parentSize, anchor: parentAnchor } = useStyleContext(SCOPE);
 
-  const drawerHeight = screenHeight * (sizes[parentSize] || sizes.md);
-  const drawerWidth = screenWidth * (sizes[parentSize] || sizes.md);
+  const drawerHeight = screenHeight * (sizes[parentSize] ?? sizes.md ?? 0.5);
+  const drawerWidth = screenWidth * (sizes[parentSize] ?? sizes.md ?? 0.5);
 
   const isHorizontal = parentAnchor === 'left' || parentAnchor === 'right';
 

@@ -247,7 +247,9 @@ describe('useUnitsStore', () => {
 			expect(useUnitsStore.getState().units).toEqual(mockUnits);
 
 			// Second fetch with different data
-			const newUnits = [...mockUnits, { ...mockUnits[0], UnitId: '4', Name: 'Truck 4' }];
+			const baseUnit = mockUnits[0];
+			if (!baseUnit) throw new Error('Mock units should have at least one element');
+			const newUnits = [...mockUnits, { ...baseUnit, UnitId: '4', Name: 'Truck 4' }];
 			mockGetUnits.mockResolvedValueOnce(createMockUnitsResult(newUnits));
 
 			await fetchUnits();

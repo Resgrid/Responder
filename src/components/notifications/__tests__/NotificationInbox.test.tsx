@@ -211,8 +211,8 @@ describe('NotificationInbox', () => {
 
     // Verify that notifications data is available to the component
     expect(mockUseNotifications).toHaveBeenCalled();
-    const mockReturn = mockUseNotifications.mock.results[0].value;
-    expect(mockReturn.notifications).toHaveLength(3);
+    const mockReturn = mockUseNotifications.mock.results[0]?.value;
+    expect(mockReturn?.notifications).toHaveLength(3);
   });
 
   it('exits selection mode on cancel', async () => {
@@ -268,9 +268,9 @@ describe('NotificationInbox', () => {
 
     // Verify that the component receives empty notifications array
     expect(mockUseNotifications).toHaveBeenCalled();
-    const mockReturn = mockUseNotifications.mock.results[0].value;
-    expect(mockReturn.notifications).toHaveLength(0);
-    expect(mockReturn.isLoading).toBe(false);
+    const mockReturn = mockUseNotifications.mock.results[0]?.value;
+    expect(mockReturn?.notifications).toHaveLength(0);
+    expect(mockReturn?.isLoading).toBe(false);
   });
 
   it('handles missing unit or config', () => {

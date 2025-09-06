@@ -36,7 +36,7 @@ export const LanguageItem = () => {
         <Text>{t('settings.language')}</Text>
       </View>
       <View className="flex-row items-center">
-        <Select onValueChange={onSelect} selectedValue={selectedLanguage?.value}>
+        <Select onValueChange={onSelect} selectedValue={selectedLanguage?.value ?? null}>
           <SelectTrigger>
             <SelectInput placeholder="Select option" />
             <SelectIcon as={ChevronDownIcon} className="mr-3" />

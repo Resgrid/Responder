@@ -1,7 +1,7 @@
 // Temporary type fixes for compilation issues
 
 declare module 'tailwind-variants/dist/config' {
-  export interface TVConfig<V = any, EV = V> {
+  export interface TVConfig<V = unknown, EV = V> {
     [key: string]: any;
   }
 }
