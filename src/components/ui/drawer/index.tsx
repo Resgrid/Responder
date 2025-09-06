@@ -20,9 +20,9 @@ const sizes: { [key: string]: number } = {
 };
 
 const UIDrawer = createDrawer({
-  Root: withStyleContext(View, SCOPE),
-  Backdrop: AnimatedPressable,
-  Content: Motion.View,
+  Root: withStyleContext(View, SCOPE) as any,
+  Backdrop: AnimatedPressable as any,
+  Content: Motion.View as any,
   Body: ScrollView,
   CloseButton: Pressable,
   Footer: View,
@@ -30,8 +30,8 @@ const UIDrawer = createDrawer({
   AnimatePresence: AnimatePresence,
 });
 
-cssInterop(AnimatedPressable, { className: 'style' });
-cssInterop(Motion.View, { className: 'style' });
+cssInterop(AnimatedPressable as any, { className: 'style' });
+cssInterop(Motion.View as any, { className: 'style' });
 
 const drawerStyle = tva({
   base: 'w-full h-full web:pointer-events-none relative',
@@ -131,7 +131,7 @@ const drawerFooterStyle = tva({
   base: 'flex-row justify-end items-center',
 });
 
-type IDrawerProps = React.ComponentProps<typeof UIDrawer> & VariantProps<typeof drawerStyle> & { className?: string };
+type IDrawerProps = React.ComponentProps<typeof UIDrawer> & VariantProps<typeof drawerStyle> & { className?: string; children?: React.ReactNode };
 
 type IDrawerBackdropProps = React.ComponentProps<typeof UIDrawer.Backdrop> & VariantProps<typeof drawerBackdropStyle> & { className?: string };
 
@@ -146,7 +146,7 @@ type IDrawerFooterProps = React.ComponentProps<typeof UIDrawer.Footer> & Variant
 type IDrawerCloseButtonProps = React.ComponentProps<typeof UIDrawer.CloseButton> & VariantProps<typeof drawerCloseButtonStyle> & { className?: string };
 
 const Drawer = React.forwardRef<React.ElementRef<typeof UIDrawer>, IDrawerProps>(({ className, size = 'sm', anchor = 'left', ...props }, ref) => {
-  return <UIDrawer ref={ref} {...props} pointerEvents="box-none" className={drawerStyle({ size, anchor, class: className })} context={{ size, anchor }} />;
+  return <UIDrawer ref={ref} {...(props as any)} className={drawerStyle({ size, anchor, class: className })} context={{ size, anchor }} />;
 });
 
 const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdrop>, IDrawerBackdropProps>(({ className, ...props }, ref) => {
@@ -171,7 +171,7 @@ const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdro
           duration: 250,
         },
       }}
-      {...props}
+      {...(props as any)}
       className={drawerBackdropStyle({
         class: className,
       })}
@@ -207,7 +207,7 @@ const DrawerContent = React.forwardRef<React.ElementRef<typeof UIDrawer.Content>
         stiffness: 300,
         mass: 0.8,
       }}
-      {...props}
+      {...(props as any)}
       className={drawerContentStyle({
         parentVariants: {
           size: parentSize,

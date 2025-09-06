@@ -197,7 +197,7 @@ function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView>
-        <KeyboardProvider>{Env.APTABASE_APP_KEY && !__DEV__ ? <AptabaseProviderWrapper appKey={Env.APTABASE_APP_KEY}>{renderContent()}</AptabaseProviderWrapper> : renderContent()}</KeyboardProvider>
+        <KeyboardProvider>{Env.APTABASE_APP_KEY && !__DEV__ ? <AptabaseProviderWrapper>{renderContent()}</AptabaseProviderWrapper> : renderContent()}</KeyboardProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

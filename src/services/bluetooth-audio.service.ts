@@ -47,7 +47,7 @@ const BUTTON_CONTROL_UUIDS = [
 class BluetoothAudioService {
   private static instance: BluetoothAudioService;
   private connectedDevice: Device | null = null;
-  private scanTimeout: NodeJS.Timeout | null = null;
+  private scanTimeout: number | null = null;
   private connectionTimeout: NodeJS.Timeout | null = null;
   private isInitialized: boolean = false;
   private hasAttemptedPreferredDeviceConnection: boolean = false;

@@ -157,7 +157,17 @@ export const useStatusesStore = create<StatusesState>((set) => ({
         }));
 
         // Extract GPS data for queuing - use location store if payload doesn't have GPS data
-        let gpsData = undefined;
+        let gpsData:
+          | {
+              latitude?: string;
+              longitude?: string;
+              accuracy?: string;
+              altitude?: string;
+              altitudeAccuracy?: string;
+              speed?: string;
+              heading?: string;
+            }
+          | undefined = undefined;
 
         if (payload.Latitude && payload.Longitude) {
           gpsData = {

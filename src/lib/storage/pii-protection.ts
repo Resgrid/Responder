@@ -151,7 +151,7 @@ export const emergencyPIICleanup = async (): Promise<void> => {
 
     // Clear web storage if applicable
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-      const keysToRemove = [];
+      const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.includes('offline-queue')) {

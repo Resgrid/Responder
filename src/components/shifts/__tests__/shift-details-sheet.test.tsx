@@ -13,16 +13,10 @@ jest.mock('@/hooks/use-analytics', () => ({
   }),
 }));
 
-// Mock react-native hooks
-jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    width: 375,
-    height: 812,
-    scale: 2,
-    fontScale: 1,
-  })),
-}));
+// Mock react-native hooks - use the global mock from jest-setup.ts
+// Get reference to the mocked useWindowDimensions from react-native
+const mockReactNative = jest.requireMock('react-native');
+const mockUseWindowDimensions = mockReactNative.useWindowDimensions;
 
 // Mock nativewind
 jest.mock('nativewind', () => ({
@@ -273,6 +267,14 @@ describe('ShiftDetailsSheet', () => {
     jest.clearAllMocks();
     mockUseShiftsStore.mockReturnValue(defaultStoreState);
     mockTrackEvent.mockClear();
+
+    // Reset useWindowDimensions to default portrait mode
+    mockUseWindowDimensions.mockReturnValue({
+      width: 375,
+      height: 812,
+      scale: 2,
+      fontScale: 1,
+    });
   });
 
   describe('Component Rendering', () => {
@@ -838,15 +840,23 @@ describe('ShiftDetailsSheet', () => {
     });
 
     it('should track correct landscape orientation', async () => {
-      const useWindowDimensions = require('react-native/Libraries/Utilities/useWindowDimensions').default;
-      useWindowDimensions.mockReturnValue({
+      // Mock window dimensions for landscape orientation
+      mockUseWindowDimensions.mockReturnValue({
         width: 812,
         height: 375,
         scale: 2,
         fontScale: 1,
       });
 
-      render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
+      // Clear previous analytics calls
+      mockTrackEvent.mockClear();
+
+      // Create a wrapper component to force re-evaluation of the hook
+      const TestWrapper: React.FC = () => {
+        return <ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />;
+      };
+
+      render(<TestWrapper />);
 
       await waitFor(() => {
         expect(mockTrackEvent).toHaveBeenCalledWith('shift_details_sheet_viewed',

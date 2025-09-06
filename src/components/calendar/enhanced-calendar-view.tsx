@@ -192,7 +192,6 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
           disableMonthChange={false}
           hideArrows={false}
           hideDayNames={false}
-          showScrollIndicator={true}
           // Customization
           enableSwipeMonths={true}
           // Accessibility

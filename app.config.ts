@@ -265,6 +265,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'react-native-ble-manager',
+    'expo-secure-store',
     '@livekit/react-native-expo-plugin',
     '@config-plugins/react-native-webrtc',
     '@config-plugins/react-native-callkeep',

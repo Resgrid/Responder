@@ -48,7 +48,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
 
         if (result && result.length > 0) {
           const { street, name, city, region, country, postalCode } = result[0];
-          let addressParts = [];
+          let addressParts: string[] = [];
 
           if (street) addressParts.push(street);
           if (name && name !== street) addressParts.push(name);
