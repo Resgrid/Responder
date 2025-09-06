@@ -60,7 +60,7 @@ describe('ContactCard', () => {
     it('should handle missing FirstName for Person type', () => {
       const personWithoutFirstName = {
         ...basePerson,
-        FirstName: undefined,
+        FirstName: '',
         LastName: 'Doe',
       };
 
@@ -73,7 +73,7 @@ describe('ContactCard', () => {
       const personWithoutLastName = {
         ...basePerson,
         FirstName: 'John',
-        LastName: undefined,
+        LastName: '',
       };
 
       render(<ContactCard contact={personWithoutLastName} onPress={mockOnPress} />);
@@ -84,8 +84,8 @@ describe('ContactCard', () => {
     it('should fallback to Name field for Person type when FirstName and LastName are missing', () => {
       const personWithoutNames = {
         ...basePerson,
-        FirstName: undefined,
-        LastName: undefined,
+        FirstName: '',
+        LastName: '',
         Name: 'John Doe',
       };
 
@@ -97,9 +97,9 @@ describe('ContactCard', () => {
     it('should show "Unknown Person" when all name fields are missing', () => {
       const personWithoutAnyName = {
         ...basePerson,
-        FirstName: undefined,
-        LastName: undefined,
-        Name: undefined,
+        FirstName: '',
+        LastName: '',
+        Name: '',
       };
 
       render(<ContactCard contact={personWithoutAnyName} onPress={mockOnPress} />);
@@ -118,7 +118,7 @@ describe('ContactCard', () => {
     it('should fallback to Name field for Company type when CompanyName is missing', () => {
       const companyWithoutCompanyName = {
         ...baseCompany,
-        CompanyName: undefined,
+        CompanyName: '',
         Name: 'Acme Corp',
       };
 
@@ -130,8 +130,8 @@ describe('ContactCard', () => {
     it('should show "Unknown Company" when all name fields are missing', () => {
       const companyWithoutAnyName = {
         ...baseCompany,
-        CompanyName: undefined,
-        Name: undefined,
+        CompanyName: '',
+        Name: '',
       };
 
       render(<ContactCard contact={companyWithoutAnyName} onPress={mockOnPress} />);

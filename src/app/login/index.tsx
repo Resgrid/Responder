@@ -112,7 +112,7 @@ export default function Login() {
   return (
     <>
       <FocusAwareStatusBar />
-      <LoginForm onSubmit={onSubmit} isLoading={status === 'loading'} error={error ?? undefined} />
+      <LoginForm onSubmit={onSubmit} isLoading={status === 'loading'} {...(error ? { error } : {})} />
 
       <Modal
         isOpen={isErrorModalVisible}

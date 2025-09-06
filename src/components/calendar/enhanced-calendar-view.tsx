@@ -192,7 +192,6 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
           disableMonthChange={false}
           hideArrows={false}
           hideDayNames={false}
-          showScrollIndicator={true}
           // Customization
           enableSwipeMonths={true}
           // Accessibility
@@ -210,14 +209,22 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
             {t('calendar.selectedDate.title', {
               date: (() => {
                 // Parse the date string properly to avoid timezone issues
-                const [year, month, day] = selectedDate.split('-').map(Number);
-                const localDate = new Date(year, month - 1, day); // month is 0-indexed
-                return localDate.toLocaleDateString([], {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                });
+                const parts = selectedDate.split('-');
+                const year = parseInt(parts[0] ?? '0', 10);
+                const month = parseInt(parts[1] ?? '0', 10);
+                const day = parseInt(parts[2] ?? '0', 10);
+
+                if (year && month && day) {
+                  const localDate = new Date(year, month - 1, day); // month is 0-indexed
+                  return localDate.toLocaleDateString([], {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  });
+                }
+
+                return selectedDate; // fallback if parsing fails
               })(),
             })}
           </Text>

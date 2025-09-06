@@ -189,8 +189,8 @@ export const useCoreStore = create<CoreState>()(
           const activeCall = callStore.calls.find((call) => call.CallId === callId);
           const activePriority = callStore.callPriorities.find((priority) => priority.Id === activeCall?.Priority);
           set({
-            activeCall: activeCall,
-            activePriority: activePriority,
+            activeCall: activeCall ?? null,
+            activePriority: activePriority ?? null,
             isLoading: false,
           });
         } catch (error) {

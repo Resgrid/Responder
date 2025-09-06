@@ -46,15 +46,23 @@ class PushNotificationService {
   }
 
   private async createNotificationChannel(id: string, name: string, description: string, sound?: string, vibration: boolean = true): Promise<void> {
-    await Notifications.setNotificationChannelAsync(id, {
+    const channelConfig: any = {
       name,
       description,
       importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: vibration ? [0, 250, 250, 250] : undefined,
-      sound,
       lightColor: '#FF231F7C',
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    });
+    };
+
+    if (vibration) {
+      channelConfig.vibrationPattern = [0, 250, 250, 250];
+    }
+
+    if (sound) {
+      channelConfig.sound = sound;
+    }
+
+    await Notifications.setNotificationChannelAsync(id, channelConfig);
   }
 
   private async setupAndroidNotificationChannels(): Promise<void> {
@@ -115,12 +123,20 @@ class PushNotificationService {
     // Check if the notification has an eventCode and show modal
     // eventCode must be a string to be valid
     if (data && data.eventCode && typeof data.eventCode === 'string') {
-      const notificationData = {
+      const notificationData: PushNotificationData & { eventCode: string } = {
         eventCode: data.eventCode as string,
-        title: notification.request.content.title || undefined,
-        body: notification.request.content.body || undefined,
         data,
       };
+
+      const title = notification.request.content.title;
+      if (title) {
+        notificationData.title = title;
+      }
+
+      const body = notification.request.content.body;
+      if (body) {
+        notificationData.body = body;
+      }
 
       // Show the notification modal using the store
       usePushNotificationModalStore.getState().showNotificationModal(notificationData);

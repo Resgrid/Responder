@@ -157,7 +157,17 @@ export const useStatusesStore = create<StatusesState>((set) => ({
         }));
 
         // Extract GPS data for queuing - use location store if payload doesn't have GPS data
-        let gpsData = undefined;
+        let gpsData:
+          | {
+              latitude?: string;
+              longitude?: string;
+              accuracy?: string;
+              altitude?: string;
+              altitudeAccuracy?: string;
+              speed?: string;
+              heading?: string;
+            }
+          | undefined = undefined;
 
         if (payload.Latitude && payload.Longitude) {
           gpsData = {
@@ -173,15 +183,33 @@ export const useStatusesStore = create<StatusesState>((set) => ({
           // Try to get GPS data from location store
           const locationState = useLocationStore.getState();
           if (locationState.latitude !== null && locationState.longitude !== null) {
-            gpsData = {
+            const gpsObject: {
+              latitude?: string;
+              longitude?: string;
+              accuracy?: string;
+              altitude?: string;
+              altitudeAccuracy?: string;
+              speed?: string;
+              heading?: string;
+            } = {
               latitude: locationState.latitude.toString(),
               longitude: locationState.longitude.toString(),
-              accuracy: locationState.accuracy?.toString(),
-              altitude: locationState.altitude?.toString(),
-              altitudeAccuracy: undefined, // Not available in location store
-              speed: locationState.speed?.toString(),
-              heading: locationState.heading?.toString(),
             };
+
+            if (locationState.accuracy !== null) {
+              gpsObject.accuracy = locationState.accuracy.toString();
+            }
+            if (locationState.altitude !== null) {
+              gpsObject.altitude = locationState.altitude.toString();
+            }
+            if (locationState.speed !== null) {
+              gpsObject.speed = locationState.speed.toString();
+            }
+            if (locationState.heading !== null) {
+              gpsObject.heading = locationState.heading.toString();
+            }
+
+            gpsData = gpsObject;
           }
         }
 

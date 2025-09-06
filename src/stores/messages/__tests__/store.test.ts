@@ -246,7 +246,7 @@ describe('MessagesStore', () => {
 
       expect(mockedApi.deleteMessage).toHaveBeenCalledWith('1');
       expect(result.current.inboxMessages).toHaveLength(1);
-      expect(result.current.inboxMessages[0].MessageId).toBe('2');
+      expect(result.current.inboxMessages[0]?.MessageId).toBe('2');
       expect(result.current.isDeleting).toBe(false);
     });
   });
@@ -288,7 +288,7 @@ describe('MessagesStore', () => {
     it('should handle closing details', () => {
       useMessagesStore.setState({
         selectedMessageId: '1',
-        selectedMessage: mockMessages[0],
+        selectedMessage: mockMessages[0] || null,
         isDetailsOpen: true,
       });
 
@@ -406,7 +406,7 @@ describe('MessagesStore', () => {
 
       const filtered = result.current.getFilteredMessages();
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].MessageId).toBe('2');
+      expect(filtered[0]?.MessageId).toBe('2');
     });
 
     it('should get selected messages correctly', () => {
@@ -419,7 +419,7 @@ describe('MessagesStore', () => {
 
       const selected = result.current.getSelectedMessages();
       expect(selected).toHaveLength(1);
-      expect(selected[0].MessageId).toBe('1');
+      expect(selected[0]?.MessageId).toBe('1');
     });
 
     it('should check if has selected messages', () => {
@@ -522,7 +522,7 @@ describe('MessagesStore', () => {
 
       const selected = result.current.getSelectedMessages();
       expect(selected).toHaveLength(1); // Should only return one instance
-      expect(selected[0].MessageId).toBe('1');
+      expect(selected[0]?.MessageId).toBe('1');
     });
   });
 });

@@ -278,7 +278,7 @@ describe('useStaffingBottomSheetStore', () => {
 
 			await useStaffingBottomSheetStore.getState().submitStaffing();
 
-			const callArgs = mockSavePersonnelStaffing.mock.calls[0][0] as any;
+			const callArgs = mockSavePersonnelStaffing.mock.calls[0]?.[0] as any;
 			expect(callArgs.Timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/); // ISO format
 			expect(callArgs.TimestampUtc).toMatch(/^\w{3}, \d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/); // UTC format
 		});

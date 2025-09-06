@@ -41,7 +41,11 @@ export const RolesModal: React.FC<RolesModalProps> = ({ isOpen, onClose, activeU
   const handleAssignUser = (roleId: string, userId?: string) => {
     setPendingAssignments((current) => {
       const filtered = current.filter((a) => a.roleId !== roleId);
-      return [...filtered, { roleId, userId }];
+      const newAssignment: { roleId: string; userId?: string } = { roleId };
+      if (userId !== undefined) {
+        newAssignment.userId = userId;
+      }
+      return [...filtered, newAssignment];
     });
   };
 

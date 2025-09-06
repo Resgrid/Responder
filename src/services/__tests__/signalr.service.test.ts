@@ -554,7 +554,7 @@ describe('SignalRService', () => {
       await signalRService.connectToHubWithEventingUrl(mockConfig);
       
       // Get the onclose callback
-      const onCloseCallback = mockConnection.onclose.mock.calls[0][0];
+      const onCloseCallback = mockConnection.onclose.mock.calls[0]?.[0];
       
       // Spy on the connectToHubWithEventingUrl method to track reconnection attempts
       const connectSpy = jest.spyOn(signalRService, 'connectToHubWithEventingUrl');
@@ -564,7 +564,9 @@ describe('SignalRService', () => {
       jest.useFakeTimers();
       
       // Trigger connection close
-      onCloseCallback();
+      if (onCloseCallback) {
+        onCloseCallback();
+      }
       
       // Fast-forward time to trigger the first reconnection attempt (base delay: 5000ms)
       jest.advanceTimersByTime(6000); // Add extra time for jitter

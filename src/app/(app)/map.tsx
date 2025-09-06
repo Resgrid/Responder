@@ -10,7 +10,7 @@ import MapPins from '@/components/maps/map-pins';
 import PinDetailModal from '@/components/maps/pin-detail-modal';
 import { SideMenu } from '@/components/sidebar/side-menu';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer';
+import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer/index';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
@@ -56,7 +56,7 @@ export default function HomeMap() {
     })
     .sort(onSortOptions);
 
-  const [styleURL] = useState({ styleURL: _mapOptions[0].data });
+  const [styleURL] = useState({ styleURL: _mapOptions[0]?.data });
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useMapSignalRUpdates(setMapPins);
@@ -317,8 +317,8 @@ export default function HomeMap() {
                 ref={cameraRef}
                 followZoomLevel={location.isMapLocked ? 16 : 12}
                 followUserLocation={location.isMapLocked}
-                followUserMode={location.isMapLocked ? Mapbox.UserTrackingMode.FollowWithHeading : undefined}
-                followPitch={location.isMapLocked ? 45 : undefined}
+                {...(location.isMapLocked && { followUserMode: Mapbox.UserTrackingMode.FollowWithHeading })}
+                {...(location.isMapLocked && { followPitch: 45 })}
               />
 
               {location.latitude != null && location.longitude != null && (

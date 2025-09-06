@@ -6,6 +6,7 @@ import { logger } from '@/lib/logging';
 import { isSameDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { type GetAllCalendarItemTypesResult } from '@/models/v4/calendar/calendarItemTypeResultData';
+import type { ApiResponse } from '@/types/api';
 
 interface CalendarState {
   // Data - matching Angular implementation
@@ -105,11 +106,11 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         context: { todayISO: today.toISOString() },
       });
 
-      const response = await getCalendarItemsForDateRange(today.toISOString(), today.toISOString());
+      const response = (await getCalendarItemsForDateRange(today.toISOString(), today.toISOString())) as ApiResponse<CalendarItemResultData[]>;
 
       // Filter items to ensure they're really for today (additional client-side validation)
       // Use Start field for date comparison as it contains the timezone-aware date from .NET backend
-      const todayItems = response.Data.filter((item) => {
+      const todayItems = response.Data.filter((item: CalendarItemResultData) => {
         return isSameDate(item.Start, new Date());
       });
 
@@ -125,7 +126,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
           filteredCount: todayItems.length,
           //startDate,
           //endDate,
-          items: todayItems.map((item) => ({
+          items: todayItems.map((item: CalendarItemResultData) => ({
             id: item.CalendarItemId,
             title: item.Title,
             start: item.Start,
@@ -149,7 +150,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       const startDate = format(startOfDay(today), 'yyyy-MM-dd HH:mm:ss');
       const endDate = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd HH:mm:ss');
 
-      const response = await getCalendarItemsForDateRange(startDate, endDate);
+      const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
         upcomingCalendarItems: response.Data,
         isUpcomingLoading: false,
@@ -172,10 +173,10 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       // Load calendar items for extended date range (matching Angular: -90 to +120 days)
-      const startDate = subDays(new Date(), 90).toISOString().split('T')[0];
-      const endDate = addDays(new Date(), 120).toISOString().split('T')[0];
+      const startDate = subDays(new Date(), 90).toISOString().split('T')[0]!;
+      const endDate = addDays(new Date(), 120).toISOString().split('T')[0]!;
 
-      const response = await getCalendarItemsForDateRange(startDate, endDate);
+      const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
         calendarItems: response.Data,
         isLoading: false,
@@ -197,7 +198,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   loadCalendarItemsForDateRange: async (startDate: string, endDate: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await getCalendarItemsForDateRange(startDate, endDate);
+      const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
         selectedMonthItems: response.Data,
         isLoading: false,
@@ -263,7 +264,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   fetchCalendarItem: async (calendarItemId: string) => {
     set({ isItemLoading: true, error: null });
     try {
-      const response = await getCalendarItem(calendarItemId);
+      const response = (await getCalendarItem(calendarItemId)) as ApiResponse<CalendarItemResultData>;
       set({ viewCalendarItem: response.Data, isItemLoading: false });
       logger.info({
         message: 'Calendar item fetched successfully',
@@ -281,7 +282,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   fetchItemTypes: async () => {
     set({ isTypesLoading: true, error: null });
     try {
-      const response = await getCalendarItemTypes();
+      const response = (await getCalendarItemTypes()) as ApiResponse<GetAllCalendarItemTypesResult[]>;
       set({ itemTypes: response.Data, isTypesLoading: false });
       logger.info({
         message: 'Calendar item types fetched successfully',

@@ -36,19 +36,19 @@ const bottomSheetItemStyle = tva({
 
 const BottomSheetContext = createContext<{
   visible: boolean;
-  bottomSheetRef: React.RefObject<GorhomBottomSheet>;
+  bottomSheetRef: React.RefObject<GorhomBottomSheet | null>;
   handleClose: () => void;
   handleOpen: () => void;
 }>({
   visible: false,
   bottomSheetRef: { current: null },
-  handleClose: () => {},
-  handleOpen: () => {},
+  handleClose: () => { },
+  handleOpen: () => { },
 });
 
 type IBottomSheetProps = React.ComponentProps<typeof GorhomBottomSheet>;
 export const BottomSheet = ({ snapToIndex = 1, onOpen, onClose, ...props }: { snapToIndex?: number; children?: React.ReactNode; onOpen?: () => void; onClose?: () => void }) => {
-  const bottomSheetRef = useRef<GorhomBottomSheet>(null);
+  const bottomSheetRef = useRef<GorhomBottomSheet | null>(null);
 
   const [visible, setVisible] = useState(false);
 
@@ -100,7 +100,16 @@ export const BottomSheetPortal = ({
   );
 
   return (
-    <GorhomBottomSheet ref={bottomSheetRef} snapPoints={snapPoints} index={-1} backdropComponent={BackDrop} onChange={handleSheetChanges} handleComponent={DragIndicator} enablePanDownToClose={true} {...props}>
+    <GorhomBottomSheet
+      ref={bottomSheetRef}
+      snapPoints={snapPoints}
+      index={-1}
+      backdropComponent={BackDrop ?? null}
+      onChange={handleSheetChanges}
+      handleComponent={DragIndicator ?? null}
+      enablePanDownToClose={true}
+      {...props}
+    >
       {props.children}
     </GorhomBottomSheet>
   );
@@ -166,14 +175,14 @@ export const BottomSheetContent = ({ ...props }: IBottomSheetContent) => {
   const keyDownHandlers = useMemo(() => {
     return Platform.OS === 'web'
       ? {
-          onKeyDown: (e: React.KeyboardEvent) => {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              handleClose();
-              return;
-            }
-          },
-        }
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            handleClose();
+            return;
+          }
+        },
+      }
       : {};
   }, [handleClose]);
 

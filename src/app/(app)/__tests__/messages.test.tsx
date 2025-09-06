@@ -232,10 +232,18 @@ jest.mock('@/components/ui/vstack', () => ({
 }));
 
 jest.mock('@/components/ui/flat-list', () => ({
-  FlatList: ({ data, renderItem, ...props }: any) => {
+  FlatList: ({ data, renderItem, keyExtractor, ...props }: any) => {
     const React = require('react');
-    const { FlatList } = require('react-native');
-    return React.createElement(FlatList, { ...props, data, renderItem });
+    const { View } = require('react-native');
+    return React.createElement(
+      View,
+      props,
+      data?.map((item: any, index: number) => {
+        const key = keyExtractor ? keyExtractor(item, index) : index.toString();
+        const element = renderItem ? renderItem({ item, index }) : null;
+        return element ? React.cloneElement(element, { key }) : null;
+      })
+    );
   },
 }));
 

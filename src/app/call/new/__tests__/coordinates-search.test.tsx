@@ -47,8 +47,8 @@ const performCoordinatesSearch = async (
     return { success: false, error: 'Invalid coordinates format' };
   }
 
-  const latitude = parseFloat(match[1]);
-  const longitude = parseFloat(match[2]);
+  const latitude = parseFloat(match[1] || '0');
+  const longitude = parseFloat(match[2] || '0');
 
   // Validate coordinate ranges
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
@@ -76,7 +76,7 @@ const performCoordinatesSearch = async (
     const result = {
       latitude,
       longitude,
-      address: response.data.status === 'OK' && response.data.results.length > 0 ? response.data.results[0].formatted_address : undefined,
+      ...(response.data.status === 'OK' && response.data.results.length > 0 && response.data.results[0]?.formatted_address && { address: response.data.results[0].formatted_address }),
     };
 
     return { success: true, result };

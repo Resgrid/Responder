@@ -37,5 +37,5 @@ export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
 
   if (Platform.OS === 'web') return null;
 
-  return isFocused ? <SystemBars style={colorScheme} hidden={{ statusBar: hidden, navigationBar: true }} /> : null;
+  return isFocused ? <SystemBars style={colorScheme ?? 'dark'} hidden={{ statusBar: hidden, navigationBar: true }} /> : null;
 };

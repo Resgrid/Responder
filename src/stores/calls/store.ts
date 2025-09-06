@@ -6,6 +6,7 @@ import { getCallTypes } from '@/api/calls/callTypes';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type CallTypeResultData } from '@/models/v4/callTypes/callTypeResultData';
+import type { ApiResponse } from '@/types/api';
 
 interface CallsState {
   calls: CallResultData[];
@@ -27,9 +28,9 @@ export const useCallsStore = create<CallsState>((set, get) => ({
   error: null,
   init: async () => {
     set({ isLoading: true, error: null });
-    const callsResponse = await getCalls();
-    const callPrioritiesResponse = await getCallPriorities();
-    const callTypesResponse = await getCallTypes();
+    const callsResponse = (await getCalls()) as ApiResponse<CallResultData[]>;
+    const callPrioritiesResponse = (await getCallPriorities()) as ApiResponse<CallPriorityResultData[]>;
+    const callTypesResponse = (await getCallTypes()) as ApiResponse<CallTypeResultData[]>;
     set({
       calls: callsResponse.Data,
       callPriorities: callPrioritiesResponse.Data,
@@ -40,7 +41,7 @@ export const useCallsStore = create<CallsState>((set, get) => ({
   fetchCalls: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await getCalls();
+      const response = (await getCalls()) as ApiResponse<CallResultData[]>;
       set({ calls: response.Data, isLoading: false });
     } catch (error) {
       set({ error: 'Failed to fetch calls', isLoading: false });

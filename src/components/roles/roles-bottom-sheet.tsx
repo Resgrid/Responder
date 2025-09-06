@@ -44,7 +44,11 @@ export const RolesBottomSheet: React.FC<RolesBottomSheetProps> = ({ isOpen, onCl
   const handleAssignUser = React.useCallback((roleId: string, userId?: string) => {
     setPendingAssignments((current) => {
       const filtered = current.filter((a) => a.roleId !== roleId);
-      return [...filtered, { roleId, userId }];
+      const newAssignment: { roleId: string; userId?: string } = { roleId };
+      if (userId !== undefined) {
+        newAssignment.userId = userId;
+      }
+      return [...filtered, newAssignment];
     });
   }, []);
 

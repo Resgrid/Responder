@@ -96,7 +96,7 @@ describe('OfflineQueueStore', () => {
       store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' }, 5);
 
       const state = useOfflineQueueStore.getState();
-      expect(state.queuedEvents[0].maxRetries).toBe(5);
+      expect(state.queuedEvents[0]?.maxRetries).toBe(5);
     });
   });
 
@@ -115,7 +115,7 @@ describe('OfflineQueueStore', () => {
       store.updateEventStatus(eventId, QueuedEventStatus.COMPLETED);
 
       const state = useOfflineQueueStore.getState();
-      expect(state.queuedEvents[0].status).toBe(QueuedEventStatus.COMPLETED);
+      expect(state.queuedEvents[0]?.status).toBe(QueuedEventStatus.COMPLETED);
       expect(state.completedEvents).toBe(1);
     });
 
@@ -125,10 +125,10 @@ describe('OfflineQueueStore', () => {
       store.updateEventStatus(eventId, QueuedEventStatus.FAILED, 'Network error');
 
       const state = useOfflineQueueStore.getState();
-      expect(state.queuedEvents[0].status).toBe(QueuedEventStatus.FAILED);
-      expect(state.queuedEvents[0].retryCount).toBe(1);
-      expect(state.queuedEvents[0].error).toBe('Network error');
-      expect(state.queuedEvents[0].nextRetryAt).toBeDefined();
+      expect(state.queuedEvents[0]?.status).toBe(QueuedEventStatus.FAILED);
+      expect(state.queuedEvents[0]?.retryCount).toBe(1);
+      expect(state.queuedEvents[0]?.error).toBe('Network error');
+      expect(state.queuedEvents[0]?.nextRetryAt).toBeDefined();
       expect(state.failedEvents).toBe(1);
     });
 
@@ -141,7 +141,7 @@ describe('OfflineQueueStore', () => {
       store.updateEventStatus(eventId, QueuedEventStatus.FAILED);
 
       const state = useOfflineQueueStore.getState();
-      expect(state.queuedEvents[0].retryCount).toBe(3);
+      expect(state.queuedEvents[0]?.retryCount).toBe(3);
     });
   });
 
@@ -202,7 +202,7 @@ describe('OfflineQueueStore', () => {
       const events = store.getEventsByType(QueuedEventType.UNIT_STATUS);
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe(QueuedEventType.UNIT_STATUS);
+      expect(events[0]?.type).toBe(QueuedEventType.UNIT_STATUS);
     });
   });
 
@@ -234,7 +234,9 @@ describe('OfflineQueueStore', () => {
       store.updateEventStatus(eventId1, QueuedEventStatus.FAILED);
       const state = useOfflineQueueStore.getState();
       // Manually set nextRetryAt to past time
-      state.queuedEvents[0].nextRetryAt = Date.now() - 1000;
+      if (state.queuedEvents[0]) {
+        state.queuedEvents[0].nextRetryAt = Date.now() - 1000;
+      }
 
       const events = store.getPendingEvents();
 
@@ -248,7 +250,9 @@ describe('OfflineQueueStore', () => {
       store.updateEventStatus(eventId1, QueuedEventStatus.FAILED);
       const state = useOfflineQueueStore.getState();
       // Manually set nextRetryAt to future time
-      state.queuedEvents[0].nextRetryAt = Date.now() + 10000;
+      if (state.queuedEvents[0]) {
+        state.queuedEvents[0].nextRetryAt = Date.now() + 10000;
+      }
 
       const events = store.getPendingEvents();
 
@@ -277,8 +281,8 @@ describe('OfflineQueueStore', () => {
       const events = store.getFailedEvents();
 
       expect(events).toHaveLength(1);
-      expect(events[0].status).toBe(QueuedEventStatus.FAILED);
-      expect(events[0].retryCount).toBe(3);
+      expect(events[0]?.status).toBe(QueuedEventStatus.FAILED);
+      expect(events[0]?.retryCount).toBe(3);
     });
   });
 
@@ -300,7 +304,7 @@ describe('OfflineQueueStore', () => {
 
       const state = useOfflineQueueStore.getState();
       expect(state.queuedEvents).toHaveLength(1);
-      expect(state.queuedEvents[0].status).toBe(QueuedEventStatus.PENDING);
+      expect(state.queuedEvents[0]?.status).toBe(QueuedEventStatus.PENDING);
     });
   });
 
@@ -339,9 +343,9 @@ describe('OfflineQueueStore', () => {
       store.retryEvent('test-event-id');
 
       const state = useOfflineQueueStore.getState();
-      expect(state.queuedEvents[0].status).toBe(QueuedEventStatus.PENDING);
-      expect(state.queuedEvents[0].error).toBeUndefined();
-      expect(state.queuedEvents[0].nextRetryAt).toBeUndefined();
+      expect(state.queuedEvents[0]?.status).toBe(QueuedEventStatus.PENDING);
+      expect(state.queuedEvents[0]?.error).toBeUndefined();
+      expect(state.queuedEvents[0]?.nextRetryAt).toBeUndefined();
     });
   });
 

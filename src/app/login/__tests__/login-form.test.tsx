@@ -98,7 +98,6 @@ describe('LoginForm Server URL Integration', () => {
       <LoginForm
         onSubmit={mockOnSubmit}
         isLoading={false}
-        error={undefined}
       />
     );
 

@@ -192,9 +192,9 @@ describe('Address Search Logic', () => {
 
       expect(result.success).toBe(true);
       expect(result.results).toHaveLength(1);
-      expect(result.results![0].formatted_address).toBe('123 Main St, New York, NY 10001, USA');
-      expect(result.results![0].geometry.location.lat).toBe(40.7128);
-      expect(result.results![0].geometry.location.lng).toBe(-74.006);
+      expect(result.results?.[0]?.formatted_address).toBe('123 Main St, New York, NY 10001, USA');
+      expect(result.results?.[0]?.geometry.location.lat).toBe(40.7128);
+      expect(result.results?.[0]?.geometry.location.lng).toBe(-74.006);
     });
 
     it('should handle multiple geocoding results', async () => {
@@ -204,8 +204,8 @@ describe('Address Search Logic', () => {
 
       expect(result.success).toBe(true);
       expect(result.results).toHaveLength(2);
-      expect(result.results![0].formatted_address).toBe('123 Main St, New York, NY 10001, USA');
-      expect(result.results![1].formatted_address).toBe('123 Main St, Brooklyn, NY 11201, USA');
+      expect(result.results?.[0]?.formatted_address).toBe('123 Main St, New York, NY 10001, USA');
+      expect(result.results?.[1]?.formatted_address).toBe('123 Main St, Brooklyn, NY 11201, USA');
     });
 
     it('should handle no results from geocoding API', async () => {
@@ -295,10 +295,10 @@ describe('Address Search Logic', () => {
       const result = await performAddressSearch('123 Main St', mockConfig);
 
       expect(result.success).toBe(true);
-      expect(result.results![0]).toEqual(validResult);
-      expect(result.results![0].geometry.location.lat).toBeDefined();
-      expect(result.results![0].geometry.location.lng).toBeDefined();
-      expect(result.results![0].formatted_address).toBeDefined();
+      expect(result.results?.[0]).toEqual(validResult);
+      expect(result.results?.[0]?.geometry.location.lat).toBeDefined();
+      expect(result.results?.[0]?.geometry.location.lng).toBeDefined();
+      expect(result.results?.[0]?.formatted_address).toBeDefined();
     });
   });
 
@@ -315,10 +315,10 @@ describe('Address Search Logic', () => {
       // Verify result structure
       expect(result.success).toBe(true);
       expect(result.results).toBeDefined();
-      expect(result.results![0].formatted_address).toBe('123 Main St, New York, NY 10001, USA');
-      expect(result.results![0].geometry.location.lat).toBe(40.7128);
-      expect(result.results![0].geometry.location.lng).toBe(-74.006);
-      expect(result.results![0].place_id).toBeDefined();
+      expect(result.results?.[0]?.formatted_address).toBe('123 Main St, New York, NY 10001, USA');
+      expect(result.results?.[0]?.geometry.location.lat).toBe(40.7128);
+      expect(result.results?.[0]?.geometry.location.lng).toBe(-74.006);
+      expect(result.results?.[0]?.place_id).toBeDefined();
 
       // Verify error is not present
       expect(result.error).toBeUndefined();

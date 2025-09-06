@@ -39,13 +39,16 @@ export const getBreakPointValue = (values: BreakPointValue, width: number): unkn
     },
   ];
   Object.keys(resolveScreenWidth).forEach((key) => {
-    const isValid = isValidBreakpoint(resolveScreenWidth[key], width);
+    const breakpointValue = resolveScreenWidth[key];
+    if (breakpointValue !== undefined) {
+      const isValid = isValidBreakpoint(breakpointValue, width);
 
-    mediaQueriesBreakpoints.push({
-      key: key,
-      breakpoint: resolveScreenWidth[key],
-      isValid: isValid,
-    });
+      mediaQueriesBreakpoints.push({
+        key: key,
+        breakpoint: breakpointValue,
+        isValid: isValid,
+      });
+    }
   });
 
   mediaQueriesBreakpoints.sort((a: MediaQueriesBreakpoints, b: MediaQueriesBreakpoints) => a.breakpoint - b.breakpoint);
@@ -96,7 +99,7 @@ function getLastValidObject(
   }[]
 ) {
   for (let i = mediaQueries.length - 1; i >= 0; i--) {
-    if (mediaQueries[i].isValid) {
+    if (mediaQueries[i]?.isValid) {
       return mediaQueries[i];
     }
   }

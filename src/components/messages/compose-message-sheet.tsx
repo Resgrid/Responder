@@ -193,13 +193,28 @@ export const ComposeMessageSheet: React.FC = () => {
     });
 
     try {
-      await sendNewMessage({
+      const messageRequest: {
+        subject: string;
+        body: string;
+        type: number;
+        recipients: {
+          id: string;
+          type: number;
+          name: string;
+        }[];
+        expireOn?: string;
+      } = {
         subject: subject.trim(),
         body: body.trim(),
         type: messageType,
         recipients: recipientsList,
-        expireOn: expirationDate || undefined,
-      });
+      };
+
+      if (expirationDate) {
+        messageRequest.expireOn = expirationDate;
+      }
+
+      await sendNewMessage(messageRequest);
 
       // Track successful send analytics
       try {
@@ -279,7 +294,10 @@ export const ComposeMessageSheet: React.FC = () => {
 
     // Clear recipients error if user selects at least one recipient
     if (errors.recipients && newSelection.size > 0) {
-      setErrors((prev) => ({ ...prev, recipients: undefined }));
+      setErrors((prev) => {
+        const { recipients, ...rest } = prev;
+        return rest;
+      });
     }
 
     // Track recipient selection analytics
@@ -452,7 +470,10 @@ export const ComposeMessageSheet: React.FC = () => {
                     onChangeText={(text) => {
                       setSubject(text);
                       if (errors.subject && text.trim()) {
-                        setErrors((prev) => ({ ...prev, subject: undefined }));
+                        setErrors((prev) => {
+                          const { subject, ...rest } = prev;
+                          return rest;
+                        });
                       }
                     }}
                   />
@@ -470,7 +491,10 @@ export const ComposeMessageSheet: React.FC = () => {
                     onChangeText={(text) => {
                       setBody(text);
                       if (errors.body && text.trim()) {
-                        setErrors((prev) => ({ ...prev, body: undefined }));
+                        setErrors((prev) => {
+                          const { body, ...rest } = prev;
+                          return rest;
+                        });
                       }
                     }}
                     multiline

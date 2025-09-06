@@ -26,10 +26,10 @@ const iconStyle = tva({
 export const Icon = React.forwardRef<
   React.ComponentRef<typeof UIIcon>,
   React.ComponentPropsWithoutRef<typeof UIIcon> &
-    VariantProps<typeof iconStyle> & {
-      height?: number | string;
-      width?: number | string;
-    }
+  VariantProps<typeof iconStyle> & {
+    height?: number | string;
+    width?: number | string;
+  }
 >(function Icon({ size = 'md', className, ...props }, ref) {
   if (typeof size === 'number') {
     return (
@@ -66,7 +66,8 @@ type ParameterTypes = Omit<Parameters<typeof createIcon>[0], 'Root'>;
 const accessClassName = (style: any) => {
   const styleObject = Array.isArray(style) ? style[0] : style;
   const keys = Object.keys(styleObject);
-  return styleObject[keys[1]];
+  const key = keys[1];
+  return key ? styleObject[key] : undefined;
 };
 
 const createIconUI = ({ ...props }: ParameterTypes) => {
@@ -74,10 +75,10 @@ const createIconUI = ({ ...props }: ParameterTypes) => {
   return React.forwardRef<
     React.ComponentRef<typeof UIIcon>,
     React.ComponentPropsWithoutRef<typeof UIIcon> &
-      VariantProps<typeof iconStyle> & {
-        height?: number | string;
-        width?: number | string;
-      }
+    VariantProps<typeof iconStyle> & {
+      height?: number | string;
+      width?: number | string;
+    }
   >(function UIIcon({ className, ...inComingprops }, ref) {
     const calculateClassName = React.useMemo(() => {
       return className === undefined ? accessClassName(inComingprops?.style) : className;

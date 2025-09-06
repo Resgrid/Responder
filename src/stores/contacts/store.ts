@@ -4,6 +4,7 @@ import { getContactNotes } from '@/api/contacts/contactNotes';
 import { getAllContacts } from '@/api/contacts/contacts';
 import { type ContactNoteResultData } from '@/models/v4/contacts/contactNoteResultData';
 import { type ContactResultData } from '@/models/v4/contacts/contactResultData';
+import type { ApiResponse } from '@/types/api';
 
 interface ContactsState {
   contacts: ContactResultData[];
@@ -52,7 +53,7 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
 
     set({ isNotesLoading: true, error: null });
     try {
-      const response = await getContactNotes(contactId);
+      const response = (await getContactNotes(contactId)) as ApiResponse<ContactNoteResultData[]>;
       set({
         contactNotes: {
           ...contactNotes,

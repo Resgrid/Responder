@@ -23,6 +23,10 @@ function arrangeChildrenIntoRows({ childrenArray, colSpanArr, numColumns }: { ch
   for (let i = 0; i < childrenArray.length; i++) {
     const colSpan = colSpanArr[i];
 
+    if (colSpan === undefined) {
+      continue; // Skip undefined colSpan values
+    }
+
     // if current row is full, go to next row
     if (currentRowTotalColSpan + colSpan > numColumns) {
       currentRow++;
@@ -32,7 +36,8 @@ function arrangeChildrenIntoRows({ childrenArray, colSpanArr, numColumns }: { ch
       currentRowTotalColSpan += colSpan;
     }
 
-    rowItemsCount[currentRow] = rowItemsCount[currentRow] ? [...rowItemsCount[currentRow], i] : [i];
+    const currentRowItems = rowItemsCount[currentRow];
+    rowItemsCount[currentRow] = currentRowItems ? [...currentRowItems, i] : [i];
   }
 
   return rowItemsCount;
@@ -51,7 +56,7 @@ function generateResponsiveNumColumns({ gridClass }: { gridClass: string }) {
 
   numColumns.forEach((classname) => {
     const match = classname.match(regex);
-    if (match) {
+    if (match && match[2]) {
       const prefix = match[1] || 'default';
       const value = parseInt(match[2], 10);
       result[prefix] = value;

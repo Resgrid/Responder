@@ -215,7 +215,7 @@ export default function EditCall() {
         setSelectedLocation({
           latitude: parseFloat(call.Latitude),
           longitude: parseFloat(call.Longitude),
-          address: call.Address || undefined,
+          ...(call.Address && { address: call.Address }),
         });
       }
     }
@@ -258,19 +258,19 @@ export default function EditCall() {
         nature: data.nature,
         priority: priority?.Id || 0,
         type: type?.Id || '',
-        note: data.note,
-        address: data.address,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        what3words: data.what3words,
-        plusCode: data.plusCode,
-        contactName: data.contactName,
-        contactInfo: data.contactInfo,
-        dispatchUsers: data.dispatchSelection?.users,
-        dispatchGroups: data.dispatchSelection?.groups,
-        dispatchRoles: data.dispatchSelection?.roles,
-        dispatchUnits: data.dispatchSelection?.units,
-        dispatchEveryone: data.dispatchSelection?.everyone,
+        note: data.note || '',
+        address: data.address || '',
+        latitude: data.latitude || 0,
+        longitude: data.longitude || 0,
+        what3words: data.what3words || '',
+        plusCode: data.plusCode || '',
+        contactName: data.contactName || '',
+        contactInfo: data.contactInfo || '',
+        dispatchUsers: data.dispatchSelection?.users || [],
+        dispatchGroups: data.dispatchSelection?.groups || [],
+        dispatchRoles: data.dispatchSelection?.roles || [],
+        dispatchUnits: data.dispatchSelection?.units || [],
+        dispatchEveryone: data.dispatchSelection?.everyone || false,
       });
 
       // Analytics: Track successful call update
@@ -428,13 +428,15 @@ export default function EditCall() {
 
         if (results.length === 1) {
           const result = results[0];
-          const newLocation = {
-            latitude: result.geometry.location.lat,
-            longitude: result.geometry.location.lng,
-            address: result.formatted_address,
-          };
+          if (result) {
+            const newLocation = {
+              latitude: result.geometry.location.lat,
+              longitude: result.geometry.location.lng,
+              address: result.formatted_address,
+            };
 
-          handleLocationSelected(newLocation);
+            handleLocationSelected(newLocation);
+          }
 
           toast.show({
             placement: 'top',
@@ -806,7 +808,7 @@ export default function EditCall() {
         >
           <FullScreenLocationPicker
             key={showLocationPicker ? 'location-picker-open' : 'location-picker-closed'}
-            initialLocation={selectedLocation || undefined}
+            initialLocation={selectedLocation || { latitude: 0, longitude: 0 }}
             onLocationSelected={handleLocationSelected}
             onClose={() => setShowLocationPicker(false)}
           />

@@ -213,7 +213,7 @@ const MockCallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, 
         React.createElement(View, { testID: 'flatlist', key: 'flatlist' },
           validImages.map((item, index) => {
             const hasError = imageErrors.has(item.Id);
-            let imageSource = null;
+            let imageSource: { uri: string } | null = null;
 
             if (item.Data && item.Data.trim() !== '') {
               const mimeType = item.Mime || 'image/png';
@@ -659,7 +659,7 @@ describe('CallImagesModal', () => {
         Name: 'Test Image'
       };
 
-      let imageSource = null;
+      let imageSource: { uri: string } | null = null;
       if (mockImage.Data && mockImage.Data.trim() !== '') {
         const mimeType = mockImage.Mime || 'image/png';
         imageSource = { uri: `data:${mimeType};base64,${mockImage.Data}` };
@@ -681,7 +681,7 @@ describe('CallImagesModal', () => {
         Name: 'Test Image'
       };
 
-      let imageSource = null;
+      let imageSource: { uri: string } | null = null;
       if (mockImage.Data && mockImage.Data.trim() !== '') {
         const mimeType = mockImage.Mime || 'image/png';
         imageSource = { uri: `data:${mimeType};base64,${mockImage.Data}` };
@@ -703,7 +703,7 @@ describe('CallImagesModal', () => {
         Name: 'Invalid Image'
       };
 
-      let imageSource = null;
+      let imageSource: { uri: string } | null = null;
       if (mockImage.Data && mockImage.Data.trim() !== '') {
         const mimeType = mockImage.Mime || 'image/png';
         imageSource = { uri: `data:${mimeType};base64,${mockImage.Data}` };

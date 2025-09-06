@@ -1230,7 +1230,7 @@ describe('PersonnelStatusBottomSheet', () => {
         selectedStatusId: mockStatus.Id,
         selectedStatusText: mockStatus.Text,
         responseType: 'call',
-        selectedCallId: mockCalls[0].CallId,
+        selectedCallId: mockCalls[0]?.CallId,
         selectedGroupId: '',
         hasNote: true,
         noteLength: 9,

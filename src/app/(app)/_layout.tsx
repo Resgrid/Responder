@@ -14,7 +14,7 @@ import { NotificationInbox } from '@/components/notifications/NotificationInbox'
 import SideMenu from '@/components/sidebar/side-menu';
 import { View } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@/components/ui/drawer';
+import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@/components/ui/drawer/index';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';

@@ -371,7 +371,7 @@ describe('LocationService', () => {
       await locationService.startLocationUpdates();
 
       // Get the callback function passed to watchPositionAsync
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
+      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0]?.[1] as Function;
       await locationCallback(mockLocationObject);
 
       expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
@@ -849,7 +849,7 @@ describe('LocationService', () => {
       await locationService.startLocationUpdates();
 
       // Get the callback function passed to watchPositionAsync
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
+      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0]?.[1] as Function;
       await locationCallback(mockLocationObject);
 
       expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
@@ -863,7 +863,7 @@ describe('LocationService', () => {
       await locationService.startLocationUpdates();
 
       // Get the callback function passed to watchPositionAsync
-      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0][1] as Function;
+      const locationCallback = mockLocation.watchPositionAsync.mock.calls[0]?.[1] as Function;
       await locationCallback(mockLocationObject);
 
       expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);

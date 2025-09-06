@@ -11,7 +11,7 @@ import { VStack } from '../ui/vstack';
 
 type RoleAssignmentItemProps = {
   role: UnitRoleResultData;
-  assignedUser?: PersonnelInfoResultData;
+  assignedUser: PersonnelInfoResultData | undefined;
   availableUsers: PersonnelInfoResultData[];
   onAssignUser: (userId?: string) => void;
   currentAssignments: { roleId: string; userId: string }[];

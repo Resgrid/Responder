@@ -27,6 +27,7 @@ export const createCachedApiEndpoint = (endpoint: string, cacheConfig: CacheConf
           statusText: 'OK (cached)',
           headers: {},
           config: {},
+          request: {},
         } as AxiosResponse<T>);
       }
 

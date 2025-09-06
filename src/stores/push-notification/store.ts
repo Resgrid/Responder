@@ -15,9 +15,9 @@ export interface ParsedNotification {
   type: NotificationType;
   id: string;
   eventCode: string;
-  title?: string;
-  body?: string;
-  data?: Record<string, unknown>;
+  title?: string | undefined;
+  body?: string | undefined;
+  data?: Record<string, unknown> | undefined;
 }
 
 interface PushNotificationModalState {
@@ -40,7 +40,7 @@ export const usePushNotificationModalStore = create<PushNotificationModalState>(
     // Parse event code format like "C:1234", "M:5678", "T:9012", "G:3456"
     if (eventCode && eventCode.includes(':')) {
       const [prefix, notificationId] = eventCode.split(':');
-      const lowerPrefix = prefix.toLowerCase();
+      const lowerPrefix = prefix?.toLowerCase() ?? '';
 
       if (lowerPrefix.startsWith('c')) {
         type = 'call';

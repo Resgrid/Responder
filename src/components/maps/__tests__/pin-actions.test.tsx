@@ -556,7 +556,7 @@ describe('Pin Actions Integration Tests', () => {
           pin={mockCallPin}
           isOpen={true}
           onClose={mockOnClose}
-          onSetAsCurrentCall={undefined}
+          onSetAsCurrentCall={() => { }}
         />
       );
 

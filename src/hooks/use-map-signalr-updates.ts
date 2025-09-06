@@ -13,7 +13,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
   const lastProcessedTimestampRef = useRef<number | undefined>(undefined);
   const isUpdating = useRef<boolean>(false);
   const pendingTimestamp = useRef<number | null>(null);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<number | null>(null);
   const abortController = useRef<AbortController | null>(null);
 
   const lastUpdateTimestamp = useSignalRStore((state) => state.lastUpdateTimestamp);

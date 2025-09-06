@@ -226,17 +226,17 @@ export default function NewCall() {
         nature: data.nature,
         priority: priority?.Id || 0,
         type: type?.Id || '',
-        note: data.note,
-        address: data.address,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        what3words: data.what3words,
-        plusCode: data.plusCode,
-        dispatchUsers: data.dispatchSelection?.users,
-        dispatchGroups: data.dispatchSelection?.groups,
-        dispatchRoles: data.dispatchSelection?.roles,
-        dispatchUnits: data.dispatchSelection?.units,
-        dispatchEveryone: data.dispatchSelection?.everyone,
+        note: data.note || '',
+        address: data.address || '',
+        latitude: data.latitude || 0,
+        longitude: data.longitude || 0,
+        what3words: data.what3words || '',
+        plusCode: data.plusCode || '',
+        dispatchUsers: data.dispatchSelection?.users || [],
+        dispatchGroups: data.dispatchSelection?.groups || [],
+        dispatchRoles: data.dispatchSelection?.roles || [],
+        dispatchUnits: data.dispatchSelection?.units || [],
+        dispatchEveryone: data.dispatchSelection?.everyone || false,
       });
 
       // Analytics: Track successful call creation
@@ -397,26 +397,28 @@ export default function NewCall() {
         if (results.length === 1) {
           // Single result - use it directly
           const result = results[0];
-          const newLocation = {
-            latitude: result.geometry.location.lat,
-            longitude: result.geometry.location.lng,
-            address: result.formatted_address,
-          };
+          if (result) {
+            const newLocation = {
+              latitude: result.geometry.location.lat,
+              longitude: result.geometry.location.lng,
+              address: result.formatted_address,
+            };
 
-          // Update the selected location and form values
-          handleLocationSelected(newLocation);
+            // Update the selected location and form values
+            handleLocationSelected(newLocation);
 
-          // Show success toast
-          toast.show({
-            placement: 'top',
-            render: () => {
-              return (
-                <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-                  <Text className="text-white">{t('calls.address_found')}</Text>
-                </Box>
-              );
-            },
-          });
+            // Show success toast
+            toast.show({
+              placement: 'top',
+              render: () => {
+                return (
+                  <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
+                    <Text className="text-white">{t('calls.address_found')}</Text>
+                  </Box>
+                );
+              },
+            });
+          }
         } else {
           // Multiple results - show selection bottom sheet
           setAddressResults(results);
@@ -682,26 +684,28 @@ export default function NewCall() {
         });
 
         const result = response.data.results[0];
-        const newLocation = {
-          latitude: result.geometry.location.lat,
-          longitude: result.geometry.location.lng,
-          address: result.formatted_address,
-        };
+        if (result) {
+          const newLocation = {
+            latitude: result.geometry.location.lat,
+            longitude: result.geometry.location.lng,
+            address: result.formatted_address,
+          };
 
-        // Update the selected location and form values
-        handleLocationSelected(newLocation);
+          // Update the selected location and form values
+          handleLocationSelected(newLocation);
 
-        // Show success toast
-        toast.show({
-          placement: 'top',
-          render: () => {
-            return (
-              <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-                <Text className="text-white">{t('calls.plus_code_found')}</Text>
-              </Box>
-            );
-          },
-        });
+          // Show success toast
+          toast.show({
+            placement: 'top',
+            render: () => {
+              return (
+                <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
+                  <Text className="text-white">{t('calls.plus_code_found')}</Text>
+                </Box>
+              );
+            },
+          });
+        }
       } else {
         // Analytics: Track no results found
         trackEvent('call_plus_code_search_failed', {
@@ -787,8 +791,8 @@ export default function NewCall() {
       return;
     }
 
-    const latitude = parseFloat(match[1]);
-    const longitude = parseFloat(match[2]);
+    const latitude = parseFloat(match[1] || '0');
+    const longitude = parseFloat(match[2] || '0');
 
     // Validate coordinate ranges
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
@@ -851,14 +855,16 @@ export default function NewCall() {
         });
 
         const result = response.data.results[0];
-        const newLocation = {
-          latitude,
-          longitude,
-          address: result.formatted_address,
-        };
+        if (result) {
+          const newLocation = {
+            latitude,
+            longitude,
+            address: result.formatted_address,
+          };
 
-        // Update the selected location and form values
-        handleLocationSelected(newLocation);
+          // Update the selected location and form values
+          handleLocationSelected(newLocation);
+        }
 
         // Show success toast
         toast.show({
@@ -884,7 +890,6 @@ export default function NewCall() {
         const newLocation = {
           latitude,
           longitude,
-          address: undefined,
         };
 
         handleLocationSelected(newLocation);
@@ -918,7 +923,6 @@ export default function NewCall() {
       const newLocation = {
         latitude,
         longitude,
-        address: undefined,
       };
 
       handleLocationSelected(newLocation);
@@ -1268,7 +1272,7 @@ export default function NewCall() {
         >
           <FullScreenLocationPicker
             key={showLocationPicker ? 'location-picker-open' : 'location-picker-closed'}
-            initialLocation={selectedLocation || undefined}
+            initialLocation={selectedLocation || { latitude: 0, longitude: 0 }}
             onLocationSelected={handleLocationSelected}
             onClose={() => setShowLocationPicker(false)}
           />

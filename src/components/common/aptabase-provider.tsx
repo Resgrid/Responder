@@ -6,11 +6,10 @@ import { logger } from '@/lib/logging';
 import { aptabaseService } from '@/services/aptabase.service';
 
 interface AptabaseProviderWrapperProps {
-  appKey: string;
   children: React.ReactNode;
 }
 
-export const AptabaseProviderWrapper: React.FC<AptabaseProviderWrapperProps> = ({ appKey, children }) => {
+export const AptabaseProviderWrapper: React.FC<AptabaseProviderWrapperProps> = ({ children }) => {
   const initializationAttempted = useRef(false);
   const [initializationFailed, setInitializationFailed] = React.useState(false);
 
@@ -31,15 +30,14 @@ export const AptabaseProviderWrapper: React.FC<AptabaseProviderWrapperProps> = (
 
     try {
       // Initialize Aptabase - use appKey prop if provided, otherwise fall back to env
-      const keyToUse = appKey || Env.APTABASE_APP_KEY;
-      init(keyToUse, {
+      init(Env.APTABASE_APP_KEY, {
         host: Env.APTABASE_URL || '',
       });
 
       logger.info({
         message: 'Aptabase provider initialized',
         context: {
-          appKey: keyToUse.substring(0, 8) + '...',
+          appKey: Env.APTABASE_APP_KEY.substring(0, 8) + '...',
           serviceStatus: aptabaseService.getStatus(),
         },
       });
@@ -57,7 +55,7 @@ export const AptabaseProviderWrapper: React.FC<AptabaseProviderWrapperProps> = (
     return () => {
       // Cleanup if needed
     };
-  }, [appKey]);
+  }, []);
 
   // Always render children - Aptabase doesn't require a provider wrapper around the app
   return <>{children}</>;

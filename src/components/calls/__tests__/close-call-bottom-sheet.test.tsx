@@ -61,7 +61,17 @@ jest.mock('@/components/ui/bottom-sheet', () => ({
 jest.mock('@/components/ui/button', () => ({
   Button: ({ children, onPress, testID, disabled, ...props }: any) => {
     const { TouchableOpacity } = require('react-native');
-    return <TouchableOpacity onPress={onPress} testID={testID} disabled={disabled} {...props}>{children}</TouchableOpacity>;
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        testID={testID}
+        disabled={disabled}
+        accessibilityState={{ disabled: !!disabled }}
+        {...props}
+      >
+        {children}
+      </TouchableOpacity>
+    );
   },
   ButtonText: ({ children, ...props }: any) => {
     const { Text } = require('react-native');
