@@ -211,12 +211,17 @@ export default function EditCall() {
       });
 
       // Set selected location if coordinates exist
-      if (call.Latitude && call.Longitude) {
-        setSelectedLocation({
-          latitude: parseFloat(call.Latitude),
-          longitude: parseFloat(call.Longitude),
-          ...(call.Address && { address: call.Address }),
-        });
+      if (call.Latitude !== undefined && call.Longitude !== undefined) {
+        const latitude = parseFloat(call.Latitude);
+        const longitude = parseFloat(call.Longitude);
+
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+          setSelectedLocation({
+            latitude,
+            longitude,
+            ...(call.Address && { address: call.Address }),
+          });
+        }
       }
     }
   }, [call, callPriorities, callTypes, reset]);
@@ -808,7 +813,7 @@ export default function EditCall() {
         >
           <FullScreenLocationPicker
             key={showLocationPicker ? 'location-picker-open' : 'location-picker-closed'}
-            initialLocation={selectedLocation || { latitude: 0, longitude: 0 }}
+            initialLocation={selectedLocation ?? undefined}
             onLocationSelected={handleLocationSelected}
             onClose={() => setShowLocationPicker(false)}
           />

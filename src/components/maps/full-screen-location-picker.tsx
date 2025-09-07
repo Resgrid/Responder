@@ -11,10 +11,13 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 
 interface FullScreenLocationPickerProps {
-  initialLocation?: {
+  initialLocation?:
+  | {
     latitude: number;
     longitude: number;
-  };
+    address?: string;
+  }
+  | undefined;
   onLocationSelected: (location: { latitude: number; longitude: number; address?: string }) => void;
   onClose: () => void;
 }
@@ -111,7 +114,9 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
   useEffect(() => {
     isMountedRef.current = true;
 
-    if (initialLocation) {
+    // Treat 0,0 coordinates as "no initial location" to recover user position
+    // This prevents the picker from accepting Null Island as a real initial value
+    if (initialLocation && !(initialLocation.latitude === 0 && initialLocation.longitude === 0)) {
       setCurrentLocation(initialLocation);
       reverseGeocode(initialLocation.latitude, initialLocation.longitude);
     } else {

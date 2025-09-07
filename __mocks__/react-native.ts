@@ -36,9 +36,15 @@ export const Linking = {
 
 export const useColorScheme = jest.fn().mockReturnValue('light');
 
+export const useWindowDimensions = jest.fn().mockReturnValue({
+  width: 375,
+  height: 812,
+});
+
 // Mock other commonly used React Native components
 export const View = 'View';
 export const Text = 'Text';
+export const ScrollView = 'ScrollView';
 export const StyleSheet = {
   create: jest.fn().mockImplementation((styles) => styles),
 };

@@ -28,15 +28,30 @@ export const useCallsStore = create<CallsState>((set, get) => ({
   error: null,
   init: async () => {
     set({ isLoading: true, error: null });
-    const callsResponse = (await getCalls()) as ApiResponse<CallResultData[]>;
-    const callPrioritiesResponse = (await getCallPriorities()) as ApiResponse<CallPriorityResultData[]>;
-    const callTypesResponse = (await getCallTypes()) as ApiResponse<CallTypeResultData[]>;
-    set({
-      calls: callsResponse.Data,
-      callPriorities: callPrioritiesResponse.Data,
-      callTypes: callTypesResponse.Data,
-      isLoading: false,
-    });
+    try {
+      // Parallelize API calls for better performance
+      const [callsResponse, callPrioritiesResponse, callTypesResponse] = await Promise.all([
+        getCalls() as Promise<ApiResponse<CallResultData[]>>,
+        getCallPriorities() as Promise<ApiResponse<CallPriorityResultData[]>>,
+        getCallTypes() as Promise<ApiResponse<CallTypeResultData[]>>,
+      ]);
+
+      set({
+        calls: callsResponse.Data,
+        callPriorities: callPrioritiesResponse.Data,
+        callTypes: callTypesResponse.Data,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error: 'Failed to initialize calls data',
+        calls: [],
+        callPriorities: [],
+        callTypes: [],
+      });
+    } finally {
+      set({ isLoading: false });
+    }
   },
   fetchCalls: async () => {
     set({ isLoading: true, error: null });

@@ -73,6 +73,7 @@ jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
 jest.mock('nativewind', () => ({
   cssInterop: jest.fn(),
   styled: jest.fn(() => (Component: any) => Component),
+  useColorScheme: jest.fn(() => ({ colorScheme: 'light' })),
 }));
 
 // Mock react-native-css-interop

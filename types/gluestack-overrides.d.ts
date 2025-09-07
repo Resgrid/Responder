@@ -34,7 +34,7 @@ declare module '@gluestack-ui/tooltip' {
 }
 
 // Drawer props (uses modal internally)
-declare module 'src/components/ui/drawer' {
+declare module '@/components/ui/drawer/index' {
   interface IDrawerProps {
     children?: React.ReactNode;
   }

@@ -37,11 +37,19 @@ const HYS_HEADSET_SERVICE = '0000FFE0-0000-1000-8000-00805F9B34FB';
 //const HYS_HEADSET_SERVICE_CHAR = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E';
 const HYS_HEADSET_SERVICE_CHAR = '00002902-0000-1000-8000-00805F9B34FB';
 
-// Common button control characteristic UUIDs (varies by manufacturer)
-const BUTTON_CONTROL_UUIDS = [
-  '0000FE59-0000-1000-8000-00805F9B34FB', // Common button control
+// Common button control service and characteristic UUIDs (varies by manufacturer)
+const BUTTON_CONTROL_SERVICES = [
   '0000180F-0000-1000-8000-00805F9B34FB', // Battery Service (often includes button data)
   '00001812-0000-1000-8000-00805F9B34FB', // Human Interface Device Service
+];
+
+const BUTTON_CONTROL_CHARACTERISTICS = [
+  '0000FE59-0000-1000-8000-00805F9B34FB', // Common button control characteristic
+  '00002A19-0000-1000-8000-00805F9B34FB', // Battery Level (may include button state)
+  '00002A4D-0000-1000-8000-00805F9B34FB', // HID Report characteristic
+  '00002A4A-0000-1000-8000-00805F9B34FB', // HID Information characteristic
+  '00002A4B-0000-1000-8000-00805F9B34FB', // HID Report Map characteristic
+  '00002A4C-0000-1000-8000-00805F9B34FB', // HID Control Point characteristic
 ];
 
 class BluetoothAudioService {
@@ -49,6 +57,30 @@ class BluetoothAudioService {
   private connectedDevice: Device | null = null;
   private scanTimeout: ReturnType<typeof setTimeout> | null = null;
   private connectionTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Normalizes a UUID to its full 128-bit form.
+   * Converts 16-bit UUIDs (e.g., '110A') to their full 128-bit equivalent.
+   * @param uuid - The UUID to normalize (16-bit, 32-bit, or 128-bit)
+   * @returns The normalized 128-bit UUID in uppercase
+   */
+  private normalizeUuid(uuid: string): string {
+    const cleanUuid = uuid.replace(/[-\s]/g, '').toUpperCase();
+
+    if (cleanUuid.length === 4) {
+      // 16-bit UUID: convert to 128-bit using Bluetooth base UUID
+      return `0000${cleanUuid}-0000-1000-8000-00805F9B34FB`;
+    } else if (cleanUuid.length === 8) {
+      // 32-bit UUID: convert to 128-bit using Bluetooth base UUID
+      return `${cleanUuid}-0000-1000-8000-00805F9B34FB`;
+    } else if (cleanUuid.length === 32) {
+      // 128-bit UUID: add hyphens if missing
+      return `${cleanUuid.substring(0, 8)}-${cleanUuid.substring(8, 12)}-${cleanUuid.substring(12, 16)}-${cleanUuid.substring(16, 20)}-${cleanUuid.substring(20)}`;
+    } else {
+      // Already formatted or unknown format: return as uppercase
+      return uuid.toUpperCase();
+    }
+  }
   private isInitialized: boolean = false;
   private hasAttemptedPreferredDeviceConnection: boolean = false;
   private eventListeners: { remove: () => void }[] = [];
@@ -287,17 +319,17 @@ class BluetoothAudioService {
   }
 
   private handleButtonEventFromCharacteristic(serviceUuid: string, characteristicUuid: string, value: string): void {
-    const upperServiceUuid = serviceUuid.toUpperCase();
-    const upperCharUuid = characteristicUuid.toUpperCase();
+    const normalizedServiceUuid = this.normalizeUuid(serviceUuid);
+    const normalizedCharUuid = this.normalizeUuid(characteristicUuid);
 
     // Route to appropriate handler based on service/characteristic
-    if (upperServiceUuid === AINA_HEADSET_SERVICE.toUpperCase() && upperCharUuid === AINA_HEADSET_SVC_PROP.toUpperCase()) {
+    if (normalizedServiceUuid === AINA_HEADSET_SERVICE.toUpperCase() && normalizedCharUuid === AINA_HEADSET_SVC_PROP.toUpperCase()) {
       this.handleAinaButtonEvent(value);
-    } else if (upperServiceUuid === B01INRICO_HEADSET_SERVICE.toUpperCase() && upperCharUuid === B01INRICO_HEADSET_SERVICE_CHAR.toUpperCase()) {
+    } else if (normalizedServiceUuid === B01INRICO_HEADSET_SERVICE.toUpperCase() && normalizedCharUuid === B01INRICO_HEADSET_SERVICE_CHAR.toUpperCase()) {
       this.handleB01InricoButtonEvent(value);
-    } else if (upperServiceUuid === HYS_HEADSET_SERVICE.toUpperCase() && upperCharUuid === HYS_HEADSET_SERVICE_CHAR.toUpperCase()) {
+    } else if (normalizedServiceUuid === HYS_HEADSET_SERVICE.toUpperCase() && normalizedCharUuid === HYS_HEADSET_SERVICE_CHAR.toUpperCase()) {
       this.handleHYSButtonEvent(value);
-    } else if (BUTTON_CONTROL_UUIDS.some((uuid) => uuid.toUpperCase() === upperCharUuid)) {
+    } else if (BUTTON_CONTROL_CHARACTERISTICS.some((uuid) => uuid.toUpperCase() === normalizedCharUuid)) {
       this.handleGenericButtonEvent(value);
     }
   }
@@ -475,12 +507,14 @@ class BluetoothAudioService {
     // Check if device name contains audio-related keywords
     const hasAudioKeyword = audioKeywords.some((keyword) => name.includes(keyword));
 
-    // Check if device has audio service UUIDs - use advertising data
+    // Check if device has audio service UUIDs - use advertising data with normalized UUID comparison
     const advertisingData = device.advertising;
+    const expectedAudioUuids = [AUDIO_SERVICE_UUID, HFP_SERVICE_UUID, HSP_SERVICE_UUID, AINA_HEADSET_SERVICE, B01INRICO_HEADSET_SERVICE, HYS_HEADSET_SERVICE].map((uuid) => uuid.toUpperCase());
+
     const hasAudioService =
       advertisingData?.serviceUUIDs?.some((uuid: string) => {
-        const upperUuid = uuid.toUpperCase();
-        return [AUDIO_SERVICE_UUID, HFP_SERVICE_UUID, HSP_SERVICE_UUID, AINA_HEADSET_SERVICE, B01INRICO_HEADSET_SERVICE, HYS_HEADSET_SERVICE].includes(upperUuid);
+        const normalizedUuid = this.normalizeUuid(uuid);
+        return expectedAudioUuids.includes(normalizedUuid);
       }) || false;
 
     // Check manufacturer data for known audio device manufacturers
@@ -500,6 +534,8 @@ class BluetoothAudioService {
         hasAudioManufacturerData,
         hasAudioServiceData,
         serviceUUIDs: advertisingData?.serviceUUIDs,
+        normalizedServiceUUIDs: advertisingData?.serviceUUIDs?.map((uuid) => this.normalizeUuid(uuid)),
+        expectedAudioUuids,
         manufacturerData: advertisingData?.manufacturerData,
         serviceData: advertisingData?.serviceData,
       },
@@ -546,10 +582,10 @@ class BluetoothAudioService {
             return false; // Skip non-string data
           }
 
-          const upperServiceUuid = serviceUuid.toUpperCase();
+          const normalizedServiceUuid = this.normalizeUuid(serviceUuid);
 
           // Check if the service UUID itself indicates audio capability
-          const isAudioServiceUuid = [
+          const expectedAudioServiceUuids = [
             AUDIO_SERVICE_UUID,
             HFP_SERVICE_UUID,
             HSP_SERVICE_UUID,
@@ -558,13 +594,15 @@ class BluetoothAudioService {
             HYS_HEADSET_SERVICE,
             '0000FE59-0000-1000-8000-00805F9B34FB', // Common audio service
             '0000180F-0000-1000-8000-00805F9B34FB', // Battery service (often used by audio devices)
-          ].some((uuid) => uuid.toUpperCase() === upperServiceUuid);
+          ].map((uuid) => uuid.toUpperCase());
+
+          const isAudioServiceUuid = expectedAudioServiceUuids.includes(normalizedServiceUuid);
 
           if (isAudioServiceUuid) {
             logger.debug({
               message: 'Found audio service UUID in service data',
               context: {
-                serviceUuid: upperServiceUuid,
+                serviceUuid: normalizedServiceUuid,
                 data: data,
               },
             });
@@ -845,7 +883,8 @@ class BluetoothAudioService {
     // Check if device likely supports microphone control based on service UUIDs
     const advertisingData = device.advertising;
     const serviceUUIDs = advertisingData?.serviceUUIDs || [];
-    return serviceUUIDs.some((uuid: string) => [HFP_SERVICE_UUID, HSP_SERVICE_UUID].includes(uuid.toUpperCase()));
+    const expectedMicrophoneUuids = [HFP_SERVICE_UUID, HSP_SERVICE_UUID].map((uuid) => uuid.toUpperCase());
+    return serviceUUIDs.some((uuid: string) => expectedMicrophoneUuids.includes(this.normalizeUuid(uuid)));
   }
 
   stopScanning(): void {
@@ -985,13 +1024,75 @@ class BluetoothAudioService {
       { service: AINA_HEADSET_SERVICE, characteristic: AINA_HEADSET_SVC_PROP },
       { service: B01INRICO_HEADSET_SERVICE, characteristic: B01INRICO_HEADSET_SERVICE_CHAR },
       { service: HYS_HEADSET_SERVICE, characteristic: HYS_HEADSET_SERVICE_CHAR },
-      // Add generic button control UUIDs
-      ...BUTTON_CONTROL_UUIDS.map((uuid) => ({ service: '00001800-0000-1000-8000-00805F9B34FB', characteristic: uuid })), // Generic service
     ];
 
+    // Add generic button control service/characteristic combinations
+    for (const serviceUuid of BUTTON_CONTROL_SERVICES) {
+      for (const characteristicUuid of BUTTON_CONTROL_CHARACTERISTICS) {
+        buttonControlConfigs.push({
+          service: serviceUuid,
+          characteristic: characteristicUuid,
+        });
+      }
+    }
+
+    // Also try to discover services and their characteristics dynamically
+    try {
+      const peripheralInfo = await BleManager.retrieveServices(deviceId);
+
+      logger.debug({
+        message: 'Retrieved device services for button monitoring',
+        context: {
+          deviceId,
+          services: peripheralInfo.services?.length || 0,
+          characteristics: peripheralInfo.characteristics?.length || 0,
+        },
+      });
+
+      // Look for potential button characteristics in discovered services
+      if (peripheralInfo.characteristics) {
+        for (const characteristic of peripheralInfo.characteristics) {
+          // Check if this characteristic could be a button control based on properties
+          if (characteristic.properties?.Notify || characteristic.properties?.Indicate) {
+            // Add service/characteristic pairs for characteristics that support notifications
+            const serviceUuid = characteristic.service;
+            const characteristicUuid = characteristic.characteristic;
+
+            // Skip if we already have this combination
+            const alreadyAdded = buttonControlConfigs.some((config) => config.service.toUpperCase() === serviceUuid.toUpperCase() && config.characteristic.toUpperCase() === characteristicUuid.toUpperCase());
+
+            if (!alreadyAdded) {
+              buttonControlConfigs.push({
+                service: serviceUuid,
+                characteristic: characteristicUuid,
+              });
+
+              logger.debug({
+                message: 'Added discovered characteristic for button monitoring',
+                context: {
+                  deviceId,
+                  service: serviceUuid,
+                  characteristic: characteristicUuid,
+                  properties: characteristic.properties,
+                },
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.debug({
+        message: 'Could not retrieve services for dynamic button characteristic discovery',
+        context: { deviceId, error },
+      });
+    }
+
+    // Try to start notifications for all collected service/characteristic pairs
+    let successCount = 0;
     for (const config of buttonControlConfigs) {
       try {
         await BleManager.startNotification(deviceId, config.service, config.characteristic);
+        successCount++;
         logger.info({
           message: 'Started notifications for button control',
           context: {
@@ -1012,6 +1113,15 @@ class BluetoothAudioService {
         });
       }
     }
+
+    logger.info({
+      message: 'Button event monitoring setup completed',
+      context: {
+        deviceId,
+        totalAttempted: buttonControlConfigs.length,
+        successfulSubscriptions: successCount,
+      },
+    });
   }
 
   // Remove all the old button monitoring methods as they're replaced by the event-based approach

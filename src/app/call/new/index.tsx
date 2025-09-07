@@ -1272,7 +1272,7 @@ export default function NewCall() {
         >
           <FullScreenLocationPicker
             key={showLocationPicker ? 'location-picker-open' : 'location-picker-closed'}
-            initialLocation={selectedLocation || { latitude: 0, longitude: 0 }}
+            initialLocation={selectedLocation ?? undefined}
             onLocationSelected={handleLocationSelected}
             onClose={() => setShowLocationPicker(false)}
           />

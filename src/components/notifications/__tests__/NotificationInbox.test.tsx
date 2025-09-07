@@ -22,6 +22,126 @@ jest.mock('nativewind', () => ({
   cssInterop: jest.fn(),
 }));
 
+// Mock gluestack-ui components and utilities
+jest.mock('@gluestack-ui/nativewind-utils/withStyleContext', () => ({
+  withStyleContext: jest.fn((Component) => Component),
+  useStyleContext: jest.fn(() => ({
+    variant: 'solid',
+    size: 'md',
+    action: 'primary',
+  })),
+}));
+
+jest.mock('@gluestack-ui/nativewind-utils/withStyleContextAndStates', () => ({
+  withStyleContextAndStates: jest.fn((Component) => Component),
+}));
+
+jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
+  tva: jest.fn(() => jest.fn()),
+}));
+
+jest.mock('@gluestack-ui/button', () => ({
+  createButton: jest.fn(() => {
+    const React = require('react');
+    const { Pressable, Text, View, ActivityIndicator } = require('react-native');
+
+    const MockButton = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(Pressable, { ...props, ref, testID: props.testID });
+    });
+
+    MockButton.Text = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(Text, { ...props, ref });
+    });
+
+    MockButton.Group = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(View, { ...props, ref });
+    });
+
+    MockButton.Spinner = ActivityIndicator;
+
+    MockButton.Icon = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(View, { ...props, ref });
+    });
+
+    return MockButton;
+  }),
+}));
+
+jest.mock('@gluestack-ui/icon', () => ({
+  PrimitiveIcon: jest.fn((props) => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { ...props });
+  }),
+  UIIcon: jest.fn((props) => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { ...props });
+  }),
+}));
+
+jest.mock('@gluestack-ui/modal', () => ({
+  createModal: jest.fn(() => {
+    const React = require('react');
+    const { Modal: RNModal, View, Pressable, ScrollView } = require('react-native');
+
+    const MockModal = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(View, { ...props, ref });
+    });
+
+    MockModal.Backdrop = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(Pressable, { ...props, ref });
+    });
+
+    MockModal.Content = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(View, { ...props, ref });
+    });
+
+    MockModal.Header = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(View, { ...props, ref });
+    });
+
+    MockModal.Body = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(ScrollView, { ...props, ref });
+    });
+
+    MockModal.Footer = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(View, { ...props, ref });
+    });
+
+    MockModal.CloseButton = React.forwardRef((props: any, ref: any) => {
+      return React.createElement(Pressable, { ...props, ref });
+    });
+
+    MockModal.AnimatePresence = ({ children }: any) => children;
+
+    return MockModal;
+  }),
+}));
+
+jest.mock('@legendapp/motion', () => ({
+  Motion: {
+    View: jest.fn((props) => {
+      const React = require('react');
+      const { View } = require('react-native');
+      return React.createElement(View, { ...props });
+    }),
+  },
+  AnimatePresence: ({ children }: any) => children,
+  createMotionAnimatedComponent: (Component: any) => Component,
+}));
+
+// Mock the NotificationDetail component
+jest.mock('@/components/notifications/NotificationDetail', () => ({
+  NotificationDetail: jest.fn((props) => {
+    const React = require('react');
+    const { View, Text } = require('react-native');
+    return React.createElement(View, { testID: 'notification-detail' },
+      React.createElement(Text, {}, 'Notification Detail')
+    );
+  }),
+}));
+
 // Mock gluestack-ui hooks to prevent keyboard bottom inset errors
 jest.mock('@gluestack-ui/hooks', () => ({
   useKeyboardBottomInset: jest.fn(() => 0),

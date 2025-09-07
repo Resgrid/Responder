@@ -57,9 +57,16 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
       call: null,
       callExtraData: null,
       callPriority: null,
+      callNotes: [],
+      callImages: null,
+      callFiles: null,
       isLoading: false,
       isNotesLoading: false,
+      isLoadingFiles: false,
+      isLoadingImages: false,
       error: null,
+      errorFiles: null,
+      errorImages: null,
     }),
   fetchCallDetail: async (callId: string) => {
     set({ isLoading: true, error: null });
@@ -122,7 +129,7 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
     const callNotes = get().callNotes;
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return callNotes;
-    return callNotes?.filter((note: CallNoteResultData) => note.Note.toLowerCase().includes(trimmedQuery.toLowerCase()) || note.FullName.toLowerCase().includes(trimmedQuery.toLowerCase()));
+    return callNotes?.filter((note: CallNoteResultData) => (note.Note?.toLowerCase().includes(trimmedQuery.toLowerCase()) ?? false) || (note.FullName?.toLowerCase().includes(trimmedQuery.toLowerCase()) ?? false));
   },
   fetchCallImages: async (callId: string) => {
     set({ isLoadingImages: true, errorImages: null });

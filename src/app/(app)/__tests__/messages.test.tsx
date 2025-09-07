@@ -431,6 +431,7 @@ const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics
 (mockedUseMessagesStore as any).getState = jest.fn(() => mockStore);
 
 const mockSecurityStore = {
+  error: null,
   canUserCreateMessages: true,
   isUserDepartmentAdmin: false,
   canUserCreateCalls: false,

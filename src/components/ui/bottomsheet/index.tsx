@@ -1,4 +1,5 @@
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
+import type BottomSheetRef from '@gorhom/bottom-sheet';
 import GorhomBottomSheet, {
   BottomSheetBackdrop as GorhomBottomSheetBackdrop,
   BottomSheetFlatList as GorhomBottomSheetFlatList,
@@ -36,19 +37,19 @@ const bottomSheetItemStyle = tva({
 
 const BottomSheetContext = createContext<{
   visible: boolean;
-  bottomSheetRef: React.RefObject<GorhomBottomSheet | null>;
+  bottomSheetRef: React.RefObject<BottomSheetRef>;
   handleClose: () => void;
   handleOpen: () => void;
 }>({
   visible: false,
-  bottomSheetRef: { current: null },
+  bottomSheetRef: { current: null } as unknown as React.RefObject<BottomSheetRef>,
   handleClose: () => { },
   handleOpen: () => { },
 });
 
 type IBottomSheetProps = React.ComponentProps<typeof GorhomBottomSheet>;
 export const BottomSheet = ({ snapToIndex = 1, onOpen, onClose, ...props }: { snapToIndex?: number; children?: React.ReactNode; onOpen?: () => void; onClose?: () => void }) => {
-  const bottomSheetRef = useRef<GorhomBottomSheet | null>(null);
+  const bottomSheetRef = useRef<BottomSheetRef>(null);
 
   const [visible, setVisible] = useState(false);
 
@@ -68,7 +69,7 @@ export const BottomSheet = ({ snapToIndex = 1, onOpen, onClose, ...props }: { sn
     <BottomSheetContext.Provider
       value={{
         visible,
-        bottomSheetRef,
+        bottomSheetRef: bottomSheetRef as React.RefObject<BottomSheetRef>,
         handleClose,
         handleOpen,
       }}
@@ -92,7 +93,7 @@ export const BottomSheetPortal = ({
 
   const handleSheetChanges = useCallback(
     (index: number) => {
-      if (index === 0 || index === -1) {
+      if (index === -1) {
         handleClose();
       }
     },

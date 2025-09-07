@@ -182,6 +182,7 @@ describe('Calls Screen', () => {
 
     // Default mock for security store - user CAN create calls
     mockUseSecurityStore.mockReturnValue({
+      error: null,
       canUserCreateCalls: true,
       getRights: jest.fn(),
       isUserDepartmentAdmin: false,
@@ -196,6 +197,7 @@ describe('Calls Screen', () => {
   describe('FAB Button Security', () => {
     it('should show the new call FAB button when user can create calls', () => {
       mockUseSecurityStore.mockReturnValue({
+        error: null,
         canUserCreateCalls: true,
         getRights: jest.fn(),
         isUserDepartmentAdmin: false,
@@ -213,6 +215,7 @@ describe('Calls Screen', () => {
 
     it('should hide the new call FAB button when user cannot create calls', () => {
       mockUseSecurityStore.mockReturnValue({
+        error: null,
         canUserCreateCalls: false,
         getRights: jest.fn(),
         isUserDepartmentAdmin: false,
@@ -230,6 +233,7 @@ describe('Calls Screen', () => {
 
     it('should navigate to new call page when FAB is pressed and user can create calls', () => {
       mockUseSecurityStore.mockReturnValue({
+        error: null,
         canUserCreateCalls: true,
         getRights: jest.fn(),
         isUserDepartmentAdmin: false,

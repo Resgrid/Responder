@@ -53,36 +53,108 @@ jest.mock('../../audio-stream/audio-stream-bottom-sheet', () => ({
   AudioStreamBottomSheet: 'AudioStreamBottomSheet',
 }));
 
+jest.mock('@/lib/utils', () => ({
+  getAvatarUrl: jest.fn((id: string) => `https://example.com/avatar/${id}`),
+}));
+
+// Mock lucide-react-native icons
+jest.mock('lucide-react-native', () => ({
+  Calendar: 'Calendar',
+  CalendarCheck: 'CalendarCheck',
+  Contact: 'Contact',
+  Headphones: 'Headphones',
+  Home: 'Home',
+  ListTree: 'ListTree',
+  LogOut: 'LogOut',
+  Mail: 'Mail',
+  Map: 'Map',
+  Megaphone: 'Megaphone',
+  Mic: 'Mic',
+  Notebook: 'Notebook',
+  Settings: 'Settings',
+  Truck: 'Truck',
+  User: 'User',
+  Users: 'Users',
+}));
+
 // Mock UI components
-jest.mock('@/components/ui/avatar', () => ({
-  Avatar: 'Avatar',
-  AvatarFallbackText: 'AvatarFallbackText',
-  AvatarImage: 'AvatarImage',
-}));
+jest.mock('@/components/ui/avatar', () => {
+  const React = require('react');
+  return {
+    Avatar: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      const MockedAvatar = 'MockedAvatar' as any;
+      return <MockedAvatar ref={ref} {...props}>{children}</MockedAvatar>;
+    }),
+    AvatarFallbackText: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      const MockedAvatarFallbackText = 'MockedAvatarFallbackText' as any;
+      return <MockedAvatarFallbackText ref={ref} {...props}>{children}</MockedAvatarFallbackText>;
+    }),
+    AvatarImage: React.forwardRef((props: any, ref: any) => {
+      const MockedAvatarImage = 'MockedAvatarImage' as any;
+      return <MockedAvatarImage ref={ref} {...props} />;
+    }),
+  };
+});
 
-jest.mock('@/components/ui/box', () => ({
-  Box: 'Box',
-}));
+jest.mock('@/components/ui/box', () => {
+  const React = require('react');
+  return {
+    Box: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      const MockedBox = 'MockedBox' as any;
+      return <MockedBox ref={ref} {...props}>{children}</MockedBox>;
+    }),
+  };
+});
 
-jest.mock('@/components/ui/divider', () => ({
-  Divider: 'Divider',
-}));
+jest.mock('@/components/ui/divider', () => {
+  const React = require('react');
+  return {
+    Divider: React.forwardRef((props: any, ref: any) => {
+      const MockedDivider = 'MockedDivider' as any;
+      return <MockedDivider ref={ref} {...props} />;
+    }),
+  };
+});
 
-jest.mock('@/components/ui/hstack', () => ({
-  HStack: 'HStack',
-}));
+jest.mock('@/components/ui/hstack', () => {
+  const React = require('react');
+  return {
+    HStack: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      const MockedHStack = 'MockedHStack' as any;
+      return <MockedHStack ref={ref} {...props}>{children}</MockedHStack>;
+    }),
+  };
+});
 
-jest.mock('@/components/ui/scroll-view', () => ({
-  ScrollView: 'ScrollView',
-}));
+jest.mock('@/components/ui/scroll-view', () => {
+  const React = require('react');
+  return {
+    ScrollView: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      const MockedScrollView = 'MockedScrollView' as any;
+      return <MockedScrollView ref={ref} {...props}>{children}</MockedScrollView>;
+    }),
+  };
+});
 
-jest.mock('@/components/ui/text', () => ({
-  Text: 'Text',
-}));
+jest.mock('@/components/ui/text', () => {
+  const React = require('react');
+  return {
+    Text: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      const MockedText = 'MockedText' as any;
+      return <MockedText ref={ref} {...props}>{children}</MockedText>;
+    }),
+  };
+});
 
-jest.mock('@/components/ui/vstack', () => ({
-  VStack: 'VStack',
-}));
+jest.mock('@/components/ui/vstack', () => {
+  const React = require('react');
+  return {
+    VStack: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      const MockedVStack = 'MockedVStack' as any;
+      return <MockedVStack ref={ref} {...props}>{children}</MockedVStack>;
+    }),
+  };
+});
 
 const mockUseLiveKitStore = useLiveKitStore as jest.MockedFunction<typeof useLiveKitStore>;
 const mockUseAudioStreamStore = useAudioStreamStore as jest.MockedFunction<typeof useAudioStreamStore>;
@@ -112,6 +184,7 @@ describe('SideMenu', () => {
 
     // Default security store mock
     mockUseSecurityStore.mockReturnValue({
+      error: null,
       getRights: jest.fn(),
       isUserDepartmentAdmin: false,
       isUserGroupAdmin: jest.fn().mockReturnValue(false),

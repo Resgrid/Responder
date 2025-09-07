@@ -121,7 +121,9 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
                 ...event,
                 status,
                 lastAttemptAt: Date.now(),
-                error: error || undefined,
+                // Use nullish coalescing to normalize error and explicitly clear stale fields for non-FAILED status
+                error: status === QueuedEventStatus.FAILED ? (error ?? undefined) : undefined,
+                nextRetryAt: undefined, // Clear initially, will be set below if FAILED
               };
 
               // Calculate next retry time if this is a failed attempt

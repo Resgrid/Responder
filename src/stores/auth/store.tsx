@@ -52,7 +52,7 @@ const useAuthStore = create<AuthState>()(
             if (tokenParts.length < 3 || !tokenParts[1]) {
               throw new Error('Invalid ID token format');
             }
-            const payload = sanitizeJson(base64.decode(tokenParts[1]));
+            const payload = sanitizeJson(decodeJwtPayload(tokenParts[1]));
 
             setItem<AuthResponse>('authResponse', response.authResponse!);
             const now = new Date();
@@ -159,7 +159,7 @@ const useAuthStore = create<AuthState>()(
             if (tokenParts.length < 3 || !tokenParts[1]) {
               throw new Error('Invalid ID token format during hydration');
             }
-            const payload = sanitizeJson(base64.decode(tokenParts[1]));
+            const payload = sanitizeJson(decodeJwtPayload(tokenParts[1]));
 
             const profileData = JSON.parse(payload) as ProfileModel;
 
@@ -228,6 +228,19 @@ const useAuthStore = create<AuthState>()(
 
 const sanitizeJson = (json: string) => {
   return json.replace(/[\u0000]+/g, '');
+};
+
+const decodeJwtPayload = (tokenPayload: string): string => {
+  // Convert base64url to base64 by replacing URL-safe characters
+  let base64Str = tokenPayload.replace(/-/g, '+').replace(/_/g, '/');
+
+  // Add padding if needed (base64url removes padding)
+  const padding = base64Str.length % 4;
+  if (padding) {
+    base64Str += '='.repeat(4 - padding);
+  }
+
+  return base64.decode(base64Str);
 };
 
 export default useAuthStore;

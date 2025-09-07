@@ -20,13 +20,36 @@ export const securityStore = create<SecurityState>()(
       rights: null,
       getRights: async () => {
         try {
-          const response = (await getCurrentUsersRights()) as ApiResponse<DepartmentRightsResultData>;
+          const response = await getCurrentUsersRights();
 
-          set({
-            rights: response.Data,
-          });
+          // Type guard to ensure response is properly structured
+          if (response && typeof response === 'object' && 'Data' in response) {
+            const typedResponse = response as ApiResponse<DepartmentRightsResultData>;
+
+            // Guard against missing or invalid Data
+            if (typedResponse.Data) {
+              set({
+                rights: typedResponse.Data,
+                error: null,
+              });
+            } else {
+              set({
+                rights: null,
+                error: 'Invalid response: missing data',
+              });
+            }
+          } else {
+            set({
+              rights: null,
+              error: 'Invalid response format',
+            });
+          }
         } catch (error) {
-          // If refresh fails, log out the user
+          // Set error state and null out rights on failure
+          set({
+            rights: null,
+            error: error instanceof Error ? error.message : 'Failed to get user rights',
+          });
         }
       },
     }),
@@ -40,6 +63,7 @@ export const securityStore = create<SecurityState>()(
 export const useSecurityStore = () => {
   const store = securityStore();
   return {
+    error: store.error,
     getRights: store.getRights,
     isUserDepartmentAdmin: store.rights?.IsAdmin,
     isUserGroupAdmin: (groupId: number) => store.rights?.Groups.some((right) => right.GroupId === groupId && right.IsGroupAdmin),

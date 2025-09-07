@@ -36,7 +36,7 @@ import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-s
 
 export default function CallDetail() {
   const { id } = useLocalSearchParams();
-  const callId = (Array.isArray(id) ? id[0] : id) as string; // Assert that we'll always have a callId
+  const callId = Array.isArray(id) ? id[0] : (id as string | undefined);
   const router = useRouter();
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
@@ -104,6 +104,13 @@ export default function CallDetail() {
   };
 
   const handleEditCall = () => {
+    if (!callId) {
+      logger.warn({
+        message: 'Cannot edit call: callId is undefined',
+        context: { id },
+      });
+      return;
+    }
     router.push(`/call/${callId}/edit`);
   };
 
@@ -134,7 +141,7 @@ export default function CallDetail() {
           callNumber: call.Number,
           callType: call.Type,
           priority: callPriority?.Name || 'Unknown',
-          hasCoordinates: !!(coordinates.latitude && coordinates.longitude),
+          hasCoordinates: coordinates.latitude != null && coordinates.longitude != null,
           notesCount: call.NotesCount || 0,
           imagesCount: call.ImgagesCount || 0,
           filesCount: call.FileCount || 0,
@@ -156,12 +163,57 @@ export default function CallDetail() {
       } else if (call.Geolocation) {
         const [lat, lng] = call.Geolocation.split(',');
         setCoordinates({
-          latitude: lat ? parseFloat(lat) : 0,
-          longitude: lng ? parseFloat(lng) : 0,
+          latitude: lat ? parseFloat(lat) : null,
+          longitude: lng ? parseFloat(lng) : null,
         });
       }
     }
   }, [call]);
+
+  // Early return if callId is undefined
+  if (!callId) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: t('call_detail.title'),
+            headerShown: true,
+          }}
+        />
+        <SafeAreaView className="size-full flex-1">
+          <FocusAwareStatusBar hidden={true} />
+          <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
+            <ZeroState heading={t('call_detail.invalid_call')} description={t('call_detail.call_id_missing')} isError={true} />
+            <Button onPress={handleBack} className="self-center">
+              <ButtonText>{t('common.go_back')}</ButtonText>
+            </Button>
+          </Box>
+        </SafeAreaView>
+      </>
+    );
+  }
+
+  /**
+   * Validates if coordinates are valid for routing
+   */
+  const isValidCoordinates = (lat: number | null | undefined, lng: number | null | undefined): boolean => {
+    // Check if coordinates exist and are valid numbers
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+      return false;
+    }
+
+    // Check if coordinates are within valid ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return false;
+    }
+
+    // Check if coordinates are not NaN
+    if (isNaN(lat) || isNaN(lng)) {
+      return false;
+    }
+
+    return true;
+  };
 
   /**
    * Opens the device's native maps application with directions to the call location
@@ -175,10 +227,35 @@ export default function CallDetail() {
         hasUserLocation: !!(userLocation.latitude && userLocation.longitude),
         destinationAddress: call?.Address || '',
       });
+
       const latitude = coordinates.latitude ?? (call?.Latitude ? parseFloat(call.Latitude) : undefined);
       const longitude = coordinates.longitude ?? (call?.Longitude ? parseFloat(call.Longitude) : undefined);
+
+      // Guard against invalid or missing coordinates
+      if (!isValidCoordinates(latitude, longitude)) {
+        const reason = latitude === undefined || longitude === undefined ? 'missing_coordinates' : latitude === 0 && longitude === 0 ? 'zeroed_coordinates' : 'invalid_coordinates';
+
+        logger.warn({
+          message: 'Cannot route to call: invalid coordinates',
+          context: { callId, latitude, longitude, address: call?.Address },
+        });
+
+        showToast('error', t('call_detail.no_location_for_routing'));
+
+        // Track failed route attempt with specific reason
+        trackEvent('call_route_failed', {
+          timestamp: new Date().toISOString(),
+          callId: call?.CallId || callId || '',
+          reason,
+          latitude: latitude?.toString() || 'undefined',
+          longitude: longitude?.toString() || 'undefined',
+        });
+        return;
+      }
+
       const destinationName = call?.Address || t('call_detail.call_location');
       const success = await openMapsWithDirections(latitude as number, longitude as number, destinationName, userLocation.latitude ?? undefined, userLocation.longitude ?? undefined);
+
       if (!success) {
         showToast('error', t('call_detail.failed_to_open_maps'));
         // Track failed route attempt
@@ -529,7 +606,9 @@ export default function CallDetail() {
 
         {/* Map */}
         <Box className="w-full">
-          {coordinates.latitude && coordinates.longitude ? <StaticMap latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} height={200} showUserLocation={true} /> : null}
+          {coordinates.latitude != null && coordinates.longitude != null ? (
+            <StaticMap latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} height={200} showUserLocation={true} />
+          ) : null}
         </Box>
 
         {/* Action Buttons */}
@@ -580,12 +659,12 @@ export default function CallDetail() {
           <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} />
         </Box>
       </ScrollView>
-      <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId} />
-      <CallImagesModal isOpen={isImagesModalOpen} onClose={() => setIsImagesModalOpen(false)} callId={callId} />
-      <CallFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} callId={callId} />
+      <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId || ''} />
+      <CallImagesModal isOpen={isImagesModalOpen} onClose={() => setIsImagesModalOpen(false)} callId={callId || ''} />
+      <CallFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} callId={callId || ''} />
 
       {/* Close Call Bottom Sheet */}
-      <CloseCallBottomSheet isOpen={isCloseCallModalOpen} onClose={() => setIsCloseCallModalOpen(false)} callId={callId} />
+      <CloseCallBottomSheet isOpen={isCloseCallModalOpen} onClose={() => setIsCloseCallModalOpen(false)} callId={callId || ''} />
 
       {/* Call Detail Menu ActionSheet */}
       <CallDetailActionSheet />

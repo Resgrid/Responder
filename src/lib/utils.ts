@@ -222,9 +222,6 @@ export function formatDateForDisplay(date: Date, format: string): string {
   if (format.indexOf('ss') > -1) {
     format = format.replace('ss', padLeadingZero(date.getSeconds()).toString());
   }
-  if (format.indexOf('dd') > -1) {
-    format = format.replace('ss', padLeadingZero(date.getDay()).toString());
-  }
   if (format.indexOf('Z') > -1) {
     let timeZone: string | undefined;
     try {

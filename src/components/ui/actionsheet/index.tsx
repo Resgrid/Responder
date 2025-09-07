@@ -52,7 +52,7 @@ const UIActionsheet = createActionsheet({
   Content: Motion.View as any,
   DragIndicator: View as any,
   DragIndicatorWrapper: View as any,
-  Item: Pressable as any,
+  Item: cssInterop(Pressable, { className: 'style' }) as any,
   ItemText: Text as any,
   ScrollView: ScrollView as any,
   VirtualizedList: VirtualizedList as any,
@@ -65,7 +65,6 @@ const UIActionsheet = createActionsheet({
 
 cssInterop(UIActionsheet, { className: 'style' });
 cssInterop(UIActionsheet.Content, { className: 'style' });
-cssInterop(ItemWrapper, { className: 'style' });
 cssInterop(UIActionsheet.ItemText, { className: 'style' });
 cssInterop(UIActionsheet.DragIndicator, { className: 'style' });
 cssInterop(UIActionsheet.DragIndicatorWrapper, { className: 'style' });

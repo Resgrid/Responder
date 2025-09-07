@@ -64,10 +64,33 @@ export const Icon = React.forwardRef<
 type ParameterTypes = Omit<Parameters<typeof createIcon>[0], 'Root'>;
 
 const accessClassName = (style: any) => {
+  if (!style) return undefined;
+
+  // Handle style arrays - iterate items and return the first item with a className or class property
+  if (Array.isArray(style)) {
+    for (const item of style) {
+      if (item && typeof item === 'object') {
+        if (item.className != null) return item.className;
+        if (item.class != null) return item.class;
+      }
+    }
+  }
+
+  // Handle a single style object - return its className or class if present
+  if (style && typeof style === 'object') {
+    if (style.className != null) return style.className;
+    if (style.class != null) return style.class;
+  }
+
+  // Fallback to previous generic key lookup for backward compatibility
   const styleObject = Array.isArray(style) ? style[0] : style;
-  const keys = Object.keys(styleObject);
-  const key = keys[1];
-  return key ? styleObject[key] : undefined;
+  if (styleObject && typeof styleObject === 'object') {
+    const keys = Object.keys(styleObject);
+    const key = keys[1];
+    return key ? styleObject[key] : undefined;
+  }
+
+  return undefined;
 };
 
 const createIconUI = ({ ...props }: ParameterTypes) => {

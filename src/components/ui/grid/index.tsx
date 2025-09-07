@@ -21,11 +21,7 @@ function arrangeChildrenIntoRows({ childrenArray, colSpanArr, numColumns }: { ch
   } = {};
 
   for (let i = 0; i < childrenArray.length; i++) {
-    const colSpan = colSpanArr[i];
-
-    if (colSpan === undefined) {
-      continue; // Skip undefined colSpan values
-    }
+    const colSpan = colSpanArr[i] ?? 1; // Normalize undefined colSpan to 1 instead of skipping
 
     // if current row is full, go to next row
     if (currentRowTotalColSpan + colSpan > numColumns) {

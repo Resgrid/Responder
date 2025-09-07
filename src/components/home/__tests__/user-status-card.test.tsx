@@ -5,6 +5,30 @@ import { UserStatusCard } from '../user-status-card';
 import { useHomeStore } from '@/stores/home/home-store';
 import { PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 
+// Mock Gluestack UI utilities before any UI component imports
+jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
+  tva: jest.fn().mockImplementation((config) => {
+    return jest.fn().mockImplementation((props) => {
+      const { class: className, ...restProps } = props || {};
+      return className || '';
+    });
+  }),
+}));
+
+jest.mock('@gluestack-ui/nativewind-utils/IsWeb', () => ({
+  isWeb: false,
+}));
+
+jest.mock('@gluestack-ui/nativewind-utils', () => ({
+  tva: jest.fn().mockImplementation((config) => {
+    return jest.fn().mockImplementation((props) => {
+      const { class: className, ...restProps } = props || {};
+      return className || '';
+    });
+  }),
+  isWeb: false,
+}));
+
 // Mock the store
 jest.mock('@/stores/home/home-store');
 
