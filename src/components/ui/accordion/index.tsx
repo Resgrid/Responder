@@ -104,7 +104,7 @@ const PrimitiveIcon = React.forwardRef<React.ElementRef<typeof Svg>, IPrimitiveI
     if (AsComp) {
       return <AsComp ref={ref} fill={fill} {...props} {...sizeProps} stroke={colorProps} />;
     }
-    return <Svg ref={ref} height={height || size || 24} width={width || size || 24} fill={fill || 'none'} stroke={colorProps} {...props} />;
+    return <Svg ref={ref} {...(height !== undefined && { height })} {...(width !== undefined && { width })} {...(fill !== undefined && { fill })} stroke={colorProps} {...props} />;
   }
 );
 

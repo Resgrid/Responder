@@ -1,5 +1,4 @@
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
-import type BottomSheetRef from '@gorhom/bottom-sheet';
 import GorhomBottomSheet, {
   BottomSheetBackdrop as GorhomBottomSheetBackdrop,
   BottomSheetFlatList as GorhomBottomSheetFlatList,
@@ -37,19 +36,19 @@ const bottomSheetItemStyle = tva({
 
 const BottomSheetContext = createContext<{
   visible: boolean;
-  bottomSheetRef: React.RefObject<BottomSheetRef>;
+  bottomSheetRef: React.RefObject<GorhomBottomSheet | null>;
   handleClose: () => void;
   handleOpen: () => void;
 }>({
   visible: false,
-  bottomSheetRef: { current: null } as unknown as React.RefObject<BottomSheetRef>,
+  bottomSheetRef: { current: null },
   handleClose: () => { },
   handleOpen: () => { },
 });
 
 type IBottomSheetProps = React.ComponentProps<typeof GorhomBottomSheet>;
 export const BottomSheet = ({ snapToIndex = 1, onOpen, onClose, ...props }: { snapToIndex?: number; children?: React.ReactNode; onOpen?: () => void; onClose?: () => void }) => {
-  const bottomSheetRef = useRef<BottomSheetRef>(null);
+  const bottomSheetRef = useRef<GorhomBottomSheet>(null);
 
   const [visible, setVisible] = useState(false);
 
@@ -69,7 +68,7 @@ export const BottomSheet = ({ snapToIndex = 1, onOpen, onClose, ...props }: { sn
     <BottomSheetContext.Provider
       value={{
         visible,
-        bottomSheetRef: bottomSheetRef as React.RefObject<BottomSheetRef>,
+        bottomSheetRef,
         handleClose,
         handleOpen,
       }}
@@ -93,7 +92,7 @@ export const BottomSheetPortal = ({
 
   const handleSheetChanges = useCallback(
     (index: number) => {
-      if (index === -1) {
+      if (index === 0 || index === -1) {
         handleClose();
       }
     },
@@ -101,16 +100,7 @@ export const BottomSheetPortal = ({
   );
 
   return (
-    <GorhomBottomSheet
-      ref={bottomSheetRef}
-      snapPoints={snapPoints}
-      index={-1}
-      backdropComponent={BackDrop ?? null}
-      onChange={handleSheetChanges}
-      handleComponent={DragIndicator ?? null}
-      enablePanDownToClose={true}
-      {...props}
-    >
+    <GorhomBottomSheet ref={bottomSheetRef} snapPoints={snapPoints} index={-1} backdropComponent={BackDrop} onChange={handleSheetChanges} handleComponent={DragIndicator} enablePanDownToClose={true} {...props}>
       {props.children}
     </GorhomBottomSheet>
   );

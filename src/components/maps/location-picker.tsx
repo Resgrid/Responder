@@ -10,12 +10,12 @@ import { Text } from '@/components/ui/text';
 
 interface LocationPickerProps {
   initialLocation?:
-  | {
-    latitude: number;
-    longitude: number;
-    address?: string;
-  }
-  | undefined;
+    | {
+        latitude: number;
+        longitude: number;
+        address?: string;
+      }
+    | undefined;
   onLocationSelected: (location: { latitude: number; longitude: number; address?: string }) => void;
   height?: number;
 }

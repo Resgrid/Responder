@@ -4,7 +4,6 @@ import { createActionsheet } from '@gluestack-ui/actionsheet';
 import type { VariantProps } from '@gluestack-ui/nativewind-utils';
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import { withStates } from '@gluestack-ui/nativewind-utils/withStates';
-import { withStyleContext } from '@gluestack-ui/nativewind-utils/withStyleContext';
 import { AnimatePresence, createMotionAnimatedComponent, Motion } from '@legendapp/motion';
 import { cssInterop } from 'nativewind';
 import React, { type ComponentType, type RefAttributes, useMemo } from 'react';
@@ -36,7 +35,7 @@ const PrimitiveIcon = React.forwardRef<React.ElementRef<typeof Svg>, IPrimitiveI
     if (AsComp) {
       return <AsComp ref={ref} fill={fill} {...props} {...sizeProps} stroke={colorProps} />;
     }
-    return <Svg ref={ref} height={height || 24} width={width || 24} fill={fill || 'none'} stroke={colorProps} {...props} />;
+    return <Svg ref={ref} {...(height !== undefined && { height })} {...(width !== undefined && { width })} {...(fill !== undefined && { fill })} stroke={colorProps} {...props} />;
   }
 );
 
@@ -46,25 +45,26 @@ const ItemWrapper = React.forwardRef<React.ElementRef<typeof Pressable>, Pressab
 
 const AnimatedPressable = createMotionAnimatedComponent(Pressable);
 
-const UIActionsheet = createActionsheet({
-  Root: withStyleContext(View) as any,
-  Backdrop: AnimatedPressable as any,
-  Content: Motion.View as any,
-  DragIndicator: View as any,
-  DragIndicatorWrapper: View as any,
-  Item: cssInterop(Pressable, { className: 'style' }) as any,
-  ItemText: Text as any,
-  ScrollView: ScrollView as any,
-  VirtualizedList: VirtualizedList as any,
-  FlatList: FlatList as any,
-  SectionList: SectionList as any,
-  SectionHeaderText: Text as any,
-  Icon: PrimitiveIcon as any,
-  AnimatePresence: AnimatePresence as any,
+export const UIActionsheet = createActionsheet({
+  Root: View,
+  Content: Motion.View,
+  Item: Platform.OS === 'web' ? ItemWrapper : (withStates(ItemWrapper) as ComponentType<PressableProps & RefAttributes<View>>),
+  ItemText: Text,
+  DragIndicator: View,
+  IndicatorWrapper: View,
+  Backdrop: AnimatedPressable,
+  ScrollView: ScrollView,
+  VirtualizedList: VirtualizedList,
+  FlatList: FlatList,
+  SectionList: SectionList,
+  SectionHeaderText: H4,
+  Icon: PrimitiveIcon,
+  AnimatePresence: AnimatePresence,
 });
 
 cssInterop(UIActionsheet, { className: 'style' });
 cssInterop(UIActionsheet.Content, { className: 'style' });
+cssInterop(ItemWrapper, { className: 'style' });
 cssInterop(UIActionsheet.ItemText, { className: 'style' });
 cssInterop(UIActionsheet.DragIndicator, { className: 'style' });
 cssInterop(UIActionsheet.DragIndicatorWrapper, { className: 'style' });

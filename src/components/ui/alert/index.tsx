@@ -135,7 +135,7 @@ const PrimitiveIcon = React.forwardRef<React.ElementRef<typeof Svg>, IPrimitiveI
   if (AsComp) {
     return <AsComp ref={ref} {...sizeProps} {...colorProps} {...props} />;
   }
-  return <Svg ref={ref} height={height || 24} width={width || 24} {...colorProps} {...props} />;
+  return <Svg ref={ref} {...(height !== undefined && { height })} {...(width !== undefined && { width })} {...colorProps} {...props} />;
 });
 
 const IconWrapper = React.forwardRef<React.ElementRef<typeof PrimitiveIcon>, IPrimitiveIcon>(({ ...props }, ref) => {

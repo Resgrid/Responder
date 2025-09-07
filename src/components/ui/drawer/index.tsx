@@ -9,7 +9,7 @@ import React from 'react';
 import { Dimensions, Pressable, ScrollView, View } from 'react-native';
 
 const AnimatedPressable = createMotionAnimatedComponent(Pressable);
-const SCOPE = 'DRAWER';
+const SCOPE = 'MODAL';
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 const sizes: { [key: string]: number } = {
@@ -20,9 +20,9 @@ const sizes: { [key: string]: number } = {
 };
 
 const UIDrawer = createDrawer({
-  Root: withStyleContext(View, SCOPE) as any,
-  Backdrop: AnimatedPressable as any,
-  Content: Motion.View as any,
+  Root: withStyleContext(View, SCOPE),
+  Backdrop: AnimatedPressable,
+  Content: Motion.View,
   Body: ScrollView,
   CloseButton: Pressable,
   Footer: View,
@@ -30,13 +30,10 @@ const UIDrawer = createDrawer({
   AnimatePresence: AnimatePresence,
 });
 
-cssInterop(AnimatedPressable as any, { className: 'style' });
-cssInterop(Motion.View as any, { className: 'style' });
-cssInterop(UIDrawer as any, { className: 'style' });
-cssInterop(UIDrawer.Body as any, { className: 'style' });
-cssInterop(UIDrawer.CloseButton as any, { className: 'style' });
-cssInterop(UIDrawer.Footer as any, { className: 'style' });
-cssInterop(UIDrawer.Header as any, { className: 'style' });
+// @ts-ignore - Motion component type compatibility issue
+cssInterop(AnimatedPressable, { className: 'style' });
+// @ts-ignore - Motion component type compatibility issue
+cssInterop(Motion.View, { className: 'style' });
 
 const drawerStyle = tva({
   base: 'w-full h-full web:pointer-events-none relative',
@@ -136,7 +133,7 @@ const drawerFooterStyle = tva({
   base: 'flex-row justify-end items-center',
 });
 
-type IDrawerProps = React.ComponentProps<typeof UIDrawer> & VariantProps<typeof drawerStyle> & { className?: string; children?: React.ReactNode };
+type IDrawerProps = React.ComponentProps<typeof UIDrawer> & VariantProps<typeof drawerStyle> & { className?: string };
 
 type IDrawerBackdropProps = React.ComponentProps<typeof UIDrawer.Backdrop> & VariantProps<typeof drawerBackdropStyle> & { className?: string };
 
@@ -151,7 +148,7 @@ type IDrawerFooterProps = React.ComponentProps<typeof UIDrawer.Footer> & Variant
 type IDrawerCloseButtonProps = React.ComponentProps<typeof UIDrawer.CloseButton> & VariantProps<typeof drawerCloseButtonStyle> & { className?: string };
 
 const Drawer = React.forwardRef<React.ElementRef<typeof UIDrawer>, IDrawerProps>(({ className, size = 'sm', anchor = 'left', ...props }, ref) => {
-  return <UIDrawer ref={ref} {...(props as any)} className={drawerStyle({ size, anchor, class: className })} context={{ size, anchor }} />;
+  return <UIDrawer ref={ref} {...props} pointerEvents="box-none" className={drawerStyle({ size, anchor, class: className })} context={{ size, anchor }} />;
 });
 
 const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdrop>, IDrawerBackdropProps>(({ className, ...props }, ref) => {
@@ -176,7 +173,7 @@ const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdro
           duration: 250,
         },
       }}
-      {...(props as any)}
+      {...props}
       className={drawerBackdropStyle({
         class: className,
       })}
@@ -187,8 +184,8 @@ const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdro
 const DrawerContent = React.forwardRef<React.ElementRef<typeof UIDrawer.Content>, IDrawerContentProps>(({ className, ...props }, ref) => {
   const { size: parentSize, anchor: parentAnchor } = useStyleContext(SCOPE);
 
-  const drawerHeight = screenHeight * (sizes[parentSize] ?? sizes.md ?? 0.5);
-  const drawerWidth = screenWidth * (sizes[parentSize] ?? sizes.md ?? 0.5);
+  const drawerHeight = screenHeight * (sizes[parentSize] || sizes.md);
+  const drawerWidth = screenWidth * (sizes[parentSize] || sizes.md);
 
   const isHorizontal = parentAnchor === 'left' || parentAnchor === 'right';
 
@@ -207,12 +204,10 @@ const DrawerContent = React.forwardRef<React.ElementRef<typeof UIDrawer.Content>
       animate={animateObj}
       exit={exitObj}
       transition={{
-        type: 'spring',
-        damping: 20,
-        stiffness: 300,
-        mass: 0.8,
+        type: 'timing',
+        duration: 300,
       }}
-      {...(props as any)}
+      {...props}
       className={drawerContentStyle({
         parentVariants: {
           size: parentSize,

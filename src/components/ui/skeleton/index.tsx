@@ -8,7 +8,6 @@ type ISkeletonProps = React.ComponentProps<typeof View> &
   VariantProps<typeof skeletonStyle> & {
     isLoaded?: boolean;
     startColor?: string;
-    speed?: number;
   };
 
 type ISkeletonTextProps = React.ComponentProps<typeof View> &
