@@ -65,18 +65,39 @@ const mockApiResponse: CallProtocolsResult = {
 describe('useProtocolsStore', () => {
   const { getAllProtocols } = require('@/api/protocols/protocols');
 
+  // Helper function to safely reset store state
+  const resetStore = () => {
+    try {
+      act(() => {
+        useProtocolsStore.setState({
+          protocols: [],
+          searchQuery: '',
+          selectedProtocolId: null,
+          isDetailsOpen: false,
+          isLoading: false,
+          error: null,
+        });
+      });
+    } catch (error) {
+      // If act fails, reset directly
+      useProtocolsStore.setState({
+        protocols: [],
+        searchQuery: '',
+        selectedProtocolId: null,
+        isDetailsOpen: false,
+        isLoading: false,
+        error: null,
+      });
+    }
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    resetStore();
+  });
 
-    // Reset store state
-    useProtocolsStore.setState({
-      protocols: [],
-      searchQuery: '',
-      selectedProtocolId: null,
-      isDetailsOpen: false,
-      isLoading: false,
-      error: null,
-    });
+  afterEach(() => {
+    resetStore();
   });
 
   describe('Initial State', () => {
@@ -380,25 +401,21 @@ describe('useProtocolsStore', () => {
 
       getAllProtocols.mockResolvedValue(emptyResponse);
 
-      const { result } = renderHook(() => useProtocolsStore());
+      // Test the store directly without renderHook
+      const store = useProtocolsStore.getState();
+      await store.fetchProtocols();
 
-      await act(async () => {
-        await result.current.fetchProtocols();
-      });
-
-      expect(result.current.protocols).toEqual([]);
-      expect(result.current.error).toBe(null);
+      expect(useProtocolsStore.getState().protocols).toEqual([]);
+      expect(useProtocolsStore.getState().error).toBe(null);
     });
 
     it('should handle null protocol ID selection', () => {
-      const { result } = renderHook(() => useProtocolsStore());
+      // Test the store directly without renderHook
+      const store = useProtocolsStore.getState();
+      store.selectProtocol(null as any);
 
-      act(() => {
-        result.current.selectProtocol(null as any);
-      });
-
-      expect(result.current.selectedProtocolId).toBe(null);
-      expect(result.current.isDetailsOpen).toBe(true);
+      expect(useProtocolsStore.getState().selectedProtocolId).toBe(null);
+      expect(useProtocolsStore.getState().isDetailsOpen).toBe(true);
     });
   });
 });

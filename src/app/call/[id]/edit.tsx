@@ -211,12 +211,17 @@ export default function EditCall() {
       });
 
       // Set selected location if coordinates exist
-      if (call.Latitude && call.Longitude) {
-        setSelectedLocation({
-          latitude: parseFloat(call.Latitude),
-          longitude: parseFloat(call.Longitude),
-          address: call.Address || undefined,
-        });
+      if (call.Latitude !== undefined && call.Longitude !== undefined) {
+        const latitude = parseFloat(call.Latitude);
+        const longitude = parseFloat(call.Longitude);
+
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+          setSelectedLocation({
+            latitude,
+            longitude,
+            ...(call.Address && { address: call.Address }),
+          });
+        }
       }
     }
   }, [call, callPriorities, callTypes, reset]);
@@ -258,19 +263,19 @@ export default function EditCall() {
         nature: data.nature,
         priority: priority?.Id || 0,
         type: type?.Id || '',
-        note: data.note,
-        address: data.address,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        what3words: data.what3words,
-        plusCode: data.plusCode,
-        contactName: data.contactName,
-        contactInfo: data.contactInfo,
-        dispatchUsers: data.dispatchSelection?.users,
-        dispatchGroups: data.dispatchSelection?.groups,
-        dispatchRoles: data.dispatchSelection?.roles,
-        dispatchUnits: data.dispatchSelection?.units,
-        dispatchEveryone: data.dispatchSelection?.everyone,
+        note: data.note || '',
+        address: data.address || '',
+        latitude: data.latitude || 0,
+        longitude: data.longitude || 0,
+        what3words: data.what3words || '',
+        plusCode: data.plusCode || '',
+        contactName: data.contactName || '',
+        contactInfo: data.contactInfo || '',
+        dispatchUsers: data.dispatchSelection?.users || [],
+        dispatchGroups: data.dispatchSelection?.groups || [],
+        dispatchRoles: data.dispatchSelection?.roles || [],
+        dispatchUnits: data.dispatchSelection?.units || [],
+        dispatchEveryone: data.dispatchSelection?.everyone || false,
       });
 
       // Analytics: Track successful call update
@@ -428,13 +433,15 @@ export default function EditCall() {
 
         if (results.length === 1) {
           const result = results[0];
-          const newLocation = {
-            latitude: result.geometry.location.lat,
-            longitude: result.geometry.location.lng,
-            address: result.formatted_address,
-          };
+          if (result) {
+            const newLocation = {
+              latitude: result.geometry.location.lat,
+              longitude: result.geometry.location.lng,
+              address: result.formatted_address,
+            };
 
-          handleLocationSelected(newLocation);
+            handleLocationSelected(newLocation);
+          }
 
           toast.show({
             placement: 'top',
@@ -806,7 +813,7 @@ export default function EditCall() {
         >
           <FullScreenLocationPicker
             key={showLocationPicker ? 'location-picker-open' : 'location-picker-closed'}
-            initialLocation={selectedLocation || undefined}
+            initialLocation={selectedLocation ?? undefined}
             onLocationSelected={handleLocationSelected}
             onClose={() => setShowLocationPicker(false)}
           />

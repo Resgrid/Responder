@@ -7,6 +7,7 @@ import { type ActiveUnitRoleResultData } from '@/models/v4/unitRoles/activeUnitR
 import { type SetUnitRolesInput } from '@/models/v4/unitRoles/setUnitRolesInput';
 import { type UnitRoleResultData } from '@/models/v4/unitRoles/unitRoleResultData';
 import { type UnitResultData } from '@/models/v4/units/unitResultData';
+import type { ApiResponse } from '@/types/api';
 
 import { useCoreStore } from '../app/core-store';
 
@@ -32,8 +33,8 @@ export const useRolesStore = create<RolesState>((set) => ({
   init: async (activeUnit) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await getAllUnitRolesAndAssignmentsForDepartment();
-      const personnelResponse = await getAllPersonnelInfos('');
+      const response = (await getAllUnitRolesAndAssignmentsForDepartment()) as ApiResponse<UnitRoleResultData[]>;
+      const personnelResponse = (await getAllPersonnelInfos('')) as ApiResponse<PersonnelInfoResultData[]>;
 
       set({
         roles: response.Data,
@@ -42,7 +43,7 @@ export const useRolesStore = create<RolesState>((set) => ({
       });
 
       if (activeUnit) {
-        const unitRoles = await getRoleAssignmentsForUnit(activeUnit.UnitId);
+        const unitRoles = (await getRoleAssignmentsForUnit(activeUnit.UnitId)) as ApiResponse<ActiveUnitRoleResultData[]>;
         set({ unitRoleAssignments: unitRoles.Data });
       }
     } catch (error) {
@@ -55,8 +56,8 @@ export const useRolesStore = create<RolesState>((set) => ({
   fetchRolesForUnit: async (unitId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const unitRoles = await getRoleAssignmentsForUnit(unitId);
-      set({ unitRoleAssignments: unitRoles.Data });
+      const unitRoles = (await getRoleAssignmentsForUnit(unitId)) as ApiResponse<ActiveUnitRoleResultData[]>;
+      set({ unitRoleAssignments: unitRoles.Data, isLoading: false });
     } catch (error) {
       set({ error: 'Failed to fetch unit roles', isLoading: false });
     }
@@ -64,7 +65,7 @@ export const useRolesStore = create<RolesState>((set) => ({
   fetchRoles: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await getAllUnitRolesAndAssignmentsForDepartment();
+      const response = (await getAllUnitRolesAndAssignmentsForDepartment()) as ApiResponse<UnitRoleResultData[]>;
       set({ roles: response.Data, isLoading: false });
     } catch (error) {
       set({ error: 'Failed to fetch all unit roles', isLoading: false });
@@ -73,7 +74,7 @@ export const useRolesStore = create<RolesState>((set) => ({
   fetchUsers: async () => {
     set({ isLoading: true, error: null });
     try {
-      const personnelResponse = await getAllPersonnelInfos('');
+      const personnelResponse = (await getAllPersonnelInfos('')) as ApiResponse<PersonnelInfoResultData[]>;
       set({ users: personnelResponse.Data, isLoading: false });
     } catch (error) {
       set({ error: 'Failed to fetch personnel', isLoading: false });
@@ -83,6 +84,7 @@ export const useRolesStore = create<RolesState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       await setRoleAssignmentsForUnit(data);
+      set({ isLoading: false });
     } catch (error) {
       set({ error: 'Failed to assign user to role', isLoading: false });
     }

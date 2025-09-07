@@ -56,7 +56,21 @@ jest.mock('@/components/ui/button', () => ({
 }));
 
 jest.mock('@/components/ui/flat-list', () => ({
-  FlatList: require('react-native').FlatList,
+  FlatList: ({ data, renderItem, keyExtractor }: any) => {
+    const React = require('react');
+    const { View } = require('react-native');
+
+    if (!data || data.length === 0) {
+      return React.createElement(View, { testID: "empty-flatlist" });
+    }
+
+    return React.createElement(View, { testID: "flatlist" },
+      data.map((item: any, index: number) => {
+        const key = keyExtractor ? keyExtractor(item, index) : index.toString();
+        return React.createElement(View, { key }, renderItem({ item, index }));
+      })
+    );
+  },
 }));
 
 jest.mock('@/components/ui/heading', () => ({

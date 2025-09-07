@@ -69,21 +69,19 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 
 	afterEach(() => {
 		// Reset store state completely to ensure clean state for next test
-		act(() => {
-			usePersonnelStatusBottomSheetStore.setState({
-				isOpen: false,
-				currentStep: 'select-responding-to',
-				selectedCall: null,
-				selectedGroup: null,
-				selectedStatus: null,
-				responseType: 'none',
-				selectedTab: 'calls',
-				note: '',
-				respondingTo: '',
-				isLoading: false,
-				groups: [],
-				isLoadingGroups: false,
-			});
+		usePersonnelStatusBottomSheetStore.setState({
+			isOpen: false,
+			currentStep: 'select-responding-to',
+			selectedCall: null,
+			selectedGroup: null,
+			selectedStatus: null,
+			responseType: 'none',
+			selectedTab: 'calls',
+			note: '',
+			respondingTo: '',
+			isLoading: false,
+			groups: [],
+			isLoadingGroups: false,
 		});
 	});
 
@@ -485,21 +483,24 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
 
 			// Start fetch
-			const fetchGroupsPromise = act(async () => {
-				return result.current.fetchGroups();
+			act(() => {
+				result.current.fetchGroups();
 			});
 
-			// Check loading state is true
-			expect(result.current.isLoadingGroups).toBe(true);
+			// Check loading state is true after the async operation starts
+			await waitFor(() => {
+				expect(result.current.isLoadingGroups).toBe(true);
+			});
 
 			// Resolve the promise
-			await act(async () => {
+			act(() => {
 				resolvePromise({ Data: [] });
-				await fetchGroupsPromise;
 			});
 
-			// Check loading state is false
-			expect(result.current.isLoadingGroups).toBe(false);
+			// Wait for loading state to become false
+			await waitFor(() => {
+				expect(result.current.isLoadingGroups).toBe(false);
+			});
 		});
 	});
 
@@ -879,21 +880,24 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			});
 
 			// Start submission
-			const submissionPromise = act(async () => {
-				return result.current.submitStatus();
+			act(() => {
+				result.current.submitStatus();
 			});
 
-			// Check loading state is true
-			expect(result.current.isLoading).toBe(true);
+			// Check loading state is true after the async operation starts
+			await waitFor(() => {
+				expect(result.current.isLoading).toBe(true);
+			});
 
 			// Resolve the promise
-			await act(async () => {
+			act(() => {
 				resolvePromise({});
-				await submissionPromise;
 			});
 
-			// Check loading state is false
-			expect(result.current.isLoading).toBe(false);
+			// Check loading state is false after completion
+			await waitFor(() => {
+				expect(result.current.isLoading).toBe(false);
+			});
 		});
 	});
 

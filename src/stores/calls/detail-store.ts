@@ -8,6 +8,7 @@ import { type CallNoteResultData } from '@/models/v4/callNotes/callNoteResultDat
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallExtraDataResultData } from '@/models/v4/calls/callExtraDataResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
+import type { ApiResponse, ApiResponseWithMessage } from '@/types/api';
 
 import { useCallsStore } from './store';
 
@@ -56,14 +57,21 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
       call: null,
       callExtraData: null,
       callPriority: null,
+      callNotes: [],
+      callImages: null,
+      callFiles: null,
       isLoading: false,
       isNotesLoading: false,
+      isLoadingFiles: false,
+      isLoadingImages: false,
       error: null,
+      errorFiles: null,
+      errorImages: null,
     }),
   fetchCallDetail: async (callId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const [callResult, callExtraDataResult] = await Promise.all([getCall(callId), getCallExtraData(callId)]);
+      const [callResult, callExtraDataResult] = await Promise.all([getCall(callId) as Promise<ApiResponse<CallResultData>>, getCallExtraData(callId) as Promise<ApiResponse<CallExtraDataResultData>>]);
 
       if (callResult && callResult.Data && callExtraDataResult && callExtraDataResult.Data) {
         const callPriority = useCallsStore.getState().callPriorities.find((priority) => priority.Id === callResult.Data.Priority);
@@ -75,8 +83,10 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
           isLoading: false,
         });
       } else {
+        const typedCallResult = callResult as ApiResponseWithMessage<CallResultData>;
+        const typedExtraResult = callExtraDataResult as ApiResponseWithMessage<CallExtraDataResultData>;
         set({
-          error: callResult.Message || callExtraDataResult.Message || 'Failed to fetch call details',
+          error: typedCallResult.Message || typedExtraResult.Message || 'Failed to fetch call details',
           isLoading: false,
         });
       }
@@ -90,7 +100,7 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
   fetchCallNotes: async (callId: string) => {
     set({ isNotesLoading: true });
     try {
-      const callNotes = await getCallNotes(callId);
+      const callNotes = (await getCallNotes(callId)) as ApiResponse<CallNoteResultData[]>;
       set({
         callNotes: callNotes.Data || [],
         isNotesLoading: false,
@@ -119,12 +129,12 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
     const callNotes = get().callNotes;
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return callNotes;
-    return callNotes?.filter((note: CallNoteResultData) => note.Note.toLowerCase().includes(trimmedQuery.toLowerCase()) || note.FullName.toLowerCase().includes(trimmedQuery.toLowerCase()));
+    return callNotes?.filter((note: CallNoteResultData) => (note.Note?.toLowerCase().includes(trimmedQuery.toLowerCase()) ?? false) || (note.FullName?.toLowerCase().includes(trimmedQuery.toLowerCase()) ?? false));
   },
   fetchCallImages: async (callId: string) => {
     set({ isLoadingImages: true, errorImages: null });
     try {
-      const callImages = await getCallImages(callId, false);
+      const callImages = (await getCallImages(callId, false)) as ApiResponse<CallFileResultData[]>;
       set({
         callImages: callImages.Data || [],
         isLoadingImages: false,
@@ -151,7 +161,7 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
   fetchCallFiles: async (callId: string) => {
     set({ isLoadingFiles: true, errorFiles: null });
     try {
-      const callFiles = await getCallFiles(callId, false);
+      const callFiles = (await getCallFiles(callId, false)) as ApiResponse<CallFileResultData[]>;
       set({
         callFiles: callFiles.Data || [],
         isLoadingFiles: false,

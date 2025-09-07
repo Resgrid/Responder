@@ -30,7 +30,9 @@ const UIDrawer = createDrawer({
   AnimatePresence: AnimatePresence,
 });
 
+// @ts-ignore - Motion component type compatibility issue
 cssInterop(AnimatedPressable, { className: 'style' });
+// @ts-ignore - Motion component type compatibility issue
 cssInterop(Motion.View, { className: 'style' });
 
 const drawerStyle = tva({
@@ -202,10 +204,8 @@ const DrawerContent = React.forwardRef<React.ElementRef<typeof UIDrawer.Content>
       animate={animateObj}
       exit={exitObj}
       transition={{
-        type: 'spring',
-        damping: 20,
-        stiffness: 300,
-        mass: 0.8,
+        type: 'timing',
+        duration: 300,
       }}
       {...props}
       className={drawerContentStyle({

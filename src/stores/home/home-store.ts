@@ -8,6 +8,7 @@ import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInf
 import { type GetCurrentStaffingResultData } from '@/models/v4/personnelStaffing/getCurrentStaffingResultData';
 import { type GetCurrentStatusResultData } from '@/models/v4/personnelStatuses/getCurrentStatusResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
+import type { ApiResponse } from '@/types/api';
 
 import useAuthStore from '../auth/store';
 import { useCallsStore } from '../calls/store';
@@ -105,9 +106,9 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
       // Fetch user info, status, and staffing in parallel
       const [userInfo, userStatus, userStaffing] = await Promise.all([
-        getPersonnelInfo(userId),
-        getCurrentPersonnelStatus(userId).catch(() => null), // Allow to fail gracefully
-        getCurrentPersonnelStaffing(userId).catch(() => null), // Allow to fail gracefully
+        getPersonnelInfo(userId) as Promise<ApiResponse<PersonnelInfoResultData>>,
+        getCurrentPersonnelStatus(userId).catch(() => null) as Promise<ApiResponse<GetCurrentStatusResultData> | null>, // Allow to fail gracefully
+        getCurrentPersonnelStaffing(userId).catch(() => null) as Promise<ApiResponse<GetCurrentStaffingResultData> | null>, // Allow to fail gracefully
       ]);
 
       set({

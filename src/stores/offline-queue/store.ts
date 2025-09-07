@@ -117,11 +117,13 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
         set((state) => ({
           queuedEvents: state.queuedEvents.map((event) => {
             if (event.id === eventId) {
-              const updatedEvent = {
+              const updatedEvent: QueuedEvent = {
                 ...event,
                 status,
                 lastAttemptAt: Date.now(),
-                error,
+                // Use nullish coalescing to normalize error and explicitly clear stale fields for non-FAILED status
+                error: status === QueuedEventStatus.FAILED ? (error ?? undefined) : undefined,
+                nextRetryAt: undefined, // Clear initially, will be set below if FAILED
               };
 
               // Calculate next retry time if this is a failed attempt
@@ -211,12 +213,13 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
         set((state) => ({
           queuedEvents: state.queuedEvents.map((event) => {
             if (event.id === eventId && event.status === QueuedEventStatus.FAILED) {
-              return {
+              const updatedEvent: QueuedEvent = {
                 ...event,
                 status: QueuedEventStatus.PENDING,
                 error: undefined,
                 nextRetryAt: undefined,
               };
+              return updatedEvent;
             }
             return event;
           }),
@@ -233,12 +236,13 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
         set((state) => ({
           queuedEvents: state.queuedEvents.map((event) => {
             if (event.status === QueuedEventStatus.FAILED) {
-              return {
+              const updatedEvent: QueuedEvent = {
                 ...event,
                 status: QueuedEventStatus.PENDING,
                 error: undefined,
                 nextRetryAt: undefined,
               };
+              return updatedEvent;
             }
             return event;
           }),
@@ -257,7 +261,7 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
       _setProcessing: (isProcessing: boolean, eventId?: string) => {
         set({
           isProcessing,
-          processingEventId: isProcessing ? eventId : null,
+          processingEventId: isProcessing ? (eventId ?? null) : null,
         });
       },
     }),

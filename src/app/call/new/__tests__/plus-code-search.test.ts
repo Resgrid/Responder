@@ -46,7 +46,8 @@ const performPlusCodeSearch = async (
     const response = await axios.get<GeocodingResponse>(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(plusCode)}&key=${apiKey}`);
 
     if (response.data.status === 'OK' && response.data.results.length > 0) {
-      return { success: true, result: response.data.results[0] };
+      const result = response.data.results[0];
+      return result ? { success: true, result } : { success: false, error: 'No results found' };
     } else {
       return { success: false, error: 'No results found' };
     }

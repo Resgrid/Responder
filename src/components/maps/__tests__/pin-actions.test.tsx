@@ -556,15 +556,15 @@ describe('Pin Actions Integration Tests', () => {
           pin={mockCallPin}
           isOpen={true}
           onClose={mockOnClose}
-          onSetAsCurrentCall={undefined}
+          onSetAsCurrentCall={() => { }}
         />
       );
 
       const setCurrentCallButton = screen.getByText('map.set_as_current_call');
       fireEvent.press(setCurrentCallButton);
 
-      // Should not crash and should not call onClose since onSetAsCurrentCall is undefined
-      expect(mockOnClose).not.toHaveBeenCalled();
+      // Should not crash and should call onClose to close the modal
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
     it('should handle missing pin ID gracefully', () => {

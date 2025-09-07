@@ -150,7 +150,7 @@ describe('Notes Screen Analytics', () => {
       );
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe('Business Meeting Notes');
+      expect(filtered[0]?.title).toBe('Business Meeting Notes');
     });
 
     it('filters notes by body content correctly', () => {
@@ -162,7 +162,7 @@ describe('Notes Screen Analytics', () => {
       );
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe('Personal Reminder');
+      expect(filtered[0]?.title).toBe('Personal Reminder');
     });
 
     it('filters notes by category correctly', () => {
@@ -174,7 +174,7 @@ describe('Notes Screen Analytics', () => {
       );
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe('Personal Reminder');
+      expect(filtered[0]?.title).toBe('Personal Reminder');
     });
 
     it('performs case-insensitive filtering', () => {
@@ -186,7 +186,7 @@ describe('Notes Screen Analytics', () => {
       );
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe('Business Meeting Notes');
+      expect(filtered[0]?.title).toBe('Business Meeting Notes');
     });
 
     it('returns all notes when search query is empty', () => {

@@ -1,5 +1,6 @@
 .eslintignorenode_modules
 __tests__/
+__mocks__/
 .vscode/
 android/
 coverage/

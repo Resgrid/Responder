@@ -313,7 +313,7 @@ describe('EnhancedCalendarView', () => {
 
         // Parse the date the same way the component does
         const [year, month, day] = testDate.split('-').map(Number);
-        const localDate = new Date(year, month - 1, day);
+        const localDate = new Date(year!, month! - 1, day!);
         const expectedDateString = localDate.toLocaleDateString([], {
           weekday: 'long',
           year: 'numeric',

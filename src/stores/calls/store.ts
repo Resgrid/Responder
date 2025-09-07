@@ -6,6 +6,7 @@ import { getCallTypes } from '@/api/calls/callTypes';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type CallTypeResultData } from '@/models/v4/callTypes/callTypeResultData';
+import type { ApiResponse } from '@/types/api';
 
 interface CallsState {
   calls: CallResultData[];
@@ -27,20 +28,35 @@ export const useCallsStore = create<CallsState>((set, get) => ({
   error: null,
   init: async () => {
     set({ isLoading: true, error: null });
-    const callsResponse = await getCalls();
-    const callPrioritiesResponse = await getCallPriorities();
-    const callTypesResponse = await getCallTypes();
-    set({
-      calls: callsResponse.Data,
-      callPriorities: callPrioritiesResponse.Data,
-      callTypes: callTypesResponse.Data,
-      isLoading: false,
-    });
+    try {
+      // Parallelize API calls for better performance
+      const [callsResponse, callPrioritiesResponse, callTypesResponse] = await Promise.all([
+        getCalls() as Promise<ApiResponse<CallResultData[]>>,
+        getCallPriorities() as Promise<ApiResponse<CallPriorityResultData[]>>,
+        getCallTypes() as Promise<ApiResponse<CallTypeResultData[]>>,
+      ]);
+
+      set({
+        calls: callsResponse.Data,
+        callPriorities: callPrioritiesResponse.Data,
+        callTypes: callTypesResponse.Data,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error: 'Failed to initialize calls data',
+        calls: [],
+        callPriorities: [],
+        callTypes: [],
+      });
+    } finally {
+      set({ isLoading: false });
+    }
   },
   fetchCalls: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await getCalls();
+      const response = (await getCalls()) as ApiResponse<CallResultData[]>;
       set({ calls: response.Data, isLoading: false });
     } catch (error) {
       set({ error: 'Failed to fetch calls', isLoading: false });

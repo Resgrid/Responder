@@ -87,6 +87,8 @@ jest.mock('react-i18next', () => ({
         'push_notifications.types.message': 'Message',
         'push_notifications.types.chat': 'Chat',
         'push_notifications.types.group_chat': 'Group Chat',
+        'push_notifications.types.notification': 'Notification',
+        'push_notifications.unknown_type_warning': 'Unknown notification type',
         'common.dismiss': 'Close',
       };
       return translations[key] || key;
@@ -298,7 +300,7 @@ describe('PushNotificationModal', () => {
     render(<PushNotificationModal />);
 
     // Check if Phone icon is rendered (by testing accessibility label or other properties)
-    const iconContainer = screen.getAllByTestId('notification-icon')[0];
+    const iconContainer = screen.getAllByTestId('icon-notification-icon')[0];
     expect(iconContainer).toBeTruthy();
   });
 
@@ -318,7 +320,7 @@ describe('PushNotificationModal', () => {
     render(<PushNotificationModal />);
 
     // Check if Mail icon is rendered
-    const iconContainer = screen.getAllByTestId('notification-icon')[0];
+    const iconContainer = screen.getAllByTestId('icon-notification-icon')[0];
     expect(iconContainer).toBeTruthy();
   });
 
@@ -338,7 +340,7 @@ describe('PushNotificationModal', () => {
     render(<PushNotificationModal />);
 
     // Check if MessageCircle icon is rendered
-    const iconContainer = screen.getAllByTestId('notification-icon')[0];
+    const iconContainer = screen.getAllByTestId('icon-notification-icon')[0];
     expect(iconContainer).toBeTruthy();
   });
 
@@ -358,7 +360,7 @@ describe('PushNotificationModal', () => {
     render(<PushNotificationModal />);
 
     // Check if Users icon is rendered
-    const iconContainer = screen.getAllByTestId('notification-icon')[0];
+    const iconContainer = screen.getAllByTestId('icon-notification-icon')[0];
     expect(iconContainer).toBeTruthy();
   });
 
@@ -378,7 +380,7 @@ describe('PushNotificationModal', () => {
     render(<PushNotificationModal />);
 
     // Check if Bell icon is rendered for unknown types
-    const iconContainer = screen.getAllByTestId('notification-icon')[0];
+    const iconContainer = screen.getAllByTestId('icon-notification-icon')[0];
     expect(iconContainer).toBeTruthy();
   });
 

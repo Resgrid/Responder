@@ -97,6 +97,114 @@ jest.mock('@gorhom/bottom-sheet', () => {
   };
 });
 
+// Mock Button components with proper isDisabled handling
+jest.mock('../../ui/button', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+
+  const Button = React.forwardRef(({ children, onPress, isDisabled, testID, ...props }: any, ref: any) => {
+    const handlePress = React.useCallback((event: any) => {
+      if (!isDisabled && onPress) {
+        onPress(event);
+      }
+    }, [isDisabled, onPress]);
+
+    return (
+      <Pressable
+        ref={ref}
+        testID={testID}
+        onPress={handlePress}
+        disabled={isDisabled}
+        {...props}
+      >
+        {children}
+      </Pressable>
+    );
+  });
+
+  const ButtonText = ({ children, ...props }: any) => (
+    <Text {...props}>{children}</Text>
+  );
+
+  return {
+    Button,
+    ButtonText,
+  };
+});
+
+// Mock other UI components
+jest.mock('../../ui', () => ({
+  FocusAwareStatusBar: () => null,
+}));
+
+jest.mock('../../ui/box', () => ({
+  Box: ({ children, testID, ...props }: any) => {
+    const { View } = require('react-native');
+    return <View testID={testID} {...props}>{children}</View>;
+  },
+}));
+
+jest.mock('../../ui/divider', () => ({
+  Divider: () => {
+    const { View } = require('react-native');
+    return <View testID="divider" />;
+  },
+}));
+
+jest.mock('../../ui/heading', () => ({
+  Heading: ({ children, ...props }: any) => {
+    const { Text } = require('react-native');
+    return <Text {...props}>{children}</Text>;
+  },
+}));
+
+jest.mock('../../ui/hstack', () => ({
+  HStack: ({ children, ...props }: any) => {
+    const { View } = require('react-native');
+    return <View {...props}>{children}</View>;
+  },
+}));
+
+jest.mock('../../ui/input', () => ({
+  Input: ({ children, ...props }: any) => {
+    const { View } = require('react-native');
+    return <View {...props}>{children}</View>;
+  },
+  InputSlot: ({ children, ...props }: any) => {
+    const { View } = require('react-native');
+    return <View {...props}>{children}</View>;
+  },
+  InputField: ({ placeholder, value, onChangeText, ...props }: any) => {
+    const { TextInput } = require('react-native');
+    return <TextInput placeholder={placeholder} value={value} onChangeText={onChangeText} {...props} />;
+  },
+}));
+
+jest.mock('../../ui/text', () => ({
+  Text: ({ children, ...props }: any) => {
+    const { Text: RNText } = require('react-native');
+    return <RNText {...props}>{children}</RNText>;
+  },
+}));
+
+jest.mock('../../ui/textarea', () => ({
+  Textarea: ({ children, ...props }: any) => {
+    const { View } = require('react-native');
+    return <View {...props}>{children}</View>;
+  },
+  TextareaInput: ({ placeholder, value, onChangeText, ...props }: any) => {
+    const { TextInput } = require('react-native');
+    return <TextInput placeholder={placeholder} value={value} onChangeText={onChangeText} {...props} />;
+  },
+}));
+
+jest.mock('../../ui/vstack', () => ({
+  VStack: ({ children, ...props }: any) => {
+    const { View } = require('react-native');
+    return <View {...props}>{children}</View>;
+  },
+}));
+
 // Mock lucide-react-native icons
 jest.mock('lucide-react-native', () => ({
   SearchIcon: 'SearchIcon',

@@ -1,6 +1,48 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import React from 'react';
 
+// Mock gluestack-ui components specifically for this test
+jest.mock('@gluestack-ui/nativewind-utils/withStyleContext', () => ({
+  withStyleContext: (Component: any, scope?: string) => {
+    const React = require('react');
+    return React.forwardRef((props: any, ref: any) => {
+      return React.createElement(Component, { ...props, ref });
+    });
+  },
+  useStyleContext: () => ({}),
+}));
+
+jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
+  tva: (config: any) => () => config.base || '',
+}));
+
+jest.mock('@gluestack-ui/avatar', () => ({
+  createAvatar: (components: any) => {
+    const React = require('react');
+    const Avatar: any = React.forwardRef((props: any, ref: any) => {
+      return React.createElement('RNAvatar', { ...props, ref });
+    });
+
+    Avatar.Badge = React.forwardRef((props: any, ref: any) => {
+      return React.createElement('RNAvatarBadge', { ...props, ref });
+    });
+
+    Avatar.Group = React.forwardRef((props: any, ref: any) => {
+      return React.createElement('RNAvatarGroup', { ...props, ref });
+    });
+
+    Avatar.Image = React.forwardRef((props: any, ref: any) => {
+      return React.createElement('RNAvatarImage', { ...props, ref });
+    });
+
+    Avatar.FallbackText = React.forwardRef((props: any, ref: any) => {
+      return React.createElement('RNAvatarFallbackText', { ...props, ref });
+    });
+
+    return Avatar;
+  },
+}));
+
 import { ContactCard } from '../contact-card';
 import { ContactType, type ContactResultData } from '@/models/v4/contacts/contactResultData';
 
@@ -60,7 +102,7 @@ describe('ContactCard', () => {
     it('should handle missing FirstName for Person type', () => {
       const personWithoutFirstName = {
         ...basePerson,
-        FirstName: undefined,
+        FirstName: '',
         LastName: 'Doe',
       };
 
@@ -73,7 +115,7 @@ describe('ContactCard', () => {
       const personWithoutLastName = {
         ...basePerson,
         FirstName: 'John',
-        LastName: undefined,
+        LastName: '',
       };
 
       render(<ContactCard contact={personWithoutLastName} onPress={mockOnPress} />);
@@ -84,8 +126,8 @@ describe('ContactCard', () => {
     it('should fallback to Name field for Person type when FirstName and LastName are missing', () => {
       const personWithoutNames = {
         ...basePerson,
-        FirstName: undefined,
-        LastName: undefined,
+        FirstName: '',
+        LastName: '',
         Name: 'John Doe',
       };
 
@@ -97,9 +139,9 @@ describe('ContactCard', () => {
     it('should show "Unknown Person" when all name fields are missing', () => {
       const personWithoutAnyName = {
         ...basePerson,
-        FirstName: undefined,
-        LastName: undefined,
-        Name: undefined,
+        FirstName: '',
+        LastName: '',
+        Name: '',
       };
 
       render(<ContactCard contact={personWithoutAnyName} onPress={mockOnPress} />);
@@ -118,7 +160,7 @@ describe('ContactCard', () => {
     it('should fallback to Name field for Company type when CompanyName is missing', () => {
       const companyWithoutCompanyName = {
         ...baseCompany,
-        CompanyName: undefined,
+        CompanyName: '',
         Name: 'Acme Corp',
       };
 
@@ -130,8 +172,8 @@ describe('ContactCard', () => {
     it('should show "Unknown Company" when all name fields are missing', () => {
       const companyWithoutAnyName = {
         ...baseCompany,
-        CompanyName: undefined,
-        Name: undefined,
+        CompanyName: '',
+        Name: '',
       };
 
       render(<ContactCard contact={companyWithoutAnyName} onPress={mockOnPress} />);

@@ -1,21 +1,63 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import 'react-native';
 
-// Mock dependencies first before importing the service
+const mockStart = jest.fn();
+const mockCheckState = jest.fn();
+const mockScan = jest.fn();
+const mockStopScan = jest.fn();
+const mockConnect = jest.fn();
+const mockDisconnect = jest.fn();
+const mockGetConnectedPeripherals = jest.fn();
+const mockGetDiscoveredPeripherals = jest.fn();
+const mockOnDidUpdateState = jest.fn();
+const mockOnDisconnectPeripheral = jest.fn();
+const mockOnDiscoverPeripheral = jest.fn();
+const mockOnDidUpdateValueForCharacteristic = jest.fn();
+const mockOnStopScan = jest.fn();
+const mockRetrieveServices = jest.fn();
+const mockStartNotification = jest.fn();
+
+// Import react-native first to get the existing mock
+const RN = require('react-native');
+
+// Add PermissionsAndroid to the existing react-native mock
+RN.PermissionsAndroid = {
+  PERMISSIONS: {
+    BLUETOOTH_SCAN: 'android.permission.BLUETOOTH_SCAN',
+    BLUETOOTH_CONNECT: 'android.permission.BLUETOOTH_CONNECT',
+  },
+  RESULTS: {
+    GRANTED: 'granted',
+    DENIED: 'denied',
+  },
+  requestMultiple: jest.fn(),
+};
+
+// Add DeviceEventEmitter if not present
+if (!RN.DeviceEventEmitter) {
+  RN.DeviceEventEmitter = {
+    addListener: jest.fn(),
+  };
+}
+
+// Mock other dependencies
 jest.mock('react-native-ble-manager', () => ({
   __esModule: true,
   default: {
-    start: jest.fn(),
-    checkState: jest.fn(),
-    scan: jest.fn(),
-    stopScan: jest.fn(),
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    isPeripheralConnected: jest.fn(),
-    getConnectedPeripherals: jest.fn(),
-    getDiscoveredPeripherals: jest.fn(),
-    removeAllListeners: jest.fn(),
-    removePeripheral: jest.fn(),
+    start: mockStart,
+    checkState: mockCheckState,
+    scan: mockScan,
+    stopScan: mockStopScan,
+    connect: mockConnect,
+    disconnect: mockDisconnect,
+    getConnectedPeripherals: mockGetConnectedPeripherals,
+    getDiscoveredPeripherals: mockGetDiscoveredPeripherals,
+    onDidUpdateState: mockOnDidUpdateState,
+    onDisconnectPeripheral: mockOnDisconnectPeripheral,
+    onDiscoverPeripheral: mockOnDiscoverPeripheral,
+    onDidUpdateValueForCharacteristic: mockOnDidUpdateValueForCharacteristic,
+    onStopScan: mockOnStopScan,
+    retrieveServices: mockRetrieveServices,
+    startNotification: mockStartNotification,
   },
 }));
 
@@ -31,42 +73,87 @@ jest.mock('@/services/audio.service', () => ({
   },
 }));
 
-// Mock PermissionsAndroid
-jest.mock('react-native', () => ({
-  Platform: {
-    OS: 'android',
-  },
-  PermissionsAndroid: {
-    PERMISSIONS: {
-      BLUETOOTH_SCAN: 'android.permission.BLUETOOTH_SCAN',
-      BLUETOOTH_CONNECT: 'android.permission.BLUETOOTH_CONNECT',
-      ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
-    },
-    RESULTS: {
-      GRANTED: 'granted',
-      DENIED: 'denied',
-    },
-    requestMultiple: jest.fn(),
-  },
-  DeviceEventEmitter: {
-    addListener: jest.fn(),
-  },
-  Alert: {
-    alert: jest.fn(),
+jest.mock('buffer', () => ({
+  Buffer: {
+    from: jest.fn((data, encoding) => {
+      if (encoding === 'base64') {
+        return { toString: jest.fn(() => 'mocked-data') };
+      }
+      if (encoding === 'hex') {
+        return { toString: jest.fn(() => 'mocked-data') };
+      }
+      return { toString: jest.fn(() => 'mocked-data') };
+    }),
   },
 }));
 
-import { bluetoothAudioService } from '../bluetooth-audio.service';
-import { Platform, PermissionsAndroid } from 'react-native';
+// Mock stores
+jest.mock('@/stores/app/bluetooth-audio-store', () => ({
+  useBluetoothAudioStore: {
+    getState: jest.fn(() => ({
+      setBluetoothState: jest.fn(),
+      setIsScanning: jest.fn(),
+      clearDevices: jest.fn(),
+      addDevice: jest.fn(),
+      setConnectedDevice: jest.fn(),
+      setIsConnecting: jest.fn(),
+      setConnectionError: jest.fn(),
+      clearConnectionError: jest.fn(),
+      addButtonEvent: jest.fn(),
+      setLastButtonAction: jest.fn(),
+      setPreferredDevice: jest.fn(),
+      setAvailableAudioDevices: jest.fn(),
+      setSelectedMicrophone: jest.fn(),
+      setSelectedSpeaker: jest.fn(),
+      setAudioRoutingActive: jest.fn(),
+      availableDevices: [],
+      connectedDevice: null,
+      preferredDevice: null,
+      isScanning: false,
+      availableAudioDevices: [],
+    })),
+  },
+}));
+
+jest.mock('@/stores/app/livekit-store', () => ({
+  useLiveKitStore: {
+    getState: jest.fn(() => ({
+      currentRoom: null,
+    })),
+  },
+}));
+
+// Import the service after all mocks are set up
+const { bluetoothAudioService } = require('../bluetooth-audio.service');
 
 describe('BluetoothAudioService Refactoring', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    
+    // Reset all mock implementations
+    RN.PermissionsAndroid.requestMultiple.mockReset();
+    mockStart.mockReset();
+    mockCheckState.mockReset();
+    mockScan.mockReset();
+    mockStopScan.mockReset();
+    mockConnect.mockReset();
+    
+    // Reset Platform.OS to Android for each test
+    (RN.Platform as any).OS = 'android';
   });
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  describe('Mock Setup Debug', () => {
+    it('should show Platform and permissions setup', () => {
+      expect(RN.Platform.OS).toBe('android');
+      expect(RN.PermissionsAndroid).toBeDefined();
+      expect(RN.PermissionsAndroid.requestMultiple).toBeDefined();
+      expect(jest.isMockFunction(RN.PermissionsAndroid.requestMultiple)).toBe(true);
+    });
   });
 
   it('should be defined and accessible', () => {
@@ -90,15 +177,15 @@ describe('BluetoothAudioService Refactoring', () => {
 
   describe('Permission Requests', () => {
     it('should add 500ms delay before requesting permissions', async () => {
-      const mockRequestMultiple = PermissionsAndroid.requestMultiple as jest.Mock;
-      mockRequestMultiple.mockResolvedValue({
+      // Ensure Android platform
+      (RN.Platform as any).OS = 'android';
+      
+      RN.PermissionsAndroid.requestMultiple.mockResolvedValue({
         'android.permission.BLUETOOTH_SCAN': 'granted',
         'android.permission.BLUETOOTH_CONNECT': 'granted',
-        'android.permission.ACCESS_FINE_LOCATION': 'granted',
       });
 
       const service = bluetoothAudioService as any;
-      const startTime = Date.now();
       
       // Start the permission request
       const permissionPromise = service.requestPermissions();
@@ -109,13 +196,17 @@ describe('BluetoothAudioService Refactoring', () => {
       // Wait for the promise to resolve
       const result = await permissionPromise;
       
+      // Now that react-native is properly mocked, the permissions should work correctly
       expect(result).toBe(true);
-      expect(mockRequestMultiple).toHaveBeenCalled();
+      expect(RN.PermissionsAndroid.requestMultiple).toHaveBeenCalledWith([
+        'android.permission.BLUETOOTH_SCAN',
+        'android.permission.BLUETOOTH_CONNECT',
+      ]);
     });
 
     it('should return true for iOS without requesting permissions', async () => {
       // Mock iOS platform
-      (Platform as any).OS = 'ios';
+      (RN.Platform as any).OS = 'ios';
       
       const service = bluetoothAudioService as any;
       
@@ -128,15 +219,17 @@ describe('BluetoothAudioService Refactoring', () => {
       const result = await permissionPromise;
       
       expect(result).toBe(true);
-      expect(PermissionsAndroid.requestMultiple).not.toHaveBeenCalled();
+      expect(RN.PermissionsAndroid.requestMultiple).not.toHaveBeenCalled();
       
       // Reset to Android for other tests
-      (Platform as any).OS = 'android';
+      (RN.Platform as any).OS = 'android';
     });
 
     it('should handle permission request failures gracefully', async () => {
-      const mockRequestMultiple = PermissionsAndroid.requestMultiple as jest.Mock;
-      mockRequestMultiple.mockRejectedValue(new Error('Permission request failed'));
+      // Ensure Android platform
+      (RN.Platform as any).OS = 'android';
+      
+      RN.PermissionsAndroid.requestMultiple.mockRejectedValue(new Error('Permission request failed'));
 
       const service = bluetoothAudioService as any;
       
@@ -149,14 +242,16 @@ describe('BluetoothAudioService Refactoring', () => {
       const result = await permissionPromise;
       
       expect(result).toBe(false);
+      expect(RN.PermissionsAndroid.requestMultiple).toHaveBeenCalled();
     });
 
     it('should return false when some permissions are denied', async () => {
-      const mockRequestMultiple = PermissionsAndroid.requestMultiple as jest.Mock;
-      mockRequestMultiple.mockResolvedValue({
+      // Ensure Android platform
+      (RN.Platform as any).OS = 'android';
+      
+      RN.PermissionsAndroid.requestMultiple.mockResolvedValue({
         'android.permission.BLUETOOTH_SCAN': 'granted',
         'android.permission.BLUETOOTH_CONNECT': 'denied',
-        'android.permission.ACCESS_FINE_LOCATION': 'granted',
       });
 
       const service = bluetoothAudioService as any;
@@ -170,6 +265,10 @@ describe('BluetoothAudioService Refactoring', () => {
       const result = await permissionPromise;
       
       expect(result).toBe(false);
+      expect(RN.PermissionsAndroid.requestMultiple).toHaveBeenCalledWith([
+        'android.permission.BLUETOOTH_SCAN',
+        'android.permission.BLUETOOTH_CONNECT',
+      ]);
     });
   });
 

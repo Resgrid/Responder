@@ -264,12 +264,10 @@ describe('Personnel Store', () => {
 		});
 
 		it('should handle init with existing partial data', async () => {
-			// Pre-populate store with one item
-			usePersonnelStore.setState({
-				personnel: [mockPersonnelData[0]],
-			});
-
-			const { init } = usePersonnelStore.getState();
+		// Pre-populate store with one item
+		usePersonnelStore.setState({
+			personnel: mockPersonnelData[0] ? [mockPersonnelData[0]] : [],
+		});			const { init } = usePersonnelStore.getState();
 			await init();
 
 			// Should not call API since data already exists (length > 0)

@@ -44,7 +44,15 @@ const useAuthStore = create<AuthState>()(
           const response = await loginRequest(credentials);
 
           if (response.successful) {
-            const payload = sanitizeJson(base64.decode(response.authResponse!.id_token!.split('.')[1]));
+            const idToken = response.authResponse?.id_token;
+            if (!idToken) {
+              throw new Error('No ID token received');
+            }
+            const tokenParts = idToken.split('.');
+            if (tokenParts.length < 3 || !tokenParts[1]) {
+              throw new Error('Invalid ID token format');
+            }
+            const payload = sanitizeJson(decodeJwtPayload(tokenParts[1]));
 
             setItem<AuthResponse>('authResponse', response.authResponse!);
             const now = new Date();
@@ -53,8 +61,8 @@ const useAuthStore = create<AuthState>()(
             const profileData = JSON.parse(payload) as ProfileModel;
 
             set({
-              accessToken: response.authResponse?.access_token,
-              refreshToken: response.authResponse?.refresh_token,
+              accessToken: response.authResponse?.access_token ?? null,
+              refreshToken: response.authResponse?.refresh_token ?? null,
               refreshTokenExpiresOn: expiresOn,
               status: 'signedIn',
               error: null,
@@ -146,8 +154,12 @@ const useAuthStore = create<AuthState>()(
           });
 
           const authResponse = getAuth();
-          if (authResponse !== null) {
-            const payload = sanitizeJson(base64.decode(authResponse!.id_token!.split('.')[1]));
+          if (authResponse !== null && authResponse.id_token) {
+            const tokenParts = authResponse.id_token.split('.');
+            if (tokenParts.length < 3 || !tokenParts[1]) {
+              throw new Error('Invalid ID token format during hydration');
+            }
+            const payload = sanitizeJson(decodeJwtPayload(tokenParts[1]));
 
             const profileData = JSON.parse(payload) as ProfileModel;
 
@@ -216,6 +228,19 @@ const useAuthStore = create<AuthState>()(
 
 const sanitizeJson = (json: string) => {
   return json.replace(/[\u0000]+/g, '');
+};
+
+const decodeJwtPayload = (tokenPayload: string): string => {
+  // Convert base64url to base64 by replacing URL-safe characters
+  let base64Str = tokenPayload.replace(/-/g, '+').replace(/_/g, '/');
+
+  // Add padding if needed (base64url removes padding)
+  const padding = base64Str.length % 4;
+  if (padding) {
+    base64Str += '='.repeat(4 - padding);
+  }
+
+  return base64.decode(base64Str);
 };
 
 export default useAuthStore;

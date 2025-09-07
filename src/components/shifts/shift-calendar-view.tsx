@@ -126,13 +126,16 @@ export const ShiftCalendarView: React.FC<ShiftCalendarViewProps> = ({ shift, shi
 
     const handleDayPress = () => {
       if (dayStatus?.shifts && dayStatus.shifts.length > 0) {
+        const firstShift = dayStatus.shifts[0];
+        if (!firstShift) return;
+
         // If there's only one shift, navigate directly to it
         if (dayStatus.shifts.length === 1) {
-          onShiftDayPress(dayStatus.shifts[0]);
+          onShiftDayPress(firstShift);
         } else {
           // For multiple shifts, navigate to the first one
           // Could be enhanced to show a picker
-          onShiftDayPress(dayStatus.shifts[0]);
+          onShiftDayPress(firstShift);
         }
       }
     };

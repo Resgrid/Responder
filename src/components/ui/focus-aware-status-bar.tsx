@@ -10,32 +10,54 @@ export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
   const isFocused = useIsFocused();
   const { colorScheme } = useColorScheme();
 
-  StatusBar.setBackgroundColor('transparent');
-  StatusBar.setTranslucent(true);
-  NavigationBar.setVisibilityAsync('hidden');
-  StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
-
   React.useEffect(() => {
-    if (Platform.OS === 'android') {
-      // Make both status bar and navigation bar transparent
-      StatusBar.setBackgroundColor('transparent');
-      StatusBar.setTranslucent(true);
-      NavigationBar.setVisibilityAsync('hidden');
+    // Early return if screen is not focused to prevent off-screen instances from overriding UI
+    if (!isFocused) return;
 
-      // Set the system UI flags to hide navigation bar
-      if (hidden) {
-        StatusBar.setHidden(true, 'slide');
-        // Set light status bar content for better visibility
-        StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
-      } else {
-        StatusBar.setHidden(false, 'slide');
+    // Only call platform-specific methods when they are supported
+    if (Platform.OS === 'android') {
+      try {
+        // Make both status bar and navigation bar transparent
+        StatusBar.setBackgroundColor('transparent');
+        StatusBar.setTranslucent(true);
+
+        // Hide navigation bar only on Android
+        NavigationBar.setVisibilityAsync('hidden').catch(() => {
+          // Silently handle errors if NavigationBar API is not available
+        });
+
+        // Set the system UI flags to hide navigation bar
+        if (hidden) {
+          StatusBar.setHidden(true, 'slide');
+        } else {
+          StatusBar.setHidden(false, 'slide');
+        }
+
         // Adapt status bar content based on theme
         StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
+      } catch (error) {
+        // Silently handle errors if StatusBar methods are not available
+      }
+    } else if (Platform.OS === 'ios') {
+      try {
+        // iOS-specific status bar configuration
+        if (hidden) {
+          StatusBar.setHidden(true, 'slide');
+        } else {
+          StatusBar.setHidden(false, 'slide');
+        }
+
+        // Set status bar style for iOS
+        StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
+      } catch (error) {
+        // Silently handle errors if StatusBar methods are not available
       }
     }
-  }, [hidden, colorScheme]);
+  }, [hidden, colorScheme, isFocused]);
 
+  // Don't render anything on web
   if (Platform.OS === 'web') return null;
 
-  return isFocused ? <SystemBars style={colorScheme} hidden={{ statusBar: hidden, navigationBar: true }} /> : null;
+  // Only render SystemBars when focused and on supported platforms
+  return isFocused && (Platform.OS === 'android' || Platform.OS === 'ios') ? <SystemBars style={colorScheme === 'dark' ? 'dark' : 'light'} hidden={{ statusBar: hidden, navigationBar: true }} /> : null;
 };

@@ -47,7 +47,12 @@ export function invertColor(hex: string, bw: boolean): string {
   }
   // convert 3-digit hex to 6-digits.
   if (hex.length === 3) {
-    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    const h0 = hex[0];
+    const h1 = hex[1];
+    const h2 = hex[2];
+    if (h0 && h1 && h2) {
+      hex = h0 + h0 + h1 + h1 + h2 + h2;
+    }
   }
   if (hex.length !== 6) {
     throw new Error('Invalid HEX color.');
@@ -132,7 +137,12 @@ export function getMinutesBetweenDates(startDate: Date, endDate: Date): number {
 
 export function parseDateISOString(s: string): Date {
   const b = s.split(/\D/);
-  return new Date(parseInt(b[0], 10), parseInt(b[1], 10) - 1, parseInt(b[2], 10), parseInt(b[3], 10), parseInt(b[4], 10), parseInt(b[5], 10));
+  // Ensure we have all required parts
+  const [year, month, day, hour = '0', minute = '0', second = '0'] = b;
+  if (!year || !month || !day) {
+    throw new Error('Invalid date string format');
+  }
+  return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), parseInt(hour, 10), parseInt(minute, 10), parseInt(second, 10));
 }
 
 export function getDate(date: string): string {
@@ -170,9 +180,15 @@ export function formatDateForDisplay(date: Date, format: string): string {
   }
 
   if (format.indexOf('MMMM') > -1) {
-    format = format.replace('MMMM', monthNames[date.getMonth()]);
+    const monthName = monthNames[date.getMonth()];
+    if (monthName) {
+      format = format.replace('MMMM', monthName);
+    }
   } else if (format.indexOf('MMM') > -1) {
-    format = format.replace('MMM', monthShortNames[date.getMonth()]);
+    const shortMonthName = monthShortNames[date.getMonth()];
+    if (shortMonthName) {
+      format = format.replace('MMM', shortMonthName);
+    }
   } else if (format.indexOf('MM') > -1) {
     format = format.replace('MM', padLeadingZero(month).toString());
   }
@@ -205,9 +221,6 @@ export function formatDateForDisplay(date: Date, format: string): string {
 
   if (format.indexOf('ss') > -1) {
     format = format.replace('ss', padLeadingZero(date.getSeconds()).toString());
-  }
-  if (format.indexOf('dd') > -1) {
-    format = format.replace('ss', padLeadingZero(date.getDay()).toString());
   }
   if (format.indexOf('Z') > -1) {
     let timeZone: string | undefined;
@@ -264,8 +277,13 @@ export function isSameDate(date1: string | Date, date2: string | Date): boolean 
 
     // If it's a date-only string (YYYY-MM-DD), treat it as local date
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      const [year, month, day] = date.split('-').map(Number);
-      return new Date(year, month - 1, day); // Month is 0-indexed
+      const parts = date.split('-');
+      const year = parseInt(parts[0] ?? '0', 10);
+      const month = parseInt(parts[1] ?? '0', 10);
+      const day = parseInt(parts[2] ?? '0', 10);
+      if (year && month && day) {
+        return new Date(year, month - 1, day); // Month is 0-indexed
+      }
     }
 
     // Otherwise, parse as usual (handles ISO strings with time)
@@ -394,9 +412,14 @@ export function getTimeAgo(time: any, floor: number = 0): string {
   while ((format = timeFormats[i++])) {
     if (seconds < Number(format[0])) {
       if (typeof format[2] === 'string') {
-        return format[listChoice].toString();
+        const formattedValue = format[listChoice];
+        return formattedValue ? formattedValue.toString() : time.toString();
       } else {
-        return Math.floor(seconds / format[2]) + ' ' + format[1] + ' ' + token;
+        const unit = format[1];
+        const divisor = format[2];
+        if (unit && divisor) {
+          return Math.floor(seconds / divisor) + ' ' + unit + ' ' + token;
+        }
       }
     }
   }
@@ -460,9 +483,14 @@ export function getTimeAgoUtc(time: any): string {
   while ((format = timeFormats[i++])) {
     if (seconds < Number(format[0])) {
       if (typeof format[2] === 'string') {
-        return format[listChoice].toString();
+        const formattedValue = format[listChoice];
+        return formattedValue ? formattedValue.toString() : time.toString();
       } else {
-        return Math.floor(seconds / format[2]) + ' ' + format[1] + ' ' + token;
+        const unit = format[1];
+        const divisor = format[2];
+        if (unit && divisor) {
+          return Math.floor(seconds / divisor) + ' ' + unit + ' ' + token;
+        }
       }
     }
   }

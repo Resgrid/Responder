@@ -339,7 +339,10 @@ describe('useShiftsStore', () => {
 			const { result } = renderHook(() => useShiftsStore());
 
 			act(() => {
-				result.current.selectShift(mockShifts[0]);
+				const shift = mockShifts[0];
+				if (shift) {
+					result.current.selectShift(shift);
+				}
 			});
 
 			expect(result.current.selectedShift).toEqual(mockShifts[0]);
@@ -351,7 +354,10 @@ describe('useShiftsStore', () => {
 
 			// First select a shift
 			act(() => {
-				result.current.selectShift(mockShifts[0]);
+				const shift = mockShifts[0];
+				if (shift) {
+					result.current.selectShift(shift);
+				}
 			});
 
 			// Then close details
@@ -399,7 +405,7 @@ describe('useShiftsStore', () => {
 	describe('computed properties', () => {
 		it('should get shift days for specific date', () => {
 			useShiftsStore.setState({
-				selectedShift: mockShifts[0],
+				selectedShift: mockShifts[0] || null,
 				shiftCalendarData: {
 					'1': [mockShiftDay],
 				},
