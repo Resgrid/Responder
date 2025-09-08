@@ -49,7 +49,7 @@ const SCHEME = 'ResgridRespond'; // app scheme
  */
 
 const withEnvSuffix = (name) => {
-  return APP_ENV === 'production' ? name : `${name}.${APP_ENV}`;
+  return APP_ENV === 'production' || APP_ENV === 'internal' ? name : `${name}.${APP_ENV}`;
 };
 
 /**
