@@ -51,6 +51,7 @@
     },
     "internal": {
       "yarn": "1.22.22",
+      "distribution": "internal",
       "ios": {
         "image": "latest"
       },
@@ -59,7 +60,7 @@
         "image": "latest"
       },
       "env": {
-        "APP_ENV": "development",
+        "APP_ENV": "internal",
         "EXPO_NO_DOTENV": "1",
         "FLIPPER_DISABLE": "1"
       }
