@@ -68,6 +68,8 @@ env:
   EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
   EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_TEAM_ID }}
   EXPO_APPLE_TEAM_TYPE: ${{ secrets.EXPO_APPLE_TEAM_TYPE }}
+  RESPOND_APTABASE_APP_KEY: ${{ secrets.RESPOND_APTABASE_APP_KEY }}
+  RESPOND_APTABASE_URL: ${{ secrets.RESPOND_APTABASE_URL }}
   NODE_OPTIONS: --openssl-legacy-provider
 
 jobs:
