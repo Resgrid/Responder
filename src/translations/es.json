@@ -131,13 +131,16 @@
     "error": "Error al obtener imágenes",
     "failed_to_load": "Error al cargar la imagen",
     "image_name": "Nombre de la imagen",
+    "image_note": "Nota de imagen",
     "loading": "Cargando...",
     "no_images": "No hay imágenes disponibles",
     "no_images_description": "Añade imágenes a tu llamada para ayudar con la documentación y comunicación",
     "select_from_gallery": "Seleccionar de la galería",
     "take_photo": "Tomar foto",
     "title": "Imágenes de la llamada",
-    "upload": "Subir"
+    "upload": "Subir",
+    "upload_error": "Error al subir la imagen. Por favor, inténtalo de nuevo.",
+    "upload_success": "Imagen subida exitosamente"
   },
   "callNotes": {
     "addNote": "Añadir nota",

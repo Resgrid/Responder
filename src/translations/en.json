@@ -131,13 +131,16 @@
     "error": "Error getting images",
     "failed_to_load": "Failed to load image",
     "image_name": "Image Name",
+    "image_note": "Image Note",
     "loading": "Loading...",
     "no_images": "No images available",
     "no_images_description": "Add images to your call to help with documentation and communication",
     "select_from_gallery": "Select from Gallery",
     "take_photo": "Take Photo",
     "title": "Call Images",
-    "upload": "Upload"
+    "upload": "Upload",
+    "upload_error": "Failed to upload image. Please try again.",
+    "upload_success": "Image uploaded successfully"
   },
   "callNotes": {
     "addNote": "Add Note",
