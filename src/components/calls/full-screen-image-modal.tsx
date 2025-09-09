@@ -1,7 +1,7 @@
 import { XIcon } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, StatusBar, TouchableOpacity } from 'react-native';
+import { Dimensions, type ImageSourcePropType, StatusBar, TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import { Modal, ModalBackdrop, ModalContent } from '@/components/ui/modal';
 interface FullScreenImageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  imageSource: any;
+  imageSource: ImageSourcePropType;
   imageName?: string;
 }
 
@@ -83,21 +83,20 @@ const FullScreenImageModal: React.FC<FullScreenImageModalProps> = ({ isOpen, onC
   const doubleTapGesture = Gesture.Tap()
     .numberOfTaps(2)
     .onEnd(() => {
-      runOnJS(() => {
-        if (scale.value > 1) {
-          // Reset to original size
-          scale.value = withTiming(1);
-          translateX.value = withTiming(0);
-          translateY.value = withTiming(0);
-          savedScale.value = 1;
-          savedTranslateX.value = 0;
-          savedTranslateY.value = 0;
-        } else {
-          // Zoom in to 2x
-          scale.value = withTiming(2);
-          savedScale.value = 2;
-        }
-      })();
+      'worklet';
+      if (scale.value > 1) {
+        // Reset to original size
+        scale.value = withTiming(1);
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+        savedScale.value = 1;
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        // Zoom in to 2x
+        scale.value = withTiming(2);
+        savedScale.value = 2;
+      }
     });
 
   const composedGesture = Gesture.Simultaneous(Gesture.Simultaneous(pinchGesture, panGesture), doubleTapGesture);
@@ -117,7 +116,7 @@ const FullScreenImageModal: React.FC<FullScreenImageModalProps> = ({ isOpen, onC
   });
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="full" {...({} as any)}>
+    <Modal isOpen={isOpen} onClose={onClose} size="full">
       <ModalBackdrop onPress={onClose} className="bg-black/90" />
       <ModalContent className="flex size-full items-center justify-center border-0 bg-transparent p-0 shadow-none">
         <StatusBar hidden />

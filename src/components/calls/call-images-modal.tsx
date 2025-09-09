@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { CameraIcon, ChevronLeftIcon, ChevronRightIcon, ImageIcon, PlusIcon, XIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Dimensions, FlatList, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, FlatList, type ImageSourcePropType, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { Loading } from '@/components/common/loading';
@@ -15,6 +15,7 @@ import { useAuthStore } from '@/lib';
 import { type CallFileResultData } from '@/models/v4/callFiles/callFileResultData';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useToastStore } from '@/stores/toast/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper, ActionsheetItem, ActionsheetItemText } from '../ui/actionsheet';
 import { Box } from '../ui/box';
@@ -50,6 +51,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const { latitude, longitude } = useLocationStore();
+  const { showToast } = useToastStore();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -57,7 +59,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [selectedImageInfo, setSelectedImageInfo] = useState<{ uri: string; filename: string } | null>(null);
   const [isAddingImage, setIsAddingImage] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
-  const [fullScreenImage, setFullScreenImage] = useState<{ source: any; name?: string } | null>(null);
+  const [fullScreenImage, setFullScreenImage] = useState<{ source: ImageSourcePropType; name?: string } | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage } = useCallDetailStore();
@@ -106,7 +108,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const handleImageSelect = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
-      alert(t('common.permission_denied'));
+      showToast('error', t('common.permission_denied'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -124,7 +126,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const handleCameraCapture = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (permissionResult.granted === false) {
-      alert(t('common.permission_denied'));
+      showToast('error', t('common.permission_denied'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -174,8 +176,10 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       setSelectedImageInfo(null);
       setNewImageNote('');
       setIsAddingImage(false);
+      showToast('success', t('callImages.upload_success'));
     } catch (error) {
       console.error('Error uploading image:', error);
+      showToast('error', t('callImages.upload_error'));
     } finally {
       setIsUploading(false);
     }
@@ -386,7 +390,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
             ref={flatListRef}
             data={validImages}
             renderItem={renderImageItem}
-            keyExtractor={(item) => item?.Id || `image-${Math.random()}`}
+            keyExtractor={(item, index) => item?.Id || `image-${index}-${item?.Name || 'unknown'}`}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
