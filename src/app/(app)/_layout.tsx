@@ -1,6 +1,7 @@
 /* eslint-disable react/no-unstable-nested-components */
 
 import { NovuProvider } from '@novu/react-native';
+import Mapbox from '@rnmapbox/maps';
 import { Redirect, Slot, SplashScreen } from 'expo-router';
 import { size } from 'lodash';
 import { Contact, Home, ListTree, Mail, Map, Megaphone, Menu, Notebook, Truck, Users } from 'lucide-react-native';
@@ -21,6 +22,7 @@ import { Text } from '@/components/ui/text';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { useSignalRLifecycle } from '@/hooks/use-signalr-lifecycle';
 import { useAuthStore } from '@/lib/auth';
+import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { useIsFirstTime } from '@/lib/storage';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
@@ -63,6 +65,8 @@ export default function TabLayout() {
 
   // Initialize push notifications
   usePushNotifications();
+
+  Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
 
   const initializeApp = useCallback(async () => {
     if (isInitializing.current) {

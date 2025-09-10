@@ -15,7 +15,6 @@ import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
-import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
@@ -23,8 +22,6 @@ import { locationService } from '@/services/location';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useToastStore } from '@/stores/toast/store';
-
-Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
 
 export default function HomeMap() {
   const { t } = useTranslation();
