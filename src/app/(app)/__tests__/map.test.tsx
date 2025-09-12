@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, act } from '@testing-library/react-native';
 import React from 'react';
 
 import { useAnalytics } from '@/hooks/use-analytics';
@@ -184,21 +184,7 @@ jest.mock('@/components/sidebar/side-menu', () => ({
   },
 }));
 
-jest.mock('@/components/ui/header', () => ({
-  Header: ({ title, onMenuPress, testID }: any) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text testID={`${testID}-title`}>{title}</Text>
-        {onMenuPress && (
-          <Pressable testID={`${testID}-menu-button`} onPress={onMenuPress}>
-            <Text>Menu</Text>
-          </Pressable>
-        )}
-      </View>
-    );
-  },
-}));
+
 
 jest.mock('@/components/ui/focus-aware-status-bar', () => ({
   FocusAwareStatusBar: () => 'FocusAwareStatusBar',
@@ -336,8 +322,13 @@ describe('HomeMap', () => {
     });
   });
 
-  it('renders correctly with map components', () => {
+  it('renders correctly with map components', async () => {
     render(<HomeMap />);
+
+    // Wait for async map data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pins')).toBeTruthy();
+    });
 
     // Check that map container is rendered
     expect(screen.getByTestId('home-map-container')).toBeTruthy();
@@ -345,7 +336,7 @@ describe('HomeMap', () => {
     expect(screen.getByTestId('map-camera')).toBeTruthy();
   });
 
-  it('shows side menu in landscape mode', () => {
+  it('shows side menu in landscape mode', async () => {
     // Mock landscape dimensions
     const mockUseWindowDimensions = (jest.requireMock('react-native') as any).useWindowDimensions;
     mockUseWindowDimensions.mockReturnValue({
@@ -355,12 +346,22 @@ describe('HomeMap', () => {
 
     render(<HomeMap />);
 
+    // Wait for async map data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pins')).toBeTruthy();
+    });
+
     // In landscape mode, side menu should be permanently visible
     expect(screen.getByTestId('side-menu')).toBeTruthy();
   });
 
   it('shows drawer in portrait mode when opened', async () => {
     render(<HomeMap />);
+
+    // Wait for async map data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pins')).toBeTruthy();
+    });
 
     // Initially drawer should not be visible
     expect(screen.queryByTestId('drawer')).toBeNull();
@@ -379,6 +380,11 @@ describe('HomeMap', () => {
     });
 
     render(<HomeMap />);
+
+    // Wait for async map data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pins')).toBeTruthy();
+    });
 
     // Simulate map ready
     await waitFor(() => {
@@ -399,6 +405,11 @@ describe('HomeMap', () => {
     });
 
     render(<HomeMap />);
+
+    // Wait for async map data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pins')).toBeTruthy();
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('home-map-view')).toBeTruthy();
@@ -495,12 +506,17 @@ describe('HomeMap', () => {
   it('shows user location marker when location is available', async () => {
     render(<HomeMap />);
 
+    // Wait for async map data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pins')).toBeTruthy();
+    });
+
     await waitFor(() => {
       expect(screen.getByTestId('point-annotation')).toBeTruthy();
     });
   });
 
-  it('handles landscape mode correctly', () => {
+  it('handles landscape mode correctly', async () => {
     // Mock landscape dimensions
     const mockUseWindowDimensions = (jest.requireMock('react-native') as any).useWindowDimensions;
     mockUseWindowDimensions.mockReturnValue({
@@ -510,12 +526,17 @@ describe('HomeMap', () => {
 
     render(<HomeMap />);
 
+    // Wait for async map data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pins')).toBeTruthy();
+    });
+
     // In landscape mode, side menu should be permanently visible
     expect(screen.getByTestId('side-menu')).toBeTruthy();
   });
 
   describe('Analytics Tracking', () => {
-    it('tracks map view on focus', () => {
+    it('tracks map view on focus', async () => {
       const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
       mockLocationStore.useLocationStore.mockReturnValue({
         latitude: 40.7128,
@@ -525,6 +546,11 @@ describe('HomeMap', () => {
       });
 
       render(<HomeMap />);
+
+      // Wait for async map data to load
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pins')).toBeTruthy();
+      });
 
       // Check analytics tracking for view
       expect(mockTrackEvent).toHaveBeenCalledWith('map_viewed', {
@@ -566,6 +592,11 @@ describe('HomeMap', () => {
       });
 
       render(<HomeMap />);
+
+      // Wait for async map data to load
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pins')).toBeTruthy();
+      });
 
       // Wait for map to be ready and simulate user moving map
       await waitFor(() => {
@@ -636,7 +667,7 @@ describe('HomeMap', () => {
       });
     });
 
-    it('tracks analytics with correct location data when location is unavailable', () => {
+    it('tracks analytics with correct location data when location is unavailable', async () => {
       const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
       mockLocationStore.useLocationStore.mockReturnValue({
         latitude: null,
@@ -647,6 +678,11 @@ describe('HomeMap', () => {
 
       render(<HomeMap />);
 
+      // Wait for async map data to load
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pins')).toBeTruthy();
+      });
+
       // Check analytics tracking for view without location
       expect(mockTrackEvent).toHaveBeenCalledWith('map_viewed', {
         timestamp: expect.any(String),
@@ -655,7 +691,7 @@ describe('HomeMap', () => {
       });
     });
 
-    it('tracks analytics with map locked state', () => {
+    it('tracks analytics with map locked state', async () => {
       const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
       mockLocationStore.useLocationStore.mockReturnValue({
         latitude: 40.7128,
@@ -665,6 +701,11 @@ describe('HomeMap', () => {
       });
 
       render(<HomeMap />);
+
+      // Wait for async map data to load
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pins')).toBeTruthy();
+      });
 
       // Check analytics tracking for view with locked map
       expect(mockTrackEvent).toHaveBeenCalledWith('map_viewed', {

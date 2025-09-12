@@ -21,7 +21,6 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { APIProvider } from '@/api';
-import { AptabaseProviderWrapper } from '@/components/common/aptabase-provider';
 import { LiveKitBottomSheet } from '@/components/livekit';
 import { PushNotificationModal } from '@/components/push-notification/push-notification-modal';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
@@ -197,7 +196,7 @@ function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView>
-        <KeyboardProvider>{Env.APTABASE_APP_KEY && !__DEV__ ? <AptabaseProviderWrapper>{renderContent()}</AptabaseProviderWrapper> : renderContent()}</KeyboardProvider>
+        <KeyboardProvider>{renderContent()}</KeyboardProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

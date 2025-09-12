@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 import { logger } from '../lib/logging';
+import { analyticsService } from './analytics.service';
 import { callKeepService } from './callkeep.service';
 
 /**
@@ -70,11 +71,32 @@ class AppInitializationService {
       message: 'Starting app initialization',
     });
 
+    // Initialize analytics service
+    await this._initializeAnalytics();
+
     // Initialize CallKeep for iOS background audio support
     await this._initializeCallKeep();
 
     // Add other global initialization tasks here as needed
-    // e.g., analytics, crash reporting, background services, etc.
+    // e.g., crash reporting, background services, etc.
+  }
+
+  /**
+   * Initialize analytics service
+   */
+  private async _initializeAnalytics(): Promise<void> {
+    try {
+      await analyticsService.initializeWithEnv();
+      logger.info({
+        message: 'Analytics service initialized successfully',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to initialize analytics service',
+        context: { error },
+      });
+      // Don't throw here - analytics failure shouldn't prevent app startup
+    }
   }
 
   /**

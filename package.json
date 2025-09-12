@@ -40,7 +40,6 @@
     "e2e-test": "maestro test .maestro/ -e APP_ID=com.obytes.development"
   },
   "dependencies": {
-    "@aptabase/react-native": "^0.3.10",
     "@config-plugins/react-native-callkeep": "^11.0.0",
     "@config-plugins/react-native-webrtc": "~12.0.0",
     "@dev-plugins/react-query": "~0.3.1",
@@ -94,6 +93,7 @@
     "axios": "^1.11.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "buffer": "^6.0.3",
+    "countly-sdk-react-native-bridge": "^25.4.0",
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "expo": "~53.0.0",

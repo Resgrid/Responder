@@ -348,8 +348,8 @@ describe('CompactCalendarItem', () => {
     const pressable = getByTestId('pressable');
     expect(pressable).toBeTruthy();
 
-    // Check that card content has reduced padding
-    const cardContent = getByTestId('card-content');
-    expect(cardContent).toBeTruthy();
+    // Check that card exists (the component uses Card directly without CardContent)
+    const card = getByTestId('card');
+    expect(card).toBeTruthy();
   });
 });

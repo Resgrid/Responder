@@ -92,8 +92,8 @@ const client = z.object({
   RESPOND_MAPBOX_DLKEY: z.string(),
   IS_MOBILE_APP: z.boolean(),
   SENTRY_DSN: z.string(),
-  APTABASE_URL: z.string(),
-  APTABASE_APP_KEY: z.string(),
+  COUNTLY_URL: z.string(),
+  COUNTLY_APP_KEY: z.string(),
   STORAGE_ENCRYPTION_KEY: z.string().optional(),
 });
 
@@ -128,8 +128,8 @@ const _clientEnv = {
   RESPOND_MAPBOX_PUBKEY: process.env.RESPOND_MAPBOX_PUBKEY || '',
   RESPOND_MAPBOX_DLKEY: process.env.RESPOND_MAPBOX_DLKEY || '',
   SENTRY_DSN: process.env.RESPOND_SENTRY_DSN || '',
-  APTABASE_APP_KEY: process.env.RESPOND_APTABASE_APP_KEY || '',
-  APTABASE_URL: process.env.RESPOND_APTABASE_URL || '',
+  COUNTLY_APP_KEY: process.env.RESPOND_COUNTLY_APP_KEY || '',
+  COUNTLY_URL: process.env.RESPOND_COUNTLY_URL || '',
   STORAGE_ENCRYPTION_KEY: process.env.RESPOND_STORAGE_ENCRYPTION_KEY || '',
 };
 
