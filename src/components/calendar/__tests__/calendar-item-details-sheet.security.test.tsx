@@ -4,11 +4,6 @@ import React from 'react';
 import { CalendarItemDetailsSheet } from '@/components/calendar/calendar-item-details-sheet';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 
-// Mock aptabase first
-jest.mock('@aptabase/react-native', () => ({
-  trackEvent: jest.fn(),
-}));
-
 // Mock all dependencies to focus on security testing
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),

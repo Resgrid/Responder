@@ -1,17 +1,17 @@
 import { renderHook } from '@testing-library/react-native';
 
-import { aptabaseService } from '@/services/aptabase.service';
+import { analyticsService } from '@/services/analytics.service';
 
 import { useAnalytics } from '../use-analytics';
 
-jest.mock('@/services/aptabase.service', () => ({
-  aptabaseService: {
+jest.mock('@/services/analytics.service', () => ({
+  analyticsService: {
     trackEvent: jest.fn(),
   },
 }));
 
 describe('useAnalytics', () => {
-  const mockAptabaseService = aptabaseService as jest.Mocked<typeof aptabaseService>;
+  const mockAnalyticsService = analyticsService as jest.Mocked<typeof analyticsService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -24,7 +24,7 @@ describe('useAnalytics', () => {
     expect(typeof result.current.trackEvent).toBe('function');
   });
 
-  it('should call aptabaseService.trackEvent with correct parameters', () => {
+  it('should call analyticsService.trackEvent with correct parameters', () => {
     const { result } = renderHook(() => useAnalytics());
 
     const eventName = 'test_event';
@@ -32,19 +32,19 @@ describe('useAnalytics', () => {
 
     result.current.trackEvent(eventName, properties);
 
-    expect(mockAptabaseService.trackEvent).toHaveBeenCalledWith(eventName, properties);
-    expect(mockAptabaseService.trackEvent).toHaveBeenCalledTimes(1);
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith(eventName, properties);
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledTimes(1);
   });
 
-  it('should call aptabaseService.trackEvent without properties', () => {
+  it('should call analyticsService.trackEvent without properties', () => {
     const { result } = renderHook(() => useAnalytics());
 
     const eventName = 'simple_event';
 
     result.current.trackEvent(eventName);
 
-    expect(mockAptabaseService.trackEvent).toHaveBeenCalledWith(eventName, undefined);
-    expect(mockAptabaseService.trackEvent).toHaveBeenCalledTimes(1);
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith(eventName, undefined);
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledTimes(1);
   });
 
   it('should maintain stable reference to trackEvent function', () => {

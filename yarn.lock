@@ -25,11 +25,6 @@
     "@jridgewell/gen-mapping" "^0.3.5"
     "@jridgewell/trace-mapping" "^0.3.24"
 
-"@aptabase/react-native@^0.3.10":
-  version "0.3.10"
-  resolved "https://registry.yarnpkg.com/@aptabase/react-native/-/react-native-0.3.10.tgz#ee2e82de200e4c4b32d2f14b13e06543fc84bb44"
-  integrity sha512-EqmW+AZsigas5aWTjEa/EP3b6WQAsMHpp9iF6992qwNMIPQkSgqLn00tk4dAWBKywBbAlffEbviFtCXV9LNR8g==
-
 "@babel/code-frame@7.10.4", "@babel/code-frame@~7.10.4":
   version "7.10.4"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.10.4.tgz#168da1a36e90da68ae8d49c0f1b48c7c6249213a"
@@ -6156,6 +6151,11 @@ cosmiconfig@^9.0.0:
     import-fresh "^3.3.0"
     js-yaml "^4.1.0"
     parse-json "^5.2.0"
+
+countly-sdk-react-native-bridge@^25.4.0:
+  version "25.4.0"
+  resolved "https://registry.yarnpkg.com/countly-sdk-react-native-bridge/-/countly-sdk-react-native-bridge-25.4.0.tgz#dd04086142becf41b4312c8fe361db87b235e04d"
+  integrity sha512-MIkQtb5UfWW7FhC7pB6luudlfdTk0YA42YCKtnAwH+0gcm4jkMMuqq0HLytqFWki9fcCzfyatz+HGIu5s5mKvA==
 
 create-jest@^29.7.0:
   version "29.7.0"
