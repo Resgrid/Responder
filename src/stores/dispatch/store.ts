@@ -33,6 +33,7 @@ interface DispatchState {
   error: string | null;
   searchQuery: string;
   fetchDispatchData: () => Promise<void>;
+  refreshDispatchData: () => Promise<void>; // Force refresh without cache
   setSelection: (selection: DispatchSelection) => void;
   toggleEveryone: () => void;
   toggleUser: (userId: string) => void;
@@ -69,14 +70,38 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
     try {
       const recipients = await getRecipients(false, true);
 
+      // Check if Data is properly defined
+      if (!recipients || !recipients.Data || !Array.isArray(recipients.Data)) {
+        if (__DEV__) {
+          console.error('Invalid recipients data structure - missing or invalid Data array');
+        }
+        set({
+          error: 'Invalid data structure received from API',
+          isLoading: false,
+        });
+        return;
+      }
+
+      if (__DEV__) {
+        console.log(`Successfully fetched ${recipients.Data.length} recipients from API`);
+      }
+
       // Initialize arrays for categorized recipients
       const categorizedUsers: RecipientsResultData[] = [];
       const categorizedGroups: RecipientsResultData[] = [];
       const categorizedRoles: RecipientsResultData[] = [];
       const categorizedUnits: RecipientsResultData[] = [];
 
-      // Categorize recipients based on Type field
+      // Categorize recipients based on Type field with both exact and flexible matching
       recipients.Data.forEach((recipient) => {
+        if (!recipient || !recipient.Type || !recipient.Name || !recipient.Id) {
+          if (__DEV__) {
+            console.warn('Skipping invalid recipient - missing required fields');
+          }
+          return;
+        }
+
+        // First try exact matching (as per the test data)
         if (recipient.Type === 'Personnel') {
           categorizedUsers.push(recipient);
         } else if (recipient.Type === 'Groups') {
@@ -85,8 +110,38 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
           categorizedRoles.push(recipient);
         } else if (recipient.Type === 'Unit') {
           categorizedUnits.push(recipient);
+        } else {
+          // Fallback to case-insensitive matching
+          const type = recipient.Type.toLowerCase().trim();
+          if (type === 'personnel' || type === 'user' || type === 'users') {
+            categorizedUsers.push(recipient);
+          } else if (type === 'groups' || type === 'group') {
+            categorizedGroups.push(recipient);
+          } else if (type === 'roles' || type === 'role') {
+            categorizedRoles.push(recipient);
+          } else if (type === 'unit' || type === 'units') {
+            categorizedUnits.push(recipient);
+          } else {
+            // Log unknown types for debugging
+            if (__DEV__) {
+              console.warn(`Unknown recipient type: '${recipient.Type}'`);
+            }
+          }
         }
       });
+
+      if (__DEV__) {
+        console.log(`Categorized recipients: Users: ${categorizedUsers.length}, Groups: ${categorizedGroups.length}, Roles: ${categorizedRoles.length}, Units: ${categorizedUnits.length}`);
+      }
+
+      // Only log if we have issues with categorization
+      const totalCategorized = categorizedUsers.length + categorizedGroups.length + categorizedRoles.length + categorizedUnits.length;
+      if (totalCategorized === 0 && recipients.Data.length > 0) {
+        if (__DEV__) {
+          console.warn('No recipients were successfully categorized!');
+          console.warn('Available recipient types:', [...new Set(recipients.Data.map((r) => r.Type))]);
+        }
+      }
 
       set({
         data: {
@@ -98,11 +153,20 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
+      if (__DEV__) {
+        console.error('Error fetching dispatch data:', error instanceof Error ? error.message : 'Unknown error');
+      }
       set({
-        error: 'Failed to fetch dispatch data',
+        error: error instanceof Error ? error.message : 'Failed to fetch dispatch data',
         isLoading: false,
       });
     }
+  },
+
+  refreshDispatchData: async () => {
+    // Force fresh data fetch
+    const { fetchDispatchData } = get();
+    return fetchDispatchData();
   },
 
   setSelection: (selection: DispatchSelection) => {

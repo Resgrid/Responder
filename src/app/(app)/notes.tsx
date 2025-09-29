@@ -1,8 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { FlashList } from '@shopify/flash-list';
 import { FileText, Search, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
@@ -107,7 +108,7 @@ export default function Notes() {
         {isLoading && !refreshing ? (
           <Loading />
         ) : filteredNotes.length > 0 ? (
-          <FlatList
+          <FlashList
             data={filteredNotes}
             keyExtractor={(item) => item.NoteId}
             renderItem={({ item }) => <NoteCard note={item} onPress={handleNoteSelect} />}

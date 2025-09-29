@@ -19,14 +19,14 @@ export const getCalls = async () => {
 
 export const getCallExtraData = async (callId: string) => {
   const response = await getCallExtraDataApi.get<CallExtraDataResult>({
-    callId: encodeURIComponent(callId),
+    callId: callId,
   });
   return response.data;
 };
 
 export const getCall = async (callId: string) => {
   const response = await getCallApi.get<CallResult>({
-    callId: encodeURIComponent(callId),
+    callId: callId,
   });
   return response.data;
 };

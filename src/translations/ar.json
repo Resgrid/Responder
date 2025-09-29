@@ -352,6 +352,8 @@
     "next": "التالي",
     "noActiveUnit": "لم يتم تعيين وحدة نشطة",
     "noActiveUnitDescription": "يرجى تعيين وحدة نشطة من صفحة الإعدادات للوصول إلى عناصر التحكم في الحالة",
+    "no_data_available": "لا توجد بيانات متاحة",
+    "no_results_found": "لم يتم العثور على نتائج",
     "no_unit_selected": "لم يتم اختيار وحدة",
     "of": "من",
     "optional": "اختياري",
@@ -360,6 +362,7 @@
     "retry": "إعادة المحاولة",
     "route": "مسار",
     "save": "حفظ",
+    "search": "بحث",
     "step": "خطوة",
     "submit": "إرسال",
     "submitting": "جاري الإرسال...",
@@ -634,6 +637,22 @@
     "emptyDescription": "لم يتم إنشاء أي ملاحظات لقسمك بعد.",
     "search": "البحث في الملاحظات...",
     "title": "الملاحظات"
+  },
+  "notifications": {
+    "bulkDeleteError": "فشل في حذف الإشعارات",
+    "bulkDeleteSuccess": "تم حذف {{count}} إشعار{{count, plural, one {} other {ات}}}",
+    "confirmDelete": {
+      "message": "هل أنت متأكد من أنك تريد حذف {{count}} إشعار{{count, plural, one {} other {ات}}}؟ لا يمكن التراجع عن هذا الإجراء.",
+      "title": "تأكيد الحذف"
+    },
+    "deleteError": "فشل في حذف الإشعار",
+    "deleteSuccess": "تم حذف الإشعار",
+    "deselectAll": "إلغاء تحديد الكل",
+    "empty": "لا توجد تحديثات متاحة",
+    "loadError": "غير قادر على تحميل الإشعارات",
+    "selectAll": "تحديد الكل",
+    "selectedCount": "{{count}} محدد",
+    "title": "الإشعارات"
   },
   "onboarding": {
     "message": "مرحبًا بك في تطبيق obytes"

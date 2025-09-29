@@ -352,6 +352,8 @@
     "next": "Next",
     "noActiveUnit": "No Active Unit",
     "noActiveUnitDescription": "Please select an active unit to see available statuses",
+    "no_data_available": "No data available",
+    "no_results_found": "No results found",
     "no_unit_selected": "No Unit Selected",
     "of": "of",
     "optional": "Optional",
@@ -360,6 +362,7 @@
     "retry": "Retry",
     "route": "Route",
     "save": "Save",
+    "search": "Search",
     "step": "Step",
     "submit": "Submit",
     "submitting": "Submitting...",
@@ -634,6 +637,22 @@
     "emptyDescription": "No notes have been created for your department yet.",
     "search": "Search notes...",
     "title": "Notes"
+  },
+  "notifications": {
+    "bulkDeleteError": "Failed to remove notifications",
+    "bulkDeleteSuccess": "{{count}} notification{{count, plural, one {} other {s}}} removed",
+    "confirmDelete": {
+      "message": "Are you sure you want to delete {{count}} notification{{count, plural, one {} other {s}}}? This action cannot be undone.",
+      "title": "Confirm Delete"
+    },
+    "deleteError": "Failed to remove notification",
+    "deleteSuccess": "Notification removed",
+    "deselectAll": "Deselect All",
+    "empty": "No updates available",
+    "loadError": "Unable to load notifications",
+    "selectAll": "Select All",
+    "selectedCount": "{{count}} selected",
+    "title": "Notifications"
   },
   "onboarding": {
     "message": "Welcome to obytes app site"

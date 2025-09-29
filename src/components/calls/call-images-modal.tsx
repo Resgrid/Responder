@@ -1,3 +1,4 @@
+import { FlashList } from '@shopify/flash-list';
 import * as FileSystem from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -5,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { CameraIcon, ChevronLeftIcon, ChevronRightIcon, ImageIcon, PlusIcon, XIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Dimensions, FlatList, type ImageSourcePropType, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, type ImageSourcePropType, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { Loading } from '@/components/common/loading';
@@ -60,7 +61,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [isAddingImage, setIsAddingImage] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [fullScreenImage, setFullScreenImage] = useState<{ source: ImageSourcePropType; name?: string } | null>(null);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlashList<CallFileResultData>>(null);
 
   const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage } = useCallDetailStore();
 
@@ -386,11 +387,11 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     return (
       <VStack className="space-y-4 p-4">
         <Box className="relative">
-          <FlatList
+          <FlashList
             ref={flatListRef}
             data={validImages}
             renderItem={renderImageItem}
-            keyExtractor={(item, index) => item?.Id || `image-${index}-${item?.Name || 'unknown'}`}
+            keyExtractor={(item: CallFileResultData, index: number) => item?.Id || `image-${index}-${item?.Name || 'unknown'}`}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
@@ -402,24 +403,9 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
             snapToInterval={width}
             snapToAlignment="start"
             decelerationRate="fast"
+            estimatedItemSize={width}
             className="w-full"
             contentContainerStyle={{ paddingHorizontal: 0 }}
-            getItemLayout={(_, index) => ({
-              length: width,
-              offset: width * index,
-              index,
-            })}
-            initialNumToRender={3}
-            maxToRenderPerBatch={3}
-            windowSize={5}
-            removeClippedSubviews={false}
-            initialScrollIndex={0}
-            onScrollToIndexFailed={(info) => {
-              const wait = new Promise((resolve) => setTimeout(resolve, 500));
-              wait.then(() => {
-                flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
-              });
-            }}
             ListEmptyComponent={() => (
               <Box className="w-full items-center justify-center p-4">
                 <Text className="text-center text-gray-500">{t('callImages.no_images')}</Text>

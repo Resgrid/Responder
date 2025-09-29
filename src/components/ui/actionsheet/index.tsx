@@ -5,9 +5,10 @@ import type { VariantProps } from '@gluestack-ui/nativewind-utils';
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import { withStates } from '@gluestack-ui/nativewind-utils/withStates';
 import { AnimatePresence, createMotionAnimatedComponent, Motion } from '@legendapp/motion';
+import { FlashList } from '@shopify/flash-list';
 import { cssInterop } from 'nativewind';
 import React, { type ComponentType, type RefAttributes, useMemo } from 'react';
-import { FlatList, Platform, Pressable, type PressableProps, ScrollView, SectionList, Text, View, VirtualizedList } from 'react-native';
+import { Platform, Pressable, type PressableProps, ScrollView, SectionList, Text, View, VirtualizedList } from 'react-native';
 import { Svg } from 'react-native-svg';
 
 type IPrimitiveIcon = {
@@ -55,7 +56,7 @@ export const UIActionsheet = createActionsheet({
   Backdrop: AnimatedPressable,
   ScrollView: ScrollView,
   VirtualizedList: VirtualizedList,
-  FlatList: FlatList,
+  FlatList: FlashList,
   SectionList: SectionList,
   SectionHeaderText: H4,
   Icon: PrimitiveIcon,

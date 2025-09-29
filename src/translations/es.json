@@ -352,6 +352,8 @@
     "next": "Siguiente",
     "noActiveUnit": "No hay unidad activa establecida",
     "noActiveUnitDescription": "Por favor establezca una unidad activa desde la página de configuración para acceder a los controles de estado",
+    "no_data_available": "No hay datos disponibles",
+    "no_results_found": "No se encontraron resultados",
     "no_unit_selected": "Ninguna unidad seleccionada",
     "of": "de",
     "optional": "Opcional",
@@ -360,6 +362,7 @@
     "retry": "Reintentar",
     "route": "Ruta",
     "save": "Guardar",
+    "search": "Buscar",
     "step": "Paso",
     "submit": "Enviar",
     "submitting": "Enviando...",
@@ -634,6 +637,22 @@
     "emptyDescription": "No se han creado notas para tu departamento todavía.",
     "search": "Buscar notas...",
     "title": "Notas"
+  },
+  "notifications": {
+    "bulkDeleteError": "Error al eliminar las notificaciones",
+    "bulkDeleteSuccess": "{{count}} notificación{{count, plural, one {} other {es}}} eliminada{{count, plural, one {} other {s}}}",
+    "confirmDelete": {
+      "message": "¿Estás seguro de que quieres eliminar {{count}} notificación{{count, plural, one {} other {es}}}? Esta acción no se puede deshacer.",
+      "title": "Confirmar Eliminación"
+    },
+    "deleteError": "Error al eliminar la notificación",
+    "deleteSuccess": "Notificación eliminada",
+    "deselectAll": "Deseleccionar Todo",
+    "empty": "No hay actualizaciones disponibles",
+    "loadError": "No se pueden cargar las notificaciones",
+    "selectAll": "Seleccionar Todo",
+    "selectedCount": "{{count}} seleccionadas",
+    "title": "Notificaciones"
   },
   "onboarding": {
     "message": "Bienvenido al sitio de la aplicación obytes"

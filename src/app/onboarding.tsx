@@ -1,9 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, Image } from 'react-native';
+import { Dimensions, Image } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { FocusAwareStatusBar, SafeAreaView, View } from '@/components/ui';
@@ -66,7 +67,7 @@ export default function Onboarding() {
   const { trackEvent } = useAnalytics();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlashList<OnboardingItemProps>>(null);
   const buttonOpacity = useSharedValue(0);
   const { colorScheme } = useColorScheme();
 
@@ -139,15 +140,15 @@ export default function Onboarding() {
         <Image style={{ width: '96%' }} resizeMode="contain" source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} />
       </View>
 
-      <FlatList
+      <FlashList
         ref={flatListRef}
         data={onboardingData}
-        renderItem={({ item }) => <OnboardingItem {...item} />}
+        renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
         horizontal
         showsHorizontalScrollIndicator={false}
         pagingEnabled
         bounces={false}
-        keyExtractor={(item) => item.title}
+        keyExtractor={(item: OnboardingItemProps) => item.title}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         testID="onboarding-flatlist"

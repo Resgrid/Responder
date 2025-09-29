@@ -1,2 +1,2 @@
 'use client';
-export { FlatList } from 'react-native';
+export { FlashList as FlatList } from '@shopify/flash-list';
