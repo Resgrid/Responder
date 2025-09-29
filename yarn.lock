@@ -2502,7 +2502,7 @@
   resolved "https://registry.yarnpkg.com/@livekit/react-native-expo-plugin/-/react-native-expo-plugin-1.0.1.tgz#8472299b1b399209463347ed27de7b0f743d700d"
   integrity sha512-CSPjjzgDDlBH1ZyFyaw7/FW2Ql1S51eUkIxv/vjGwVshn+lUD6eQ9VgfUh7ha84itvjXi9X87FvP0XWKn9CiFQ==
 
-"@livekit/react-native-webrtc@^137.0.2":
+"@livekit/react-native-webrtc@~137.0.2":
   version "137.0.2"
   resolved "https://registry.yarnpkg.com/@livekit/react-native-webrtc/-/react-native-webrtc-137.0.2.tgz#5fbd7876e6768a2247d04ef5653c373d92d74783"
   integrity sha512-0aXYATcBraOMDTteKzmfH5ICNHw8xFyMPHmhKg14+94fAGZ2hGjdHZUSkzL14+e508W486aIAmbXipuSQCCJgA==
@@ -2511,7 +2511,7 @@
     debug "4.3.4"
     event-target-shim "6.0.2"
 
-"@livekit/react-native@^2.9.1":
+"@livekit/react-native@~2.9.1":
   version "2.9.1"
   resolved "https://registry.yarnpkg.com/@livekit/react-native/-/react-native-2.9.1.tgz#1d0d9a40ebecd49e6c088cbe0d62b6380c1ff7ca"
   integrity sha512-oN1aWQeAuo3NhhrQRCI/V9upi8PhRQRFyZHBqnU/AlxYFyTKWKGmtVJtJWkGW+zNUF3lEF+nZMnpIHft9aJdqQ==
@@ -3902,7 +3902,7 @@
   dependencies:
     "@sentry/core" "8.54.0"
 
-"@shopify/flash-list@^2.1.0":
+"@shopify/flash-list@~2.1.0":
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@shopify/flash-list/-/flash-list-2.1.0.tgz#b1eefcf9fbd01ca04a5f24a6003cda3b46a59f64"
   integrity sha512-/EIQlptG456yM5o9qNmNsmaZEFEOGvG3WGyb6GUAxSLlcKUGlPUkPI2NLW5wQSDEY4xSRa5zocUI+9xwmsM4Kg==
@@ -10221,10 +10221,10 @@ listr@^0.14.3:
     p-map "^2.0.0"
     rxjs "^6.3.3"
 
-livekit-client@~2.15.2:
-  version "2.15.2"
-  resolved "https://registry.yarnpkg.com/livekit-client/-/livekit-client-2.15.2.tgz#0d7f1c9bae26848327773d39c5c3b1f26bc58b38"
-  integrity sha512-hf0A0JFN7M0iVGZxMfTk6a3cW7TNTVdqxkykjKBweORlqhQX1ITVloh6aLvplLZOxpkUE5ZVLz1DeS3+ERglog==
+livekit-client@^2.15.7:
+  version "2.15.7"
+  resolved "https://registry.yarnpkg.com/livekit-client/-/livekit-client-2.15.7.tgz#98a63cb259eaf6b54a15fe0376d212c6b37fe06b"
+  integrity sha512-19m8Q1cvRl5PslRawDUgWXeP8vL8584tX8kiZEJaPZo83U/L6VPS/O7pP06phfJaBWeeV8sAOVtEPlQiZEHtpg==
   dependencies:
     "@livekit/mutex" "1.1.1"
     "@livekit/protocol" "1.39.3"
