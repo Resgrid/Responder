@@ -13,6 +13,8 @@ const recipientsApi = createCachedApiEndpoint('/Messages/GetRecipients', {
   enabled: true,
 });
 
+//const recipientsApi = createApiEndpoint('/Messages/GetRecipients');
+
 const getInboxMessagesApi = createApiEndpoint('/Messages/GetInboxMessages');
 const getSentMessagesApi = createApiEndpoint('/Messages/GetOutboxMessages');
 const getMessageApi = createApiEndpoint('/Messages/GetMessage');

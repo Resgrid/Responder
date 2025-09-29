@@ -1,6 +1,6 @@
 import { CheckIcon, SearchIcon, UsersIcon, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 
@@ -27,10 +27,25 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
   const wasModalOpenRef = useRef(false);
-  const { data, selection, isLoading, error, searchQuery, fetchDispatchData, setSelection, toggleEveryone, toggleUser, toggleGroup, toggleRole, toggleUnit, setSearchQuery, clearSelection, getFilteredData } =
+  const [forceRenderKey, setForceRenderKey] = useState(0);
+
+  const { data, selection, isLoading, error, searchQuery, fetchDispatchData, refreshDispatchData, setSelection, toggleEveryone, toggleUser, toggleGroup, toggleRole, toggleUnit, setSearchQuery, clearSelection } =
     useDispatchStore();
 
-  const filteredData = useMemo(() => getFilteredData(), [getFilteredData]);
+  // Calculate filtered data directly in component to ensure reactivity
+  const filteredData = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return data;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return {
+      users: data.users.filter((user) => user.Name.toLowerCase().includes(query)),
+      groups: data.groups.filter((group) => group.Name.toLowerCase().includes(query)),
+      roles: data.roles.filter((role) => role.Name.toLowerCase().includes(query)),
+      units: data.units.filter((unit) => unit.Name.toLowerCase().includes(query)),
+    };
+  }, [data, searchQuery]);
 
   // Track analytics when modal becomes visible
   const trackViewAnalytics = useCallback(() => {
@@ -53,7 +68,10 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
   useEffect(() => {
     if (isVisible && !wasModalOpenRef.current) {
       wasModalOpenRef.current = true;
+
+      // Always fetch data when modal opens
       fetchDispatchData();
+
       if (initialSelection) {
         setSelection(initialSelection);
       }
@@ -62,6 +80,46 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
       wasModalOpenRef.current = false;
     }
   }, [isVisible, initialSelection, fetchDispatchData, setSelection, trackViewAnalytics]);
+
+  // Debug: Log when data changes
+  useEffect(() => {
+    console.log('Dispatch modal data updated:', {
+      users: data.users.length,
+      groups: data.groups.length,
+      roles: data.roles.length,
+      units: data.units.length,
+      isLoading,
+      error,
+      filteredDataUsers: filteredData.users.length,
+      filteredDataGroups: filteredData.groups.length,
+      filteredDataRoles: filteredData.roles.length,
+      filteredDataUnits: filteredData.units.length,
+      isVisible,
+      searchQuery,
+    });
+
+    // Log first few user names for verification
+    if (data.users.length > 0) {
+      console.log(
+        'First 3 users:',
+        data.users.slice(0, 3).map((u) => u.Name)
+      );
+    }
+    if (filteredData.users.length > 0) {
+      console.log(
+        'First 3 filtered users:',
+        filteredData.users.slice(0, 3).map((u) => u.Name)
+      );
+    }
+
+    // Force re-render when data changes
+    setForceRenderKey((prev) => prev + 1);
+  }, [data, isLoading, error, filteredData, isVisible, searchQuery]);
+
+  // Remove the debug logging effect that we added earlier
+  // useEffect(() => {
+  //   console.log('Dispatch modal data updated:', { ... });
+  // }, [data, isLoading, error]);
 
   const handleToggleEveryone = useCallback(() => {
     const wasSelected = selection.everyone;
@@ -211,6 +269,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
 
   return (
     <View
+      key={`dispatch-modal-${forceRenderKey}`}
       style={{
         position: 'absolute',
         top: 0,
@@ -246,6 +305,9 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
       ) : error ? (
         <Box className="flex-1 items-center justify-center p-4">
           <Text className="text-center text-red-500">{error}</Text>
+          <Button variant="outline" className="mt-4" onPress={() => refreshDispatchData()}>
+            <ButtonText>{t('common.retry')}</ButtonText>
+          </Button>
         </Box>
       ) : (
         <ScrollView className="flex-1 px-4">
@@ -275,9 +337,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleUser(user.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.users.includes(user.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -302,9 +363,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleGroup(group.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.groups.includes(group.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -329,9 +389,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleRole(role.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.roles.includes(role.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -356,9 +415,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleUnit(unit.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.units.includes(unit.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -372,25 +430,35 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
             </VStack>
           )}
 
-          {/* No Results */}
-          {searchQuery && filteredData.users.length === 0 && filteredData.groups.length === 0 && filteredData.roles.length === 0 && filteredData.units.length === 0 && (
+          {/* No Results or Empty Data */}
+          {!isLoading && !error && searchQuery && filteredData.users.length === 0 && filteredData.groups.length === 0 && filteredData.roles.length === 0 && filteredData.units.length === 0 && (
             <Box className="items-center justify-center py-8">
               <Text className="text-center text-neutral-500">{t('common.no_results_found')}</Text>
+            </Box>
+          )}
+
+          {/* Empty State - No recipients available */}
+          {!isLoading && !error && !searchQuery && data.users.length === 0 && data.groups.length === 0 && data.roles.length === 0 && data.units.length === 0 && (
+            <Box className="items-center justify-center py-8">
+              <Text className="text-center text-neutral-500">{t('common.no_data_available', { defaultValue: 'No recipients available' })}</Text>
+              <Button variant="outline" className="mt-4" onPress={() => refreshDispatchData()}>
+                <ButtonText>{t('common.refresh', { defaultValue: 'Refresh' })}</ButtonText>
+              </Button>
             </Box>
           )}
         </ScrollView>
       )}
 
       {/* Footer */}
-      <Box className={`flex-row items-center justify-between p-4 ${colorScheme === 'dark' ? 'border-t border-neutral-800 bg-neutral-900' : 'border-t border-neutral-200 bg-white'}`}>
-        <Text className="text-sm text-neutral-500">
+      <Box className={`p-4 ${colorScheme === 'dark' ? 'border-t border-neutral-800 bg-neutral-900' : 'border-t border-neutral-200 bg-white'}`}>
+        <Text className="mb-3 text-sm text-neutral-500">
           {getSelectionCount()} {t('calls.selected')}
         </Text>
-        <HStack className="space-x-3 pl-4">
-          <Button variant="outline" onPress={handleCancel} className="mr-10 flex-1">
+        <HStack className="space-x-4">
+          <Button variant="outline" onPress={handleCancel} className="flex-1">
             <ButtonText>{t('common.cancel')}</ButtonText>
           </Button>
-          <Button variant="solid" action="primary" onPress={handleConfirm} disabled={getSelectionCount() === 0} className="ml-2 flex-1">
+          <Button variant="solid" action="primary" onPress={handleConfirm} disabled={getSelectionCount() === 0} className="flex-1">
             <ButtonText>{t('common.confirm')}</ButtonText>
           </Button>
         </HStack>
