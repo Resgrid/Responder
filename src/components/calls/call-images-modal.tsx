@@ -403,6 +403,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
             snapToInterval={width}
             snapToAlignment="start"
             decelerationRate="fast"
+            estimatedItemSize={width}
             className="w-full"
             contentContainerStyle={{ paddingHorizontal: 0 }}
             ListEmptyComponent={() => (
