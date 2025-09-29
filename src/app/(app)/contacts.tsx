@@ -1,8 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { FlashList } from '@shopify/flash-list';
 import { ContactIcon, Search, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, RefreshControl } from 'react-native';
+import { RefreshControl } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
@@ -80,7 +81,7 @@ export default function Contacts() {
         </Input>
 
         {filteredContacts.length > 0 ? (
-          <FlatList
+          <FlashList
             testID="contacts-list"
             data={filteredContacts}
             keyExtractor={(item) => item.ContactId}

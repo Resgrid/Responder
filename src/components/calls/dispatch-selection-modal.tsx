@@ -337,8 +337,9 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleUser(user.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                          }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${
+                          selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                        }`}
                       >
                         {selection.users.includes(user.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -363,8 +364,9 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleGroup(group.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                          }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${
+                          selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                        }`}
                       >
                         {selection.groups.includes(group.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -389,8 +391,9 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleRole(role.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                          }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${
+                          selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                        }`}
                       >
                         {selection.roles.includes(role.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -415,8 +418,9 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleUnit(unit.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                          }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${
+                          selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                        }`}
                       >
                         {selection.units.includes(unit.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>

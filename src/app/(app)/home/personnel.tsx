@@ -1,8 +1,9 @@
 // Removed useFocusEffect to simplify analytics tracking on mount
+import { FlashList } from '@shopify/flash-list';
 import { Filter, Search, Users, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
@@ -89,7 +90,7 @@ export default function Personnel() {
           {isLoading && !refreshing ? (
             <Loading />
           ) : filteredPersonnel.length > 0 ? (
-            <FlatList
+            <FlashList
               data={filteredPersonnel}
               keyExtractor={(item, index) => item.UserId || `personnel-${index}`}
               renderItem={({ item }) => <PersonnelCard personnel={item} onPress={selectPersonnel} />}

@@ -1,8 +1,9 @@
 import { useNotifications } from '@novu/react-native';
+import { FlashList } from '@shopify/flash-list';
 import { CheckCircle, ChevronRight, Circle, ExternalLink, MoreVertical, Trash2, X } from 'lucide-react-native';
 import { colorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, FlatList, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { deleteMessage } from '@/api/novu/inbox';
 import { NotificationDetail } from '@/components/notifications/NotificationDetail';
@@ -297,10 +298,10 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                   <Text>Unable to load notifications</Text>
                 </View>
               ) : (
-                <FlatList
+                <FlashList
                   data={notifications}
                   renderItem={renderItem}
-                  keyExtractor={(item) => item.id}
+                  keyExtractor={(item: any) => item.id}
                   contentContainerStyle={styles.listContainer}
                   onEndReached={fetchMore}
                   onEndReachedThreshold={0.5}
