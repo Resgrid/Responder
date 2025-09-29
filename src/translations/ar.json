@@ -638,6 +638,22 @@
     "search": "البحث في الملاحظات...",
     "title": "الملاحظات"
   },
+  "notifications": {
+    "bulkDeleteError": "فشل في حذف الإشعارات",
+    "bulkDeleteSuccess": "تم حذف {{count}} إشعار{{count, plural, one {} other {ات}}}",
+    "confirmDelete": {
+      "message": "هل أنت متأكد من أنك تريد حذف {{count}} إشعار{{count, plural, one {} other {ات}}}؟ لا يمكن التراجع عن هذا الإجراء.",
+      "title": "تأكيد الحذف"
+    },
+    "deleteError": "فشل في حذف الإشعار",
+    "deleteSuccess": "تم حذف الإشعار",
+    "deselectAll": "إلغاء تحديد الكل",
+    "empty": "لا توجد تحديثات متاحة",
+    "loadError": "غير قادر على تحميل الإشعارات",
+    "selectAll": "تحديد الكل",
+    "selectedCount": "{{count}} محدد",
+    "title": "الإشعارات"
+  },
   "onboarding": {
     "message": "مرحبًا بك في تطبيق obytes"
   },

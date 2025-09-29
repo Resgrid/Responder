@@ -638,6 +638,22 @@
     "search": "Search notes...",
     "title": "Notes"
   },
+  "notifications": {
+    "bulkDeleteError": "Failed to remove notifications",
+    "bulkDeleteSuccess": "{{count}} notification{{count, plural, one {} other {s}}} removed",
+    "confirmDelete": {
+      "message": "Are you sure you want to delete {{count}} notification{{count, plural, one {} other {s}}}? This action cannot be undone.",
+      "title": "Confirm Delete"
+    },
+    "deleteError": "Failed to remove notification",
+    "deleteSuccess": "Notification removed",
+    "deselectAll": "Deselect All",
+    "empty": "No updates available",
+    "loadError": "Unable to load notifications",
+    "selectAll": "Select All",
+    "selectedCount": "{{count}} selected",
+    "title": "Notifications"
+  },
   "onboarding": {
     "message": "Welcome to obytes app site"
   },

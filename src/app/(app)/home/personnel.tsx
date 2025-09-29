@@ -47,8 +47,8 @@ export default function Personnel() {
     const query = searchQuery.toLowerCase();
     return personnel.filter(
       (person) =>
-        person.FirstName.toLowerCase().includes(query) ||
-        person.LastName.toLowerCase().includes(query) ||
+        person.FirstName?.toLowerCase().includes(query) ||
+        person.LastName?.toLowerCase().includes(query) ||
         person.EmailAddress?.toLowerCase().includes(query) ||
         person.GroupName?.toLowerCase().includes(query) ||
         person.Status?.toLowerCase().includes(query) ||

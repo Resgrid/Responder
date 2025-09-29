@@ -52,8 +52,8 @@ export default function Units() {
     const query = searchQuery.toLowerCase();
     return units.filter(
       (unit) =>
-        unit.Name.toLowerCase().includes(query) ||
-        unit.Type.toLowerCase().includes(query) ||
+        unit.Name?.toLowerCase().includes(query) ||
+        unit.Type?.toLowerCase().includes(query) ||
         unit.PlateNumber?.toLowerCase().includes(query) ||
         unit.Vin?.toLowerCase().includes(query) ||
         unit.GroupName?.toLowerCase().includes(query)

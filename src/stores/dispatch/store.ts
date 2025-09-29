@@ -72,7 +72,9 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
 
       // Check if Data is properly defined
       if (!recipients || !recipients.Data || !Array.isArray(recipients.Data)) {
-        console.error('Invalid recipients data structure:', recipients);
+        if (__DEV__) {
+          console.error('Invalid recipients data structure - missing or invalid Data array');
+        }
         set({
           error: 'Invalid data structure received from API',
           isLoading: false,
@@ -80,7 +82,9 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
         return;
       }
 
-      console.log(`Successfully fetched ${recipients.Data.length} recipients from API`);
+      if (__DEV__) {
+        console.log(`Successfully fetched ${recipients.Data.length} recipients from API`);
+      }
 
       // Initialize arrays for categorized recipients
       const categorizedUsers: RecipientsResultData[] = [];
@@ -91,7 +95,9 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
       // Categorize recipients based on Type field with both exact and flexible matching
       recipients.Data.forEach((recipient) => {
         if (!recipient || !recipient.Type || !recipient.Name || !recipient.Id) {
-          console.warn('Skipping invalid recipient:', recipient);
+          if (__DEV__) {
+            console.warn('Skipping invalid recipient - missing required fields');
+          }
           return;
         }
 
@@ -117,18 +123,24 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
             categorizedUnits.push(recipient);
           } else {
             // Log unknown types for debugging
-            console.warn(`Unknown recipient type: '${recipient.Type}' for recipient: ${recipient.Name}`);
+            if (__DEV__) {
+              console.warn(`Unknown recipient type: '${recipient.Type}'`);
+            }
           }
         }
       });
 
-      console.log(`Categorized recipients: Users: ${categorizedUsers.length}, Groups: ${categorizedGroups.length}, Roles: ${categorizedRoles.length}, Units: ${categorizedUnits.length}`);
+      if (__DEV__) {
+        console.log(`Categorized recipients: Users: ${categorizedUsers.length}, Groups: ${categorizedGroups.length}, Roles: ${categorizedRoles.length}, Units: ${categorizedUnits.length}`);
+      }
 
       // Only log if we have issues with categorization
       const totalCategorized = categorizedUsers.length + categorizedGroups.length + categorizedRoles.length + categorizedUnits.length;
       if (totalCategorized === 0 && recipients.Data.length > 0) {
-        console.warn('No recipients were successfully categorized!');
-        console.warn('Available recipient types:', [...new Set(recipients.Data.map((r) => r.Type))]);
+        if (__DEV__) {
+          console.warn('No recipients were successfully categorized!');
+          console.warn('Available recipient types:', [...new Set(recipients.Data.map((r) => r.Type))]);
+        }
       }
 
       set({
@@ -141,7 +153,9 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
-      console.error('Error fetching dispatch data:', error);
+      if (__DEV__) {
+        console.error('Error fetching dispatch data:', error instanceof Error ? error.message : 'Unknown error');
+      }
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch dispatch data',
         isLoading: false,

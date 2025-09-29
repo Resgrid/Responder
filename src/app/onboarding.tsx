@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
@@ -67,7 +67,7 @@ export default function Onboarding() {
   const { trackEvent } = useAnalytics();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlashListRef<OnboardingItemProps>>(null);
+  const flatListRef = useRef<FlashList<OnboardingItemProps>>(null);
   const buttonOpacity = useSharedValue(0);
   const { colorScheme } = useColorScheme();
 

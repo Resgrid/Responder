@@ -1,4 +1,4 @@
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import * as FileSystem from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -61,7 +61,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [isAddingImage, setIsAddingImage] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [fullScreenImage, setFullScreenImage] = useState<{ source: ImageSourcePropType; name?: string } | null>(null);
-  const flatListRef = useRef<FlashListRef<CallFileResultData>>(null);
+  const flatListRef = useRef<FlashList<CallFileResultData>>(null);
 
   const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage } = useCallDetailStore();
 

@@ -27,7 +27,6 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
   const wasModalOpenRef = useRef(false);
-  const [forceRenderKey, setForceRenderKey] = useState(0);
 
   const { data, selection, isLoading, error, searchQuery, fetchDispatchData, refreshDispatchData, setSelection, toggleEveryone, toggleUser, toggleGroup, toggleRole, toggleUnit, setSearchQuery, clearSelection } =
     useDispatchStore();
@@ -80,46 +79,6 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
       wasModalOpenRef.current = false;
     }
   }, [isVisible, initialSelection, fetchDispatchData, setSelection, trackViewAnalytics]);
-
-  // Debug: Log when data changes
-  useEffect(() => {
-    console.log('Dispatch modal data updated:', {
-      users: data.users.length,
-      groups: data.groups.length,
-      roles: data.roles.length,
-      units: data.units.length,
-      isLoading,
-      error,
-      filteredDataUsers: filteredData.users.length,
-      filteredDataGroups: filteredData.groups.length,
-      filteredDataRoles: filteredData.roles.length,
-      filteredDataUnits: filteredData.units.length,
-      isVisible,
-      searchQuery,
-    });
-
-    // Log first few user names for verification
-    if (data.users.length > 0) {
-      console.log(
-        'First 3 users:',
-        data.users.slice(0, 3).map((u) => u.Name)
-      );
-    }
-    if (filteredData.users.length > 0) {
-      console.log(
-        'First 3 filtered users:',
-        filteredData.users.slice(0, 3).map((u) => u.Name)
-      );
-    }
-
-    // Force re-render when data changes
-    setForceRenderKey((prev) => prev + 1);
-  }, [data, isLoading, error, filteredData, isVisible, searchQuery]);
-
-  // Remove the debug logging effect that we added earlier
-  // useEffect(() => {
-  //   console.log('Dispatch modal data updated:', { ... });
-  // }, [data, isLoading, error]);
 
   const handleToggleEveryone = useCallback(() => {
     const wasSelected = selection.everyone;
@@ -269,7 +228,6 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
 
   return (
     <View
-      key={`dispatch-modal-${forceRenderKey}`}
       style={{
         position: 'absolute',
         top: 0,
@@ -337,9 +295,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleUser(user.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.users.includes(user.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -364,9 +321,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleGroup(group.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.groups.includes(group.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -391,9 +347,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleRole(role.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.roles.includes(role.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>
@@ -418,9 +373,8 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                   <TouchableOpacity onPress={() => handleToggleUnit(unit.Id)}>
                     <HStack className="items-center space-x-3">
                       <Box
-                        className={`size-5 items-center justify-center rounded border-2 ${
-                          selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
-                        }`}
+                        className={`size-5 items-center justify-center rounded border-2 ${selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
+                          }`}
                       >
                         {selection.units.includes(unit.Id) && <CheckIcon size={12} className="text-white" />}
                       </Box>

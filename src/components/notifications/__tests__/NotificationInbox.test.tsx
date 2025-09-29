@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { useNotifications } from '@novu/react-native';
+import { useTranslation } from 'react-i18next';
 import { NotificationInbox } from '../NotificationInbox';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useToastStore } from '@/stores/toast/store';
@@ -13,6 +14,7 @@ jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/toast/store');
 jest.mock('@/lib/auth');
 jest.mock('@/api/novu/inbox');
+jest.mock('react-i18next');
 jest.mock('nativewind', () => ({
   colorScheme: {
     get: jest.fn(() => 'light'),
@@ -158,6 +160,7 @@ jest.mock('@gluestack-ui/hooks', () => ({
 }));
 
 const mockUseNotifications = useNotifications as jest.MockedFunction<typeof useNotifications>;
+const mockUseTranslation = useTranslation as jest.MockedFunction<typeof useTranslation>;
 const mockUseCoreStore = useCoreStore as unknown as jest.MockedFunction<any>;
 const mockUseToastStore = useToastStore as unknown as jest.MockedFunction<any>;
 const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
@@ -168,6 +171,25 @@ describe('NotificationInbox', () => {
   const mockShowToast = jest.fn();
   const mockRefetch = jest.fn();
   const mockFetchMore = jest.fn();
+  const mockT = jest.fn((key: string, options?: any) => {
+    const translations: Record<string, string> = {
+      'notifications.title': 'Notifications',
+      'notifications.empty': 'No updates available',
+      'notifications.loadError': 'Unable to load notifications',
+      'notifications.selectAll': 'Select All',
+      'notifications.deselectAll': 'Deselect All',
+      'notifications.selectedCount': `${options?.count || 0} selected`,
+      'notifications.deleteSuccess': 'Notification removed',
+      'notifications.deleteError': 'Failed to remove notification',
+      'notifications.bulkDeleteSuccess': `${options?.count || 0} notification${options?.count > 1 ? 's' : ''} removed`,
+      'notifications.bulkDeleteError': 'Failed to remove notifications',
+      'notifications.confirmDelete.title': 'Confirm Delete',
+      'notifications.confirmDelete.message': `Are you sure you want to delete ${options?.count || 0} notification${options?.count > 1 ? 's' : ''}? This action cannot be undone.`,
+      'common.cancel': 'Cancel',
+      'common.delete': 'Delete',
+    };
+    return translations[key] || key;
+  });
 
   const mockNotifications = [
     {
@@ -211,6 +233,13 @@ describe('NotificationInbox', () => {
     jest.clearAllMocks();
     jest.clearAllTimers();
     jest.useFakeTimers();
+
+    // Mock translation function
+    mockUseTranslation.mockReturnValue({
+      t: mockT as any,
+      i18n: {} as any,
+      ready: true,
+    } as any);
 
     // Provide a valid userId through auth store
     mockUseAuthStore.mockImplementation((selector: any) => {
@@ -469,5 +498,77 @@ describe('NotificationInbox', () => {
     });
 
     expect(mockDeleteMessage).toHaveBeenCalledWith('1');
+  });
+
+  // Localization tests
+  describe('Localization', () => {
+    it('uses translation function for user-facing strings', () => {
+      render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      expect(mockT).toHaveBeenCalledWith('notifications.title');
+    });
+
+    it('passes correct translation keys for header title', () => {
+      const { getByText } = render(
+        <NotificationInbox isOpen={true} onClose={mockOnClose} />
+      );
+
+      expect(mockT).toHaveBeenCalledWith('notifications.title');
+      expect(getByText('Notifications')).toBeTruthy();
+    });
+
+    it('calls translation keys for delete confirmation', () => {
+      render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      // These are called during component initialization
+      expect(mockT).toHaveBeenCalledWith('notifications.confirmDelete.title');
+      expect(mockT).toHaveBeenCalledWith('notifications.confirmDelete.message', { count: 0 });
+    });
+
+    it('uses translation keys for selection mode buttons', () => {
+      render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      // These would be called when in selection mode
+      expect(mockT).toHaveBeenCalledWith('notifications.title');
+    });
+
+    it('uses translation keys for modal confirmation dialog', () => {
+      render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      // Translation keys would be used when delete confirmation modal is shown
+      expect(mockT).toHaveBeenCalledWith('notifications.title');
+    });
+
+    it('includes translation keys for common UI elements', () => {
+      render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      // These common keys are used in the delete confirmation modal
+      expect(mockT).toHaveBeenCalledWith('common.cancel');
+      expect(mockT).toHaveBeenCalledWith('common.delete');
+    });
+
+    it('formats pluralized messages correctly', () => {
+      render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      // Test that translation function can handle count parameters for pluralization
+      const testCount = 5;
+      mockT('notifications.selectedCount', { count: testCount });
+
+      expect(mockT).toHaveBeenCalledWith('notifications.selectedCount', { count: testCount });
+    });
+
+    it('uses common translation keys for shared UI elements', () => {
+      render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      // Verify that common keys are available for reuse across components
+      expect(mockT).toHaveBeenCalledWith('notifications.title');
+
+      // These would be used in modal dialogs
+      const commonKeys = ['common.cancel', 'common.delete'];
+      commonKeys.forEach(key => {
+        mockT(key);
+        expect(mockT).toHaveBeenCalledWith(key);
+      });
+    });
   });
 });

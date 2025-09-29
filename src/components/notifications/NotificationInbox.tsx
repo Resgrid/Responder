@@ -3,6 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { CheckCircle, ChevronRight, Circle, ExternalLink, MoreVertical, Trash2, X } from 'lucide-react-native';
 import { colorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Animated, Dimensions, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { deleteMessage } from '@/api/novu/inbox';
@@ -26,6 +27,7 @@ interface NotificationInboxProps {
 }
 
 export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) => {
+  const { t } = useTranslation();
   const config = useCoreStore((state: any) => state.config);
   const userId = useAuthStore((state) => state.userId);
   const { notifications, isLoading, fetchMore, hasMore, refetch } = useNotifications();
@@ -131,27 +133,27 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       const deletePromises = Array.from(selectedNotificationIds).map((id) => deleteMessage(id));
       await Promise.all(deletePromises);
 
-      showToast('success', `${selectedNotificationIds.size} notification${selectedNotificationIds.size > 1 ? 's' : ''} removed`);
+      showToast('success', t('notifications.bulkDeleteSuccess', { count: selectedNotificationIds.size }));
       exitSelectionMode();
       refetch();
     } catch (error) {
-      showToast('error', 'Failed to remove notifications');
+      showToast('error', t('notifications.bulkDeleteError'));
     } finally {
       setIsDeletingSelected(false);
     }
-  }, [selectedNotificationIds, showToast, exitSelectionMode, refetch]);
+  }, [selectedNotificationIds, showToast, exitSelectionMode, refetch, t]);
 
   const handleDeleteNotification = React.useCallback(
     async (_id: string) => {
       try {
         await deleteMessage(_id);
-        showToast('success', 'Notification removed');
+        showToast('success', t('notifications.deleteSuccess'));
         refetch();
       } catch (error) {
-        showToast('error', 'Failed to remove notification');
+        showToast('error', t('notifications.deleteError'));
       }
     },
-    [showToast, refetch]
+    [showToast, refetch, t]
   );
 
   const handleNavigateToReference = (referenceType: string, referenceId: string) => {
@@ -229,7 +231,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text>No updates available</Text>
+      <Text>{t('notifications.empty')}</Text>
     </View>
   );
 
@@ -260,23 +262,23 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                 {isSelectionMode ? (
                   <>
                     <View style={styles.selectionHeader}>
-                      <Text style={styles.selectionCount}>{selectedNotificationIds.size} selected</Text>
+                      <Text style={styles.selectionCount}>{t('notifications.selectedCount', { count: selectedNotificationIds.size })}</Text>
                       <View style={styles.selectionActions}>
                         <Button onPress={selectedNotificationIds.size === notifications?.length ? deselectAllNotifications : selectAllNotifications} variant="outline" className="mr-2">
-                          <Text>{selectedNotificationIds.size === notifications?.length ? 'Deselect All' : 'Select All'}</Text>
+                          <Text>{selectedNotificationIds.size === notifications?.length ? t('notifications.deselectAll') : t('notifications.selectAll')}</Text>
                         </Button>
                         <Button onPress={handleBulkDelete} variant="outline" className="mr-2" disabled={selectedNotificationIds.size === 0 || isDeletingSelected}>
                           {isDeletingSelected ? <ActivityIndicator size="small" color="#ef4444" /> : <Trash2 size={16} className="text-red-500" strokeWidth={2} />}
                         </Button>
                         <Button onPress={exitSelectionMode} variant="outline">
-                          <Text>Cancel</Text>
+                          <Text>{t('common.cancel')}</Text>
                         </Button>
                       </View>
                     </View>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.headerTitle}>Notifications</Text>
+                    <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
                     <View style={styles.headerActions}>
                       <Pressable onPress={enterSelectionMode} style={styles.actionButton}>
                         <MoreVertical size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
@@ -295,14 +297,13 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                 </View>
               ) : !userId || !config ? (
                 <View style={styles.loadingContainer}>
-                  <Text>Unable to load notifications</Text>
+                  <Text>{t('notifications.loadError')}</Text>
                 </View>
               ) : (
                 <FlashList
                   data={notifications}
                   renderItem={renderItem}
                   keyExtractor={(item: any) => item.id}
-                  contentContainerStyle={styles.listContainer}
                   onEndReached={fetchMore}
                   onEndReachedThreshold={0.5}
                   ListFooterComponent={renderFooter}
@@ -320,19 +321,17 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
         <ModalBackdrop />
         <ModalContent>
           <ModalHeader>
-            <Text className="text-lg font-semibold">Confirm Delete</Text>
+            <Text className="text-lg font-semibold">{t('notifications.confirmDelete.title')}</Text>
           </ModalHeader>
           <ModalBody>
-            <Text>
-              Are you sure you want to delete {selectedNotificationIds.size} notification{selectedNotificationIds.size > 1 ? 's' : ''}? This action cannot be undone.
-            </Text>
+            <Text>{t('notifications.confirmDelete.message', { count: selectedNotificationIds.size })}</Text>
           </ModalBody>
           <ModalFooter>
             <Button variant="outline" onPress={() => setShowDeleteConfirmModal(false)} className="mr-2">
-              <Text>Cancel</Text>
+              <Text>{t('common.cancel')}</Text>
             </Button>
             <Button variant="solid" onPress={confirmBulkDelete} className="bg-red-500">
-              <Text className="text-white">Delete</Text>
+              <Text className="text-white">{t('common.delete')}</Text>
             </Button>
           </ModalFooter>
         </ModalContent>
