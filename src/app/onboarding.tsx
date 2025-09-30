@@ -3,7 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Dimensions, Image } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -42,11 +42,40 @@ const onboardingData: OnboardingItemProps[] = [
 ];
 
 const OnboardingItem: React.FC<OnboardingItemProps> = ({ title, description, icon }) => {
+  const { colorScheme } = useColorScheme();
+
   return (
-    <View className="w-full flex-1 items-center justify-center px-8" style={{ width }}>
-      <View className="mb-8 items-center justify-center">{icon}</View>
-      <Text className="mb-4 text-center text-3xl font-bold">{title}</Text>
-      <Text className="text-center text-lg text-gray-600">{description}</Text>
+    <View
+      style={{
+        width,
+        height: 400,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+      }}
+    >
+      <View style={{ marginBottom: 32, alignItems: 'center' }}>{icon}</View>
+      <Text
+        style={{
+          fontSize: 28,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          marginBottom: 16,
+          color: colorScheme === 'dark' ? '#ffffff' : '#1f2937', // white in dark mode, dark gray in light mode
+        }}
+      >
+        {title}
+      </Text>
+      <Text
+        style={{
+          fontSize: 16,
+          textAlign: 'center',
+          color: colorScheme === 'dark' ? '#d1d5db' : '#6b7280', // light gray in dark mode, gray in light mode
+          lineHeight: 24,
+        }}
+      >
+        {description}
+      </Text>
     </View>
   );
 };
@@ -140,19 +169,23 @@ export default function Onboarding() {
         <Image style={{ width: '96%' }} resizeMode="contain" source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} />
       </View>
 
-      <FlashList
-        ref={flatListRef}
-        data={onboardingData}
-        renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        bounces={false}
-        keyExtractor={(item: OnboardingItemProps) => item.title}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        testID="onboarding-flatlist"
-      />
+      <View style={{ flex: 1, minHeight: 400 }}>
+        <FlashList
+          ref={flatListRef}
+          data={onboardingData}
+          renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          pagingEnabled
+          bounces={false}
+          keyExtractor={(item: OnboardingItemProps) => item.title}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          estimatedItemSize={width}
+          getItemType={() => 'onboarding-item'}
+          testID="onboarding-flatlist"
+        />
+      </View>
 
       <Pagination currentIndex={currentIndex} length={onboardingData.length} />
 
