@@ -3,8 +3,8 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, Image } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Dimensions, Image, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { FocusAwareStatusBar, SafeAreaView, View } from '@/components/ui';
@@ -17,6 +17,50 @@ import { useIsFirstTime } from '@/lib/storage';
 
 const { width } = Dimensions.get('window');
 
+// Color constants
+const COLORS = {
+  primary: '#FF7B1A',
+  text: {
+    light: {
+      primary: '#1f2937',
+      secondary: '#6b7280',
+    },
+    dark: {
+      primary: '#ffffff',
+      secondary: '#d1d5db',
+    },
+  },
+};
+
+// Static styles
+const styles = StyleSheet.create({
+  onboardingContainer: {
+    height: 400,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  iconContainer: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  description: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  flexContainer: {
+    flex: 1,
+    minHeight: 400,
+  },
+});
+
 type OnboardingItemProps = {
   title: string;
   description: string;
@@ -27,26 +71,37 @@ const onboardingData: OnboardingItemProps[] = [
   {
     title: 'Resgrid Responder',
     description: 'Manage your status, staffing, and interact with your organization in real-time',
-    icon: <MapPin size={80} color="#FF7B1A" />,
+    icon: <MapPin size={80} color={COLORS.primary} />,
   },
   {
     title: 'Instant Notifications',
     description: 'Receive immediate alerts for emergencies and important updates from your department',
-    icon: <Bell size={80} color="#FF7B1A" />,
+    icon: <Bell size={80} color={COLORS.primary} />,
   },
   {
     title: 'Interact with Calls',
     description: 'Seamlessly view call information and interact with your team members for efficient emergency response',
-    icon: <Users size={80} color="#FF7B1A" />,
+    icon: <Users size={80} color={COLORS.primary} />,
   },
 ];
 
 const OnboardingItem: React.FC<OnboardingItemProps> = ({ title, description, icon }) => {
+  const { colorScheme } = useColorScheme();
+
+  // Compute dynamic colors once using useMemo
+  const textColors = useMemo(() => {
+    const isDark = colorScheme === 'dark';
+    return {
+      title: isDark ? COLORS.text.dark.primary : COLORS.text.light.primary,
+      description: isDark ? COLORS.text.dark.secondary : COLORS.text.light.secondary,
+    };
+  }, [colorScheme]);
+
   return (
-    <View className="w-full flex-1 items-center justify-center px-8" style={{ width }}>
-      <View className="mb-8 items-center justify-center">{icon}</View>
-      <Text className="mb-4 text-center text-3xl font-bold">{title}</Text>
-      <Text className="text-center text-lg text-gray-600">{description}</Text>
+    <View style={[styles.onboardingContainer, { width }]}>
+      <View style={styles.iconContainer}>{icon}</View>
+      <Text style={[styles.title, { color: textColors.title }]}>{title}</Text>
+      <Text style={[styles.description, { color: textColors.description }]}>{description}</Text>
     </View>
   );
 };
@@ -140,19 +195,23 @@ export default function Onboarding() {
         <Image style={{ width: '96%' }} resizeMode="contain" source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} />
       </View>
 
-      <FlashList
-        ref={flatListRef}
-        data={onboardingData}
-        renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        bounces={false}
-        keyExtractor={(item: OnboardingItemProps) => item.title}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        testID="onboarding-flatlist"
-      />
+      <View style={styles.flexContainer}>
+        <FlashList
+          ref={flatListRef}
+          data={onboardingData}
+          renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          pagingEnabled
+          bounces={false}
+          keyExtractor={(item: OnboardingItemProps) => item.title}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          estimatedItemSize={width}
+          getItemType={() => 'onboarding-item'}
+          testID="onboarding-flatlist"
+        />
+      </View>
 
       <Pagination currentIndex={currentIndex} length={onboardingData.length} />
 

@@ -213,7 +213,7 @@ describe('Onboarding Component', () => {
       expect(getByTestId('onboarding-flatlist')).toBeTruthy();
       expect(getByText('Skip')).toBeTruthy();
 
-      // The FlatList content might not render immediately in tests,
+      // The FlashList content might not render immediately in tests,
       // so we verify the component renders without crashing
       expect(getByTestId('onboarding-flatlist')).toBeTruthy();
     });
