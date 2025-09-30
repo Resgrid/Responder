@@ -3,7 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { FileText, Search, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
@@ -11,8 +11,9 @@ import { NoteCard } from '@/components/notes/note-card';
 import { NoteDetailsSheet } from '@/components/notes/note-details-sheet';
 import { FocusAwareStatusBar } from '@/components/ui';
 import { Box } from '@/components/ui/box';
-import { Input } from '@/components/ui/input';
-import { InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { Pressable } from '@/components/ui/pressable';
+import { RefreshControl } from '@/components/ui/refresh-control';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useNotesStore } from '@/stores/notes/store';
 

@@ -2,7 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import ZeroState from '@/components/common/zero-state';
 import { ShiftCard } from '@/components/shifts/shift-card';
@@ -16,6 +16,7 @@ import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Input, InputField } from '@/components/ui/input';
+import { RefreshControl } from '@/components/ui/refresh-control';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';

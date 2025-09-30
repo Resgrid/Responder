@@ -15,6 +15,7 @@ export interface AuthResponse {
   expires_in: number;
   token_type: string;
   expiration_date: string;
+  obtained_at?: number; // Unix timestamp when token was obtained
 }
 
 export interface LoginResponse {

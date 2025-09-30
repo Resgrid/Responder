@@ -3,7 +3,6 @@ import { FlashList } from '@shopify/flash-list';
 import { ContactIcon, Search, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
@@ -12,6 +11,8 @@ import { ContactDetailsSheet } from '@/components/contacts/contact-details-sheet
 import { FocusAwareStatusBar } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { Pressable as UIPressable } from '@/components/ui/pressable';
+import { RefreshControl } from '@/components/ui/refresh-control';
 import { View } from '@/components/ui/view';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useContactsStore } from '@/stores/contacts/store';
