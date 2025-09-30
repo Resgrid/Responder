@@ -65,7 +65,6 @@ describe('Auth Store - Login and Hydration', () => {
     useAuthStore.setState({
       accessToken: null,
       refreshToken: null,
-      refreshTokenExpiresOn: null,
       accessTokenObtainedAt: null,
       refreshTokenObtainedAt: null,
       status: 'idle',
@@ -314,7 +313,7 @@ describe('Auth Store - Login and Hydration', () => {
       });
     });
 
-    it('should trigger refresh when access token is expired during hydration', async () => {
+    it('should detect expired access token during hydration but not trigger automatic refresh', async () => {
       const mockAuthResponse = {
         access_token: 'expired-access-token',
         refresh_token: 'valid-refresh-token',
@@ -326,20 +325,31 @@ describe('Auth Store - Login and Hydration', () => {
       };
 
       mockedGetAuth.mockReturnValueOnce(mockAuthResponse);
-      const refreshSpy = jest.spyOn(useAuthStore.getState(), 'refreshAccessToken');
 
       useAuthStore.getState().hydrate();
 
-      // Fast forward timer to trigger refresh
-      jest.advanceTimersByTime(200);
-
-      expect(refreshSpy).toHaveBeenCalled();
+      const state = useAuthStore.getState();
       
-      // Verify logging for expired access token
+      // Should hydrate successfully but with expired access token
+      expect(state.status).toBe('signedIn');
+      expect(state.accessToken).toBe('expired-access-token');
+      expect(state.refreshToken).toBe('valid-refresh-token');
+      expect(state.userId).toBe('test-user');
+      expect(state.isAccessTokenExpired()).toBe(true);
+      expect(state.shouldRefreshToken()).toBe(true);
+      
+      // Verify logging shows access token is expired
       expect(mockedLogger.info).toHaveBeenCalledWith({
-        message: 'Access token expired during hydration, attempting refresh',
-        context: { userId: 'test-user' },
+        message: 'Successfully hydrated auth state',
+        context: {
+          userId: 'test-user',
+          isAccessExpired: true,
+          accessTokenAgeMinutes: 120, // 2 hours
+          refreshTokenAgeDays: 0,
+        },
       });
+      
+      // Note: Token refresh will be handled by API interceptor when needed
     });
 
     it('should logout when refresh token is expired during hydration', async () => {

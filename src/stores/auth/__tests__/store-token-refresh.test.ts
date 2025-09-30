@@ -63,7 +63,6 @@ describe('Auth Store - Token Refresh Functionality', () => {
     useAuthStore.setState({
       accessToken: 'expired-token',
       refreshToken: 'valid-refresh-token',
-      refreshTokenExpiresOn: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000).getTime().toString(), // 300 days from now
       accessTokenObtainedAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago (expired)
       refreshTokenObtainedAt: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
       status: 'signedIn',

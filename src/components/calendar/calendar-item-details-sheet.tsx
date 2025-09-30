@@ -234,7 +234,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={onClose}>
-      <VStack className="h-[80vh]">
+      <VStack style={{ height: '80%' }}>
         <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: 24 }}>
           {/* Header */}
           <VStack className="mb-6">

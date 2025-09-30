@@ -10,24 +10,29 @@ import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { removeItem, setItem, zustandStorage } from '../../lib/storage';
 
-export interface AuthState {
+interface AuthState {
+  // Tokens
   accessToken: string | null;
   refreshToken: string | null;
-  refreshTokenExpiresOn: string | null;
   accessTokenObtainedAt: number | null;
   refreshTokenObtainedAt: number | null;
   status: AuthStatus;
   error: string | null;
   profile: ProfileModel | null;
   userId: string | null;
+  isFirstTime: boolean;
+
+  // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: (reason?: string) => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   hydrate: () => void;
-  isFirstTime: boolean;
-  isAuthenticated: () => boolean;
   setIsOnboarding: () => void;
+
+  // Computed properties
+  isAuthenticated: () => boolean;
   isAccessTokenExpired: () => boolean;
+  isAccessTokenExpiringSoon: () => boolean;
   isRefreshTokenExpired: () => boolean;
   shouldRefreshToken: () => boolean;
 }
@@ -37,7 +42,6 @@ const useAuthStore = create<AuthState>()(
     (set, get) => ({
       accessToken: null,
       refreshToken: null,
-      refreshTokenExpiresOn: null,
       accessTokenObtainedAt: null,
       refreshTokenObtainedAt: null,
       status: 'idle',
@@ -76,14 +80,12 @@ const useAuthStore = create<AuthState>()(
             };
 
             setItem<AuthResponse>('authResponse', authResponseWithTimestamp);
-            const refreshTokenExpiresOn = new Date(now + 365 * 24 * 60 * 60 * 1000).getTime().toString(); // 1 year from now
 
             const profileData = JSON.parse(payload) as ProfileModel;
 
             set({
               accessToken: response.authResponse?.access_token ?? null,
               refreshToken: response.authResponse?.refresh_token ?? null,
-              refreshTokenExpiresOn,
               accessTokenObtainedAt: now,
               refreshTokenObtainedAt: now,
               status: 'signedIn',
@@ -101,21 +103,6 @@ const useAuthStore = create<AuthState>()(
                 refreshTokenObtainedAt: now,
               },
             });
-
-            // Set up automatic token refresh 5 minutes before expiry
-            const expiresIn = (response.authResponse?.expires_in ?? 3600) * 1000 - 5 * 60 * 1000;
-            if (expiresIn > 0) {
-              setTimeout(() => {
-                const state = get();
-                if (state.isAuthenticated() && state.shouldRefreshToken()) {
-                  logger.info({
-                    message: 'Auto-refreshing token before expiry',
-                    context: { userId: state.userId },
-                  });
-                  state.refreshAccessToken();
-                }
-              }, expiresIn);
-            }
           } else {
             logger.error({
               message: 'Login failed - unsuccessful response',
@@ -180,7 +167,6 @@ const useAuthStore = create<AuthState>()(
         set({
           accessToken: null,
           refreshToken: null,
-          refreshTokenExpiresOn: null,
           accessTokenObtainedAt: null,
           refreshTokenObtainedAt: null,
           status: 'signedOut',
@@ -256,21 +242,6 @@ const useAuthStore = create<AuthState>()(
               newAccessTokenObtainedAt: now,
             },
           });
-
-          // Set up next token refresh 5 minutes before expiry
-          const expiresIn = response.expires_in * 1000 - 5 * 60 * 1000;
-          if (expiresIn > 0) {
-            setTimeout(() => {
-              const state = get();
-              if (state.isAuthenticated() && state.shouldRefreshToken()) {
-                logger.info({
-                  message: 'Auto-refreshing token before expiry (from previous refresh)',
-                  context: { userId: state.userId },
-                });
-                state.refreshAccessToken();
-              }
-            }, expiresIn);
-          }
         } catch (error) {
           const currentState = get();
           logger.error({
@@ -327,7 +298,6 @@ const useAuthStore = create<AuthState>()(
               set({
                 accessToken: null,
                 refreshToken: null,
-                refreshTokenExpiresOn: null,
                 accessTokenObtainedAt: null,
                 refreshTokenObtainedAt: null,
                 status: 'signedOut',
@@ -342,7 +312,6 @@ const useAuthStore = create<AuthState>()(
             set({
               accessToken: authResponse.access_token,
               refreshToken: authResponse.refresh_token,
-              refreshTokenExpiresOn: new Date(obtainedAt + refreshTokenExpiryTime).getTime().toString(),
               accessTokenObtainedAt: obtainedAt,
               refreshTokenObtainedAt: obtainedAt,
               status: 'signedIn',
@@ -361,20 +330,7 @@ const useAuthStore = create<AuthState>()(
               },
             });
 
-            // If access token is expired but refresh token is valid, attempt refresh
-            if (isAccessExpired) {
-              logger.info({
-                message: 'Access token expired during hydration, attempting refresh',
-                context: { userId: profileData.sub },
-              });
-              // Use setTimeout to avoid blocking hydration
-              setTimeout(() => {
-                const state = get();
-                if (state.isAuthenticated()) {
-                  state.refreshAccessToken();
-                }
-              }, 100);
-            }
+            // Note: Token refresh will be handled by API interceptor when needed
           } else {
             logger.info({
               message: 'No valid auth response found during hydration',
@@ -382,7 +338,6 @@ const useAuthStore = create<AuthState>()(
             set({
               accessToken: null,
               refreshToken: null,
-              refreshTokenExpiresOn: null,
               accessTokenObtainedAt: null,
               refreshTokenObtainedAt: null,
               status: 'signedOut',
@@ -400,7 +355,6 @@ const useAuthStore = create<AuthState>()(
           set({
             accessToken: null,
             refreshToken: null,
-            refreshTokenExpiresOn: null,
             accessTokenObtainedAt: null,
             refreshTokenObtainedAt: null,
             status: 'signedOut',
@@ -436,6 +390,19 @@ const useAuthStore = create<AuthState>()(
 
         return tokenAge >= expiryTime;
       },
+      isAccessTokenExpiringSoon: (): boolean => {
+        const state = get();
+        if (!state.accessTokenObtainedAt || !state.accessToken) {
+          return true;
+        }
+
+        const now = Date.now();
+        const tokenAge = now - state.accessTokenObtainedAt;
+        const expiryTime = 3600 * 1000; // 1 hour in milliseconds (default)
+        const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+
+        return tokenAge >= expiryTime - bufferTime;
+      },
       isRefreshTokenExpired: (): boolean => {
         const state = get();
         if (!state.refreshTokenObtainedAt || !state.refreshToken) {
@@ -454,8 +421,8 @@ const useAuthStore = create<AuthState>()(
           return false;
         }
 
-        // Refresh if access token is expired but refresh token is still valid
-        return state.isAccessTokenExpired() && !state.isRefreshTokenExpired();
+        // Refresh if access token is expiring soon or expired but refresh token is still valid
+        return (state.isAccessTokenExpiringSoon() || state.isAccessTokenExpired()) && !state.isRefreshTokenExpired();
       },
     }),
     {

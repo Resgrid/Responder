@@ -336,7 +336,7 @@ describe('Core Store', () => {
 			mockUseAuthStore.getState.mockReturnValue({
 				accessToken: null,
 				refreshToken: null,
-				refreshTokenExpiresOn: null,
+				refreshTokenObtainedAt: null,
 				status: 'signedOut',
 				error: null,
 				profile: null,

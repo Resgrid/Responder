@@ -347,12 +347,16 @@
     "edit": "تعديل",
     "error": "خطأ",
     "errorOccurred": "حدث خطأ",
+    "get_my_location": "احصل على موقعي",
     "loading": "جاري التحميل...",
+    "loading_address": "جاري تحميل العنوان...",
     "navigation": "التنقل",
     "next": "التالي",
     "noActiveUnit": "لم يتم تعيين وحدة نشطة",
     "noActiveUnitDescription": "يرجى تعيين وحدة نشطة من صفحة الإعدادات للوصول إلى عناصر التحكم في الحالة",
+    "no_address_found": "لم يتم العثور على عنوان",
     "no_data_available": "لا توجد بيانات متاحة",
+    "no_location": "لا يوجد موقع متاح",
     "no_results_found": "لم يتم العثور على نتائج",
     "no_unit_selected": "لم يتم اختيار وحدة",
     "of": "من",
@@ -363,6 +367,7 @@
     "route": "مسار",
     "save": "حفظ",
     "search": "بحث",
+    "set_location": "تحديد الموقع",
     "step": "خطوة",
     "submit": "إرسال",
     "submitting": "جاري الإرسال...",
@@ -552,6 +557,11 @@
     "recenter_map": "إعادة توسيط الخريطة",
     "set_as_current_call": "تعيين كمكالمة حالية",
     "view_call_details": "عرض تفاصيل المكالمة"
+  },
+  "maps": {
+    "contact_administrator": "يرجى الاتصال بالمسؤول لتكوين خدمات الخرائط.",
+    "failed_to_load": "فشل في تحميل الخريطة. يرجى فحص اتصالك بالإنترنت.",
+    "mapbox_not_configured": "Mapbox غير مُكوَّن. يرجى الاتصال بالمسؤول."
   },
   "messages": {
     "all_messages": "جميع الرسائل",

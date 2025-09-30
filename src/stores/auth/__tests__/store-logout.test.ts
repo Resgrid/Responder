@@ -59,7 +59,6 @@ describe('Auth Store - Logout Functionality', () => {
     useAuthStore.setState({
       accessToken: 'test-token',
       refreshToken: 'test-refresh',
-      refreshTokenExpiresOn: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).getTime().toString(),
       accessTokenObtainedAt: Date.now() - 30 * 60 * 1000, // 30 minutes ago
       refreshTokenObtainedAt: Date.now() - 30 * 60 * 1000,
       status: 'signedIn',
@@ -81,7 +80,6 @@ describe('Auth Store - Logout Functionality', () => {
       const state = useAuthStore.getState();
       expect(state.accessToken).toBeNull();
       expect(state.refreshToken).toBeNull();
-      expect(state.refreshTokenExpiresOn).toBeNull();
       expect(state.accessTokenObtainedAt).toBeNull();
       expect(state.refreshTokenObtainedAt).toBeNull();
       expect(state.status).toBe('signedOut');

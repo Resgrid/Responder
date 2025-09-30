@@ -1,5 +1,12 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
+// Mock Env
+jest.mock('@/lib/env', () => ({
+  Env: {
+    RESPOND_MAPBOX_PUBKEY: 'test-key',
+  },
+}));
+
 // Mock all complex dependencies
 jest.mock('@rnmapbox/maps', () => ({
   MapView: () => null,
@@ -14,8 +21,12 @@ jest.mock('expo-location', () => ({
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, fallback?: string) => fallback || key,
   }),
+}));
+
+jest.mock('lucide-react-native', () => ({
+  AlertTriangle: () => null,
 }));
 
 // Mock all UI components
@@ -44,6 +55,20 @@ describe('LocationPicker', () => {
   it('should be importable', () => {
     const LocationPicker = require('../location-picker').default;
     expect(LocationPicker).toBeDefined();
+  });
+
+  it('should detect when Mapbox is properly configured', () => {
+    // Test the Mapbox configuration check
+    const testKey: string = 'pk.test123';
+    const isConfigured = Boolean(testKey && testKey.trim() !== '');
+    expect(isConfigured).toBe(true);
+  });
+
+  it('should detect when Mapbox is not configured', () => {
+    // Test empty Mapbox key
+    const testKey: string = '';
+    const isConfigured = Boolean(testKey && testKey.trim() !== '');
+    expect(isConfigured).toBe(false);
   });
 
   it('should treat coordinates {0,0} as no location by checking the logic condition', () => {

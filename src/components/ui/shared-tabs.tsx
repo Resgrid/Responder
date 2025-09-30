@@ -34,6 +34,7 @@ interface SharedTabsProps {
   scrollable?: boolean;
   variant?: 'default' | 'pills' | 'underlined' | 'segmented';
   size?: 'sm' | 'md' | 'lg';
+  titleFontSize?: 'text-2xs' | 'text-xs' | 'text-sm' | 'text-base' | 'text-lg' | 'text-xl';
   className?: string;
   tabClassName?: string;
   tabsContainerClassName?: string;
@@ -47,6 +48,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   scrollable = true,
   variant = 'default',
   size = 'md',
+  titleFontSize,
   className = '',
   tabClassName = '',
   tabsContainerClassName = '',
@@ -80,15 +82,31 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     return colorScheme === 'dark' ? 'text-gray-200' : 'text-gray-800';
   };
 
+  // Get font size for title text
+  const getTitleFontSize = () => {
+    if (titleFontSize) {
+      return titleFontSize;
+    }
+
+    // Default font sizes based on size and orientation
+    const defaultSizes = {
+      sm: isLandscape ? 'text-xs' : 'text-2xs',
+      md: isLandscape ? 'text-sm' : 'text-xs',
+      lg: isLandscape ? 'text-base' : 'text-sm',
+    }[size];
+
+    return defaultSizes;
+  };
+
   // Determine tab styles based on variant and size
   const getTabStyles = (index: number) => {
     const isActive = index === currentIndex;
 
     const baseStyles = 'flex-1 flex items-center justify-center';
     const sizeStyles = {
-      sm: isLandscape ? 'px-3 py-1.5 text-xs' : 'px-2 py-1 text-2xs',
-      md: isLandscape ? 'px-4 py-2 text-sm' : 'px-3 py-1.5 text-xs',
-      lg: isLandscape ? 'px-5 py-2.5 text-base' : 'px-4 py-2 text-sm',
+      sm: isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
+      md: isLandscape ? 'px-4 py-2' : 'px-3 py-1.5',
+      lg: isLandscape ? 'px-5 py-2.5' : 'px-4 py-2',
     }[size];
 
     const variantStyles = {
@@ -141,11 +159,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
           {tabs.map((tab, index) => (
             <Pressable key={tab.key} className={getTabStyles(index)} onPress={() => handleTabPress(index)}>
               {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
-              {typeof tab.title === 'string' ? (
-                <Text className={isLandscape ? getTextColor() : `text-xs ${getTextColor()}`}>{t(tab.title)}</Text>
-              ) : (
-                <Text className={isLandscape ? getTextColor() : `text-xs ${getTextColor()}`}>{tab.title}</Text>
-              )}
+              {typeof tab.title === 'string' ? <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{t(tab.title)}</Text> : <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{tab.title}</Text>}
               {tab.badge !== undefined && tab.badge > 0 && (
                 <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
                   <Text className="text-xs font-bold text-white">{tab.badge}</Text>
@@ -159,11 +173,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
           {tabs.map((tab, index) => (
             <Pressable key={tab.key} className={`flex-1 ${getTabStyles(index)}`} onPress={() => handleTabPress(index)}>
               {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
-              {typeof tab.title === 'string' ? (
-                <Text className={isLandscape ? getTextColor() : `text-xs ${getTextColor()}`}>{t(tab.title)}</Text>
-              ) : (
-                <Text className={isLandscape ? getTextColor() : `text-xs ${getTextColor()}`}>{tab.title}</Text>
-              )}
+              {typeof tab.title === 'string' ? <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{t(tab.title)}</Text> : <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{tab.title}</Text>}
               {tab.badge !== undefined && tab.badge > 0 && (
                 <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
                   <Text className="text-xs font-bold text-white">{tab.badge}</Text>
