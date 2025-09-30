@@ -52,6 +52,10 @@ jest.mock('@/stores/calls/store', () => ({
 // Mock toast
 jest.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
+    success: jest.fn(),
+    error: jest.fn(),
+    warning: jest.fn(),
+    info: jest.fn(),
     show: jest.fn(),
   }),
 }));
