@@ -9,7 +9,8 @@ import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as z from 'zod';
 
 import { createCall } from '@/api/calls/calls';
@@ -121,6 +122,7 @@ export default function NewCall() {
   const { config } = useCoreStore();
   const { trackEvent } = useAnalytics();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(false);
@@ -769,7 +771,7 @@ export default function NewCall() {
       />
       <View className="size-full flex-1">
         <Box className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>
-          <ScrollView className="flex-1 px-4 py-6">
+          <ScrollView className="flex-1 px-4 py-6" contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 20, 40) }} showsVerticalScrollIndicator={false}>
             <Text className="mb-6 text-2xl font-bold">{t('calls.create_new_call')}</Text>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
@@ -1047,7 +1049,7 @@ export default function NewCall() {
               </Button>
             </Card>
 
-            <Box className="mb-6 flex-row space-x-4">
+            <Box className="mb-6 flex-row space-x-4" style={{ marginBottom: Platform.OS === 'android' ? Math.max(insets.bottom + 20, 30) : 24 }}>
               <Button className="mr-10 flex-1" variant="outline" onPress={() => router.back()}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
@@ -1070,6 +1072,7 @@ export default function NewCall() {
             right: 0,
             bottom: 0,
             zIndex: 1000,
+            paddingBottom: Platform.OS === 'android' ? insets.bottom : 0,
           }}
         >
           <FullScreenLocationPicker
