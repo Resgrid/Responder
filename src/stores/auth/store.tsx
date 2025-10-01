@@ -8,7 +8,7 @@ import { loginRequest, refreshTokenRequest } from '../../lib/auth/api';
 import type { AuthResponse, AuthStatus, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
-import { removeItem, setItem, zustandStorage } from '../../lib/storage';
+import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage';
 
 interface AuthState {
   // Tokens
@@ -214,10 +214,17 @@ const useAuthStore = create<AuthState>()(
           const response = await refreshTokenRequest(refreshToken);
           const now = Date.now();
 
-          // Update stored auth response with new tokens
+          // Read existing stored auth response to preserve refresh token if not provided
+          const existingAuthResponse = getItem<AuthResponse>('authResponse');
+
+          // Determine which refresh token and timestamp to use
+          const refreshTokenToUse = response.refresh_token || currentState.refreshToken || refreshToken;
+          const refreshTokenTimestamp = response.refresh_token ? now : currentState.refreshTokenObtainedAt || now;
+
+          // Update stored auth response with new tokens, preserving refresh token if not provided
           const updatedAuthResponse: AuthResponse = {
             access_token: response.access_token,
-            refresh_token: response.refresh_token,
+            refresh_token: refreshTokenToUse,
             id_token: response.id_token,
             expires_in: response.expires_in,
             token_type: response.token_type,
@@ -229,9 +236,9 @@ const useAuthStore = create<AuthState>()(
 
           set({
             accessToken: response.access_token,
-            refreshToken: response.refresh_token,
+            refreshToken: refreshTokenToUse,
             accessTokenObtainedAt: now,
-            refreshTokenObtainedAt: now,
+            refreshTokenObtainedAt: refreshTokenTimestamp,
             status: 'signedIn',
             error: null,
           });
