@@ -70,11 +70,14 @@ axiosInstance.interceptors.request.use(
         context: { userId: authStore.userId },
       });
 
+      // Save the current access token before attempting refresh
+      const savedAccessToken = accessToken;
+
       try {
         await authStore.refreshAccessToken();
         // Get the updated token after refresh
         const updatedToken = useAuthStore.getState().accessToken;
-        if (updatedToken) {
+        if (updatedToken && config.headers) {
           config.headers.Authorization = `Bearer ${updatedToken}`;
         }
       } catch (error) {
@@ -82,7 +85,10 @@ axiosInstance.interceptors.request.use(
           message: 'Failed to refresh token in request interceptor',
           context: { error: error instanceof Error ? error.message : 'Unknown error' },
         });
-        // Let the request proceed, it will be handled by response interceptor
+        // Restore the saved token so the request proceeds with the last known good bearer token
+        if (savedAccessToken && config.headers) {
+          config.headers.Authorization = `Bearer ${savedAccessToken}`;
+        }
       }
     } else if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
@@ -146,11 +152,12 @@ axiosInstance.interceptors.response.use(
 
         // Update tokens in store
         const now = Date.now();
+        const currentState = useAuthStore.getState();
         useAuthStore.setState({
           accessToken: access_token,
-          refreshToken: newRefreshToken,
+          refreshToken: newRefreshToken || currentState.refreshToken,
           accessTokenObtainedAt: now,
-          refreshTokenObtainedAt: now,
+          refreshTokenObtainedAt: newRefreshToken ? now : currentState.refreshTokenObtainedAt,
           status: 'signedIn',
           error: null,
         });

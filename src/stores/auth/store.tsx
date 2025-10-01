@@ -92,6 +92,7 @@ const useAuthStore = create<AuthState>()(
               error: null,
               profile: profileData,
               userId: profileData.sub,
+              isFirstTime: false,
             });
 
             logger.info({
@@ -318,6 +319,7 @@ const useAuthStore = create<AuthState>()(
               error: null,
               profile: profileData,
               userId: profileData.sub,
+              isFirstTime: false,
             });
 
             logger.info({

@@ -72,13 +72,26 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       }
 
       // Get current position with timeout
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       const locationPromise = Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
         mayShowUserSettingsDialog: true,
-      });
+      }).then(
+        (result) => {
+          if (timeoutId) clearTimeout(timeoutId);
+          return result;
+        },
+        (error) => {
+          if (timeoutId) clearTimeout(timeoutId);
+          throw error;
+        }
+      );
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Location request timed out')), 15000);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          timeoutId = null;
+          reject(new Error('Location request timed out'));
+        }, 15000);
       });
 
       const location = (await Promise.race([locationPromise, timeoutPromise])) as Location.LocationObject;
