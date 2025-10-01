@@ -11,7 +11,9 @@ export const ToastMessage: React.FC<{
   type: ToastType;
   title?: string;
   message: string;
-}> = ({ /*id,*/ type, title, message }) => {
+  position?: string;
+  duration?: number;
+}> = ({ /*id,*/ type, title, message /*, position, duration*/ }) => {
   //const { removeToast } = useToastStore();
   const { t } = useTranslation();
 

@@ -9,7 +9,8 @@ import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as z from 'zod';
 
 import { createCall } from '@/api/calls/calls';
@@ -26,8 +27,8 @@ import { Input, InputField } from '@/components/ui/input';
 import { Select, SelectBackdrop, SelectContent, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/toast';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useToast } from '@/hooks/use-toast';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { type DispatchSelection } from '@/stores/dispatch/store';
@@ -121,6 +122,7 @@ export default function NewCall() {
   const { config } = useCoreStore();
   const { trackEvent } = useAnalytics();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(false);
@@ -250,19 +252,10 @@ export default function NewCall() {
       });
 
       // Show success toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.create_success')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.success(t('calls.create_success'));
 
       // Navigate back to calls list
-      router.push('/calls');
+      router.push('/home/calls');
     } catch (error) {
       console.error('Error creating call:', error);
 
@@ -275,16 +268,7 @@ export default function NewCall() {
       });
 
       // Show error toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.create_error')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.error(t('calls.create_error'));
     }
   };
 
@@ -347,16 +331,7 @@ export default function NewCall() {
 
   const handleAddressSearch = async (address: string) => {
     if (!address.trim()) {
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.address_required')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.address_required'));
       return;
     }
 
@@ -408,16 +383,7 @@ export default function NewCall() {
             handleLocationSelected(newLocation);
 
             // Show success toast
-            toast.show({
-              placement: 'top',
-              render: () => {
-                return (
-                  <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-                    <Text className="text-white">{t('calls.address_found')}</Text>
-                  </Box>
-                );
-              },
-            });
+            toast.success(t('calls.address_found'));
           }
         } else {
           // Multiple results - show selection bottom sheet
@@ -433,16 +399,7 @@ export default function NewCall() {
         });
 
         // Show error toast for no results
-        toast.show({
-          placement: 'top',
-          render: () => {
-            return (
-              <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-                <Text className="text-white">{t('calls.address_not_found')}</Text>
-              </Box>
-            );
-          },
-        });
+        toast.error(t('calls.address_not_found'));
       }
     } catch (error) {
       console.error('Error geocoding address:', error);
@@ -455,16 +412,7 @@ export default function NewCall() {
       });
 
       // Show error toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.geocoding_error')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.error(t('calls.geocoding_error'));
     } finally {
       setIsGeocodingAddress(false);
     }
@@ -494,30 +442,12 @@ export default function NewCall() {
     setShowAddressSelection(false);
 
     // Show success toast
-    toast.show({
-      placement: 'top',
-      render: () => {
-        return (
-          <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-            <Text className="text-white">{t('calls.address_found')}</Text>
-          </Box>
-        );
-      },
-    });
+    toast.success(t('calls.address_found'));
   };
 
   const handleWhat3WordsSearch = async (what3words: string) => {
     if (!what3words.trim()) {
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.what3words_required')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.what3words_required'));
       return;
     }
 
@@ -530,16 +460,7 @@ export default function NewCall() {
         reason: 'invalid_format',
       });
 
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.what3words_invalid_format')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.what3words_invalid_format'));
       return;
     }
 
@@ -583,16 +504,7 @@ export default function NewCall() {
         handleLocationSelected(newLocation);
 
         // Show success toast
-        toast.show({
-          placement: 'top',
-          render: () => {
-            return (
-              <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-                <Text className="text-white">{t('calls.what3words_found')}</Text>
-              </Box>
-            );
-          },
-        });
+        toast.success(t('calls.what3words_found'));
       } else {
         // Analytics: Track no results found
         trackEvent('call_what3words_search_failed', {
@@ -601,16 +513,7 @@ export default function NewCall() {
         });
 
         // Show error toast for no results
-        toast.show({
-          placement: 'top',
-          render: () => {
-            return (
-              <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-                <Text className="text-white">{t('calls.what3words_not_found')}</Text>
-              </Box>
-            );
-          },
-        });
+        toast.error(t('calls.what3words_not_found'));
       }
     } catch (error) {
       console.error('Error geocoding what3words:', error);
@@ -623,16 +526,7 @@ export default function NewCall() {
       });
 
       // Show error toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.what3words_geocoding_error')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.error(t('calls.what3words_geocoding_error'));
     } finally {
       setIsGeocodingWhat3Words(false);
     }
@@ -640,16 +534,7 @@ export default function NewCall() {
 
   const handlePlusCodeSearch = async (plusCode: string) => {
     if (!plusCode.trim()) {
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.plus_code_required')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.plus_code_required'));
       return;
     }
 
@@ -695,16 +580,7 @@ export default function NewCall() {
           handleLocationSelected(newLocation);
 
           // Show success toast
-          toast.show({
-            placement: 'top',
-            render: () => {
-              return (
-                <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-                  <Text className="text-white">{t('calls.plus_code_found')}</Text>
-                </Box>
-              );
-            },
-          });
+          toast.success(t('calls.plus_code_found'));
         }
       } else {
         // Analytics: Track no results found
@@ -715,16 +591,7 @@ export default function NewCall() {
         });
 
         // Show error toast for no results
-        toast.show({
-          placement: 'top',
-          render: () => {
-            return (
-              <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-                <Text className="text-white">{t('calls.plus_code_not_found')}</Text>
-              </Box>
-            );
-          },
-        });
+        toast.error(t('calls.plus_code_not_found'));
       }
     } catch (error) {
       console.error('Error geocoding plus code:', error);
@@ -737,16 +604,7 @@ export default function NewCall() {
       });
 
       // Show error toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.plus_code_geocoding_error')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.error(t('calls.plus_code_geocoding_error'));
     } finally {
       setIsGeocodingPlusCode(false);
     }
@@ -754,16 +612,7 @@ export default function NewCall() {
 
   const handleCoordinatesSearch = async (coordinates: string) => {
     if (!coordinates.trim()) {
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.coordinates_required')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.coordinates_required'));
       return;
     }
 
@@ -778,16 +627,7 @@ export default function NewCall() {
         reason: 'invalid_format',
       });
 
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.coordinates_invalid_format')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.coordinates_invalid_format'));
       return;
     }
 
@@ -804,16 +644,7 @@ export default function NewCall() {
         longitude,
       });
 
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.coordinates_out_of_range')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.coordinates_out_of_range'));
       return;
     }
 
@@ -867,16 +698,7 @@ export default function NewCall() {
         }
 
         // Show success toast
-        toast.show({
-          placement: 'top',
-          render: () => {
-            return (
-              <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-                <Text className="text-white">{t('calls.coordinates_found')}</Text>
-              </Box>
-            );
-          },
-        });
+        toast.success(t('calls.coordinates_found'));
       } else {
         // Analytics: Track coordinates set without address
         trackEvent('call_coordinates_search_success', {
@@ -895,16 +717,7 @@ export default function NewCall() {
         handleLocationSelected(newLocation);
 
         // Show info toast
-        toast.show({
-          placement: 'top',
-          render: () => {
-            return (
-              <Box className="rounded-lg bg-blue-500 p-4 shadow-lg">
-                <Text className="text-white">{t('calls.coordinates_no_address')}</Text>
-              </Box>
-            );
-          },
-        });
+        toast.info(t('calls.coordinates_no_address'));
       }
     } catch (error) {
       console.error('Error reverse geocoding coordinates:', error);
@@ -928,16 +741,7 @@ export default function NewCall() {
       handleLocationSelected(newLocation);
 
       // Show warning toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-orange-500 p-4 shadow-lg">
-              <Text className="text-white">{t('calls.coordinates_geocoding_error')}</Text>
-            </Box>
-          );
-        },
-      });
+      toast.warning(t('calls.coordinates_geocoding_error'));
     } finally {
       setIsGeocodingCoordinates(false);
     }
@@ -967,7 +771,7 @@ export default function NewCall() {
       />
       <View className="size-full flex-1">
         <Box className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>
-          <ScrollView className="flex-1 px-4 py-6">
+          <ScrollView className="flex-1 px-4 py-6" contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 20, 40) }} showsVerticalScrollIndicator={false}>
             <Text className="mb-6 text-2xl font-bold">{t('calls.create_new_call')}</Text>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
@@ -1245,7 +1049,7 @@ export default function NewCall() {
               </Button>
             </Card>
 
-            <Box className="mb-6 flex-row space-x-4">
+            <Box className="mb-6 flex-row space-x-4" style={{ marginBottom: Platform.OS === 'android' ? Math.max(insets.bottom + 20, 30) : 24 }}>
               <Button className="mr-10 flex-1" variant="outline" onPress={() => router.back()}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
@@ -1268,6 +1072,7 @@ export default function NewCall() {
             right: 0,
             bottom: 0,
             zIndex: 1000,
+            paddingBottom: Platform.OS === 'android' ? insets.bottom : 0,
           }}
         >
           <FullScreenLocationPicker

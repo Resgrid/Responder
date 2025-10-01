@@ -61,7 +61,7 @@ export interface SendMessageRequest {
 
 export const sendMessage = async (messageData: SendMessageRequest) => {
   const data = {
-    Subject: messageData.subject,
+    Title: messageData.subject,
     Body: messageData.body,
     Type: messageData.type,
     Recipients: messageData.recipients.map((recipient) => ({

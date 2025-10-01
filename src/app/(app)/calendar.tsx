@@ -2,7 +2,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CalendarCard } from '@/components/calendar/calendar-card';
@@ -16,6 +15,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { FlatList } from '@/components/ui/flat-list';
 import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
+import { RefreshControl } from '@/components/ui/refresh-control';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
@@ -164,7 +164,8 @@ export default function CalendarScreen() {
         keyExtractor={(item) => item.CalendarItemId}
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        estimatedItemSize={100}
         refreshControl={<RefreshControl refreshing={isTodaysLoading} onRefresh={handleRefresh} colors={['#3B82F6']} tintColor="#3B82F6" />}
       />
     );
@@ -196,7 +197,8 @@ export default function CalendarScreen() {
         keyExtractor={(item) => item.CalendarItemId}
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        estimatedItemSize={100}
         refreshControl={<RefreshControl refreshing={isUpcomingLoading} onRefresh={handleRefresh} colors={['#3B82F6']} tintColor="#3B82F6" />}
       />
     );
@@ -213,7 +215,14 @@ export default function CalendarScreen() {
             ) : getItemsForSelectedDate().length === 0 ? (
               <Text className="py-8 text-center text-gray-500 dark:text-gray-400">{t('calendar.selectedDate.empty')}</Text>
             ) : (
-              <FlatList data={getItemsForSelectedDate()} renderItem={renderCompactCalendarItem} keyExtractor={(item) => item.CalendarItemId} showsVerticalScrollIndicator={false} />
+              <FlatList
+                data={getItemsForSelectedDate()}
+                renderItem={renderCompactCalendarItem}
+                keyExtractor={(item) => item.CalendarItemId}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={{ padding: 8 }}
+                estimatedItemSize={60}
+              />
             )}
           </View>
         ) : (

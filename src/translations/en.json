@@ -347,12 +347,16 @@
     "edit": "Edit",
     "error": "Error",
     "errorOccurred": "An error occurred",
+    "get_my_location": "Get My Location",
     "loading": "Loading",
+    "loading_address": "Loading address...",
     "navigation": "Navigation",
     "next": "Next",
     "noActiveUnit": "No Active Unit",
     "noActiveUnitDescription": "Please select an active unit to see available statuses",
+    "no_address_found": "No address found",
     "no_data_available": "No data available",
+    "no_location": "No location available",
     "no_results_found": "No results found",
     "no_unit_selected": "No Unit Selected",
     "of": "of",
@@ -363,6 +367,7 @@
     "route": "Route",
     "save": "Save",
     "search": "Search",
+    "set_location": "Set Location",
     "step": "Step",
     "submit": "Submit",
     "submitting": "Submitting...",
@@ -552,6 +557,11 @@
     "recenter_map": "Recenter Map",
     "set_as_current_call": "Set as Current Call",
     "view_call_details": "View Call Details"
+  },
+  "maps": {
+    "contact_administrator": "Please contact your administrator to configure mapping services.",
+    "failed_to_load": "Failed to load map. Please check your internet connection.",
+    "mapbox_not_configured": "Mapbox is not configured. Please contact your administrator."
   },
   "messages": {
     "all_messages": "All Messages",

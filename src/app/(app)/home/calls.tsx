@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { PlusIcon, RefreshCcwDotIcon, Search, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { CallCard } from '@/components/calls/call-card';
 import { Loading } from '@/components/common/loading';
@@ -12,6 +12,7 @@ import { Box } from '@/components/ui/box';
 import { Fab, FabIcon } from '@/components/ui/fab';
 import { FlatList } from '@/components/ui/flat-list';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { RefreshControl } from '@/components/ui/refresh-control';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { useCallsStore } from '@/stores/calls/store';

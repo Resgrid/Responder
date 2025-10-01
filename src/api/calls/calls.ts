@@ -87,16 +87,20 @@ export const createCall = async (callData: CreateCallRequest) => {
     const dispatchEntries: string[] = [];
 
     if (callData.dispatchUsers) {
-      dispatchEntries.push(...callData.dispatchUsers.map((user) => `U:${user}`));
+      ///dispatchEntries.push(...callData.dispatchUsers.map((user) => `U:${user}`));
+      dispatchEntries.push(...callData.dispatchUsers);
     }
     if (callData.dispatchGroups) {
-      dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
+      //dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
+      dispatchEntries.push(...callData.dispatchGroups);
     }
     if (callData.dispatchRoles) {
-      dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
+      //dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
+      dispatchEntries.push(...callData.dispatchRoles);
     }
     if (callData.dispatchUnits) {
-      dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
+      //dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
+      dispatchEntries.push(...callData.dispatchUnits);
     }
 
     dispatchList = dispatchEntries.join('|');

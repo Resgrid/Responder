@@ -18,6 +18,7 @@ jest.mock('@/lib/logging', () => ({
   logger: {
     warn: jest.fn(),
     error: jest.fn(),
+    info: jest.fn(),
   },
 }));
 
@@ -58,10 +59,13 @@ describe('Auth Store - Logout Functionality', () => {
     useAuthStore.setState({
       accessToken: 'test-token',
       refreshToken: 'test-refresh',
+      accessTokenObtainedAt: Date.now() - 30 * 60 * 1000, // 30 minutes ago
+      refreshTokenObtainedAt: Date.now() - 30 * 60 * 1000,
       status: 'signedIn',
       error: null,
-      profile: { sub: 'test-user' } as any,
+      profile: { sub: 'test-user', name: 'Test User' } as any,
       isFirstTime: false,
+      userId: 'test-user',
     });
   });
 
@@ -76,10 +80,13 @@ describe('Auth Store - Logout Functionality', () => {
       const state = useAuthStore.getState();
       expect(state.accessToken).toBeNull();
       expect(state.refreshToken).toBeNull();
+      expect(state.accessTokenObtainedAt).toBeNull();
+      expect(state.refreshTokenObtainedAt).toBeNull();
       expect(state.status).toBe('signedOut');
       expect(state.error).toBeNull();
       expect(state.profile).toBeNull();
       expect(state.isFirstTime).toBe(true);
+      expect(state.userId).toBeNull();
     });
 
     it('should log warning if removeItem fails but still reset auth state', async () => {
@@ -91,13 +98,44 @@ describe('Auth Store - Logout Functionality', () => {
       // Verify warning was logged
       expect(mockedLogger.warn).toHaveBeenCalledWith({
         message: 'Failed to remove authResponse from storage during logout',
-        context: { error: mockError },
+        context: { error: mockError, reason: undefined },
       });
 
       // Verify auth state was still reset
       const state = useAuthStore.getState();
       expect(state.accessToken).toBeNull();
       expect(state.status).toBe('signedOut');
+    });
+
+    it('should log forced logout with reason', async () => {
+      const logoutReason = 'Token refresh failed';
+      
+      await useAuthStore.getState().logout(logoutReason);
+
+      // Verify error was logged for forced logout
+      expect(mockedLogger.error).toHaveBeenCalledWith({
+        message: 'User forced to logout due to authentication issue',
+        context: {
+          userId: 'test-user',
+          reason: logoutReason,
+          accessTokenObtainedAt: expect.any(Number),
+          refreshTokenObtainedAt: expect.any(Number),
+          timestamp: expect.any(Number),
+        },
+      });
+    });
+
+    it('should log voluntary logout without reason', async () => {
+      await useAuthStore.getState().logout();
+
+      // Verify info was logged for voluntary logout
+      expect(mockedLogger.info).toHaveBeenCalledWith({
+        message: 'User logged out voluntarily',
+        context: {
+          userId: 'test-user',
+          timestamp: expect.any(Number),
+        },
+      });
     });
   });
 

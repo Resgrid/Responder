@@ -15,7 +15,6 @@ import { Stack, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { LogBox, useColorScheme } from 'react-native';
-import FlashMessage from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -23,6 +22,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { APIProvider } from '@/api';
 import { LiveKitBottomSheet } from '@/components/livekit';
 import { PushNotificationModal } from '@/components/push-notification/push-notification-modal';
+import { ToastContainer } from '@/components/toast/toast-container';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { hydrateAuth, useAuth } from '@/lib/auth';
 import { loadKeepAliveState } from '@/lib/hooks/use-keep-alive';
@@ -186,7 +186,7 @@ function Providers({ children }: { children: React.ReactNode }) {
             {children}
             <LiveKitBottomSheet />
             <PushNotificationModal />
-            <FlashMessage position="top" />
+            <ToastContainer />
           </BottomSheetModalProvider>
         </ThemeProvider>
       </GluestackUIProvider>

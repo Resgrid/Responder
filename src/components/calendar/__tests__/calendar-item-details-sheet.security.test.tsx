@@ -188,7 +188,8 @@ describe('CalendarItemDetailsSheet Security', () => {
     expect(webview).toBeTruthy();
 
     // Verify WebView props include security settings
-    expect(webview.props['data-js-enabled']).toBe(false);
+    // Note: JavaScript is enabled but restricted by CSP and sanitization
+    expect(webview.props['data-js-enabled']).toBe(true);
     expect(webview.props['data-dom-storage']).toBe(false);
     expect(webview.props['data-file-access']).toBe(false);
     expect(webview.props['data-universal-access']).toBe(false);

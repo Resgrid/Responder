@@ -32,13 +32,68 @@ const processQueue = (error: Error | null) => {
   failedQueue = [];
 };
 
+// Helper function to determine if a refresh error is transient
+const isTransientRefreshError = (error: unknown): boolean => {
+  if (error instanceof Error && 'response' in error) {
+    const axiosError = error as AxiosError;
+    const status = axiosError.response?.status;
+
+    // Transient errors that might resolve on retry
+    return (
+      status === 429 || // Rate limited
+      status === 503 || // Service unavailable
+      status === 502 || // Bad gateway
+      status === 504 || // Gateway timeout
+      !status // Network errors
+    );
+  }
+
+  // Network errors or other non-HTTP errors are typically transient
+  return true;
+};
+
 // Request interceptor for API calls
 axiosInstance.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const accessToken = useAuthStore.getState().accessToken;
-    if (accessToken) {
+  async (config: InternalAxiosRequestConfig) => {
+    const authStore = useAuthStore.getState();
+    const { accessToken, isAuthenticated, isAccessTokenExpiringSoon, shouldRefreshToken } = authStore;
+
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      return config;
+    }
+
+    // Check if access token is expiring soon and needs refresh (only if not already refreshing)
+    if (!isRefreshing && isAccessTokenExpiringSoon() && shouldRefreshToken()) {
+      logger.info({
+        message: 'Access token expiring soon, refreshing before API call',
+        context: { userId: authStore.userId },
+      });
+
+      // Save the current access token before attempting refresh
+      const savedAccessToken = accessToken;
+
+      try {
+        await authStore.refreshAccessToken();
+        // Get the updated token after refresh
+        const updatedToken = useAuthStore.getState().accessToken;
+        if (updatedToken && config.headers) {
+          config.headers.Authorization = `Bearer ${updatedToken}`;
+        }
+      } catch (error) {
+        logger.error({
+          message: 'Failed to refresh token in request interceptor',
+          context: { error: error instanceof Error ? error.message : 'Unknown error' },
+        });
+        // Restore the saved token so the request proceeds with the last known good bearer token
+        if (savedAccessToken && config.headers) {
+          config.headers.Authorization = `Bearer ${savedAccessToken}`;
+        }
+      }
+    } else if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+
     return config;
   },
   (error: AxiosError) => {
@@ -54,8 +109,21 @@ axiosInstance.interceptors.response.use(
     if (!originalRequest) {
       return Promise.reject(error);
     }
+
     // Handle 401 errors
     if (error.response?.status === 401 && !(originalRequest as InternalAxiosRequestConfig & { _retry?: boolean })._retry) {
+      const authStore = useAuthStore.getState();
+
+      // Check if refresh token is expired
+      if (authStore.isRefreshTokenExpired()) {
+        logger.error({
+          message: 'Refresh token expired, forcing logout',
+          context: { userId: authStore.userId },
+        });
+        await authStore.logout('Refresh token expired');
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // If refreshing, queue the request
         return new Promise((resolve, reject) => {
@@ -74,7 +142,7 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = useAuthStore.getState().refreshToken;
+        const refreshToken = authStore.refreshToken;
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
@@ -83,9 +151,13 @@ axiosInstance.interceptors.response.use(
         const { access_token, refresh_token: newRefreshToken } = response;
 
         // Update tokens in store
+        const now = Date.now();
+        const currentState = useAuthStore.getState();
         useAuthStore.setState({
           accessToken: access_token,
-          refreshToken: newRefreshToken,
+          refreshToken: newRefreshToken || currentState.refreshToken,
+          accessTokenObtainedAt: now,
+          refreshTokenObtainedAt: newRefreshToken ? now : currentState.refreshTokenObtainedAt,
           status: 'signedIn',
           error: null,
         });
@@ -98,13 +170,31 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as Error);
-        // Handle refresh token failure
-        useAuthStore.getState().logout();
-        logger.error({
-          message: 'Token refresh failed',
-          context: { error: refreshError },
-        });
-        return Promise.reject(refreshError);
+
+        // Determine if the error is transient or permanent
+        const isTransientError = isTransientRefreshError(refreshError);
+
+        if (isTransientError) {
+          logger.warn({
+            message: 'Transient token refresh error, not logging out',
+            context: {
+              error: refreshError instanceof Error ? refreshError.message : 'Unknown error',
+              userId: authStore.userId,
+            },
+          });
+          // For transient errors, don't logout - let the original request fail
+          return Promise.reject(refreshError);
+        } else {
+          logger.error({
+            message: 'Permanent token refresh failure, forcing logout',
+            context: {
+              error: refreshError instanceof Error ? refreshError.message : 'Unknown error',
+              userId: authStore.userId,
+            },
+          });
+          await authStore.logout('Token refresh failed permanently');
+          return Promise.reject(refreshError);
+        }
       } finally {
         isRefreshing = false;
       }

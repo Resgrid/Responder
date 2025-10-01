@@ -1,6 +1,7 @@
 import type { AxiosError } from 'axios';
 import { Dimensions, Platform } from 'react-native';
-import { showMessage } from 'react-native-flash-message';
+
+import { useToastStore } from '@/stores/toast/store';
 
 export const IS_IOS = Platform.OS === 'ios';
 const { width, height } = Dimensions.get('screen');
@@ -13,21 +14,11 @@ export const showError = (error: AxiosError) => {
   console.log(JSON.stringify(error?.response?.data));
   const description = extractError(error?.response?.data).trimEnd();
 
-  showMessage({
-    message: 'Error',
-    description,
-    type: 'danger',
-    duration: 4000,
-    icon: 'danger',
-  });
+  useToastStore.getState().showToast('error', description, 'Error', 'top', 4000);
 };
 
 export const showErrorMessage = (message: string = 'Something went wrong ') => {
-  showMessage({
-    message,
-    type: 'danger',
-    duration: 4000,
-  });
+  useToastStore.getState().showToast('error', message, undefined, 'top', 4000);
 };
 
 export const extractError = (data: unknown): string => {

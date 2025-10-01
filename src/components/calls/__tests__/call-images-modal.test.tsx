@@ -355,7 +355,7 @@ describe('CallImagesModal', () => {
       userId: 'test-user-id',
       accessToken: 'test-token',
       refreshToken: 'test-refresh-token',
-      refreshTokenExpiresOn: new Date(),
+      refreshTokenObtainedAt: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
       status: 'authenticated',
       user: null,
       departmentId: 'test-dept-id',

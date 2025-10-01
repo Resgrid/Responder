@@ -347,12 +347,16 @@
     "edit": "Editar",
     "error": "Error",
     "errorOccurred": "Ha ocurrido un error",
+    "get_my_location": "Obtener Mi Ubicación",
     "loading": "Cargando...",
+    "loading_address": "Cargando dirección...",
     "navigation": "Navegación",
     "next": "Siguiente",
     "noActiveUnit": "No hay unidad activa establecida",
     "noActiveUnitDescription": "Por favor establezca una unidad activa desde la página de configuración para acceder a los controles de estado",
+    "no_address_found": "No se encontró dirección",
     "no_data_available": "No hay datos disponibles",
+    "no_location": "No hay ubicación disponible",
     "no_results_found": "No se encontraron resultados",
     "no_unit_selected": "Ninguna unidad seleccionada",
     "of": "de",
@@ -363,6 +367,7 @@
     "route": "Ruta",
     "save": "Guardar",
     "search": "Buscar",
+    "set_location": "Establecer Ubicación",
     "step": "Paso",
     "submit": "Enviar",
     "submitting": "Enviando...",
@@ -552,6 +557,11 @@
     "recenter_map": "Recentrar mapa",
     "set_as_current_call": "Establecer como llamada actual",
     "view_call_details": "Ver detalles de la llamada"
+  },
+  "maps": {
+    "contact_administrator": "Por favor contacta a tu administrador para configurar los servicios de mapas.",
+    "failed_to_load": "Error al cargar el mapa. Por favor verifica tu conexión a internet.",
+    "mapbox_not_configured": "Mapbox no está configurado. Por favor contacta a tu administrador."
   },
   "messages": {
     "all_messages": "Todos los Mensajes",

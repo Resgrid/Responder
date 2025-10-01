@@ -34,6 +34,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
   const [signupNote, setSignupNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [webViewHeight, setWebViewHeight] = useState(120);
 
   const { setCalendarItemAttendingStatus, isAttendanceLoading, attendanceError, fetchCalendarItem } = useCalendarStore();
   const { personnel, fetchPersonnel, isLoading: isPersonnelLoading } = usePersonnelStore();
@@ -233,8 +234,8 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={onClose}>
-      <VStack className="max-h-[80vh] p-6">
-        <ScrollView showsVerticalScrollIndicator={false}>
+      <VStack style={{ height: '80%' }}>
+        <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: 24 }}>
           {/* Header */}
           <VStack className="mb-6">
             <HStack className="mb-2 items-start justify-between">
@@ -282,14 +283,21 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
               </HStack>
               <Box className="w-full rounded-lg bg-gray-50 p-1 dark:bg-gray-700">
                 <WebView
-                  style={[styles.container, { height: 120 }]}
+                  style={[styles.container, { height: webViewHeight }]}
                   originWhitelist={['about:blank']}
                   scrollEnabled={false}
                   showsVerticalScrollIndicator={false}
-                  javaScriptEnabled={false}
+                  javaScriptEnabled={true}
                   domStorageEnabled={false}
                   allowFileAccess={false}
                   allowUniversalAccessFromFileURLs={false}
+                  onMessage={(event) => {
+                    const height = parseInt(event.nativeEvent.data, 10);
+                    if (height && height > 0) {
+                      // Add some padding to ensure all content is visible
+                      setWebViewHeight(Math.max(height + 20, 120));
+                    }
+                  }}
                   onShouldStartLoadWithRequest={(request) => {
                     // Only allow the initial HTML load with about:blank or data URLs
                     return request.url === 'about:blank' || request.url.startsWith('data:');
@@ -306,7 +314,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                       <html>
                         <head>
                           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-                          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
+                          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
                           <style>
                             body {
                               color: ${colorScheme === 'dark' ? '#E5E7EB' : '#1F2937'};
@@ -322,7 +330,36 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                             }
                           </style>
                         </head>
-                        <body>${sanitizeHtmlContent(item.Description)}</body>
+                        <body>
+                          ${sanitizeHtmlContent(item.Description)}
+                          <script>
+                            function updateHeight() {
+                              const height = document.body.scrollHeight;
+                              window.ReactNativeWebView.postMessage(height.toString());
+                            }
+                            
+                            // Update height after content loads
+                            if (document.readyState === 'loading') {
+                              document.addEventListener('DOMContentLoaded', updateHeight);
+                            } else {
+                              updateHeight();
+                            }
+                            
+                            // Also update on window resize or content changes
+                            window.addEventListener('resize', updateHeight);
+                            
+                            // Use MutationObserver to detect content changes
+                            if (typeof MutationObserver !== 'undefined') {
+                              const observer = new MutationObserver(updateHeight);
+                              observer.observe(document.body, { 
+                                childList: true, 
+                                subtree: true, 
+                                attributes: true, 
+                                characterData: true 
+                              });
+                            }
+                          </script>
+                        </body>
                       </html>
                     `,
                     baseUrl: 'about:blank',
