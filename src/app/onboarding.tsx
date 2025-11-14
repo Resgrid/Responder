@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Dimensions, Image, StyleSheet } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { FocusAwareStatusBar, SafeAreaView, View } from '@/components/ui';
@@ -126,6 +126,15 @@ export default function Onboarding() {
   const buttonOpacity = useSharedValue(0);
   const { colorScheme } = useColorScheme();
 
+  // Initialize button opacity when reaching the last slide
+  React.useEffect(() => {
+    if (currentIndex === onboardingData.length - 1) {
+      buttonOpacity.value = withTiming(1, { duration: 500 });
+    } else {
+      buttonOpacity.value = withTiming(0, { duration: 300 });
+    }
+  }, [currentIndex, buttonOpacity]);
+
   //useEffect(() => {
   //  setIsOnboarding();
   //}, [setIsOnboarding]);
@@ -141,13 +150,26 @@ export default function Onboarding() {
     }, [trackEvent, currentIndex])
   );
 
+  const handleGetStarted = useCallback(() => {
+    // Analytics: Track completion
+    trackEvent('onboarding_completed', {
+      timestamp: new Date().toISOString(),
+      totalSlides: onboardingData.length,
+      completionMethod: 'finished',
+    });
+
+    setIsFirstTime(false);
+    router.replace('/login');
+  }, [trackEvent, setIsFirstTime, router]);
+
   const handleScroll = (event: { nativeEvent: { contentOffset: { x: number } } }) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
     const wasLastIndex = currentIndex;
-    setCurrentIndex(index);
 
-    // Analytics: Track slide changes
     if (index !== wasLastIndex) {
+      setCurrentIndex(index);
+
+      // Analytics: Track slide changes
       trackEvent('onboarding_slide_changed', {
         timestamp: new Date().toISOString(),
         fromSlide: wasLastIndex,
@@ -156,11 +178,9 @@ export default function Onboarding() {
       });
     }
 
-    // Show button with animation when on the last slide
-    if (index === onboardingData.length - 1) {
-      buttonOpacity.value = withTiming(1, { duration: 500 });
-    } else {
-      buttonOpacity.value = withTiming(0, { duration: 300 });
+    // Auto-trigger "Let's Get Started" when swiping past the last slide
+    if (index > onboardingData.length - 1) {
+      handleGetStarted();
     }
   };
 
@@ -187,83 +207,85 @@ export default function Onboarding() {
     };
   });
 
+  const handleSkip = useCallback(() => {
+    // Analytics: Track skip button clicks
+    trackEvent('onboarding_skip_clicked', {
+      timestamp: new Date().toISOString(),
+      currentSlide: currentIndex,
+      slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
+      skipLocation: 'top_right',
+    });
+
+    setIsFirstTime(false);
+    router.replace('/login');
+  }, [trackEvent, currentIndex, setIsFirstTime, router]);
+
   return (
-    <View className="flex-1">
+    <SafeAreaView className="flex-1">
       <FocusAwareStatusBar hidden={true} />
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
+        <View className="w-full items-center justify-center px-10 pt-20">
+          <Image style={{ width: '96%' }} resizeMode="contain" source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} />
 
-      <View className="w-full items-center justify-center px-10 pt-20">
-        <Image style={{ width: '96%' }} resizeMode="contain" source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} />
-      </View>
+          {/* Skip button in upper right corner */}
+          <Pressable onPress={handleSkip} className="absolute right-8 top-4" testID="skip-button-top">
+            <Text className="text-base font-semibold text-primary-500">Skip</Text>
+          </Pressable>
+        </View>
 
-      <View style={styles.flexContainer}>
-        <FlashList
-          ref={flatListRef}
-          data={onboardingData}
-          renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          bounces={false}
-          keyExtractor={(item: OnboardingItemProps) => item.title}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          estimatedItemSize={width}
-          getItemType={() => 'onboarding-item'}
-          testID="onboarding-flatlist"
-        />
-      </View>
+        <View style={styles.flexContainer}>
+          <FlashList
+            ref={flatListRef}
+            data={onboardingData}
+            renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            bounces={false}
+            keyExtractor={(item: OnboardingItemProps) => item.title}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            estimatedItemSize={width}
+            getItemType={() => 'onboarding-item'}
+            testID="onboarding-flatlist"
+          />
+        </View>
 
-      <Pagination currentIndex={currentIndex} length={onboardingData.length} />
+        <Pagination currentIndex={currentIndex} length={onboardingData.length} />
 
-      <SafeAreaView className="mb-8 mt-4 px-8">
-        {currentIndex < onboardingData.length - 1 ? (
-          <View className="flex-row items-center justify-between">
-            <Pressable
-              onPress={() => {
-                // Analytics: Track skip button clicks
-                trackEvent('onboarding_skip_clicked', {
-                  timestamp: new Date().toISOString(),
-                  currentSlide: currentIndex,
-                  slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
-                });
+        <View className="mb-8 mt-4 px-8">
+          {currentIndex < onboardingData.length - 1 ? (
+            <View className="flex-row items-center justify-between">
+              <Pressable
+                onPress={() => {
+                  // Analytics: Track skip button clicks
+                  trackEvent('onboarding_skip_clicked', {
+                    timestamp: new Date().toISOString(),
+                    currentSlide: currentIndex,
+                    slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
+                  });
 
-                setIsFirstTime(false);
-                router.replace('/login');
-              }}
-            >
-              <Text className="text-gray-500">Skip</Text>
-            </Pressable>
+                  setIsFirstTime(false);
+                  router.replace('/login');
+                }}
+              >
+                <Text className="text-gray-500">Skip</Text>
+              </Pressable>
 
-            <Button size="lg" variant="solid" action="primary" className="bg-primary-500 px-6" onPress={nextSlide}>
-              <ButtonText>Next </ButtonText>
-              <ChevronRight size={20} color={colorScheme === 'dark' ? 'black' : 'white'} />
-            </Button>
-          </View>
-        ) : (
-          <Animated.View style={buttonAnimatedStyle}>
-            <Button
-              size="lg"
-              variant="solid"
-              action="primary"
-              className="w-full bg-primary-500"
-              testID="get-started-button"
-              onPress={() => {
-                // Analytics: Track completion
-                trackEvent('onboarding_completed', {
-                  timestamp: new Date().toISOString(),
-                  totalSlides: onboardingData.length,
-                  completionMethod: 'finished',
-                });
-
-                setIsFirstTime(false);
-                router.replace('/login');
-              }}
-            >
-              <ButtonText>Let's Get Started</ButtonText>
-            </Button>
-          </Animated.View>
-        )}
-      </SafeAreaView>
-    </View>
+              <Button size="lg" variant="solid" action="primary" className="bg-primary-500 px-6" onPress={nextSlide}>
+                <ButtonText>Next </ButtonText>
+                <ChevronRight size={20} color={colorScheme === 'dark' ? 'black' : 'white'} />
+              </Button>
+            </View>
+          ) : (
+            <Animated.View style={buttonAnimatedStyle}>
+              <Button size="lg" variant="solid" action="primary" className="w-full bg-primary-500" testID="get-started-button" onPress={handleGetStarted}>
+                <ButtonText>Let's Get Started</ButtonText>
+              </Button>
+            </Animated.View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

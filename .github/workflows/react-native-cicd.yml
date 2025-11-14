@@ -72,6 +72,8 @@ env:
   RESPOND_APTABASE_URL: ${{ secrets.RESPOND_APTABASE_URL }}
   RESPOND_COUNTLY_APP_KEY: ${{ secrets.RESPOND_COUNTLY_APP_KEY }}
   RESPOND_COUNTLY_URL: ${{ secrets.RESPOND_COUNTLY_URL }}
+  CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
+  CHANGERAWR_API_URL: ${{ secrets.CHANGERAWR_API_URL }}
   NODE_OPTIONS: --openssl-legacy-provider
 
 jobs:
@@ -296,19 +298,50 @@ jobs:
         run: |
           firebase appdistribution:distribute ./ResgridRespond-ios-adhoc.ipa --app ${{ secrets.FIREBASE_RESP_IOS_APP_ID }} --groups "testers"
 
+      - name: 📋 Get PR information
+        if: ${{ matrix.platform == 'android' && github.event_name == 'push' }}
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commit = context.sha;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commit
+            });
+            
+            if (prs.length > 0) {
+              const pr = prs[0];
+              core.setOutput('pr_number', pr.number);
+              core.setOutput('pr_title', pr.title);
+              core.setOutput('pr_body', pr.body || '');
+              core.setOutput('pr_url', pr.html_url);
+            } else {
+              core.setOutput('pr_number', '');
+              core.setOutput('pr_title', '');
+              core.setOutput('pr_body', '');
+              core.setOutput('pr_url', '');
+            }
+
       - name: 📋 Prepare Release Notes file
         if: ${{ matrix.platform == 'android' }}
         env:
           RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || steps.pr_info.outputs.pr_body }}
         run: |
           set -eo pipefail
           # Determine source of release notes: workflow input, PR body, or recent commits
           if [ -n "$RELEASE_NOTES_INPUT" ]; then
             NOTES="$RELEASE_NOTES_INPUT"
           elif [ -n "$PR_BODY" ]; then
+            # Try to extract Release Notes section, otherwise use entire PR body
             NOTES="$(printf '%s\n' "$PR_BODY" \
               | awk 'f && /^## /{exit} /^## Release Notes/{f=1; next} f')"
+            # If no Release Notes section found, use the entire PR body
+            if [ -z "$NOTES" ]; then
+              NOTES="$PR_BODY"
+            fi
           else
             NOTES="$(git log -n 5 --pretty=format:'- %s')"
           fi
@@ -323,6 +356,11 @@ jobs:
             echo
             printf '%s\n' "$NOTES"
           } > RELEASE_NOTES.md
+          
+          # Store release notes for later use
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat RELEASE_NOTES.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: 📦 Create Release
         if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
@@ -335,3 +373,56 @@ jobs:
           name: '10.${{ github.run_number }}'
           artifacts: './ResgridRespond-prod.apk'
           bodyFile: 'RELEASE_NOTES.md'
+
+      - name: 📡 Send Release Notes to Changerawr
+        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        run: |
+          set -eo pipefail
+          
+          # Prepare JSON payload
+          VERSION="10.${{ github.run_number }}"
+          RELEASE_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          
+          # Escape release notes for JSON
+          NOTES_JSON=$(cat RELEASE_NOTES.md | jq -Rs .)
+          
+          # Create JSON payload
+          PAYLOAD=$(jq -n \
+            --arg version "$VERSION" \
+            --arg date "$RELEASE_DATE" \
+            --argjson notes "$NOTES_JSON" \
+            --arg repo "${{ github.repository }}" \
+            --arg commit "${{ github.sha }}" \
+            --arg actor "${{ github.actor }}" \
+            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              version: $version,
+              releaseDate: $date,
+              releaseNotes: $notes,
+              repository: $repo,
+              commitSha: $commit,
+              author: $actor,
+              buildUrl: $run_url,
+              platform: "android"
+            }')
+          
+          # Send to Changerawr API
+          HTTP_STATUS=$(curl -s -o /tmp/changerawr_response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${CHANGERAWR_API_KEY}" \
+            -d "$PAYLOAD" \
+            "${CHANGERAWR_API_URL}")
+          
+          # Check response
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Successfully sent release notes to Changerawr (HTTP $HTTP_STATUS)"
+            cat /tmp/changerawr_response.json
+          else
+            echo "⚠️ Failed to send release notes to Changerawr (HTTP $HTTP_STATUS)"
+            cat /tmp/changerawr_response.json
+            exit 1
+          fi
+        env:
+          CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
+          CHANGERAWR_API_URL: ${{ secrets.CHANGERAWR_API_URL }}
