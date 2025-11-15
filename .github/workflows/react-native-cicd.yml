@@ -342,6 +342,8 @@ jobs:
             if [ -z "$NOTES" ]; then
               NOTES="$PR_BODY"
             fi
+            # Remove "Summary by CodeRabbit" line
+            NOTES="$(printf '%s\n' "$NOTES" | grep -v "Summary by CodeRabbit")"
           else
             NOTES="$(git log -n 5 --pretty=format:'- %s')"
           fi
@@ -397,14 +399,9 @@ jobs:
             --arg actor "${{ github.actor }}" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{
-              version: $version,
-              releaseDate: $date,
-              releaseNotes: $notes,
-              repository: $repo,
-              commitSha: $commit,
-              author: $actor,
-              buildUrl: $run_url,
-              platform: "android"
+              "version": $version,
+              "title": ("Release v" + $version),
+              "content": $notes,
             }')
           
           # Send to Changerawr API
