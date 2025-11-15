@@ -376,6 +376,7 @@ jobs:
 
       - name: 📡 Send Release Notes to Changerawr
         if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        continue-on-error: true
         run: |
           set -eo pipefail
           
@@ -421,7 +422,7 @@ jobs:
           else
             echo "⚠️ Failed to send release notes to Changerawr (HTTP $HTTP_STATUS)"
             cat /tmp/changerawr_response.json
-            exit 1
+            echo "Continuing workflow despite Changerawr failure..."
           fi
         env:
           CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
