@@ -35,7 +35,7 @@ export const RoleAssignmentItem: React.FC<RoleAssignmentItemProps> = ({ role, as
         </SelectTrigger>
         <SelectPortal>
           <SelectBackdrop />
-          <SelectContent>
+          <SelectContent className="max-h-[60vh] pb-20">
             <SelectDragIndicatorWrapper>
               <SelectDragIndicator />
             </SelectDragIndicatorWrapper>

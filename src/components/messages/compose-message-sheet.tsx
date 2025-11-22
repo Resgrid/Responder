@@ -410,7 +410,7 @@ export const ComposeMessageSheet: React.FC = () => {
                   </SelectTrigger>
                   <SelectPortal>
                     <SelectBackdrop />
-                    <SelectContent>
+                    <SelectContent className="max-h-[60vh] pb-20">
                       <SelectDragIndicatorWrapper>
                         <SelectDragIndicator />
                       </SelectDragIndicatorWrapper>

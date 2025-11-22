@@ -641,7 +641,7 @@ export default function EditCall() {
                       </SelectTrigger>
                       <SelectPortal>
                         <SelectBackdrop />
-                        <SelectContent>
+                        <SelectContent className="max-h-[60vh] pb-20">
                           {callPriorities.map((priority) => (
                             <SelectItem key={priority.Id} label={priority.Name} value={priority.Name} />
                           ))}
@@ -674,7 +674,7 @@ export default function EditCall() {
                       </SelectTrigger>
                       <SelectPortal>
                         <SelectBackdrop />
-                        <SelectContent>
+                        <SelectContent className="max-h-[60vh] pb-20">
                           {callTypes.map((type) => (
                             <SelectItem key={type.Id} label={type.Name} value={type.Name} />
                           ))}
