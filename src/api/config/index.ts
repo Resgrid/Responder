@@ -1,17 +1,11 @@
 import { type GetConfigResult } from '@/models/v4/configs/getConfigResult';
 import { type GetSystemConfigResult } from '@/models/v4/configs/getSystemConfigResult';
 
-import { createCachedApiEndpoint } from '../common/cached-client';
+import { createApiEndpoint } from '../common';
 
-const getConfigApi = createCachedApiEndpoint('/Config/GetConfig', {
-  ttl: 60 * 1000 * 1440, // Cache for 1 days
-  enabled: false,
-});
+const getConfigApi = createApiEndpoint('/Config/GetConfig');
 
-const getSystemConfigApi = createCachedApiEndpoint('/Config/GetSystemConfig', {
-  ttl: 60 * 1000 * 1440, // Cache for 1 days
-  enabled: false,
-});
+const getSystemConfigApi = createApiEndpoint('/Config/GetSystemConfig');
 
 export const getConfig = async (key: string) => {
   const response = await getConfigApi.get<GetConfigResult>({

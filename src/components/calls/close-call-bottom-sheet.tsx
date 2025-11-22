@@ -195,7 +195,7 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
             </SelectTrigger>
             <SelectPortal>
               <SelectBackdrop />
-              <SelectContent>
+              <SelectContent className="max-h-[60vh] pb-20">
                 <SelectItem label={t('call_detail.close_call_types.closed')} value="1" />
                 <SelectItem label={t('call_detail.close_call_types.cancelled')} value="2" />
                 <SelectItem label={t('call_detail.close_call_types.unfounded')} value="3" />

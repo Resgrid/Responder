@@ -43,7 +43,7 @@ export const LanguageItem = () => {
           </SelectTrigger>
           <SelectPortal>
             <SelectBackdrop />
-            <SelectContent>
+            <SelectContent className="max-h-[60vh] pb-20">
               <SelectDragIndicatorWrapper>
                 <SelectDragIndicator />
               </SelectDragIndicatorWrapper>

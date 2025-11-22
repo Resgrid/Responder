@@ -74,14 +74,6 @@ export const useCoreStore = create<CoreState>()(
           return;
         }
 
-        // Don't re-initialize if already initialized
-        if (state.isInitialized) {
-          logger.info({
-            message: 'Core store already initialized, skipping',
-          });
-          return;
-        }
-
         set({ isLoading: true, isInitializing: true, error: null });
 
         try {

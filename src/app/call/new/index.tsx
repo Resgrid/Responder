@@ -217,9 +217,6 @@ export default function NewCall() {
         data.longitude = selectedLocation.longitude;
       }
 
-      // TODO: Implement the API call to create a new call
-      console.log('Creating new call with data:', data);
-
       const priority = callPriorities.find((p) => p.Name === data.priority);
       const type = callTypes.find((t) => t.Name === data.type);
 
@@ -834,7 +831,7 @@ export default function NewCall() {
                       </SelectTrigger>
                       <SelectPortal>
                         <SelectBackdrop />
-                        <SelectContent>
+                        <SelectContent className="max-h-[60vh] pb-20">
                           {callPriorities.map((priority) => (
                             <SelectItem key={priority.Id} label={priority.Name} value={priority.Name} />
                           ))}
@@ -867,7 +864,7 @@ export default function NewCall() {
                       </SelectTrigger>
                       <SelectPortal>
                         <SelectBackdrop />
-                        <SelectContent>
+                        <SelectContent className="max-h-[60vh] pb-20">
                           {callTypes.map((type) => (
                             <SelectItem key={type.Id} label={type.Name} value={type.Name} />
                           ))}
