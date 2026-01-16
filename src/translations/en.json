@@ -750,6 +750,10 @@
     "links": "Links",
     "login_info": "Login Info",
     "logout": "Logout",
+    "logout_confirm_cancel": "Cancel",
+    "logout_confirm_message": "Are you sure you want to log out? All local data, cached values, and saved settings will be cleared from the app.",
+    "logout_confirm_title": "Confirm Logout",
+    "logout_confirm_yes": "Yes, Logout",
     "more": "More",
     "no_units_available": "No units available",
     "none_selected": "None Selected",
@@ -881,6 +885,7 @@
     "plateNumber": "Plate Number",
     "search": "Search units...",
     "specialPermit": "Special Permit",
+    "tapToOpenMaps": "Tap to open in maps",
     "title": "Units",
     "vehicleInfo": "Vehicle Information",
     "vin": "VIN"

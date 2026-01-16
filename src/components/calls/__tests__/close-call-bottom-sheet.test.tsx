@@ -115,41 +115,64 @@ jest.mock('@/components/ui/form-control', () => ({
   },
 }));
 
-jest.mock('@/components/ui/select', () => ({
-  Select: ({ children, testID, selectedValue, onValueChange, ...props }: any) => {
-    const { View, TouchableOpacity, Text } = require('react-native');
-    return (
-      <View testID={testID} {...props}>
-        {children}
-        <TouchableOpacity onPress={() => onValueChange && onValueChange('1')}>
-          <Text>Select Option</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  },
-  SelectTrigger: ({ children, ...props }: any) => {
-    const { View } = require('react-native');
-    return <View {...props}>{children}</View>;
-  },
-  SelectInput: ({ placeholder, ...props }: any) => {
-    const { Text } = require('react-native');
-    return <Text {...props}>{placeholder}</Text>;
-  },
-  SelectIcon: () => null,
-  SelectPortal: ({ children, ...props }: any) => {
-    const { View } = require('react-native');
-    return <View {...props}>{children}</View>;
-  },
-  SelectBackdrop: () => null,
-  SelectContent: ({ children, ...props }: any) => {
-    const { View } = require('react-native');
-    return <View {...props}>{children}</View>;
-  },
-  SelectItem: ({ label, value, ...props }: any) => {
-    const { View, Text } = require('react-native');
-    return <View {...props}><Text>{label}</Text></View>;
-  },
-}));
+jest.mock('@/components/ui/select', () => {
+  // Store onValueChange handlers for each select by testID
+  const handlers: Record<string, (value: string) => void> = {};
+
+  return {
+    Select: ({ children, testID, selectedValue, onValueChange, ...props }: any) => {
+      const React = require('react');
+      const { View, TouchableOpacity, Text } = require('react-native');
+
+      // Store the handler
+      React.useEffect(() => {
+        if (testID && onValueChange) {
+          handlers[testID] = onValueChange;
+        }
+        return () => {
+          if (testID) {
+            delete handlers[testID];
+          }
+        };
+      }, [testID, onValueChange]);
+
+      return (
+        <View
+          testID={testID}
+          onValueChange={onValueChange}
+          {...props}
+        >
+          {children}
+          <TouchableOpacity onPress={() => onValueChange && onValueChange('1')}>
+            <Text>Select Option</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    SelectTrigger: ({ children, ...props }: any) => {
+      const { View } = require('react-native');
+      return <View {...props}>{children}</View>;
+    },
+    SelectInput: ({ placeholder, ...props }: any) => {
+      const { Text } = require('react-native');
+      return <Text {...props}>{placeholder}</Text>;
+    },
+    SelectIcon: () => null,
+    SelectPortal: ({ children, ...props }: any) => {
+      const { View } = require('react-native');
+      return <View {...props}>{children}</View>;
+    },
+    SelectBackdrop: () => null,
+    SelectContent: ({ children, ...props }: any) => {
+      const { View } = require('react-native');
+      return <View {...props}>{children}</View>;
+    },
+    SelectItem: ({ label, value, ...props }: any) => {
+      const { View, Text } = require('react-native');
+      return <View {...props}><Text>{label}</Text></View>;
+    },
+  };
+});
 
 jest.mock('@/components/ui/textarea', () => ({
   Textarea: ({ children, ...props }: any) => {
@@ -164,6 +187,7 @@ jest.mock('@/components/ui/textarea', () => ({
 
 const mockRouter = {
   back: jest.fn(),
+  replace: jest.fn(),
 };
 
 const mockUseTranslation = {
@@ -222,7 +246,7 @@ describe('CloseCallBottomSheet', () => {
     const closeCallTexts = screen.getAllByText('call_detail.close_call');
     expect(closeCallTexts.length).toBeGreaterThan(0); // Should have at least one element with this text
     expect(screen.getByText('call_detail.close_call_type')).toBeTruthy();
-    expect(screen.getByText('call_detail.close_call_note')).toBeTruthy();
+    expect(screen.getByText(/call_detail\.close_call_note.*common\.optional/)).toBeTruthy();
     expect(screen.getByText('common.cancel')).toBeTruthy();
   });
 
@@ -267,7 +291,7 @@ describe('CloseCallBottomSheet', () => {
       });
       expect(mockShowToast).toHaveBeenCalledWith('success', 'call_detail.close_call_success');
       expect(mockFetchCalls).toHaveBeenCalled();
-      expect(mockRouter.back).toHaveBeenCalled();
+      expect(mockRouter.replace).toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
     });
   });
@@ -295,7 +319,7 @@ describe('CloseCallBottomSheet', () => {
       });
       expect(mockShowToast).toHaveBeenCalledWith('success', 'call_detail.close_call_success');
       expect(mockFetchCalls).toHaveBeenCalled();
-      expect(mockRouter.back).toHaveBeenCalled();
+      expect(mockRouter.replace).toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
     });
   });
@@ -319,7 +343,7 @@ describe('CloseCallBottomSheet', () => {
     });
 
     expect(mockFetchCalls).not.toHaveBeenCalled();
-    expect(mockRouter.back).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -428,6 +452,8 @@ describe('CloseCallBottomSheet', () => {
     });
 
     // Wait for all toast messages and error handling to complete
+    // closeCall succeeds first, showing success toast and calling router.replace
+    // then fetchCalls fails, triggering the catch block and error toast
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith('success', 'call_detail.close_call_success');
       expect(mockOnClose).toHaveBeenCalled();
@@ -435,8 +461,8 @@ describe('CloseCallBottomSheet', () => {
       expect(mockShowToast).toHaveBeenCalledWith('error', 'call_detail.close_call_error');
     });
 
-    // Since closeCall succeeded, the modal should be closed but router.back() should not be called due to fetchCalls failure
-    expect(mockRouter.back).not.toHaveBeenCalled();
+    // router.replace is called BEFORE fetchCalls, so it will have been called even if fetchCalls fails
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(app)/home/calls');
   });
 
   it('should not render when isOpen is false', () => {

@@ -1,5 +1,6 @@
 export class CallProtocolsResultData {
   public Id: string = '';
+  public ProtocolId: string = '';
   public DepartmentId: string = '';
   public Name: string = '';
   public Code: string = '';

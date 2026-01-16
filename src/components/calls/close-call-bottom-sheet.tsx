@@ -1,8 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -28,6 +30,7 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const showToast = useToastStore((state) => state.showToast);
@@ -128,11 +131,9 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
       // Close the bottom sheet
       handleClose();
 
-      // Refresh the call list
+      // Navigate back to the calls list and refresh it
+      router.replace('/(app)/home/calls');
       await fetchCalls();
-
-      // Navigate back to close the call detail screen
-      router.back();
     } catch (error) {
       console.error('Error closing call:', error);
 
@@ -181,51 +182,53 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={handleClose} isLoading={isButtonDisabled}>
-      <VStack className="w-full flex-1 space-y-4 p-4">
-        <Text className="text-center text-lg font-semibold">{t('call_detail.close_call')}</Text>
+      <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} bottomOffset={20} style={{ flexGrow: 0, width: '100%' }}>
+        <VStack space="md" className="w-full p-4">
+          <Text className="mb-4 text-center text-lg font-semibold text-gray-900 dark:text-white">{t('call_detail.close_call')}</Text>
 
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>{t('call_detail.close_call_type')}</FormControlLabelText>
-          </FormControlLabel>
-          <Select selectedValue={closeCallType} onValueChange={handleCloseCallTypeChange} testID="close-call-type-select">
-            <SelectTrigger>
-              <SelectInput placeholder={t('call_detail.close_call_type_placeholder')} />
-              <SelectIcon />
-            </SelectTrigger>
-            <SelectPortal>
-              <SelectBackdrop />
-              <SelectContent className="max-h-[60vh] pb-20">
-                <SelectItem label={t('call_detail.close_call_types.closed')} value="1" />
-                <SelectItem label={t('call_detail.close_call_types.cancelled')} value="2" />
-                <SelectItem label={t('call_detail.close_call_types.unfounded')} value="3" />
-                <SelectItem label={t('call_detail.close_call_types.founded')} value="4" />
-                <SelectItem label={t('call_detail.close_call_types.minor')} value="5" />
-                <SelectItem label={t('call_detail.close_call_types.transferred')} value="6" />
-                <SelectItem label={t('call_detail.close_call_types.false_alarm')} value="7" />
-              </SelectContent>
-            </SelectPortal>
-          </Select>
-        </FormControl>
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText className="font-medium text-gray-900 dark:text-gray-100">{t('call_detail.close_call_type')}</FormControlLabelText>
+            </FormControlLabel>
+            <Select selectedValue={closeCallType} onValueChange={handleCloseCallTypeChange} testID="close-call-type-select">
+              <SelectTrigger className="border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+                <SelectInput placeholder={t('call_detail.close_call_type_placeholder')} className="text-gray-900 dark:text-white" />
+                <SelectIcon />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdrop />
+                <SelectContent className="max-h-[60vh] bg-white pb-20 dark:bg-gray-900">
+                  <SelectItem label={t('call_detail.close_call_types.closed')} value="1" />
+                  <SelectItem label={t('call_detail.close_call_types.cancelled')} value="2" />
+                  <SelectItem label={t('call_detail.close_call_types.unfounded')} value="3" />
+                  <SelectItem label={t('call_detail.close_call_types.founded')} value="4" />
+                  <SelectItem label={t('call_detail.close_call_types.minor')} value="5" />
+                  <SelectItem label={t('call_detail.close_call_types.transferred')} value="6" />
+                  <SelectItem label={t('call_detail.close_call_types.false_alarm')} value="7" />
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+          </FormControl>
 
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>{t('call_detail.close_call_note')}</FormControlLabelText>
-          </FormControlLabel>
-          <Textarea>
-            <TextareaInput placeholder={t('call_detail.close_call_note_placeholder')} value={closeCallNote} onChangeText={setCloseCallNote} numberOfLines={4} testID="close-call-note-input" />
-          </Textarea>
-        </FormControl>
+          <VStack space="sm">
+            <Text className="font-medium text-gray-900 dark:text-gray-100">
+              {t('call_detail.close_call_note')} ({t('common.optional')}):
+            </Text>
+            <Textarea size="md" className="min-h-[100px] w-full border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+              <TextareaInput placeholder={t('call_detail.close_call_note_placeholder')} value={closeCallNote} onChangeText={setCloseCallNote} className="text-gray-900 dark:text-white" testID="close-call-note-input" />
+            </Textarea>
+          </VStack>
 
-        <HStack className="space-x-3 pt-10">
-          <Button variant="outline" className="mr-4 flex-1" onPress={handleClose} disabled={isButtonDisabled} size={isLandscape ? 'md' : 'sm'}>
-            <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.cancel')}</ButtonText>
-          </Button>
-          <Button className="ml-4 flex-1" onPress={handleSubmit} disabled={isButtonDisabled} size={isLandscape ? 'md' : 'sm'}>
-            <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('call_detail.close_call')}</ButtonText>
-          </Button>
-        </HStack>
-      </VStack>
+          <HStack space="sm" className="mt-4 justify-between">
+            <Button variant="outline" className="flex-1" onPress={handleClose} disabled={isButtonDisabled} size={isLandscape ? 'md' : 'sm'}>
+              <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.cancel')}</ButtonText>
+            </Button>
+            <Button className="flex-1 bg-blue-600" onPress={handleSubmit} disabled={isButtonDisabled} size={isLandscape ? 'md' : 'sm'}>
+              <ButtonText className={`text-white ${isLandscape ? '' : 'text-xs'}`}>{t('call_detail.close_call')}</ButtonText>
+            </Button>
+          </HStack>
+        </VStack>
+      </KeyboardAwareScrollView>
     </CustomBottomSheet>
   );
 };

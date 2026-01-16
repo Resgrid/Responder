@@ -18,7 +18,7 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
@@ -65,21 +65,69 @@ interface ContactFieldProps {
   icon?: React.ReactNode;
   isLink?: boolean;
   linkPrefix?: string;
+  actionType?: 'email' | 'phone' | 'address';
+  addressData?: {
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zip?: string | null;
+  };
 }
 
-const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink, linkPrefix }) => {
+const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink, linkPrefix, actionType, addressData }) => {
   if (!value || value.toString().trim() === '') return null;
 
   const displayValue = isLink && linkPrefix ? `${linkPrefix}${value}` : value.toString();
 
+  const handlePress = async () => {
+    if (!actionType) return;
+
+    try {
+      let url = '';
+
+      switch (actionType) {
+        case 'email':
+          url = `mailto:${value}`;
+          break;
+        case 'phone':
+          url = `tel:${value}`;
+          break;
+        case 'address':
+          const addressParts = addressData ? [addressData.address, addressData.city, addressData.state, addressData.zip].filter(Boolean).join(', ') : value;
+          const encodedAddress = encodeURIComponent(addressParts?.toString() || '');
+
+          if (Platform.OS === 'ios') {
+            url = `maps:?q=${encodedAddress}`;
+          } else {
+            url = `geo:0,0?q=${encodedAddress}`;
+          }
+          break;
+      }
+
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', `Unable to open ${actionType} app`);
+      }
+    } catch (error) {
+      console.warn(`Failed to open ${actionType} link:`, error);
+      Alert.alert('Error', `Failed to open ${actionType} app`);
+    }
+  };
+
+  const isActionable = !!actionType;
+
   return (
-    <HStack space="md" className="items-start py-2">
-      {icon ? <View className="size-6 items-center justify-center">{icon}</View> : null}
-      <VStack space="xs" className="flex-1">
-        <Text className="text-sm text-gray-500 dark:text-gray-400">{label}</Text>
-        <Text className="text-base text-gray-900 dark:text-white">{displayValue}</Text>
-      </VStack>
-    </HStack>
+    <Pressable onPress={isActionable ? handlePress : undefined} disabled={!isActionable}>
+      <HStack space="md" className="items-start py-2">
+        {icon ? <View className="size-6 items-center justify-center">{icon}</View> : null}
+        <VStack space="xs" className="flex-1">
+          <Text className="text-sm text-gray-500 dark:text-gray-400">{label}</Text>
+          <Text className={`text-base ${isActionable ? 'text-primary-600 underline dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>{displayValue}</Text>
+        </VStack>
+      </HStack>
+    </Pressable>
   );
 };
 
@@ -285,13 +333,13 @@ export const ContactDetailsSheet: React.FC = () => {
                 {hasContactInfo ? (
                   <Section title={t('contacts.contactInformation')} icon={<PhoneIcon size={16} color="#6366F1" />}>
                     <VStack space="xs">
-                      <ContactField label={t('contacts.email')} value={selectedContact.Email} icon={<MailIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.phone')} value={selectedContact.Phone} icon={<PhoneIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.mobile')} value={selectedContact.Mobile} icon={<SmartphoneIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.homePhone')} value={selectedContact.HomePhoneNumber} icon={<HomeIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.cellPhone')} value={selectedContact.CellPhoneNumber} icon={<SmartphoneIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.officePhone')} value={selectedContact.OfficePhoneNumber} icon={<PhoneIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.faxPhone')} value={selectedContact.FaxPhoneNumber} icon={<PhoneIcon size={16} color="#6366F1" />} />
+                      <ContactField label={t('contacts.email')} value={selectedContact.Email} icon={<MailIcon size={16} color="#6366F1" />} actionType="email" />
+                      <ContactField label={t('contacts.phone')} value={selectedContact.Phone} icon={<PhoneIcon size={16} color="#6366F1" />} actionType="phone" />
+                      <ContactField label={t('contacts.mobile')} value={selectedContact.Mobile} icon={<SmartphoneIcon size={16} color="#6366F1" />} actionType="phone" />
+                      <ContactField label={t('contacts.homePhone')} value={selectedContact.HomePhoneNumber} icon={<HomeIcon size={16} color="#6366F1" />} actionType="phone" />
+                      <ContactField label={t('contacts.cellPhone')} value={selectedContact.CellPhoneNumber} icon={<SmartphoneIcon size={16} color="#6366F1" />} actionType="phone" />
+                      <ContactField label={t('contacts.officePhone')} value={selectedContact.OfficePhoneNumber} icon={<PhoneIcon size={16} color="#6366F1" />} actionType="phone" />
+                      <ContactField label={t('contacts.faxPhone')} value={selectedContact.FaxPhoneNumber} icon={<PhoneIcon size={16} color="#6366F1" />} actionType="phone" />
                     </VStack>
                   </Section>
                 ) : null}
@@ -300,17 +348,35 @@ export const ContactDetailsSheet: React.FC = () => {
                 {hasLocationInfo ? (
                   <Section title={t('contacts.locationInformation')} icon={<MapPinIcon size={16} color="#6366F1" />}>
                     <VStack space="xs">
-                      <ContactField label={t('contacts.address')} value={selectedContact.Address} icon={<HomeIcon size={16} color="#6366F1" />} />
+                      <ContactField
+                        label={t('contacts.address')}
+                        value={selectedContact.Address}
+                        icon={<HomeIcon size={16} color="#6366F1" />}
+                        actionType="address"
+                        addressData={{
+                          address: selectedContact.Address,
+                          city: selectedContact.City,
+                          state: selectedContact.State,
+                          zip: selectedContact.Zip,
+                        }}
+                      />
                       {selectedContact.City || selectedContact.State || selectedContact.Zip ? (
                         <ContactField
                           label={t('contacts.cityStateZip')}
                           value={[selectedContact.City, selectedContact.State, selectedContact.Zip].filter(Boolean).join(', ')}
                           icon={<MapPinIcon size={16} color="#6366F1" />}
+                          actionType="address"
+                          addressData={{
+                            address: selectedContact.Address,
+                            city: selectedContact.City,
+                            state: selectedContact.State,
+                            zip: selectedContact.Zip,
+                          }}
                         />
                       ) : null}
-                      <ContactField label={t('contacts.locationCoordinates')} value={selectedContact.LocationGpsCoordinates} icon={<MapPinIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.entranceCoordinates')} value={selectedContact.EntranceGpsCoordinates} icon={<MapPinIcon size={16} color="#6366F1" />} />
-                      <ContactField label={t('contacts.exitCoordinates')} value={selectedContact.ExitGpsCoordinates} icon={<MapPinIcon size={16} color="#6366F1" />} />
+                      <ContactField label={t('contacts.locationCoordinates')} value={selectedContact.LocationGpsCoordinates} icon={<MapPinIcon size={16} color="#6366F1" />} actionType="address" />
+                      <ContactField label={t('contacts.entranceCoordinates')} value={selectedContact.EntranceGpsCoordinates} icon={<MapPinIcon size={16} color="#6366F1" />} actionType="address" />
+                      <ContactField label={t('contacts.exitCoordinates')} value={selectedContact.ExitGpsCoordinates} icon={<MapPinIcon size={16} color="#6366F1" />} actionType="address" />
                     </VStack>
                   </Section>
                 ) : null}

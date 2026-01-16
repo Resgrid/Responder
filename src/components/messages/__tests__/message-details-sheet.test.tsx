@@ -272,7 +272,7 @@ describe('MessageDetailsSheet', () => {
     SentOn: '2023-12-01T10:00:00Z',
     SentOnUtc: '2023-12-01T10:00:00Z',
     Type: 1, // Poll
-    ExpiredOn: '2025-12-15T10:00:00Z', // Future date
+    ExpiredOn: '2030-12-15T10:00:00Z', // Future date (well beyond 2026)
     Responded: false,
     Note: '',
     RespondedOn: '',

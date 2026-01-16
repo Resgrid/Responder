@@ -74,16 +74,18 @@ describe('Navigation Functions', () => {
       it('should open Google Maps with current location as origin', async () => {
         const result = await openMapsWithDirections(40.7128, -74.006, 'New York');
 
-        expect(MockedLinking.canOpenURL).toHaveBeenCalledWith('google.navigation:q=40.7128,-74.006');
-        expect(MockedLinking.openURL).toHaveBeenCalledWith('google.navigation:q=40.7128,-74.006');
+        // Android uses HTTPS URLs directly without canOpenURL check
+        expect(MockedLinking.canOpenURL).not.toHaveBeenCalled();
+        expect(MockedLinking.openURL).toHaveBeenCalledWith('https://www.google.com/maps/dir/?api=1&destination=40.7128,-74.006&travelmode=driving');
         expect(result).toBe(true);
       });
 
       it('should open Google Maps with specific origin', async () => {
         const result = await openMapsWithDirections(40.7128, -74.006, 'New York', 40.7589, -73.9851);
 
-        expect(MockedLinking.canOpenURL).toHaveBeenCalledWith('google.navigation:q=40.7128,-74.006&origin=40.7589,-73.9851');
-        expect(MockedLinking.openURL).toHaveBeenCalledWith('google.navigation:q=40.7128,-74.006&origin=40.7589,-73.9851');
+        // Android uses HTTPS URLs directly without canOpenURL check
+        expect(MockedLinking.canOpenURL).not.toHaveBeenCalled();
+        expect(MockedLinking.openURL).toHaveBeenCalledWith('https://www.google.com/maps/dir/?api=1&origin=40.7589,-73.9851&destination=40.7128,-74.006&travelmode=driving');
         expect(result).toBe(true);
       });
     });

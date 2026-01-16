@@ -2,7 +2,8 @@ import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TouchableOpacity } from 'react-native';
+import { Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -445,8 +446,11 @@ export const PersonnelStatusBottomSheet = () => {
                 )}
               </ScrollView>
 
-              <HStack space="sm" className="mt-4 justify-end">
-                <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="bg-blue-600">
+              <HStack space="sm" className="mt-4 justify-between">
+                <Button variant="outline" onPress={handleClose} className="flex-1">
+                  <ButtonText>{t('common.cancel')}</ButtonText>
+                </Button>
+                <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
                   <ButtonText>{t('common.next')}</ButtonText>
                   <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
                 </Button>
@@ -455,32 +459,34 @@ export const PersonnelStatusBottomSheet = () => {
           )}
 
           {currentStep === 'add-note' && (
-            <VStack space="md" className="w-full">
-              <VStack space="sm">
-                <Text className="font-medium">{t('personnel.status.selected_destination')}:</Text>
-                <Text className="text-sm text-gray-600 dark:text-gray-400">{getSelectedDestinationDisplay()}</Text>
-              </VStack>
+            <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} bottomOffset={20} style={{ flexGrow: 0, width: '100%' }}>
+              <VStack space="md" className="w-full">
+                <VStack space="sm">
+                  <Text className="font-medium">{t('personnel.status.selected_destination')}:</Text>
+                  <Text className="text-sm text-gray-600 dark:text-gray-400">{getSelectedDestinationDisplay()}</Text>
+                </VStack>
 
-              <VStack space="sm">
-                <Text className="font-medium">
-                  {t('personnel.status.note')} ({t('common.optional')}):
-                </Text>
-                <Textarea size="md" className="min-h-[100px] w-full">
-                  <TextareaInput placeholder={t('personnel.status.note_placeholder')} value={note} onChangeText={setNote} />
-                </Textarea>
-              </VStack>
+                <VStack space="sm">
+                  <Text className="font-medium">
+                    {t('personnel.status.note')} ({t('common.optional')}):
+                  </Text>
+                  <Textarea size="md" className="min-h-[100px] w-full">
+                    <TextareaInput placeholder={t('personnel.status.note_placeholder')} value={note} onChangeText={setNote} />
+                  </Textarea>
+                </VStack>
 
-              <HStack space="sm" className="mt-4 justify-between">
-                <Button variant="outline" onPress={handlePrevious} className="flex-1">
-                  <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-                  <ButtonText>{t('common.previous')}</ButtonText>
-                </Button>
-                <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                  <ButtonText>{t('common.next')}</ButtonText>
-                  <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
-                </Button>
-              </HStack>
-            </VStack>
+                <HStack space="sm" className="mt-4 justify-between">
+                  <Button variant="outline" onPress={handlePrevious} className="flex-1">
+                    <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
+                    <ButtonText>{t('common.previous')}</ButtonText>
+                  </Button>
+                  <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
+                    <ButtonText>{t('common.next')}</ButtonText>
+                    <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
+                  </Button>
+                </HStack>
+              </VStack>
+            </KeyboardAwareScrollView>
           )}
 
           {currentStep === 'confirm' && (

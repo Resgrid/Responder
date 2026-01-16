@@ -24,7 +24,7 @@ import { useUnitsStore } from '@/stores/units/store';
 
 export default function Units() {
   const { t } = useTranslation();
-  const { units, searchQuery, setSearchQuery, selectUnit, isLoading, fetchUnits, selectedFilters, openFilterSheet } = useUnitsStore();
+  const { units, unitTypeStatuses, searchQuery, setSearchQuery, selectUnit, isLoading, fetchUnits, selectedFilters, openFilterSheet } = useUnitsStore();
   const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -96,7 +96,7 @@ export default function Units() {
             <FlashList
               data={filteredUnits}
               keyExtractor={(item, index) => item.UnitId || `unit-${index}`}
-              renderItem={({ item }) => <UnitCard unit={item as any} onPress={selectUnit} />}
+              renderItem={({ item }) => <UnitCard unit={item} unitTypeStatuses={unitTypeStatuses} onPress={selectUnit} />}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}

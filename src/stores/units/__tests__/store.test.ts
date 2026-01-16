@@ -1,15 +1,18 @@
-import { getUnits } from '@/api/units/units';
-import { type UnitResultData } from '@/models/v4/units/unitResultData';
-import { type UnitsResult } from '@/models/v4/units/unitsResult';
+import { getUnitsInfos } from '@/api/units/units';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
+import { type UnitsInfoResult } from '@/models/v4/units/unitInfoResult';
 
 import { useUnitsStore } from '../store';
 
 // Mock the API
 jest.mock('@/api/units/units');
-const mockGetUnits = getUnits as jest.MockedFunction<typeof getUnits>;
+jest.mock('@/api/satuses', () => ({
+	getAllUnitStatuses: jest.fn().mockResolvedValue({ Data: [] }),
+}));
+const mockGetUnitsInfos = getUnitsInfos as jest.MockedFunction<typeof getUnitsInfos>;
 
-// Helper function to create mock UnitsResult
-const createMockUnitsResult = (data: UnitResultData[]): UnitsResult => ({
+// Helper function to create mock UnitsInfoResult
+const createMockUnitsInfoResult = (data: UnitInfoResultData[]): UnitsInfoResult => ({
 	Data: data,
 	PageSize: 0,
 	Timestamp: '',
@@ -20,8 +23,8 @@ const createMockUnitsResult = (data: UnitResultData[]): UnitsResult => ({
 	Environment: '',
 });
 
-// Mock data
-const mockUnits: UnitResultData[] = [
+// Mock data using UnitInfoResultData structure
+const mockUnits: UnitInfoResultData[] = [
 	{
 		UnitId: '1',
 		DepartmentId: 'dept1',
@@ -36,11 +39,15 @@ const mockUnits: UnitResultData[] = [
 		FourWheelDrive: false,
 		SpecialPermit: false,
 		CurrentDestinationId: '',
+		CurrentDestinationName: '',
 		CurrentStatusId: '1',
-		CurrentStatusTimestamp: '2024-01-15T10:00:00Z',
+		CurrentStatus: 'Available',
+		CurrentStatusColor: '#00FF00',
+		CurrentStatusTimestampUtc: '2024-01-15T10:00:00Z',
 		Latitude: '40.7128',
 		Longitude: '-74.0060',
 		Note: 'Primary response unit for Station 1',
+		Roles: [],
 	},
 	{
 		UnitId: '2',
@@ -56,11 +63,15 @@ const mockUnits: UnitResultData[] = [
 		FourWheelDrive: true,
 		SpecialPermit: true,
 		CurrentDestinationId: '',
+		CurrentDestinationName: '',
 		CurrentStatusId: '2',
-		CurrentStatusTimestamp: '2024-01-15T11:00:00Z',
+		CurrentStatus: 'En Route',
+		CurrentStatusColor: '#FFFF00',
+		CurrentStatusTimestampUtc: '2024-01-15T11:00:00Z',
 		Latitude: '40.7589',
 		Longitude: '-73.9851',
 		Note: 'Advanced life support unit',
+		Roles: [],
 	},
 	{
 		UnitId: '3',
@@ -76,11 +87,15 @@ const mockUnits: UnitResultData[] = [
 		FourWheelDrive: false,
 		SpecialPermit: false,
 		CurrentDestinationId: '',
+		CurrentDestinationName: '',
 		CurrentStatusId: '',
-		CurrentStatusTimestamp: '',
+		CurrentStatus: '',
+		CurrentStatusColor: '',
+		CurrentStatusTimestampUtc: '',
 		Latitude: '',
 		Longitude: '',
 		Note: '',
+		Roles: [],
 	},
 ];
 
@@ -102,7 +117,7 @@ describe('useUnitsStore', () => {
 
 	describe('fetchUnits', () => {
 		it('should fetch units successfully', async () => {
-			mockGetUnits.mockResolvedValueOnce(createMockUnitsResult(mockUnits));
+			mockGetUnitsInfos.mockResolvedValueOnce(createMockUnitsInfoResult(mockUnits));
 
 			const { fetchUnits } = useUnitsStore.getState();
 			await fetchUnits();
@@ -115,7 +130,7 @@ describe('useUnitsStore', () => {
 
 		it('should handle fetch error', async () => {
 			const errorMessage = 'Failed to fetch units';
-			mockGetUnits.mockRejectedValueOnce(new Error(errorMessage));
+			mockGetUnitsInfos.mockRejectedValueOnce(new Error(errorMessage));
 
 			const { fetchUnits } = useUnitsStore.getState();
 			await fetchUnits();
@@ -127,7 +142,7 @@ describe('useUnitsStore', () => {
 		});
 
 		it('should handle generic error', async () => {
-			mockGetUnits.mockRejectedValueOnce('Generic error');
+			mockGetUnitsInfos.mockRejectedValueOnce('Generic error');
 
 			const { fetchUnits } = useUnitsStore.getState();
 			await fetchUnits();
@@ -137,11 +152,11 @@ describe('useUnitsStore', () => {
 		});
 
 		it('should set loading state during fetch', async () => {
-			let resolvePromise: (value: UnitsResult) => void;
-			const promise = new Promise<UnitsResult>((resolve) => {
+			let resolvePromise: (value: UnitsInfoResult) => void;
+			const promise = new Promise<UnitsInfoResult>((resolve) => {
 				resolvePromise = resolve;
 			});
-			mockGetUnits.mockReturnValueOnce(promise);
+			mockGetUnitsInfos.mockReturnValueOnce(promise);
 
 			const { fetchUnits } = useUnitsStore.getState();
 			const fetchPromise = fetchUnits();
@@ -150,7 +165,7 @@ describe('useUnitsStore', () => {
 			expect(useUnitsStore.getState().isLoading).toBe(true);
 
 			// Resolve the promise
-			resolvePromise!(createMockUnitsResult(mockUnits));
+			resolvePromise!(createMockUnitsInfoResult(mockUnits));
 			await fetchPromise;
 
 			// Check final state
@@ -238,7 +253,7 @@ describe('useUnitsStore', () => {
 
 	describe('multiple operations', () => {
 		it('should handle multiple fetch operations', async () => {
-			mockGetUnits.mockResolvedValue(createMockUnitsResult(mockUnits));
+			mockGetUnitsInfos.mockResolvedValue(createMockUnitsInfoResult(mockUnits));
 
 			const { fetchUnits } = useUnitsStore.getState();
 
@@ -250,7 +265,7 @@ describe('useUnitsStore', () => {
 			const baseUnit = mockUnits[0];
 			if (!baseUnit) throw new Error('Mock units should have at least one element');
 			const newUnits = [...mockUnits, { ...baseUnit, UnitId: '4', Name: 'Truck 4' }];
-			mockGetUnits.mockResolvedValueOnce(createMockUnitsResult(newUnits));
+			mockGetUnitsInfos.mockResolvedValueOnce(createMockUnitsInfoResult(newUnits));
 
 			await fetchUnits();
 			expect(useUnitsStore.getState().units).toEqual(newUnits);
@@ -274,7 +289,7 @@ describe('useUnitsStore', () => {
 			// Set initial error state
 			useUnitsStore.setState({ error: 'Previous error' });
 
-			mockGetUnits.mockResolvedValueOnce(createMockUnitsResult(mockUnits));
+			mockGetUnitsInfos.mockResolvedValueOnce(createMockUnitsInfoResult(mockUnits));
 
 			const { fetchUnits } = useUnitsStore.getState();
 			await fetchUnits();
@@ -286,11 +301,11 @@ describe('useUnitsStore', () => {
 			// Set initial error state
 			useUnitsStore.setState({ error: 'Previous error' });
 
-			let resolvePromise: (value: UnitsResult) => void;
-			const promise = new Promise<UnitsResult>((resolve) => {
+			let resolvePromise: (value: UnitsInfoResult) => void;
+			const promise = new Promise<UnitsInfoResult>((resolve) => {
 				resolvePromise = resolve;
 			});
-			mockGetUnits.mockReturnValueOnce(promise);
+			mockGetUnitsInfos.mockReturnValueOnce(promise);
 
 			const { fetchUnits } = useUnitsStore.getState();
 			fetchUnits();
@@ -300,7 +315,7 @@ describe('useUnitsStore', () => {
 			expect(useUnitsStore.getState().isLoading).toBe(true);
 
 			// Clean up
-			resolvePromise!(createMockUnitsResult([]));
+			resolvePromise!(createMockUnitsInfoResult([]));
 		});
 	});
 });

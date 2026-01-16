@@ -61,7 +61,7 @@
     "@gluestack-ui/link": "~0.1.22",
     "@gluestack-ui/menu": "~0.2.43",
     "@gluestack-ui/modal": "^0.1.35",
-    "@gluestack-ui/nativewind-utils": "~1.0.26",
+    "@gluestack-ui/nativewind-utils": "^1.0.28",
     "@gluestack-ui/overlay": "~0.1.16",
     "@gluestack-ui/popover": "~0.1.49",
     "@gluestack-ui/pressable": "~0.1.16",

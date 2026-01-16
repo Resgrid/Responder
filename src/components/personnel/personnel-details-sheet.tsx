@@ -1,5 +1,6 @@
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
+import { ScrollView } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
@@ -81,114 +82,116 @@ export const PersonnelDetailsSheet: React.FC = () => {
             </Button>
           </HStack>
 
-          <VStack space="md" className="flex-1">
-            {/* Identification Number */}
-            {selectedPersonnel.IdentificationNumber ? (
-              <HStack space="xs" className="items-center">
-                <IdCard size={18} className="text-gray-600 dark:text-gray-400" />
-                <Text className="text-gray-700 dark:text-gray-300">ID: {selectedPersonnel.IdentificationNumber}</Text>
-              </HStack>
-            ) : null}
-
-            {/* Contact Information Section */}
-            {canUserViewPII ? (
-              <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Information</Text>
-                <VStack space="xs">
-                  {selectedPersonnel.EmailAddress ? (
-                    <HStack space="xs" className="items-center">
-                      <Mail size={16} className="text-gray-600 dark:text-gray-400" />
-                      <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.EmailAddress}</Text>
-                    </HStack>
-                  ) : null}
-
-                  {selectedPersonnel.MobilePhone ? (
-                    <HStack space="xs" className="items-center">
-                      <Phone size={16} className="text-gray-600 dark:text-gray-400" />
-                      <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.MobilePhone}</Text>
-                    </HStack>
-                  ) : null}
-                </VStack>
-              </Box>
-            ) : null}
-
-            {/* Group Information */}
-            {selectedPersonnel.GroupName ? (
-              <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Group</Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+            <VStack space="md" className="flex-1">
+              {/* Identification Number */}
+              {selectedPersonnel.IdentificationNumber ? (
                 <HStack space="xs" className="items-center">
-                  <Users size={16} className="text-gray-600 dark:text-gray-400" />
-                  <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.GroupName}</Text>
+                  <IdCard size={18} className="text-gray-600 dark:text-gray-400" />
+                  <Text className="text-gray-700 dark:text-gray-300">ID: {selectedPersonnel.IdentificationNumber}</Text>
                 </HStack>
-              </Box>
-            ) : null}
+              ) : null}
 
-            {/* Status Information */}
-            <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-              <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Current Status</Text>
-              <VStack space="xs">
-                {selectedPersonnel.Status ? (
-                  <HStack className="flex-wrap">
-                    <Badge className="mb-1 mr-1" style={{ backgroundColor: selectedPersonnel.StatusColor || '#3B82F6' }}>
-                      <Text className="text-xs text-white">{selectedPersonnel.Status}</Text>
-                    </Badge>
-                    {selectedPersonnel.StatusDestinationName ? (
-                      <Badge className="mb-1 mr-1 bg-blue-100 dark:bg-blue-900">
-                        <Text className="text-xs text-blue-800 dark:text-blue-100">{selectedPersonnel.StatusDestinationName}</Text>
-                      </Badge>
+              {/* Contact Information Section */}
+              {canUserViewPII ? (
+                <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Information</Text>
+                  <VStack space="xs">
+                    {selectedPersonnel.EmailAddress ? (
+                      <HStack space="xs" className="items-center">
+                        <Mail size={16} className="text-gray-600 dark:text-gray-400" />
+                        <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.EmailAddress}</Text>
+                      </HStack>
                     ) : null}
-                  </HStack>
-                ) : null}
 
-                {selectedPersonnel.StatusTimestamp ? (
+                    {selectedPersonnel.MobilePhone ? (
+                      <HStack space="xs" className="items-center">
+                        <Phone size={16} className="text-gray-600 dark:text-gray-400" />
+                        <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.MobilePhone}</Text>
+                      </HStack>
+                    ) : null}
+                  </VStack>
+                </Box>
+              ) : null}
+
+              {/* Group Information */}
+              {selectedPersonnel.GroupName ? (
+                <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Group</Text>
                   <HStack space="xs" className="items-center">
-                    <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
-                    <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDateForDisplay(parseDateISOString(selectedPersonnel.StatusTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text>
+                    <Users size={16} className="text-gray-600 dark:text-gray-400" />
+                    <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.GroupName}</Text>
                   </HStack>
-                ) : null}
-              </VStack>
-            </Box>
+                </Box>
+              ) : null}
 
-            {/* Staffing Information */}
-            {selectedPersonnel.Staffing ? (
+              {/* Status Information */}
               <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Staffing</Text>
+                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Current Status</Text>
                 <VStack space="xs">
-                  <HStack className="flex-wrap">
-                    <Badge className="mb-1 mr-1" style={{ backgroundColor: selectedPersonnel.StaffingColor || '#10B981' }}>
-                      <Text className="text-xs text-white">{selectedPersonnel.Staffing}</Text>
-                    </Badge>
-                  </HStack>
+                  {selectedPersonnel.Status ? (
+                    <HStack className="flex-wrap">
+                      <Badge className="mb-1 mr-1" style={{ backgroundColor: selectedPersonnel.StatusColor || '#3B82F6' }}>
+                        <Text className="text-xs text-white">{selectedPersonnel.Status}</Text>
+                      </Badge>
+                      {selectedPersonnel.StatusDestinationName ? (
+                        <Badge className="mb-1 mr-1 bg-blue-100 dark:bg-blue-900">
+                          <Text className="text-xs text-blue-800 dark:text-blue-100">{selectedPersonnel.StatusDestinationName}</Text>
+                        </Badge>
+                      ) : null}
+                    </HStack>
+                  ) : null}
 
-                  {selectedPersonnel.StaffingTimestamp ? (
+                  {selectedPersonnel.StatusTimestamp ? (
                     <HStack space="xs" className="items-center">
                       <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
-                      <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDateForDisplay(parseDateISOString(selectedPersonnel.StaffingTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDateForDisplay(parseDateISOString(selectedPersonnel.StatusTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text>
                     </HStack>
                   ) : null}
                 </VStack>
               </Box>
-            ) : null}
 
-            {/* Roles */}
-            {selectedPersonnel.Roles && selectedPersonnel.Roles.length > 0 ? (
-              <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Roles</Text>
-                <HStack space="xs" className="items-center">
-                  <Tag size={16} className="text-gray-600 dark:text-gray-400" />
-                  <HStack className="flex-wrap">
-                    {selectedPersonnel.Roles.map((role, index) => (
-                      <Badge key={index} className="mb-1 mr-1 bg-gray-100 dark:bg-gray-700">
-                        <Text className="text-xs text-gray-800 dark:text-gray-100">{role}</Text>
+              {/* Staffing Information */}
+              {selectedPersonnel.Staffing ? (
+                <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Staffing</Text>
+                  <VStack space="xs">
+                    <HStack className="flex-wrap">
+                      <Badge className="mb-1 mr-1" style={{ backgroundColor: selectedPersonnel.StaffingColor || '#10B981' }}>
+                        <Text className="text-xs text-white">{selectedPersonnel.Staffing}</Text>
                       </Badge>
-                    ))}
-                  </HStack>
-                </HStack>
-              </Box>
-            ) : null}
+                    </HStack>
 
-            <Divider />
-          </VStack>
+                    {selectedPersonnel.StaffingTimestamp ? (
+                      <HStack space="xs" className="items-center">
+                        <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
+                        <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDateForDisplay(parseDateISOString(selectedPersonnel.StaffingTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text>
+                      </HStack>
+                    ) : null}
+                  </VStack>
+                </Box>
+              ) : null}
+
+              {/* Roles */}
+              {selectedPersonnel.Roles && selectedPersonnel.Roles.length > 0 ? (
+                <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Roles</Text>
+                  <HStack space="xs" className="items-center">
+                    <Tag size={16} className="text-gray-600 dark:text-gray-400" />
+                    <HStack className="flex-wrap">
+                      {selectedPersonnel.Roles.map((role, index) => (
+                        <Badge key={index} className="mb-1 mr-1 bg-gray-100 dark:bg-gray-700">
+                          <Text className="text-xs text-gray-800 dark:text-gray-100">{role}</Text>
+                        </Badge>
+                      ))}
+                    </HStack>
+                  </HStack>
+                </Box>
+              ) : null}
+
+              <Divider />
+            </VStack>
+          </ScrollView>
         </Box>
       </ActionsheetContent>
     </Actionsheet>

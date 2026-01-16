@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 
-import { getUnits, getUnitsFilterOptions, getUnitsInfos } from '@/api/units/units';
+import { getAllUnitStatuses } from '@/api/satuses';
+import { getUnitsFilterOptions, getUnitsInfos } from '@/api/units/units';
 import { loadUnitsFilterOptions, saveUnitsFilterOptions } from '@/lib/storage/units-filter';
 import { type FilterResultData } from '@/models/v4/personnel/filterResultData';
+import { type UnitTypeStatusResultData } from '@/models/v4/statuses/unitTypeStatusResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { type UnitResultData } from '@/models/v4/units/unitResultData';
 
@@ -11,6 +13,7 @@ type UnitData = UnitResultData | UnitInfoResultData;
 
 interface UnitsState {
   units: UnitData[];
+  unitTypeStatuses: UnitTypeStatusResultData[];
   searchQuery: string;
   selectedUnitId: string | null;
   isDetailsOpen: boolean;
@@ -25,6 +28,7 @@ interface UnitsState {
 
   // Actions
   fetchUnits: () => Promise<void>;
+  fetchUnitStatuses: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   selectUnit: (id: string) => void;
   closeDetails: () => void;
@@ -40,6 +44,7 @@ interface UnitsState {
 
 export const useUnitsStore = create<UnitsState>((set, get) => ({
   units: [],
+  unitTypeStatuses: [],
   searchQuery: '',
   selectedUnitId: null,
   isDetailsOpen: false,
@@ -55,17 +60,28 @@ export const useUnitsStore = create<UnitsState>((set, get) => ({
   fetchUnits: async () => {
     try {
       set({ isLoading: true, error: null });
-      const { selectedFilters } = get();
+      const { selectedFilters, fetchUnitStatuses } = get();
       const filterString = selectedFilters.length > 0 ? selectedFilters.join(',') : '';
 
-      // Use getUnitsInfos if filters are applied, otherwise use getUnits
-      const response = filterString ? await getUnitsInfos(filterString) : await getUnits();
-      set({ units: response.Data || [], isLoading: false });
+      // Fetch units and unit statuses in parallel
+      const [unitsResponse] = await Promise.all([getUnitsInfos(filterString), fetchUnitStatuses()]);
+
+      set({ units: unitsResponse.Data || [], isLoading: false });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch units',
         isLoading: false,
       });
+    }
+  },
+
+  fetchUnitStatuses: async () => {
+    try {
+      const response = await getAllUnitStatuses();
+      set({ unitTypeStatuses: response.Data || [] });
+    } catch (error) {
+      // Silently fail - statuses are optional enhancement
+      console.warn('Failed to fetch unit statuses:', error);
     }
   },
 

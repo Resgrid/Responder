@@ -16,7 +16,7 @@ interface ProtocolCardProps {
 
 export const ProtocolCard: React.FC<ProtocolCardProps> = ({ protocol, onPress }) => {
   return (
-    <Pressable onPress={() => onPress(protocol.Id)} testID={`protocol-card-${protocol.Id}`}>
+    <Pressable onPress={() => onPress(protocol.ProtocolId)} testID={`protocol-card-${protocol.ProtocolId}`}>
       <Box className="mb-3 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
         <VStack space="xs">
           <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{protocol.Name}</Text>

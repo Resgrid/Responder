@@ -77,7 +77,7 @@ export default function Protocols() {
           <FlashList
             testID="protocols-list"
             data={filteredProtocols}
-            keyExtractor={(item, index) => item.Id || `protocol-${index}`}
+            keyExtractor={(item, index) => item.ProtocolId || `protocol-${index}`}
             renderItem={({ item }) => <ProtocolCard protocol={item} onPress={selectProtocol} />}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
