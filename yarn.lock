@@ -1641,7 +1641,7 @@
     "@react-native-aria/interactions" "0.2.16"
     "@react-native-aria/overlays" "^0.3.15"
 
-"@gluestack-ui/nativewind-utils@~1.0.26":
+"@gluestack-ui/nativewind-utils@^1.0.28":
   version "1.0.28"
   resolved "https://registry.yarnpkg.com/@gluestack-ui/nativewind-utils/-/nativewind-utils-1.0.28.tgz#54ec885c5683ce7a18aeafbd31ef00e17913ef11"
   integrity sha512-POWYUK99Y9zRbDbTv0/FF6YtPmymaAmqgWKU3QYFjraK3HPAgF9HjovJVEN8SycEDylJAnACw53AoHFQ3Bxh+A==
