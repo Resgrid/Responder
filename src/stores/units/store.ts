@@ -64,8 +64,11 @@ export const useUnitsStore = create<UnitsState>((set, get) => ({
       const { selectedFilters, fetchUnitStatuses } = get();
       const filterString = selectedFilters.length > 0 ? selectedFilters.join(',') : '';
 
-      // Fetch units and unit statuses in parallel
-      const [unitsResponse] = await Promise.all([getUnitsInfos(filterString), fetchUnitStatuses()]);
+      // Start status fetch in parallel (non-blocking)
+      fetchUnitStatuses();
+
+      // Await only the units response
+      const unitsResponse = await getUnitsInfos(filterString);
 
       set({ units: unitsResponse.Data || [], isLoading: false });
     } catch (error) {

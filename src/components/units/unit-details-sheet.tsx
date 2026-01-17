@@ -170,7 +170,13 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
 
               {/* Location Information */}
               {hasLocation && (
-                <Pressable onPress={handleOpenMaps} testID="location-press">
+                <Pressable
+                  onPress={handleOpenMaps}
+                  testID="location-press"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('units.location')}
+                  accessibilityHint={t('units.tapToOpenMaps')}
+                >
                   <Box className="rounded-lg bg-gray-50 p-3 active:bg-gray-100 dark:bg-gray-700 dark:active:bg-gray-600">
                     <HStack space="sm" className="mb-2 items-center">
                       <MapPin size={18} color={isDark ? '#4ade80' : '#16a34a'} />

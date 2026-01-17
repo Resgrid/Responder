@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 
-import { type PersonnelResultData } from '@/models/v4/personnel/personnelResultData';
+import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 
 import { PersonnelDetailsSheet } from '../personnel-details-sheet';
 
@@ -86,7 +86,7 @@ jest.mock('react-native', () => ({
 
 // Mock the personnel store
 const mockPersonnelStore = {
-  personnel: [] as PersonnelResultData[],
+  personnel: [] as PersonnelInfoResultData[],
   selectedPersonnelId: null as string | null,
   isDetailsOpen: false,
   closeDetails: jest.fn(),
@@ -131,7 +131,7 @@ jest.mock('@/lib/utils', () => ({
 }));
 
 describe('PersonnelDetailsSheet', () => {
-  const mockPersonnel: PersonnelResultData = {
+  const mockPersonnel: PersonnelInfoResultData = {
     UserId: 'user-123',
     FirstName: 'John',
     LastName: 'Doe',
@@ -147,11 +147,11 @@ describe('PersonnelDetailsSheet', () => {
     StaffingColor: '#3B82F6',
     StaffingTimestamp: '2024-01-15T08:00:00Z',
     Roles: ['Firefighter', 'EMT', 'Driver'],
-    Name: 'John Doe',
     DepartmentId: 'dept-1',
     GroupId: 'group-1',
-    Latitude: 0,
-    Longitude: 0,
+    StatusId: 'status-1',
+    StatusDestinationId: 'dest-1',
+    StaffingId: 'staffing-1',
   };
 
   beforeEach(() => {
@@ -304,7 +304,7 @@ describe('PersonnelDetailsSheet', () => {
   });
 
   it('does not render identification number section if not provided', () => {
-    const personnelWithoutId = { ...mockPersonnel, IdentificationNumber: undefined };
+    const personnelWithoutId = { ...mockPersonnel, IdentificationNumber: '' };
     mockPersonnelStore.isDetailsOpen = true;
     mockPersonnelStore.selectedPersonnelId = personnelWithoutId.UserId;
     mockPersonnelStore.personnel = [personnelWithoutId];
@@ -319,7 +319,7 @@ describe('PersonnelDetailsSheet', () => {
   });
 
   it('does not render group section if not provided', () => {
-    const personnelWithoutGroup = { ...mockPersonnel, GroupName: undefined };
+    const personnelWithoutGroup = { ...mockPersonnel, GroupName: '' };
     mockPersonnelStore.isDetailsOpen = true;
     mockPersonnelStore.selectedPersonnelId = personnelWithoutGroup.UserId;
     mockPersonnelStore.personnel = [personnelWithoutGroup];
@@ -334,7 +334,7 @@ describe('PersonnelDetailsSheet', () => {
   });
 
   it('does not render staffing section if not provided', () => {
-    const personnelWithoutStaffing = { ...mockPersonnel, Staffing: undefined };
+    const personnelWithoutStaffing = { ...mockPersonnel, Staffing: '' };
     mockPersonnelStore.isDetailsOpen = true;
     mockPersonnelStore.selectedPersonnelId = personnelWithoutStaffing.UserId;
     mockPersonnelStore.personnel = [personnelWithoutStaffing];
@@ -364,15 +364,27 @@ describe('PersonnelDetailsSheet', () => {
   });
 
   it('handles personnel with minimal data', () => {
-    const minimalPersonnel: PersonnelResultData = {
+    const minimalPersonnel: PersonnelInfoResultData = {
       UserId: 'user-456',
       FirstName: 'Jane',
       LastName: 'Smith',
-      Name: 'Jane Smith',
       DepartmentId: 'dept-1',
       GroupId: 'group-1',
-      Latitude: 0,
-      Longitude: 0,
+      IdentificationNumber: '',
+      EmailAddress: '',
+      MobilePhone: '',
+      GroupName: '',
+      StatusId: '',
+      Status: '',
+      StatusColor: '',
+      StatusTimestamp: '',
+      StatusDestinationId: '',
+      StatusDestinationName: '',
+      StaffingId: '',
+      Staffing: '',
+      StaffingColor: '',
+      StaffingTimestamp: '',
+      Roles: [],
     };
 
     mockPersonnelStore.isDetailsOpen = true;

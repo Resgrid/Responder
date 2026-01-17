@@ -1,5 +1,5 @@
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
@@ -9,6 +9,14 @@ import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSecurityStore } from '@/stores/security/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
+import { Badge } from '../ui/badge';
+import { Box } from '../ui/box';
+import { Button } from '../ui/button';
+import { Divider } from '../ui/divider';
+import { Heading } from '../ui/heading';
+import { HStack } from '../ui/hstack';
+import { Text } from '../ui/text';
+import { VStack } from '../ui/vstack';
 
 /**
  * Safely formats a timestamp string with error handling.
@@ -25,14 +33,6 @@ const safeFormatTimestamp = (timestamp: string | undefined | null, format: strin
     return '';
   }
 };
-import { Badge } from '../ui/badge';
-import { Box } from '../ui/box';
-import { Button } from '../ui/button';
-import { Divider } from '../ui/divider';
-import { Heading } from '../ui/heading';
-import { HStack } from '../ui/hstack';
-import { Text } from '../ui/text';
-import { VStack } from '../ui/vstack';
 
 export const PersonnelDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
@@ -41,6 +41,17 @@ export const PersonnelDetailsSheet: React.FC = () => {
   const { trackEvent } = useAnalytics();
 
   const selectedPersonnel = personnel?.find((person) => person.UserId === selectedPersonnelId);
+
+  // Cache formatted timestamps to avoid double parsing
+  const formattedStatusTimestamp = useMemo(
+    () => safeFormatTimestamp(selectedPersonnel?.StatusTimestamp, 'yyyy-MM-dd HH:mm Z'),
+    [selectedPersonnel?.StatusTimestamp]
+  );
+
+  const formattedStaffingTimestamp = useMemo(
+    () => safeFormatTimestamp(selectedPersonnel?.StaffingTimestamp, 'yyyy-MM-dd HH:mm Z'),
+    [selectedPersonnel?.StaffingTimestamp]
+  );
 
   // Track analytics when sheet becomes visible
   const trackViewAnalytics = useCallback(() => {
@@ -162,10 +173,10 @@ export const PersonnelDetailsSheet: React.FC = () => {
                     </HStack>
                   ) : null}
 
-                  {selectedPersonnel.StatusTimestamp && safeFormatTimestamp(selectedPersonnel.StatusTimestamp, 'yyyy-MM-dd HH:mm Z') ? (
+                  {formattedStatusTimestamp ? (
                     <HStack space="xs" className="items-center">
                       <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
-                      <Text className="text-sm text-gray-600 dark:text-gray-400">{safeFormatTimestamp(selectedPersonnel.StatusTimestamp, 'yyyy-MM-dd HH:mm Z')}</Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400">{formattedStatusTimestamp}</Text>
                     </HStack>
                   ) : null}
                 </VStack>
@@ -182,10 +193,10 @@ export const PersonnelDetailsSheet: React.FC = () => {
                       </Badge>
                     </HStack>
 
-                    {selectedPersonnel.StaffingTimestamp && safeFormatTimestamp(selectedPersonnel.StaffingTimestamp, 'yyyy-MM-dd HH:mm Z') ? (
+                    {formattedStaffingTimestamp ? (
                       <HStack space="xs" className="items-center">
                         <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
-                        <Text className="text-sm text-gray-600 dark:text-gray-400">{safeFormatTimestamp(selectedPersonnel.StaffingTimestamp, 'yyyy-MM-dd HH:mm Z')}</Text>
+                        <Text className="text-sm text-gray-600 dark:text-gray-400">{formattedStaffingTimestamp}</Text>
                       </HStack>
                     ) : null}
                   </VStack>

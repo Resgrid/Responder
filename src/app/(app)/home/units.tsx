@@ -48,10 +48,7 @@ export default function Units() {
     setRefreshing(false);
   }, [fetchUnits]);
 
-  const renderUnitItem = useCallback(
-    ({ item }: { item: any }) => <UnitCard unit={item} unitTypeStatuses={unitTypeStatuses} onPress={selectUnit} />,
-    [unitTypeStatuses, selectUnit]
-  );
+  const renderUnitItem = useCallback(({ item }: { item: any }) => <UnitCard unit={item} unitTypeStatuses={unitTypeStatuses} onPress={selectUnit} />, [unitTypeStatuses, selectUnit]);
 
   const filteredUnits = React.useMemo(() => {
     if (!searchQuery.trim()) return units;

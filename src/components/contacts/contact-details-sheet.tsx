@@ -113,7 +113,7 @@ const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink,
         Alert.alert(t('contacts.errorTitle'), t('contacts.openAppError', { action: actionType }));
       }
     } catch (error) {
-      console.warn(t('contacts.openLinkFailed', { action: actionType }), error);
+      console.warn('Failed to open link for action:', actionType, error);
       Alert.alert(t('contacts.errorTitle'), t('contacts.openAppError', { action: actionType }));
     }
   };

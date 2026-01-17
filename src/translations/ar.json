@@ -143,8 +143,7 @@
     "upload_success": "تم رفع الصورة بنجاح"
   },
   "callNotes": {
-    "addNote": "إضافة ملاحظة",
-    "addNotePlaceholder": "أضف ملاحظة جديدة...",
+    "addNote": "إضافة ملاحظة",    "addNoteError": "فشل إضافة الملاحظة. يرجى المحاولة مرة أخرى.",    "addNotePlaceholder": "أضف ملاحظة جديدة...",
     "noNotes": "لا توجد ملاحظات متاحة لهذه المكالمة",
     "noSearchResults": "لا توجد ملاحظات تطابق بحثك",
     "searchPlaceholder": "البحث في الملاحظات...",
@@ -410,8 +409,6 @@
     "emptyDescription": "أضف جهات اتصال لإدارة اتصالاتك الشخصية والتجارية",
     "entranceCoordinates": "إحداثيات المدخل",
     "errorTitle": "خطأ",
-    "openAppError": "غير قادر على فتح تطبيق {{action}}",
-    "openLinkFailed": "فشل في فتح رابط {{action}}:",
     "exitCoordinates": "إحداثيات المخرج",
     "expires": "تنتهي في",
     "facebook": "فيسبوك",
@@ -434,6 +431,8 @@
     "notes": "ملاحظات",
     "notesTab": "الملاحظات",
     "officePhone": "هاتف المكتب",
+    "openAppError": "غير قادر على فتح تطبيق {{action}}",
+    "openLinkFailed": "فشل في فتح رابط {{action}}:",
     "otherInfo": "معلومات أخرى",
     "person": "شخص",
     "phone": "هاتف",

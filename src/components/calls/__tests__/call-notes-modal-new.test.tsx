@@ -12,21 +12,6 @@ jest.mock('@/lib/auth');
 jest.mock('@/stores/calls/detail-store');
 jest.mock('@/hooks/use-analytics');
 
-// Mock navigation
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((fn) => fn()),
-  useIsFocused: () => true,
-  useNavigation: () => ({
-    navigate: jest.fn(),
-  }),
-}));
-
-// Mock nativewind
-jest.mock('nativewind', () => ({
-  useColorScheme: () => ({ colorScheme: 'light' }),
-  cssInterop: jest.fn(),
-}));
-
 // Mock lucide-react-native icons
 jest.mock('lucide-react-native', () => ({
   SearchIcon: 'SearchIcon',
@@ -46,56 +31,17 @@ jest.mock('../../common/zero-state', () => ({
   __esModule: true,
   default: ({ heading }: { heading: string }) => {
     const { View, Text } = require('react-native');
-    return <View><Text>{heading}</Text></View>;
+    return <View testID="zero-state"><Text>{heading}</Text></View>;
   },
-}));
-
-// Mock FocusAwareStatusBar to avoid navigation issues
-jest.mock('../../ui/focus-aware-status-bar', () => ({
-  FocusAwareStatusBar: () => null,
 }));
 
 // Mock react-native-keyboard-controller
 jest.mock('react-native-keyboard-controller', () => ({
-  KeyboardAwareScrollView: ({ children }: any) => {
+  KeyboardStickyView: ({ children }: any) => {
     const { View } = require('react-native');
-    return <View testID="keyboard-aware-scroll-view">{children}</View>;
+    return <View testID="keyboard-sticky-view">{children}</View>;
   },
 }));
-
-// Mock react-native-gesture-handler
-jest.mock('react-native-gesture-handler', () => ({
-  ScrollView: ({ children, testID, ...props }: any) => {
-    const { ScrollView } = require('react-native');
-    return <ScrollView testID={testID} {...props}>{children}</ScrollView>;
-  },
-  PanGestureHandler: ({ children }: any) => children,
-  State: {},
-}));
-
-// Mock @gorhom/bottom-sheet
-jest.mock('@gorhom/bottom-sheet', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-
-  return {
-    __esModule: true,
-    default: React.forwardRef(({ children, onChange, index }: any, ref: any) => {
-      React.useImperativeHandle(ref, () => ({
-        expand: jest.fn(),
-        close: jest.fn(),
-      }));
-
-      React.useEffect(() => {
-        if (onChange) onChange(index);
-      }, [index, onChange]);
-
-      return <View testID="bottom-sheet">{children}</View>;
-    }),
-    BottomSheetView: ({ children }: any) => <View testID="bottom-sheet-view">{children}</View>,
-    BottomSheetBackdrop: ({ children }: any) => <View testID="backdrop">{children}</View>,
-  };
-});
 
 // Mock Button components with proper isDisabled handling
 jest.mock('../../ui/button', () => {

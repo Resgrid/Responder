@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Download, File, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable } from 'react-native';
@@ -21,8 +22,6 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { type CallFileResultData } from '@/models/v4/callFiles/callFileResultData';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 
-import { FocusAwareStatusBar } from '../ui';
-
 interface CallFilesModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,8 +31,14 @@ interface CallFilesModalProps {
 export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { colorScheme } = useColorScheme();
   const { callFiles, isLoadingFiles, errorFiles, fetchCallFiles } = useCallDetailStore();
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, number>>({});
+
+  // Dynamic colors based on color scheme
+  const backgroundColor = useMemo(() => (colorScheme === 'dark' ? '#111827' : '#FFFFFF'), [colorScheme]);
+  const handleIndicatorColor = useMemo(() => (colorScheme === 'dark' ? '#4B5563' : '#D1D5DB'), [colorScheme]);
+  const iconColor = useMemo(() => (colorScheme === 'dark' ? '#F3F4F6' : '#111827'), [colorScheme]);
 
   // Bottom sheet ref and snap points
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -316,56 +321,53 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
   };
 
   return (
-    <>
-      <FocusAwareStatusBar hidden={true} />
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={isOpen ? 0 : -1}
-        snapPoints={snapPoints}
-        onChange={handleSheetChanges}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose={true}
-        handleIndicatorStyle={{ backgroundColor: '#D1D5DB' }}
-        backgroundStyle={{ backgroundColor: 'white' }}
-      >
-        <BottomSheetView style={{ flex: 1 }} testID="call-files-modal">
-          {/* Fixed Header */}
-          <VStack space="md" className="bg-white dark:bg-gray-800">
-            <Box className="w-full flex-row items-center justify-between border-b border-gray-200 px-4 pb-4 pt-2 dark:border-gray-700">
-              <Heading size="lg">{t('calls.files.title')}</Heading>
-              <Button
-                variant="link"
-                onPress={() => {
-                  // Only track close analytics if modal was actually opened
-                  if (wasModalOpenRef.current) {
-                    try {
-                      trackEvent('call_files_modal_closed', {
-                        timestamp: new Date().toISOString(),
-                        callId,
-                        wasManualClose: true, // This means it was closed by button press
-                      });
-                    } catch (error) {
-                      console.warn('Failed to track call files modal close analytics:', error);
-                    }
-                    wasModalOpenRef.current = false;
+    <BottomSheet
+      ref={bottomSheetRef}
+      index={isOpen ? 0 : -1}
+      snapPoints={snapPoints}
+      onChange={handleSheetChanges}
+      backdropComponent={renderBackdrop}
+      enablePanDownToClose={true}
+      handleIndicatorStyle={{ backgroundColor: handleIndicatorColor }}
+      backgroundStyle={{ backgroundColor }}
+    >
+      <BottomSheetView style={{ flex: 1, backgroundColor }} testID="call-files-modal">
+        {/* Fixed Header */}
+        <VStack space="md" style={{ backgroundColor }}>
+          <Box className="w-full flex-row items-center justify-between border-b border-gray-200 px-4 pb-4 pt-2 dark:border-gray-700">
+            <Heading size="lg">{t('calls.files.title')}</Heading>
+            <Button
+              variant="link"
+              onPress={() => {
+                // Only track close analytics if modal was actually opened
+                if (wasModalOpenRef.current) {
+                  try {
+                    trackEvent('call_files_modal_closed', {
+                      timestamp: new Date().toISOString(),
+                      callId,
+                      wasManualClose: true, // This means it was closed by button press
+                    });
+                  } catch (error) {
+                    console.warn('Failed to track call files modal close analytics:', error);
                   }
-                  onClose();
-                }}
-                className="p-1"
-                testID="close-button"
-              >
-                <X size={24} />
-              </Button>
-            </Box>
-          </VStack>
+                  wasModalOpenRef.current = false;
+                }
+                onClose();
+              }}
+              className="p-1"
+              testID="close-button"
+            >
+              <X size={24} color={iconColor} />
+            </Button>
+          </Box>
+        </VStack>
 
-          {/* Scrollable Files List */}
-          <ScrollView style={{ flex: 1 }} className="bg-white dark:bg-gray-800" showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
-            {renderFilesContent()}
-          </ScrollView>
-        </BottomSheetView>
-      </BottomSheet>
-    </>
+        {/* Scrollable Files List */}
+        <ScrollView style={{ flex: 1, backgroundColor }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
+          {renderFilesContent()}
+        </ScrollView>
+      </BottomSheetView>
+    </BottomSheet>
   );
 };
 

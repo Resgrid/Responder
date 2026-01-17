@@ -1,10 +1,12 @@
 import { SearchIcon, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Modal, StyleSheet, View } from 'react-native';
+import { FlatList, Keyboard, Modal, StyleSheet, View } from 'react-native';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { showErrorMessage } from '@/components/ui/utils';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
 import type { CallNoteResultData } from '@/models/v4/callNotes/callNoteResultData';
@@ -27,13 +29,46 @@ interface CallNotesModalProps {
   callId: string;
 }
 
-const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
+function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { colorScheme } = useColorScheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [newNote, setNewNote] = useState('');
   const { callNotes, addNote, searchNotes, isNotesLoading, fetchCallNotes } = useCallDetailStore();
   const { profile } = useAuthStore();
+
+  // Create dynamic styles based on color scheme
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
+        },
+        header: {
+          backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
+          borderBottomWidth: 1,
+          borderBottomColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+        },
+        listContainer: {
+          flex: 1,
+        },
+        listContent: {
+          paddingHorizontal: 16,
+          paddingTop: 8,
+          paddingBottom: 16,
+        },
+        footer: {
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderTopWidth: 1,
+          borderTopColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#F9FAFB',
+        },
+      }),
+    [colorScheme]
+  );
 
   // Track if modal was actually opened to avoid false close events
   const wasModalOpenRef = useRef(false);
@@ -89,8 +124,10 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
       try {
         await addNote(callId, newNote, currentUser, null, null);
         setNewNote('');
+        Keyboard.dismiss();
       } catch (error) {
         console.error('Failed to add note:', error);
+        showErrorMessage(t('callNotes.addNoteError'));
       }
     }
   }, [newNote, callId, currentUser, addNote, trackEvent]);
@@ -155,7 +192,7 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
   const keyExtractor = useCallback((item: CallNoteResultData) => item.CallNoteId.toString(), []);
 
   // Empty list component
-  const ListEmptyComponent = useCallback(() => <ZeroState heading="No notes found" />, []);
+  const ListEmptyComponent = useCallback(() => <ZeroState heading={t('No notes found')} />, [t]);
 
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
@@ -165,7 +202,7 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
           <Box className="w-full flex-row items-center justify-between px-4 pb-4 pt-2">
             <Heading size="lg">{t('callNotes.title')}</Heading>
             <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
-              <X size={24} />
+              <X size={24} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
             </Button>
           </Box>
 
@@ -173,7 +210,7 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
           <Box className="px-4 pb-4">
             <Input className="w-full rounded-lg bg-gray-100 dark:bg-gray-700">
               <InputSlot>
-                <SearchIcon size={20} className="text-gray-500" />
+                <SearchIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
               </InputSlot>
               <InputField placeholder={t('callNotes.searchPlaceholder')} value={searchQuery} onChangeText={handleSearchQueryChange} />
             </Input>
@@ -193,6 +230,9 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
               contentContainerStyle={styles.listContent}
               ListEmptyComponent={ListEmptyComponent}
               showsVerticalScrollIndicator={true}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              windowSize={5}
             />
           )}
         </View>
@@ -204,7 +244,10 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
               <Textarea className="w-full rounded-lg bg-white dark:bg-gray-700">
                 <TextareaInput placeholder={t('callNotes.addNotePlaceholder')} value={newNote} onChangeText={setNewNote} autoCorrect={false} className="min-h-[80px] w-full" />
               </Textarea>
-              <HStack className="w-full justify-end">
+              <HStack className="w-full justify-between">
+                <Button variant="outline" onPress={handleClose} className="border-gray-300 dark:border-gray-600">
+                  <ButtonText className="text-gray-700 dark:text-gray-300">{t('common.cancel')}</ButtonText>
+                </Button>
                 <Button onPress={handleAddNote} className="bg-blue-600 dark:bg-blue-500" isDisabled={!newNote.trim() || isNotesLoading}>
                   <HStack space="xs" className="text-center">
                     <ButtonText>{t('callNotes.addNote')}</ButtonText>
@@ -217,33 +260,7 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
       </SafeAreaView>
     </Modal>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  header: {
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  listContainer: {
-    flex: 1,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-  },
-});
+}
 
 export default CallNotesModal;
+export { CallNotesModal };

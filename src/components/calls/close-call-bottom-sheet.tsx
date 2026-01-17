@@ -180,7 +180,13 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={handleClose} isLoading={isButtonDisabled}>
-      <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} bottomOffset={20} style={{ flexGrow: 0, width: '100%' }}>
+      <KeyboardAwareScrollView
+        keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'}
+        showsVerticalScrollIndicator={false}
+        bottomOffset={120}
+        extraScrollHeight={40}
+        style={{ flexGrow: 0, width: '100%' }}
+      >
         <VStack space="md" className="w-full p-4">
           <Text className="mb-4 text-center text-lg font-semibold text-gray-900 dark:text-white">{t('call_detail.close_call')}</Text>
 
