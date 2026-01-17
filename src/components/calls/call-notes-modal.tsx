@@ -130,7 +130,7 @@ function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
         showErrorMessage(t('callNotes.addNoteError'));
       }
     }
-  }, [newNote, callId, currentUser, addNote, trackEvent]);
+  }, [newNote, callId, currentUser, addNote, trackEvent, t]);
 
   // Handle close with analytics tracking
   const handleClose = useCallback(() => {

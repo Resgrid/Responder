@@ -43,15 +43,9 @@ export const PersonnelDetailsSheet: React.FC = () => {
   const selectedPersonnel = personnel?.find((person) => person.UserId === selectedPersonnelId);
 
   // Cache formatted timestamps to avoid double parsing
-  const formattedStatusTimestamp = useMemo(
-    () => safeFormatTimestamp(selectedPersonnel?.StatusTimestamp, 'yyyy-MM-dd HH:mm Z'),
-    [selectedPersonnel?.StatusTimestamp]
-  );
+  const formattedStatusTimestamp = useMemo(() => safeFormatTimestamp(selectedPersonnel?.StatusTimestamp, 'yyyy-MM-dd HH:mm Z'), [selectedPersonnel?.StatusTimestamp]);
 
-  const formattedStaffingTimestamp = useMemo(
-    () => safeFormatTimestamp(selectedPersonnel?.StaffingTimestamp, 'yyyy-MM-dd HH:mm Z'),
-    [selectedPersonnel?.StaffingTimestamp]
-  );
+  const formattedStaffingTimestamp = useMemo(() => safeFormatTimestamp(selectedPersonnel?.StaffingTimestamp, 'yyyy-MM-dd HH:mm Z'), [selectedPersonnel?.StaffingTimestamp]);
 
   // Track analytics when sheet becomes visible
   const trackViewAnalytics = useCallback(() => {

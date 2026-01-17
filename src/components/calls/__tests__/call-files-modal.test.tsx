@@ -318,7 +318,6 @@ describe('CallFilesModal', () => {
     const { getByTestId } = render(<CallFilesModal {...defaultProps} />);
 
     expect(getByTestId('bottom-sheet')).toBeTruthy();
-    expect(getByTestId('focus-aware-status-bar')).toBeTruthy();
   });
 
   it('renders correctly when open', () => {

@@ -184,7 +184,7 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
         keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'}
         showsVerticalScrollIndicator={false}
         bottomOffset={120}
-        extraScrollHeight={40}
+        extraKeyboardSpace={40}
         style={{ flexGrow: 0, width: '100%' }}
       >
         <VStack space="md" className="w-full p-4">
