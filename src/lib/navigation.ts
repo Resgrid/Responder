@@ -91,15 +91,14 @@ export const openMapsWithDirections = async (
       url = `maps://maps.apple.com/?daddr=${destLat},${destLng}&dirflg=d`;
     }
   } else if (Platform.OS === 'android') {
-    // Google Maps (Android)
+    // Google Maps (Android) - Use HTTPS URL which is more reliable
+    // The google.navigation: scheme requires AndroidManifest queries declaration
     if (originLatitude && originLongitude) {
-      // With specific origin
       const originLat = typeof originLatitude === 'number' ? originLatitude.toString() : originLatitude;
       const originLng = typeof originLongitude === 'number' ? originLongitude.toString() : originLongitude;
-      url = `google.navigation:q=${destLat},${destLng}&origin=${originLat},${originLng}`;
+      url = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}&travelmode=driving`;
     } else {
-      // Using current location as origin
-      url = `google.navigation:q=${destLat},${destLng}`;
+      url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
     }
   } else if (Platform.OS === 'web') {
     // Google Maps (Web)
@@ -131,6 +130,14 @@ export const openMapsWithDirections = async (
   }
 
   try {
+    // On Android, we use HTTPS URLs which don't need canOpenURL check
+    // HTTPS scheme is already declared in AndroidManifest queries
+    if (Platform.OS === 'android') {
+      await Linking.openURL(url);
+      return true;
+    }
+
+    // For iOS and other platforms, check if we can open the URL first
     const canOpen = await Linking.canOpenURL(url);
     if (canOpen) {
       await Linking.openURL(url);

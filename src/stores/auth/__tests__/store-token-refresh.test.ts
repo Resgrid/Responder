@@ -176,8 +176,11 @@ describe('Auth Store - Token Refresh Functionality', () => {
       });
     });
 
-    it('should logout when refresh API call fails', async () => {
-      const mockError = new Error('Network error');
+    it('should logout when refresh API call fails with permanent error', async () => {
+      // Create a mock axios error with 401 status (permanent auth failure)
+      const mockError = Object.assign(new Error('Unauthorized'), {
+        response: { status: 401 },
+      });
       mockedRefreshTokenRequest.mockRejectedValueOnce(mockError);
 
       const logoutSpy = jest.spyOn(useAuthStore.getState(), 'logout');
@@ -192,9 +195,57 @@ describe('Auth Store - Token Refresh Functionality', () => {
         message: 'Failed to refresh access token, forcing logout',
         context: {
           userId: 'test-user',
-          error: 'Network error',
+          error: 'Unauthorized',
         },
       });
+    });
+
+    it('should not logout when refresh API call fails with transient error', async () => {
+      // Create a mock error that looks like a network error (transient)
+      const mockError = new Error('Network request failed');
+      mockedRefreshTokenRequest.mockRejectedValueOnce(mockError);
+
+      const logoutSpy = jest.spyOn(useAuthStore.getState(), 'logout');
+
+      // This should throw because transient errors are re-thrown
+      await expect(useAuthStore.getState().refreshAccessToken()).rejects.toThrow('Network request failed');
+
+      // Verify logout was NOT called for transient error
+      expect(logoutSpy).not.toHaveBeenCalled();
+      
+      // Verify warning logging instead of error
+      expect(mockedLogger.warn).toHaveBeenCalledWith({
+        message: 'Transient token refresh error, not logging out',
+        context: {
+          userId: 'test-user',
+          error: 'Network request failed',
+        },
+      });
+
+      // Verify user is still signed in
+      const state = useAuthStore.getState();
+      expect(state.status).toBe('signedIn');
+      expect(state.refreshToken).toBe('valid-refresh-token');
+    });
+
+    it('should not logout when refresh API call fails with 503 Service Unavailable', async () => {
+      // Create a mock axios error with 503 status (transient)
+      const mockError = Object.assign(new Error('Service Unavailable'), {
+        response: { status: 503 },
+      });
+      mockedRefreshTokenRequest.mockRejectedValueOnce(mockError);
+
+      const logoutSpy = jest.spyOn(useAuthStore.getState(), 'logout');
+
+      // This should throw because transient errors are re-thrown
+      await expect(useAuthStore.getState().refreshAccessToken()).rejects.toThrow('Service Unavailable');
+
+      // Verify logout was NOT called for transient error
+      expect(logoutSpy).not.toHaveBeenCalled();
+      
+      // Verify user is still signed in
+      const state = useAuthStore.getState();
+      expect(state.status).toBe('signedIn');
     });
 
     it('should set up automatic token refresh after successful refresh', async () => {

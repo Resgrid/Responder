@@ -2,7 +2,7 @@
 import { Env } from '@env';
 import { useFocusEffect } from '@react-navigation/native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BackgroundGeolocationItem } from '@/components/settings/background-geolocation-item';
@@ -16,14 +16,18 @@ import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sh
 import { ThemeItem } from '@/components/settings/theme-item';
 import { ToggleItem } from '@/components/settings/toggle-item';
 import { FocusAwareStatusBar, ScrollView } from '@/components/ui';
+import { AlertDialog, AlertDialogBackdrop, AlertDialogBody, AlertDialogContent, AlertDialogFooter, AlertDialogHeader } from '@/components/ui/alert-dialog';
 import { Box } from '@/components/ui/box';
+import { Button, ButtonText } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth, useAuthStore } from '@/lib';
 import { logger } from '@/lib/logging';
 import { getBaseApiUrl } from '@/lib/storage/app';
+import { clearAllAppData } from '@/lib/storage/clear-all-data';
 import { openLinkInBrowser } from '@/lib/utils';
 import { useUnitsStore } from '@/stores/units/store';
 
@@ -36,6 +40,8 @@ export default function Settings() {
   const { login, status, isAuthenticated } = useAuth();
   const [showServerUrl, setShowServerUrl] = React.useState(false);
   const [showUnitSelection, setShowUnitSelection] = React.useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { units } = useUnitsStore();
 
   // Track analytics when view becomes visible
@@ -83,8 +89,53 @@ export default function Settings() {
     trackEvent('settings_logout_pressed', {
       timestamp: new Date().toISOString(),
     });
-    signOut();
+    setShowLogoutConfirm(true);
+  }, [trackEvent]);
+
+  const handleLogoutConfirm = useCallback(async () => {
+    setIsLoggingOut(true);
+    trackEvent('settings_logout_confirmed', {
+      timestamp: new Date().toISOString(),
+    });
+
+    logger.info({
+      message: 'User confirmed logout, clearing all app data',
+    });
+
+    try {
+      // Clear all app data (stores, storage, cached values)
+      await clearAllAppData({
+        resetStores: true,
+        clearStorage: true,
+        clearFilters: true,
+        clearSecure: false, // Keep secure keys for re-login
+      });
+
+      // Sign out the user
+      await signOut();
+
+      logger.info({
+        message: 'Logout completed successfully, all data cleared',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Error during logout data cleanup',
+        context: { error },
+      });
+      // Still sign out even if cleanup fails
+      await signOut();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
+    }
   }, [trackEvent, signOut]);
+
+  const handleLogoutCancel = useCallback(() => {
+    trackEvent('settings_logout_cancelled', {
+      timestamp: new Date().toISOString(),
+    });
+    setShowLogoutConfirm(false);
+  }, [trackEvent]);
 
   const handleSupportLinkPress = useCallback(
     (linkType: string, url: string) => {
@@ -160,6 +211,27 @@ export default function Settings() {
 
       <LoginInfoBottomSheet isOpen={showLoginInfo} onClose={() => setShowLoginInfo(false)} onSubmit={handleLoginInfoSubmit} />
       <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} />
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog isOpen={showLogoutConfirm} onClose={handleLogoutCancel}>
+        <AlertDialogBackdrop />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <Heading size="lg">{t('settings.logout_confirm_title')}</Heading>
+          </AlertDialogHeader>
+          <AlertDialogBody className="mb-4 mt-3">
+            <Text>{t('settings.logout_confirm_message')}</Text>
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button variant="outline" action="secondary" onPress={handleLogoutCancel} disabled={isLoggingOut} className="mr-3">
+              <ButtonText>{t('settings.logout_confirm_cancel')}</ButtonText>
+            </Button>
+            <Button action="negative" onPress={handleLogoutConfirm} disabled={isLoggingOut}>
+              <ButtonText>{isLoggingOut ? '...' : t('settings.logout_confirm_yes')}</ButtonText>
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Box>
   );
 }

@@ -1,3 +1,4 @@
+import type { AxiosError } from 'axios';
 import base64 from 'react-native-base64';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -9,6 +10,33 @@ import type { AuthResponse, AuthStatus, LoginCredentials } from '../../lib/auth/
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage';
+
+// Helper function to determine if a refresh error is transient (network issues, rate limiting, etc.)
+// Transient errors should not force logout as they might resolve on retry
+const isTransientRefreshError = (error: unknown): boolean => {
+  if (error instanceof Error && 'response' in error) {
+    const axiosError = error as AxiosError;
+    const status = axiosError.response?.status;
+
+    // Transient errors that might resolve on retry
+    return (
+      status === 429 || // Rate limited
+      status === 503 || // Service unavailable
+      status === 502 || // Bad gateway
+      status === 504 || // Gateway timeout
+      !status // Network errors (no response)
+    );
+  }
+
+  // Network errors or other non-HTTP errors are typically transient
+  // Check for common network error indicators
+  if (error instanceof Error) {
+    const errorMessage = error.message.toLowerCase();
+    return errorMessage.includes('network') || errorMessage.includes('timeout') || errorMessage.includes('econnrefused') || errorMessage.includes('enotfound') || errorMessage.includes('socket');
+  }
+
+  return false;
+};
 
 interface AuthState {
   // Tokens
@@ -252,15 +280,31 @@ const useAuthStore = create<AuthState>()(
           });
         } catch (error) {
           const currentState = get();
-          logger.error({
-            message: 'Failed to refresh access token, forcing logout',
-            context: {
-              userId: currentState.userId,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-          });
-          // If refresh fails, log out the user
-          await get().logout('Token refresh failed');
+
+          // Check if this is a transient error that might resolve on retry
+          const isTransientError = isTransientRefreshError(error);
+
+          if (isTransientError) {
+            logger.warn({
+              message: 'Transient token refresh error, not logging out',
+              context: {
+                userId: currentState.userId,
+                error: error instanceof Error ? error.message : 'Unknown error',
+              },
+            });
+            // Re-throw the error to let the caller handle it (e.g., retry or use cached token)
+            throw error;
+          } else {
+            logger.error({
+              message: 'Failed to refresh access token, forcing logout',
+              context: {
+                userId: currentState.userId,
+                error: error instanceof Error ? error.message : 'Unknown error',
+              },
+            });
+            // Only logout for permanent auth failures
+            await get().logout('Token refresh failed');
+          }
         }
       },
       hydrate: () => {

@@ -144,6 +144,7 @@
   },
   "callNotes": {
     "addNote": "Add Note",
+    "addNoteError": "Failed to add note. Please try again.",
     "addNotePlaceholder": "Add a new note...",
     "noNotes": "No notes available for this call",
     "noSearchResults": "No notes match your search",
@@ -409,6 +410,7 @@
     "empty": "No contacts found",
     "emptyDescription": "Add contacts to manage your personal and business connections",
     "entranceCoordinates": "Entrance Coordinates",
+    "errorTitle": "Error",
     "exitCoordinates": "Exit Coordinates",
     "expires": "Expires",
     "facebook": "Facebook",
@@ -431,6 +433,8 @@
     "notes": "Notes",
     "notesTab": "Notes",
     "officePhone": "Office Phone",
+    "openAppError": "Unable to open {{action}} app",
+    "openLinkFailed": "Failed to open {{action}} link:",
     "otherInfo": "Other Information",
     "person": "Person",
     "phone": "Phone",
@@ -668,6 +672,8 @@
     "message": "Welcome to obytes app site"
   },
   "personnel": {
+    "contactInformation": "Contact Information",
+    "currentStatus": "Current Status",
     "empty": "No personnel found",
     "emptyDescription": "No personnel match your search criteria or no personnel data is available.",
     "filter": {
@@ -676,7 +682,11 @@
       "emptyDescription": "Filter options will appear here when available.",
       "title": "Filter Personnel"
     },
+    "group": "Group",
+    "id": "ID",
+    "roles": "Roles",
     "search": "Search personnel...",
+    "staffing": "Staffing",
     "status": {
       "add_note": "Add Note",
       "calls_tab": "Calls",
@@ -750,6 +760,10 @@
     "links": "Links",
     "login_info": "Login Info",
     "logout": "Logout",
+    "logout_confirm_cancel": "Cancel",
+    "logout_confirm_message": "Are you sure you want to log out? All local data, cached values, and saved settings will be cleared from the app.",
+    "logout_confirm_title": "Confirm Logout",
+    "logout_confirm_yes": "Yes, Logout",
     "more": "More",
     "no_units_available": "No units available",
     "none_selected": "None Selected",
@@ -877,10 +891,12 @@
     "group": "Group",
     "lastUpdate": "Last Updated",
     "location": "Location",
+    "maps_error": "Unable to open maps",
     "notes": "Notes",
     "plateNumber": "Plate Number",
     "search": "Search units...",
     "specialPermit": "Special Permit",
+    "tapToOpenMaps": "Tap to open in maps",
     "title": "Units",
     "vehicleInfo": "Vehicle Information",
     "vin": "VIN"

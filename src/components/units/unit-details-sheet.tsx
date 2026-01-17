@@ -2,9 +2,12 @@ import { Calendar, Car, MapPin, Settings, Truck, Users, X } from 'lucide-react-n
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Platform, Pressable } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
+import { openMapsWithDirections } from '@/lib/navigation';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
+import { useToastStore } from '@/stores/toast/store';
 import { useUnitsStore } from '@/stores/units/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
@@ -22,6 +25,7 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
+  const showToast = useToastStore((state) => state.showToast);
   const { units, selectedUnitId, isDetailsOpen, closeDetails } = useUnitsStore();
 
   const selectedUnit = units.find((unit) => unit.UnitId === selectedUnitId);
@@ -93,6 +97,34 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
     closeDetails();
   }, [trackEvent, selectedUnit, closeDetails]);
 
+  // Handle opening the native maps app with location
+  const handleOpenMaps = useCallback(() => {
+    if (!selectedUnit?.Latitude || !selectedUnit?.Longitude) return;
+
+    const latitude = selectedUnit.Latitude;
+    const longitude = selectedUnit.Longitude;
+
+    // Track analytics for map opening
+    try {
+      trackEvent('unit_details_location_tapped', {
+        timestamp: new Date().toISOString(),
+        unitId: selectedUnit.UnitId || '',
+        unitName: selectedUnit.Name || '',
+        latitude,
+        longitude,
+        platform: Platform.OS,
+      });
+    } catch (error) {
+      console.warn('Failed to track location tap analytics:', error);
+    }
+
+    // Use the navigation utility to open maps
+    openMapsWithDirections(latitude, longitude, selectedUnit.Name).catch((error) => {
+      console.warn('Failed to open maps:', error);
+      showToast('error', t('units.maps_error'));
+    });
+  }, [selectedUnit, trackEvent, showToast, t]);
+
   if (!selectedUnit) return null;
 
   return (
@@ -138,15 +170,18 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
 
               {/* Location Information */}
               {hasLocation && (
-                <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                  <HStack space="sm" className="mb-2 items-center">
-                    <MapPin size={18} color={isDark ? '#4ade80' : '#16a34a'} />
-                    <Text className="font-medium text-gray-800 dark:text-gray-200">{t('units.location')}</Text>
-                  </HStack>
-                  <Text className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('units.coordinates')}: {selectedUnit.Latitude}, {selectedUnit.Longitude}
-                  </Text>
-                </Box>
+                <Pressable onPress={handleOpenMaps} testID="location-press" accessibilityRole="button" accessibilityLabel={t('units.location')} accessibilityHint={t('units.tapToOpenMaps')}>
+                  <Box className="rounded-lg bg-gray-50 p-3 active:bg-gray-100 dark:bg-gray-700 dark:active:bg-gray-600">
+                    <HStack space="sm" className="mb-2 items-center">
+                      <MapPin size={18} color={isDark ? '#4ade80' : '#16a34a'} />
+                      <Text className="font-medium text-gray-800 dark:text-gray-200">{t('units.location')}</Text>
+                    </HStack>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('units.coordinates')}: {selectedUnit.Latitude}, {selectedUnit.Longitude}
+                    </Text>
+                    <Text className="mt-1 text-xs text-blue-600 dark:text-blue-400">{t('units.tapToOpenMaps')}</Text>
+                  </Box>
+                </Pressable>
               )}
 
               {/* Vehicle Information */}

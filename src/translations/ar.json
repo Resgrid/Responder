@@ -143,8 +143,7 @@
     "upload_success": "تم رفع الصورة بنجاح"
   },
   "callNotes": {
-    "addNote": "إضافة ملاحظة",
-    "addNotePlaceholder": "أضف ملاحظة جديدة...",
+    "addNote": "إضافة ملاحظة",    "addNoteError": "فشل إضافة الملاحظة. يرجى المحاولة مرة أخرى.",    "addNotePlaceholder": "أضف ملاحظة جديدة...",
     "noNotes": "لا توجد ملاحظات متاحة لهذه المكالمة",
     "noSearchResults": "لا توجد ملاحظات تطابق بحثك",
     "searchPlaceholder": "البحث في الملاحظات...",
@@ -409,6 +408,7 @@
     "empty": "لم يتم العثور على جهات اتصال",
     "emptyDescription": "أضف جهات اتصال لإدارة اتصالاتك الشخصية والتجارية",
     "entranceCoordinates": "إحداثيات المدخل",
+    "errorTitle": "خطأ",
     "exitCoordinates": "إحداثيات المخرج",
     "expires": "تنتهي في",
     "facebook": "فيسبوك",
@@ -431,6 +431,8 @@
     "notes": "ملاحظات",
     "notesTab": "الملاحظات",
     "officePhone": "هاتف المكتب",
+    "openAppError": "غير قادر على فتح تطبيق {{action}}",
+    "openLinkFailed": "فشل في فتح رابط {{action}}:",
     "otherInfo": "معلومات أخرى",
     "person": "شخص",
     "phone": "هاتف",
@@ -668,6 +670,8 @@
     "message": "مرحبًا بك في تطبيق obytes"
   },
   "personnel": {
+    "contactInformation": "معلومات الاتصال",
+    "currentStatus": "الحالة الحالية",
     "empty": "لم يتم العثور على أي شخص",
     "emptyDescription": "لا يتطابق أي شخص مع معايير البحث أو لا توجد بيانات شخصية متاحة.",
     "filter": {
@@ -676,7 +680,11 @@
       "emptyDescription": "ستظهر خيارات المرشحات هنا عند توفرها.",
       "title": "تصفية الأشخاص"
     },
+    "group": "المجموعة",
+    "id": "رقم التعريف",
+    "roles": "الأدوار",
     "search": "بحث في الأشخاص...",
+    "staffing": "التوظيف",
     "status": {
       "add_note": "إضافة ملاحظة",
       "calls_tab": "المكالمات",
@@ -750,6 +758,10 @@
     "links": "الروابط",
     "login_info": "معلومات تسجيل الدخول",
     "logout": "تسجيل خروج",
+    "logout_confirm_cancel": "إلغاء",
+    "logout_confirm_message": "هل أنت متأكد من أنك تريد تسجيل الخروج؟ سيتم مسح جميع البيانات المحلية والقيم المخزنة مؤقتًا والإعدادات المحفوظة من التطبيق.",
+    "logout_confirm_title": "تأكيد تسجيل الخروج",
+    "logout_confirm_yes": "نعم، تسجيل الخروج",
     "more": "المزيد",
     "no_units_available": "لا توجد وحدات متاحة",
     "none_selected": "لم يتم اختيار أي شيء",
@@ -877,10 +889,12 @@
     "group": "المجموعة",
     "lastUpdate": "آخر تحديث",
     "location": "الموقع",
+    "maps_error": "غير قادر على فتح الخرائط",
     "notes": "الملاحظات",
     "plateNumber": "رقم اللوحة",
     "search": "البحث في الوحدات...",
     "specialPermit": "تصريح خاص",
+    "tapToOpenMaps": "اضغط لفتح في الخرائط",
     "title": "الوحدات",
     "vehicleInfo": "معلومات المركبة",
     "vin": "رقم الهيكل"

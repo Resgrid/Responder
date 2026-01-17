@@ -238,6 +238,63 @@ jest.mock('@/lib/logging', () => ({
   },
 }));
 
+// Mock clear all app data
+const mockClearAllAppData = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/lib/storage/clear-all-data', () => ({
+  clearAllAppData: () => mockClearAllAppData(),
+}));
+
+// Mock AlertDialog components
+jest.mock('@/components/ui/alert-dialog', () => ({
+  AlertDialog: ({ isOpen, onClose, children }: any) => {
+    const { View } = require('react-native');
+    return isOpen ? (
+      <View testID="logout-confirmation-dialog">{children}</View>
+    ) : null;
+  },
+  AlertDialogBackdrop: () => null,
+  AlertDialogContent: ({ children }: any) => {
+    const { View } = require('react-native');
+    return <View testID="alert-dialog-content">{children}</View>;
+  },
+  AlertDialogHeader: ({ children }: any) => {
+    const { View } = require('react-native');
+    return <View testID="alert-dialog-header">{children}</View>;
+  },
+  AlertDialogBody: ({ children }: any) => {
+    const { View } = require('react-native');
+    return <View testID="alert-dialog-body">{children}</View>;
+  },
+  AlertDialogFooter: ({ children }: any) => {
+    const { View } = require('react-native');
+    return <View testID="alert-dialog-footer">{children}</View>;
+  },
+}));
+
+// Mock Button components
+jest.mock('@/components/ui/button', () => ({
+  Button: ({ children, onPress, disabled, testID }: any) => {
+    const { TouchableOpacity } = require('react-native');
+    return (
+      <TouchableOpacity testID={testID} onPress={onPress} disabled={disabled}>
+        {children}
+      </TouchableOpacity>
+    );
+  },
+  ButtonText: ({ children }: any) => {
+    const { Text } = require('react-native');
+    return <Text>{children}</Text>;
+  },
+}));
+
+// Mock Text component
+jest.mock('@/components/ui/text', () => ({
+  Text: ({ children }: any) => {
+    const { Text: RNText } = require('react-native');
+    return <RNText>{children}</RNText>;
+  },
+}));
+
 describe('Settings Screen', () => {
   const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
   const mockUseFocusEffect = useFocusEffect as jest.MockedFunction<typeof useFocusEffect>;
@@ -347,7 +404,7 @@ describe('Settings Screen', () => {
     expect(loginSheet.props.style.display).toBe('flex');
   });
 
-  it('handles logout press and tracks analytics', () => {
+  it('handles logout press and shows confirmation dialog', () => {
     render(<Settings />);
 
     const logoutItem = screen.getByTestId('item-settings.logout');
@@ -357,7 +414,59 @@ describe('Settings Screen', () => {
       timestamp: expect.any(String),
     });
 
-    expect(mockLogout).toHaveBeenCalledTimes(1);
+    // Confirmation dialog should now be shown
+    expect(screen.getByTestId('logout-confirmation-dialog')).toBeTruthy();
+    expect(screen.getByText('settings.logout_confirm_title')).toBeTruthy();
+    expect(screen.getByText('settings.logout_confirm_message')).toBeTruthy();
+  });
+
+  it('handles logout confirmation and clears all app data', async () => {
+    render(<Settings />);
+
+    // Open logout confirmation dialog
+    const logoutItem = screen.getByTestId('item-settings.logout');
+    fireEvent.press(logoutItem);
+
+    // Find and press the confirm button (Yes, Logout)
+    const confirmButton = screen.getByText('settings.logout_confirm_yes');
+    fireEvent.press(confirmButton);
+
+    await waitFor(() => {
+      expect(mockTrackEvent).toHaveBeenCalledWith('settings_logout_confirmed', {
+        timestamp: expect.any(String),
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockClearAllAppData).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(mockLogout).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('handles logout cancellation and does not clear data', () => {
+    render(<Settings />);
+
+    // Open logout confirmation dialog
+    const logoutItem = screen.getByTestId('item-settings.logout');
+    fireEvent.press(logoutItem);
+
+    // Dialog should be visible
+    expect(screen.getByTestId('logout-confirmation-dialog')).toBeTruthy();
+
+    // Find and press the cancel button
+    const cancelButton = screen.getByText('settings.logout_confirm_cancel');
+    fireEvent.press(cancelButton);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('settings_logout_cancelled', {
+      timestamp: expect.any(String),
+    });
+
+    // Logout and clear should not be called
+    expect(mockClearAllAppData).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
   it('handles support link presses and tracks analytics', () => {

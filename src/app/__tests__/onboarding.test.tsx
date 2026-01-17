@@ -207,11 +207,11 @@ describe('Onboarding Component', () => {
 
   describe('Component Rendering', () => {
     it('should render onboarding component without crashing', () => {
-      const { getByTestId, getByText } = render(<Onboarding />);
+      const { getByTestId } = render(<Onboarding />);
 
       // Check for main structural elements
       expect(getByTestId('onboarding-flatlist')).toBeTruthy();
-      expect(getByText('Skip')).toBeTruthy();
+      expect(getByTestId('skip-button-top')).toBeTruthy();
 
       // The FlashList content might not render immediately in tests,
       // so we verify the component renders without crashing
@@ -219,9 +219,9 @@ describe('Onboarding Component', () => {
     });
 
     it('should render navigation elements', () => {
-      const { getByText, queryByText } = render(<Onboarding />);
+      const { getByTestId, queryByText } = render(<Onboarding />);
 
-      expect(getByText('Skip')).toBeTruthy();
+      expect(getByTestId('skip-button-top')).toBeTruthy();
 
       // Check for Next button in different ways
       const hasNext = queryByText('Next ') ||
@@ -233,7 +233,7 @@ describe('Onboarding Component', () => {
       if (!hasNext) {
         // Just verify that we have the basic navigation structure
         // The Next button functionality is tested in the analytics tests
-        expect(getByText('Skip')).toBeTruthy();
+        expect(getByTestId('skip-button-top')).toBeTruthy();
       } else {
         expect(hasNext).toBeTruthy();
       }
@@ -294,17 +294,18 @@ describe('Onboarding Component', () => {
     });
 
     it('should track onboarding_skip_clicked event when skip button is pressed', () => {
-      const { getByText } = render(<Onboarding />);
+      const { getByTestId } = render(<Onboarding />);
 
       // Clear the initial view tracking call
       mockTrackEvent.mockClear();
 
-      fireEvent.press(getByText('Skip'));
+      fireEvent.press(getByTestId('skip-button-top'));
 
       expect(mockTrackEvent).toHaveBeenCalledWith('onboarding_skip_clicked', {
         timestamp: expect.any(String),
         currentSlide: 0,
         slideTitle: 'Resgrid Responder',
+        skipLocation: 'top_right',
       });
     });
 
@@ -342,9 +343,9 @@ describe('Onboarding Component', () => {
 
   describe('Navigation Behavior', () => {
     it('should navigate to login when skip is pressed', () => {
-      const { getByText } = render(<Onboarding />);
+      const { getByTestId } = render(<Onboarding />);
 
-      fireEvent.press(getByText('Skip'));
+      fireEvent.press(getByTestId('skip-button-top'));
 
       expect(mockSetIsFirstTime).toHaveBeenCalledWith(false);
       expect(mockRouter.replace).toHaveBeenCalledWith('/login');
@@ -442,10 +443,10 @@ describe('Onboarding Component', () => {
     });
 
     it('should validate onboarding_skip_clicked analytics structure', () => {
-      const { getByText } = render(<Onboarding />);
+      const { getByTestId } = render(<Onboarding />);
 
       mockTrackEvent.mockClear();
-      fireEvent.press(getByText('Skip'));
+      fireEvent.press(getByTestId('skip-button-top'));
 
       const call = mockTrackEvent.mock.calls.find(call => call[0] === 'onboarding_skip_clicked');
       expect(call).toBeTruthy();

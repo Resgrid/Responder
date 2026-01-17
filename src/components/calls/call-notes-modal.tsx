@@ -1,30 +1,26 @@
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { SearchIcon, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useColorScheme } from 'nativewind';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, useWindowDimensions } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { FlatList, Keyboard, Modal, StyleSheet, View } from 'react-native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { showErrorMessage } from '@/components/ui/utils';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
+import type { CallNoteResultData } from '@/models/v4/callNotes/callNoteResultData';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 
 import { Loading } from '../common/loading';
 import ZeroState from '../common/zero-state';
-import { FocusAwareStatusBar } from '../ui';
 import { Box } from '../ui/box';
 import { Button, ButtonText } from '../ui/button';
-import { Divider } from '../ui/divider';
 import { Heading } from '../ui/heading';
 import { HStack } from '../ui/hstack';
-import { Input } from '../ui/input';
-import { InputSlot } from '../ui/input';
-import { InputField } from '../ui/input';
+import { Input, InputField, InputSlot } from '../ui/input';
 import { Text } from '../ui/text';
-import { Textarea } from '../ui/textarea';
-import { TextareaInput } from '../ui/textarea';
+import { Textarea, TextareaInput } from '../ui/textarea';
 import { VStack } from '../ui/vstack';
 
 interface CallNotesModalProps {
@@ -33,18 +29,46 @@ interface CallNotesModalProps {
   callId: string;
 }
 
-const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
+function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { colorScheme } = useColorScheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [newNote, setNewNote] = useState('');
   const { callNotes, addNote, searchNotes, isNotesLoading, fetchCallNotes } = useCallDetailStore();
   const { profile } = useAuthStore();
-  const { height } = useWindowDimensions();
 
-  // Bottom sheet ref and snap points
-  const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => ['67%'], []);
+  // Create dynamic styles based on color scheme
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
+        },
+        header: {
+          backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
+          borderBottomWidth: 1,
+          borderBottomColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+        },
+        listContainer: {
+          flex: 1,
+        },
+        listContent: {
+          paddingHorizontal: 16,
+          paddingTop: 8,
+          paddingBottom: 16,
+        },
+        footer: {
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderTopWidth: 1,
+          borderTopColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#F9FAFB',
+        },
+      }),
+    [colorScheme]
+  );
 
   // Track if modal was actually opened to avoid false close events
   const wasModalOpenRef = useRef(false);
@@ -72,9 +96,6 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
   useEffect(() => {
     if (isOpen && callId) {
       fetchCallNotes(callId);
-      bottomSheetRef.current?.expand();
-    } else {
-      bottomSheetRef.current?.close();
     }
   }, [isOpen, callId, fetchCallNotes]);
 
@@ -103,42 +124,16 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
       try {
         await addNote(callId, newNote, currentUser, null, null);
         setNewNote('');
+        Keyboard.dismiss();
       } catch (error) {
         console.error('Failed to add note:', error);
+        showErrorMessage(t('callNotes.addNoteError'));
       }
     }
-  }, [newNote, callId, currentUser, addNote, trackEvent]);
+  }, [newNote, callId, currentUser, addNote, trackEvent, t]);
 
-  // Handle sheet changes
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        // Only track close analytics if modal was actually opened
-        if (wasModalOpenRef.current) {
-          try {
-            trackEvent('call_notes_modal_closed', {
-              timestamp: new Date().toISOString(),
-              callId,
-              wasManualClose: false, // This means it was closed by gesture
-              noteCount: callNotes?.length || 0,
-              hadSearchQuery: searchQuery.trim().length > 0,
-            });
-          } catch (error) {
-            console.warn('Failed to track call notes modal close analytics:', error);
-          }
-          wasModalOpenRef.current = false;
-        }
-        onClose();
-      }
-    },
-    [onClose, trackEvent, callId, callNotes?.length, searchQuery]
-  );
-
-  // Render backdrop
-  const renderBackdrop = useCallback((props: BottomSheetBackdropProps) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />, []);
-
-  // Handle manual close with analytics tracking
-  const handleManualClose = useCallback(() => {
+  // Handle close with analytics tracking
+  const handleClose = useCallback(() => {
     // Only track close analytics if modal was actually opened
     if (wasModalOpenRef.current) {
       try {
@@ -179,84 +174,93 @@ const CallNotesModal = ({ isOpen, onClose, callId }: CallNotesModalProps) => {
     [setSearchQuery, trackEvent, callId, searchNotes]
   );
 
-  return (
-    <>
-      <FocusAwareStatusBar hidden={true} />
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={isOpen ? 0 : -1}
-        snapPoints={snapPoints}
-        onChange={handleSheetChanges}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose={true}
-        handleIndicatorStyle={{ backgroundColor: '#D1D5DB' }}
-        backgroundStyle={{ backgroundColor: 'white' }}
-      >
-        <BottomSheetView style={{ flex: 1 }}>
-          {/* Fixed Header */}
-          <VStack space="md" className="bg-white dark:bg-gray-800">
-            <Box className="w-full flex-row items-center justify-between border-b border-gray-200 px-4 pb-4 pt-2 dark:border-gray-700">
-              <Heading size="lg">{t('callNotes.title')}</Heading>
-              <Button variant="link" onPress={handleManualClose} className="p-1" testID="close-button">
-                <X size={24} />
-              </Button>
-            </Box>
-
-            {/* Search Bar - Fixed */}
-            <Box className="px-4 pb-4">
-              <Input className="w-full rounded-lg bg-gray-100 dark:bg-gray-700">
-                <InputSlot>
-                  <SearchIcon size={20} className="text-gray-500" />
-                </InputSlot>
-                <InputField placeholder={t('callNotes.searchPlaceholder')} value={searchQuery} onChangeText={handleSearchQueryChange} />
-              </Input>
-            </Box>
-          </VStack>
-
-          {/* Scrollable Notes List - This is the only scrollable part */}
-          <ScrollView style={{ flex: 1 }} className="bg-white dark:bg-gray-800" showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
-            <VStack space="md" className="w-full">
-              {isNotesLoading ? (
-                <Loading />
-              ) : filteredNotes.length > 0 ? (
-                filteredNotes.map((note) => (
-                  <Box key={note.CallNoteId} className="w-full rounded-lg bg-gray-50 p-4 shadow-sm dark:bg-gray-700">
-                    <Text className="mb-2 text-gray-800 dark:text-gray-200">{note.Note}</Text>
-                    <HStack className="w-full justify-between">
-                      <Text className="text-xs text-gray-500 dark:text-gray-400">{note.FullName}</Text>
-                      <Text className="text-xs text-gray-500 dark:text-gray-400">{note.TimestampFormatted}</Text>
-                    </HStack>
-                  </Box>
-                ))
-              ) : (
-                <ZeroState heading="No notes found" />
-              )}
-            </VStack>
-          </ScrollView>
-
-          <Divider />
-
-          {/* Fixed Footer - Always at bottom */}
-          <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
-            <Box className="w-full bg-gray-50 p-4 dark:bg-gray-900">
-              <VStack space="md" className="w-full">
-                <Textarea className="w-full rounded-lg bg-white dark:bg-gray-700">
-                  <TextareaInput placeholder={t('callNotes.addNotePlaceholder')} value={newNote} onChangeText={setNewNote} autoCorrect={false} className="min-h-[80px] w-full" />
-                </Textarea>
-                <HStack className="w-full justify-end">
-                  <Button onPress={handleAddNote} className="bg-blue-600 dark:bg-blue-500" isDisabled={!newNote.trim() || isNotesLoading}>
-                    <HStack space="xs" className="text-center">
-                      <ButtonText>{t('callNotes.addNote')}</ButtonText>
-                    </HStack>
-                  </Button>
-                </HStack>
-              </VStack>
-            </Box>
-          </KeyboardAwareScrollView>
-        </BottomSheetView>
-      </BottomSheet>
-    </>
+  // Render note item for FlatList
+  const renderNoteItem = useCallback(
+    ({ item: note }: { item: CallNoteResultData }) => (
+      <Box className="mb-3 w-full rounded-lg bg-gray-50 p-4 shadow-sm dark:bg-gray-700">
+        <Text className="mb-2 text-gray-800 dark:text-gray-200">{note.Note}</Text>
+        <HStack className="w-full justify-between">
+          <Text className="text-xs text-gray-500 dark:text-gray-400">{note.FullName}</Text>
+          <Text className="text-xs text-gray-500 dark:text-gray-400">{note.TimestampFormatted}</Text>
+        </HStack>
+      </Box>
+    ),
+    []
   );
-};
+
+  // Key extractor for FlatList
+  const keyExtractor = useCallback((item: CallNoteResultData) => item.CallNoteId.toString(), []);
+
+  // Empty list component
+  const ListEmptyComponent = useCallback(() => <ZeroState heading={t('No notes found')} />, [t]);
+
+  return (
+    <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        {/* Fixed Header */}
+        <View style={styles.header}>
+          <Box className="w-full flex-row items-center justify-between px-4 pb-4 pt-2">
+            <Heading size="lg">{t('callNotes.title')}</Heading>
+            <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
+              <X size={24} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+            </Button>
+          </Box>
+
+          {/* Search Bar - Fixed */}
+          <Box className="px-4 pb-4">
+            <Input className="w-full rounded-lg bg-gray-100 dark:bg-gray-700">
+              <InputSlot>
+                <SearchIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+              </InputSlot>
+              <InputField placeholder={t('callNotes.searchPlaceholder')} value={searchQuery} onChangeText={handleSearchQueryChange} />
+            </Input>
+          </Box>
+        </View>
+
+        {/* Scrollable Notes List */}
+        <View style={styles.listContainer}>
+          {isNotesLoading ? (
+            <Loading />
+          ) : (
+            <FlatList
+              data={filteredNotes}
+              renderItem={renderNoteItem}
+              keyExtractor={keyExtractor}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={ListEmptyComponent}
+              showsVerticalScrollIndicator={true}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+            />
+          )}
+        </View>
+
+        {/* Footer with KeyboardStickyView */}
+        <KeyboardStickyView offset={{ opened: 0, closed: 0 }}>
+          <View style={styles.footer}>
+            <VStack space="md" className="w-full">
+              <Textarea className="w-full rounded-lg bg-white dark:bg-gray-700">
+                <TextareaInput placeholder={t('callNotes.addNotePlaceholder')} value={newNote} onChangeText={setNewNote} autoCorrect={false} className="min-h-[80px] w-full" />
+              </Textarea>
+              <HStack className="w-full justify-between">
+                <Button variant="outline" onPress={handleClose} className="border-gray-300 dark:border-gray-600">
+                  <ButtonText className="text-gray-700 dark:text-gray-300">{t('common.cancel')}</ButtonText>
+                </Button>
+                <Button onPress={handleAddNote} className="bg-blue-600 dark:bg-blue-500" isDisabled={!newNote.trim() || isNotesLoading}>
+                  <HStack space="xs" className="text-center">
+                    <ButtonText>{t('callNotes.addNote')}</ButtonText>
+                  </HStack>
+                </Button>
+              </HStack>
+            </VStack>
+          </View>
+        </KeyboardStickyView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
 
 export default CallNotesModal;
+export { CallNotesModal };

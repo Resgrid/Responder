@@ -108,7 +108,7 @@ jest.mock('@/components/protocols/protocol-card', () => ({
     const React = require('react');
     return React.createElement(
       'Pressable',
-      { testID: `protocol-card-${protocol.Id}`, onPress: () => onPress(protocol.Id) },
+      { testID: `protocol-card-${protocol.ProtocolId}`, onPress: () => onPress(protocol.ProtocolId) },
       React.createElement('Text', null, protocol.Name)
     );
   },
@@ -215,6 +215,7 @@ import Protocols from '../protocols';
 const mockProtocols: CallProtocolsResultData[] = [
   {
     Id: '1',
+    ProtocolId: '1',
     DepartmentId: 'dept1',
     Name: 'Fire Emergency Response',
     Code: 'FIRE001',
@@ -233,6 +234,7 @@ const mockProtocols: CallProtocolsResultData[] = [
   },
   {
     Id: '2',
+    ProtocolId: '2',
     DepartmentId: 'dept1',
     Name: 'Medical Emergency',
     Code: 'MED001',
@@ -251,6 +253,7 @@ const mockProtocols: CallProtocolsResultData[] = [
   },
   {
     Id: '3',
+    ProtocolId: '3',
     DepartmentId: 'dept1',
     Name: 'Hazmat Response',
     Code: 'HAZ001',
@@ -269,6 +272,7 @@ const mockProtocols: CallProtocolsResultData[] = [
   },
   {
     Id: '', // Empty ID to test the keyExtractor fix
+    ProtocolId: '', // Empty ProtocolId to test the keyExtractor fix
     DepartmentId: 'dept1',
     Name: 'Protocol with Empty ID',
     Code: 'EMPTY001',

@@ -126,20 +126,19 @@ export const getCallAudio = async (callId: string, includeData: boolean) => {
 };
 
 export const saveCallFile = async (callId: string, userId: string, note: string, name: string, latitude: number | null, longitude: number | null, file: string, type: number) => {
-  let data = {
+  let data: any = {
     CallId: callId,
     UserId: userId,
     Type: type,
     Name: name,
-    Latitude: '',
-    Longitude: '',
     Note: note,
     Data: file,
   };
 
-  if (latitude && longitude) {
-    data.Latitude = latitude?.toString();
-    data.Longitude = longitude?.toString();
+  // Only include Latitude and Longitude if both are provided
+  if (latitude !== null && longitude !== null) {
+    data.Latitude = latitude.toString();
+    data.Longitude = longitude.toString();
   }
 
   const response = await saveCallFileApi.post<SaveCallFileResult>({

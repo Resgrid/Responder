@@ -3,11 +3,13 @@ import * as FileSystem from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { CameraIcon, ChevronLeftIcon, ChevronRightIcon, ImageIcon, PlusIcon, XIcon } from 'lucide-react-native';
+import { CameraIcon, ChevronLeftIcon, ChevronRightIcon, ImageIcon, PlusIcon, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Dimensions, type ImageSourcePropType, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { Dimensions, type ImageSourcePropType, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
@@ -18,9 +20,9 @@ import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useToastStore } from '@/stores/toast/store';
 
-import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper, ActionsheetItem, ActionsheetItemText } from '../ui/actionsheet';
 import { Box } from '../ui/box';
 import { Button, ButtonIcon, ButtonText } from '../ui/button';
+import { Heading } from '../ui/heading';
 import { HStack } from '../ui/hstack';
 import { Input, InputField } from '../ui/input';
 import { Text } from '../ui/text';
@@ -51,8 +53,36 @@ const styles = StyleSheet.create({
 const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { colorScheme } = useColorScheme();
   const { latitude, longitude } = useLocationStore();
   const { showToast } = useToastStore();
+
+  // Create dynamic styles based on color scheme
+  const dynamicStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
+        },
+        header: {
+          backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
+          borderBottomWidth: 1,
+          borderBottomColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+        },
+        contentContainer: {
+          flex: 1,
+        },
+        footer: {
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderTopWidth: 1,
+          borderTopColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#F9FAFB',
+        },
+      }),
+    [colorScheme]
+  );
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -63,7 +93,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [fullScreenImage, setFullScreenImage] = useState<{ source: ImageSourcePropType; name?: string } | null>(null);
   const flatListRef = useRef<FlashList<CallFileResultData>>(null);
 
-  const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage } = useCallDetailStore();
+  const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage, clearCallImages } = useCallDetailStore();
 
   // Filter out images without proper data or URL
   const validImages = useMemo(() => {
@@ -248,6 +278,8 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
             contentFit="contain"
             transition={200}
             pointerEvents="none"
+            cachePolicy="memory-disk"
+            recyclingKey={item.Id}
             onError={() => {
               handleImageError(item.Id, 'expo-image load error');
             }}
@@ -329,54 +361,52 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const renderAddImageContent = () => (
     <VStack className="flex-1">
       {/* Scrollable content area */}
-      <VStack className="flex-1 space-y-4 p-4">
-        <HStack className="items-center justify-between">
-          <Text className="text-lg font-bold">{t('callImages.add_new')}</Text>
-          <TouchableOpacity
-            onPress={() => {
-              setIsAddingImage(false);
-              setSelectedImageInfo(null);
-              setNewImageNote('');
-            }}
-          >
-            <XIcon size={24} />
-          </TouchableOpacity>
-        </HStack>
-
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
         {selectedImageInfo ? (
-          <Box className="flex-1 items-center justify-center">
+          <Box className="items-center justify-center">
             <Image source={{ uri: selectedImageInfo.uri }} style={styles.previewImage} contentFit="contain" transition={200} />
           </Box>
         ) : (
-          <VStack className="flex-1 justify-center space-y-4">
-            <ActionsheetItem onPress={handleImageSelect}>
-              <HStack className="items-center space-x-2">
-                <PlusIcon size={20} />
-                <ActionsheetItemText>{t('callImages.select_from_gallery')}</ActionsheetItemText>
-              </HStack>
-            </ActionsheetItem>
-            <ActionsheetItem onPress={handleCameraCapture}>
-              <HStack className="items-center space-x-2">
-                <CameraIcon size={20} />
-                <ActionsheetItemText>{t('callImages.take_photo')}</ActionsheetItemText>
-              </HStack>
-            </ActionsheetItem>
+          <VStack className="space-y-4">
+            <TouchableOpacity onPress={handleImageSelect} className="flex-row items-center space-x-2 rounded-lg bg-gray-100 p-4 dark:bg-gray-700">
+              <PlusIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+              <Text className="text-gray-800 dark:text-gray-200">{t('callImages.select_from_gallery')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleCameraCapture} className="flex-row items-center space-x-2 rounded-lg bg-gray-100 p-4 dark:bg-gray-700">
+              <CameraIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+              <Text className="text-gray-800 dark:text-gray-200">{t('callImages.take_photo')}</Text>
+            </TouchableOpacity>
           </VStack>
         )}
-      </VStack>
+      </ScrollView>
 
-      {/* Fixed bottom section for input and save button */}
+      {/* Fixed bottom section for input and buttons */}
       {selectedImageInfo && (
-        <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
-          <VStack className="max-h-30 space-y-2 border-t border-gray-200 bg-white px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
-            <Input className="w-full" size="sm">
-              <InputField placeholder={t('callImages.image_note')} value={newImageNote} onChangeText={setNewImageNote} testID="image-note-input" />
-            </Input>
-            <Button className="mt-2 w-full" size="sm" onPress={handleUploadImage} isDisabled={isUploading} testID="upload-button">
-              <ButtonText>{isUploading ? t('common.uploading') : t('callImages.upload')}</ButtonText>
-            </Button>
-          </VStack>
-        </KeyboardAwareScrollView>
+        <KeyboardStickyView offset={{ opened: 0, closed: 0 }}>
+          <View style={dynamicStyles.footer}>
+            <VStack space="md" className="w-full">
+              <Input className="w-full rounded-lg bg-white dark:bg-gray-700">
+                <InputField placeholder={t('callImages.image_note')} value={newImageNote} onChangeText={setNewImageNote} testID="image-note-input" autoCorrect={false} />
+              </Input>
+              <HStack className="w-full justify-between">
+                <Button
+                  variant="outline"
+                  onPress={() => {
+                    setIsAddingImage(false);
+                    setSelectedImageInfo(null);
+                    setNewImageNote('');
+                  }}
+                  className="border-gray-300 dark:border-gray-600"
+                >
+                  <ButtonText className="text-gray-700 dark:text-gray-300">{t('common.cancel')}</ButtonText>
+                </Button>
+                <Button onPress={handleUploadImage} className="bg-blue-600 dark:bg-blue-500" isDisabled={isUploading} testID="upload-button">
+                  <ButtonText>{isUploading ? t('common.uploading') : t('callImages.upload')}</ButtonText>
+                </Button>
+              </HStack>
+            </VStack>
+          </View>
+        </KeyboardStickyView>
       )}
     </VStack>
   );
@@ -385,36 +415,44 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     if (!validImages?.length) return null;
 
     return (
-      <VStack className="space-y-4 p-4">
-        <Box className="relative">
-          <FlashList
-            ref={flatListRef}
-            data={validImages}
-            renderItem={renderImageItem}
-            keyExtractor={(item: CallFileResultData, index: number) => item?.Id || `image-${index}-${item?.Name || 'unknown'}`}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onViewableItemsChanged={handleViewableItemsChanged}
-            viewabilityConfig={{
-              itemVisiblePercentThreshold: 50,
-              minimumViewTime: 100,
-            }}
-            snapToInterval={width}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            estimatedItemSize={width}
-            className="w-full"
-            contentContainerStyle={{ paddingHorizontal: 0 }}
-            ListEmptyComponent={() => (
-              <Box className="w-full items-center justify-center p-4">
-                <Text className="text-center text-gray-500">{t('callImages.no_images')}</Text>
-              </Box>
-            )}
-          />
-        </Box>
-        {renderPagination()}
-      </VStack>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingVertical: 16 }} showsVerticalScrollIndicator={true}>
+        <VStack className="space-y-4">
+          <Box className="relative">
+            <FlashList
+              ref={flatListRef}
+              data={validImages}
+              renderItem={renderImageItem}
+              keyExtractor={(item: CallFileResultData, index: number) => item?.Id || `image-${index}-${item?.Name || 'unknown'}`}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onViewableItemsChanged={handleViewableItemsChanged}
+              viewabilityConfig={{
+                itemVisiblePercentThreshold: 50,
+                minimumViewTime: 100,
+              }}
+              snapToInterval={width}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              estimatedItemSize={width}
+              // Memory optimization: only render visible items plus a small buffer
+              drawDistance={width}
+              // Optimize for memory by removing items that are far from viewport
+              overrideItemLayout={(layout, item, index, maxColumns, extraData) => {
+                layout.size = width;
+              }}
+              className="w-full"
+              contentContainerStyle={{ paddingHorizontal: 0 }}
+              ListEmptyComponent={() => (
+                <Box className="w-full items-center justify-center p-4">
+                  <Text className="text-center text-gray-500">{t('callImages.no_images')}</Text>
+                </Box>
+              )}
+            />
+          </Box>
+          {renderPagination()}
+        </VStack>
+      </ScrollView>
     );
   };
 
@@ -438,29 +476,47 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     return renderImageGallery();
   };
 
+  // Handle modal close with cleanup
+  const handleClose = useCallback(() => {
+    // Clear state before closing
+    setFullScreenImage(null);
+    setSelectedImageInfo(null);
+    setIsAddingImage(false);
+    setNewImageNote('');
+    setImageErrors(new Set());
+    // Clear images from store to free memory
+    clearCallImages();
+    onClose();
+  }, [onClose, clearCallImages]);
+
   return (
     <>
-      <Actionsheet isOpen={isOpen} onClose={onClose} snapPoints={[67]}>
-        <ActionsheetBackdrop />
-        <ActionsheetContent className="rounded-t-3x bg-white dark:bg-gray-800">
-          <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator />
-          </ActionsheetDragIndicatorWrapper>
-          <Box className="w-full p-4">
-            <HStack className="mb-4 items-center justify-between">
-              <Text className="text-xl font-bold">{t('callImages.title')}</Text>
-              {!isAddingImage && !isLoadingImages && (
-                <Button size="sm" variant="outline" onPress={() => setIsAddingImage(true)}>
+      <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+        <SafeAreaView style={dynamicStyles.container} edges={['top', 'left', 'right']}>
+          {/* Fixed Header */}
+          <View style={dynamicStyles.header}>
+            <Box className="w-full flex-row items-center justify-between px-4 pb-4 pt-2">
+              <Heading size="lg">{isAddingImage ? t('callImages.add_new') : t('callImages.title')}</Heading>
+              <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
+                <X size={24} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+              </Button>
+            </Box>
+
+            {/* Add Image Button - Only show when not adding and not loading */}
+            {!isAddingImage && !isLoadingImages && (
+              <Box className="px-4 pb-4">
+                <Button size="sm" variant="outline" onPress={() => setIsAddingImage(true)} className="w-full">
                   <ButtonIcon as={PlusIcon} />
                   <ButtonText>{t('callImages.add')}</ButtonText>
                 </Button>
-              )}
-            </HStack>
+              </Box>
+            )}
+          </View>
 
-            <View className="min-h-[300px]">{renderContent()}</View>
-          </Box>
-        </ActionsheetContent>
-      </Actionsheet>
+          {/* Scrollable Content */}
+          <View style={dynamicStyles.contentContainer}>{renderContent()}</View>
+        </SafeAreaView>
+      </Modal>
 
       {/* Full Screen Image Modal */}
       <FullScreenImageModal isOpen={!!fullScreenImage} onClose={() => setFullScreenImage(null)} imageSource={fullScreenImage?.source || { uri: '' }} imageName={fullScreenImage?.name} />

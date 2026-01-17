@@ -22,7 +22,7 @@ export const ProtocolDetailsSheet: React.FC = () => {
   const { protocols, selectedProtocolId, isDetailsOpen, closeDetails } = useProtocolsStore();
   const { trackEvent } = useAnalytics();
 
-  const selectedProtocol = protocols.find((protocol) => protocol.Id === selectedProtocolId);
+  const selectedProtocol = protocols.find((protocol) => protocol.ProtocolId === selectedProtocolId);
 
   // Track analytics when the protocol details sheet becomes visible
   const trackViewAnalytics = useCallback(() => {
@@ -31,7 +31,7 @@ export const ProtocolDetailsSheet: React.FC = () => {
     try {
       trackEvent('protocol_details_viewed', {
         timestamp: new Date().toISOString(),
-        protocolId: selectedProtocol.Id || '',
+        protocolId: selectedProtocol.ProtocolId || '',
         protocolName: selectedProtocol.Name || '',
         protocolCode: selectedProtocol.Code || '',
         hasDescription: !!selectedProtocol.Description,
@@ -61,7 +61,7 @@ export const ProtocolDetailsSheet: React.FC = () => {
       try {
         trackEvent('protocol_details_closed', {
           timestamp: new Date().toISOString(),
-          protocolId: selectedProtocol.Id || '',
+          protocolId: selectedProtocol.ProtocolId || '',
           protocolName: selectedProtocol.Name || '',
         });
       } catch (error) {

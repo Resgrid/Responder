@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { Filter, Search, Truck, X } from 'lucide-react-native';
 import * as React from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -24,7 +25,7 @@ import { useUnitsStore } from '@/stores/units/store';
 
 export default function Units() {
   const { t } = useTranslation();
-  const { units, searchQuery, setSearchQuery, selectUnit, isLoading, fetchUnits, selectedFilters, openFilterSheet } = useUnitsStore();
+  const { units, unitTypeStatuses, searchQuery, setSearchQuery, selectUnit, isLoading, fetchUnits, selectedFilters, openFilterSheet } = useUnitsStore();
   const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -46,6 +47,8 @@ export default function Units() {
     await fetchUnits();
     setRefreshing(false);
   }, [fetchUnits]);
+
+  const renderUnitItem = useCallback(({ item }: { item: any }) => <UnitCard unit={item} unitTypeStatuses={unitTypeStatuses} onPress={selectUnit} />, [unitTypeStatuses, selectUnit]);
 
   const filteredUnits = React.useMemo(() => {
     if (!searchQuery.trim()) return units;
@@ -96,7 +99,7 @@ export default function Units() {
             <FlashList
               data={filteredUnits}
               keyExtractor={(item, index) => item.UnitId || `unit-${index}`}
-              renderItem={({ item }) => <UnitCard unit={item as any} onPress={selectUnit} />}
+              renderItem={renderUnitItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}

@@ -28,12 +28,12 @@ import { useLocationStore } from '@/stores/app/location-store';
 
 interface FullScreenLocationPickerProps {
   initialLocation?:
-  | {
-    latitude: number;
-    longitude: number;
-    address?: string;
-  }
-  | undefined;
+    | {
+        latitude: number;
+        longitude: number;
+        address?: string;
+      }
+    | undefined;
   onLocationSelected: (location: { latitude: number; longitude: number; address?: string }) => void;
   onClose: () => void;
 }
@@ -163,9 +163,9 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       const storedLocation =
         locationStore.latitude && locationStore.longitude
           ? {
-            latitude: locationStore.latitude,
-            longitude: locationStore.longitude,
-          }
+              latitude: locationStore.latitude,
+              longitude: locationStore.longitude,
+            }
           : null;
 
       // If we have a valid stored location, use it
@@ -248,9 +248,9 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       const storedLocation =
         locationStore.latitude && locationStore.longitude
           ? {
-            latitude: locationStore.latitude,
-            longitude: locationStore.longitude,
-          }
+              latitude: locationStore.latitude,
+              longitude: locationStore.longitude,
+            }
           : null;
 
       if (storedLocation && !(storedLocation.latitude === 0 && storedLocation.longitude === 0)) {
