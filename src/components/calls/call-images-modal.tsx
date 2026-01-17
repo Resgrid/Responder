@@ -63,7 +63,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [fullScreenImage, setFullScreenImage] = useState<{ source: ImageSourcePropType; name?: string } | null>(null);
   const flatListRef = useRef<FlashList<CallFileResultData>>(null);
 
-  const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage } = useCallDetailStore();
+  const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage, clearCallImages } = useCallDetailStore();
 
   // Filter out images without proper data or URL
   const validImages = useMemo(() => {
@@ -84,7 +84,17 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       setActiveIndex(0); // Reset active index when opening
       setImageErrors(new Set()); // Reset image errors
     }
-  }, [isOpen, callId, fetchCallImages]);
+
+    // Cleanup when modal closes to free memory
+    return () => {
+      if (!isOpen) {
+        clearCallImages();
+        setImageErrors(new Set());
+        setFullScreenImage(null);
+        setSelectedImageInfo(null);
+      }
+    };
+  }, [isOpen, callId, fetchCallImages, clearCallImages]);
 
   // Track when call images modal is opened/rendered
   useEffect(() => {
@@ -248,6 +258,8 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
             contentFit="contain"
             transition={200}
             pointerEvents="none"
+            cachePolicy="memory-disk"
+            recyclingKey={item.Id}
             onError={() => {
               handleImageError(item.Id, 'expo-image load error');
             }}
@@ -404,6 +416,12 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
             snapToAlignment="start"
             decelerationRate="fast"
             estimatedItemSize={width}
+            // Memory optimization: only render visible items plus a small buffer
+            drawDistance={width}
+            // Optimize for memory by removing items that are far from viewport
+            overrideItemLayout={(layout, item, index, maxColumns, extraData) => {
+              layout.size = width;
+            }}
             className="w-full"
             contentContainerStyle={{ paddingHorizontal: 0 }}
             ListEmptyComponent={() => (
@@ -438,9 +456,22 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     return renderImageGallery();
   };
 
+  // Handle modal close with cleanup
+  const handleClose = useCallback(() => {
+    // Clear state before closing
+    setFullScreenImage(null);
+    setSelectedImageInfo(null);
+    setIsAddingImage(false);
+    setNewImageNote('');
+    setImageErrors(new Set());
+    // Clear images from store to free memory
+    clearCallImages();
+    onClose();
+  }, [onClose, clearCallImages]);
+
   return (
     <>
-      <Actionsheet isOpen={isOpen} onClose={onClose} snapPoints={[67]}>
+      <Actionsheet isOpen={isOpen} onClose={handleClose} snapPoints={[67]}>
         <ActionsheetBackdrop />
         <ActionsheetContent className="rounded-t-3x bg-white dark:bg-gray-800">
           <ActionsheetDragIndicatorWrapper>

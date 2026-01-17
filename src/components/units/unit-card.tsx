@@ -17,19 +17,19 @@ import { VStack } from '../ui/vstack';
 
 // Default unit statuses when custom statuses are not defined
 const DEFAULT_UNIT_STATUSES: Record<string, { text: string; color: string }> = {
-  '0': { text: 'Available', color: '#28a745' }, // Green
-  '1': { text: 'Delayed', color: '#ffc107' }, // Yellow
-  '2': { text: 'Unavailable', color: '#dc3545' }, // Red
-  '3': { text: 'Committed', color: '#007bff' }, // Blue
-  '4': { text: 'Out of Service', color: '#6c757d' }, // Gray
-  '5': { text: 'Responding', color: '#17a2b8' }, // Cyan
-  '6': { text: 'On Scene', color: '#6f42c1' }, // Purple
-  '7': { text: 'Staging', color: '#fd7e14' }, // Orange
-  '8': { text: 'Returning', color: '#20c997' }, // Teal
-  '9': { text: 'Cancelled', color: '#795548' }, // Brown
-  '10': { text: 'Released', color: '#87ceeb' }, // Light Blue
-  '11': { text: 'Manual', color: '#e83e8c' }, // Pink
-  '12': { text: 'Enroute', color: '#155724' }, // Dark Green
+  '0': { text: 'units.status.available', color: '#28a745' }, // Green
+  '1': { text: 'units.status.delayed', color: '#ffc107' }, // Yellow
+  '2': { text: 'units.status.unavailable', color: '#dc3545' }, // Red
+  '3': { text: 'units.status.committed', color: '#007bff' }, // Blue
+  '4': { text: 'units.status.outOfService', color: '#6c757d' }, // Gray
+  '5': { text: 'units.status.responding', color: '#17a2b8' }, // Cyan
+  '6': { text: 'units.status.onScene', color: '#6f42c1' }, // Purple
+  '7': { text: 'units.status.staging', color: '#fd7e14' }, // Orange
+  '8': { text: 'units.status.returning', color: '#20c997' }, // Teal
+  '9': { text: 'units.status.cancelled', color: '#795548' }, // Brown
+  '10': { text: 'units.status.released', color: '#87ceeb' }, // Light Blue
+  '11': { text: 'units.status.manual', color: '#e83e8c' }, // Pink
+  '12': { text: 'units.status.enroute', color: '#155724' }, // Dark Green
 };
 
 // Helper function to get contrasting text color based on background luminance
@@ -93,7 +93,7 @@ export const UnitCard: React.FC<UnitCardProps> = ({ unit, unitTypeStatuses, onPr
   const defaultStatus = statusId && !customStatusData ? getDefaultStatus(statusId) : null;
 
   // Get status text and colors - prioritize custom, then default, then API response
-  const statusText = customStatusData?.Text || defaultStatus?.text || ('CurrentStatus' in unit ? unit.CurrentStatus : null);
+  const statusText = customStatusData?.Text || (defaultStatus?.text ? t(defaultStatus.text) : null) || ('CurrentStatus' in unit ? unit.CurrentStatus : null);
   const buttonColor = customStatusData?.BColor || defaultStatus?.color || ('CurrentStatusColor' in unit ? unit.CurrentStatusColor : null);
   const textColor = buttonColor ? getContrastTextColor(buttonColor) : '#FFFFFF';
 

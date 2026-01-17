@@ -1,5 +1,6 @@
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
@@ -8,6 +9,22 @@ import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSecurityStore } from '@/stores/security/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
+
+/**
+ * Safely formats a timestamp string with error handling.
+ * Returns formatted date string on success, empty string on failure.
+ */
+const safeFormatTimestamp = (timestamp: string | undefined | null, format: string): string => {
+  if (!timestamp) return '';
+
+  try {
+    const parsed = parseDateISOString(timestamp);
+    return formatDateForDisplay(parsed, format);
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', timestamp, error);
+    return '';
+  }
+};
 import { Badge } from '../ui/badge';
 import { Box } from '../ui/box';
 import { Button } from '../ui/button';
@@ -18,6 +35,7 @@ import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
 
 export const PersonnelDetailsSheet: React.FC = () => {
+  const { t } = useTranslation();
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
   const { canUserViewPII } = useSecurityStore();
   const { trackEvent } = useAnalytics();
@@ -88,14 +106,16 @@ export const PersonnelDetailsSheet: React.FC = () => {
               {selectedPersonnel.IdentificationNumber ? (
                 <HStack space="xs" className="items-center">
                   <IdCard size={18} className="text-gray-600 dark:text-gray-400" />
-                  <Text className="text-gray-700 dark:text-gray-300">ID: {selectedPersonnel.IdentificationNumber}</Text>
+                  <Text className="text-gray-700 dark:text-gray-300">
+                    {t('personnel.id')}: {selectedPersonnel.IdentificationNumber}
+                  </Text>
                 </HStack>
               ) : null}
 
               {/* Contact Information Section */}
               {canUserViewPII ? (
                 <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Information</Text>
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">{t('personnel.contactInformation')}</Text>
                   <VStack space="xs">
                     {selectedPersonnel.EmailAddress ? (
                       <HStack space="xs" className="items-center">
@@ -117,7 +137,7 @@ export const PersonnelDetailsSheet: React.FC = () => {
               {/* Group Information */}
               {selectedPersonnel.GroupName ? (
                 <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Group</Text>
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">{t('personnel.group')}</Text>
                   <HStack space="xs" className="items-center">
                     <Users size={16} className="text-gray-600 dark:text-gray-400" />
                     <Text className="text-gray-700 dark:text-gray-300">{selectedPersonnel.GroupName}</Text>
@@ -127,7 +147,7 @@ export const PersonnelDetailsSheet: React.FC = () => {
 
               {/* Status Information */}
               <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Current Status</Text>
+                <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">{t('personnel.currentStatus')}</Text>
                 <VStack space="xs">
                   {selectedPersonnel.Status ? (
                     <HStack className="flex-wrap">
@@ -142,10 +162,10 @@ export const PersonnelDetailsSheet: React.FC = () => {
                     </HStack>
                   ) : null}
 
-                  {selectedPersonnel.StatusTimestamp ? (
+                  {selectedPersonnel.StatusTimestamp && safeFormatTimestamp(selectedPersonnel.StatusTimestamp, 'yyyy-MM-dd HH:mm Z') ? (
                     <HStack space="xs" className="items-center">
                       <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
-                      <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDateForDisplay(parseDateISOString(selectedPersonnel.StatusTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400">{safeFormatTimestamp(selectedPersonnel.StatusTimestamp, 'yyyy-MM-dd HH:mm Z')}</Text>
                     </HStack>
                   ) : null}
                 </VStack>
@@ -154,7 +174,7 @@ export const PersonnelDetailsSheet: React.FC = () => {
               {/* Staffing Information */}
               {selectedPersonnel.Staffing ? (
                 <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Staffing</Text>
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">{t('personnel.staffing')}</Text>
                   <VStack space="xs">
                     <HStack className="flex-wrap">
                       <Badge className="mb-1 mr-1" style={{ backgroundColor: selectedPersonnel.StaffingColor || '#10B981' }}>
@@ -162,10 +182,10 @@ export const PersonnelDetailsSheet: React.FC = () => {
                       </Badge>
                     </HStack>
 
-                    {selectedPersonnel.StaffingTimestamp ? (
+                    {selectedPersonnel.StaffingTimestamp && safeFormatTimestamp(selectedPersonnel.StaffingTimestamp, 'yyyy-MM-dd HH:mm Z') ? (
                       <HStack space="xs" className="items-center">
                         <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
-                        <Text className="text-sm text-gray-600 dark:text-gray-400">{formatDateForDisplay(parseDateISOString(selectedPersonnel.StaffingTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text>
+                        <Text className="text-sm text-gray-600 dark:text-gray-400">{safeFormatTimestamp(selectedPersonnel.StaffingTimestamp, 'yyyy-MM-dd HH:mm Z')}</Text>
                       </HStack>
                     ) : null}
                   </VStack>
@@ -175,7 +195,7 @@ export const PersonnelDetailsSheet: React.FC = () => {
               {/* Roles */}
               {selectedPersonnel.Roles && selectedPersonnel.Roles.length > 0 ? (
                 <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Roles</Text>
+                  <Text className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">{t('personnel.roles')}</Text>
                   <HStack space="xs" className="items-center">
                     <Tag size={16} className="text-gray-600 dark:text-gray-400" />
                     <HStack className="flex-wrap">

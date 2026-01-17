@@ -7,6 +7,7 @@ import { Platform, Pressable } from 'react-native';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
+import { useToastStore } from '@/stores/toast/store';
 import { useUnitsStore } from '@/stores/units/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
@@ -24,6 +25,7 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
+  const showToast = useToastStore((state) => state.showToast);
   const { units, selectedUnitId, isDetailsOpen, closeDetails } = useUnitsStore();
 
   const selectedUnit = units.find((unit) => unit.UnitId === selectedUnitId);
@@ -119,8 +121,9 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
     // Use the navigation utility to open maps
     openMapsWithDirections(latitude, longitude, selectedUnit.Name).catch((error) => {
       console.warn('Failed to open maps:', error);
+      showToast('error', t('units.maps_error'));
     });
-  }, [selectedUnit, trackEvent]);
+  }, [selectedUnit, trackEvent, showToast, t]);
 
   if (!selectedUnit) return null;
 

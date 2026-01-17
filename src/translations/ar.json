@@ -409,6 +409,9 @@
     "empty": "لم يتم العثور على جهات اتصال",
     "emptyDescription": "أضف جهات اتصال لإدارة اتصالاتك الشخصية والتجارية",
     "entranceCoordinates": "إحداثيات المدخل",
+    "errorTitle": "خطأ",
+    "openAppError": "غير قادر على فتح تطبيق {{action}}",
+    "openLinkFailed": "فشل في فتح رابط {{action}}:",
     "exitCoordinates": "إحداثيات المخرج",
     "expires": "تنتهي في",
     "facebook": "فيسبوك",
@@ -668,6 +671,8 @@
     "message": "مرحبًا بك في تطبيق obytes"
   },
   "personnel": {
+    "contactInformation": "معلومات الاتصال",
+    "currentStatus": "الحالة الحالية",
     "empty": "لم يتم العثور على أي شخص",
     "emptyDescription": "لا يتطابق أي شخص مع معايير البحث أو لا توجد بيانات شخصية متاحة.",
     "filter": {
@@ -676,7 +681,11 @@
       "emptyDescription": "ستظهر خيارات المرشحات هنا عند توفرها.",
       "title": "تصفية الأشخاص"
     },
+    "group": "المجموعة",
+    "id": "رقم التعريف",
+    "roles": "الأدوار",
     "search": "بحث في الأشخاص...",
+    "staffing": "التوظيف",
     "status": {
       "add_note": "إضافة ملاحظة",
       "calls_tab": "المكالمات",
@@ -881,6 +890,7 @@
     "group": "المجموعة",
     "lastUpdate": "آخر تحديث",
     "location": "الموقع",
+    "maps_error": "غير قادر على فتح الخرائط",
     "notes": "الملاحظات",
     "plateNumber": "رقم اللوحة",
     "search": "البحث في الوحدات...",

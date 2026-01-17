@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { XIcon } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,6 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Image } from '@/components/ui/image';
 import { Modal, ModalBackdrop, ModalContent } from '@/components/ui/modal';
 
 interface FullScreenImageModalProps {
@@ -160,7 +160,8 @@ const FullScreenImageModal: React.FC<FullScreenImageModalProps> = ({ isOpen, onC
                 maxHeight: screenHeight * 0.8,
               }}
               contentFit="contain"
-              alt={imageName || t('callImages.image_alt')}
+              cachePolicy="memory-disk"
+              transition={200}
               testID="full-screen-image"
             />
           </Animated.View>

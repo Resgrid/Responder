@@ -30,9 +30,11 @@ interface CallDetailState {
   isLoadingFiles: boolean;
   errorFiles: string | null;
   fetchCallFiles: (callId: string) => Promise<void>;
+  clearCallFiles: () => void;
   isLoadingImages: boolean;
   errorImages: string | null;
   fetchCallImages: (callId: string) => Promise<void>;
+  clearCallImages: () => void;
   uploadCallImage: (callId: string, userId: string, note: string, name: string, latitude: number | null, longitude: number | null, file: string) => Promise<void>;
   updateCall: (callData: UpdateCallRequest) => Promise<void>;
   closeCall: (callData: CloseCallRequest) => Promise<void>;
@@ -147,6 +149,9 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
       });
     }
   },
+  clearCallImages: () => {
+    set({ callImages: null, isLoadingImages: false, errorImages: null });
+  },
   uploadCallImage: async (callId: string, userId: string, note: string, name: string, latitude: number | null, longitude: number | null, file: string) => {
     try {
       await saveCallImage(callId, userId, note, name, latitude, longitude, file);
@@ -173,6 +178,9 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
         errorFiles: error instanceof Error ? error.message : 'Failed to fetch call files',
       });
     }
+  },
+  clearCallFiles: () => {
+    set({ callFiles: null, isLoadingFiles: false, errorFiles: null });
   },
   updateCall: async (callData: UpdateCallRequest) => {
     set({ isLoading: true, error: null });

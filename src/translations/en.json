@@ -409,6 +409,9 @@
     "empty": "No contacts found",
     "emptyDescription": "Add contacts to manage your personal and business connections",
     "entranceCoordinates": "Entrance Coordinates",
+    "errorTitle": "Error",
+    "openAppError": "Unable to open {{action}} app",
+    "openLinkFailed": "Failed to open {{action}} link:",
     "exitCoordinates": "Exit Coordinates",
     "expires": "Expires",
     "facebook": "Facebook",
@@ -668,6 +671,8 @@
     "message": "Welcome to obytes app site"
   },
   "personnel": {
+    "contactInformation": "Contact Information",
+    "currentStatus": "Current Status",
     "empty": "No personnel found",
     "emptyDescription": "No personnel match your search criteria or no personnel data is available.",
     "filter": {
@@ -676,7 +681,11 @@
       "emptyDescription": "Filter options will appear here when available.",
       "title": "Filter Personnel"
     },
+    "group": "Group",
+    "id": "ID",
+    "roles": "Roles",
     "search": "Search personnel...",
+    "staffing": "Staffing",
     "status": {
       "add_note": "Add Note",
       "calls_tab": "Calls",
@@ -881,6 +890,7 @@
     "group": "Group",
     "lastUpdate": "Last Updated",
     "location": "Location",
+    "maps_error": "Unable to open maps",
     "notes": "Notes",
     "plateNumber": "Plate Number",
     "search": "Search units...",

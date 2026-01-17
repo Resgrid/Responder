@@ -75,6 +75,7 @@ interface ContactFieldProps {
 }
 
 const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink, linkPrefix, actionType, addressData }) => {
+  const { t } = useTranslation();
   if (!value || value.toString().trim() === '') return null;
 
   const displayValue = isLink && linkPrefix ? `${linkPrefix}${value}` : value.toString();
@@ -92,7 +93,7 @@ const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink,
         case 'phone':
           url = `tel:${value}`;
           break;
-        case 'address':
+        case 'address': {
           const addressParts = addressData ? [addressData.address, addressData.city, addressData.state, addressData.zip].filter(Boolean).join(', ') : value;
           const encodedAddress = encodeURIComponent(addressParts?.toString() || '');
 
@@ -102,17 +103,18 @@ const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink,
             url = `geo:0,0?q=${encodedAddress}`;
           }
           break;
+        }
       }
 
       const canOpen = await Linking.canOpenURL(url);
       if (canOpen) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('Error', `Unable to open ${actionType} app`);
+        Alert.alert(t('contacts.errorTitle'), t('contacts.openAppError', { action: actionType }));
       }
     } catch (error) {
-      console.warn(`Failed to open ${actionType} link:`, error);
-      Alert.alert('Error', `Failed to open ${actionType} app`);
+      console.warn(t('contacts.openLinkFailed', { action: actionType }), error);
+      Alert.alert(t('contacts.errorTitle'), t('contacts.openAppError', { action: actionType }));
     }
   };
 

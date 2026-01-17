@@ -1,6 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from 'nativewind';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, useWindowDimensions } from 'react-native';
@@ -30,7 +29,6 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const router = useRouter();
-  const { colorScheme } = useColorScheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const showToast = useToastStore((state) => state.showToast);

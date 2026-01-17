@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { getAllUnitStatuses } from '@/api/satuses';
 import { getUnitsFilterOptions, getUnitsInfos } from '@/api/units/units';
+import { logger } from '@/lib/logging';
 import { loadUnitsFilterOptions, saveUnitsFilterOptions } from '@/lib/storage/units-filter';
 import { type FilterResultData } from '@/models/v4/personnel/filterResultData';
 import { type UnitTypeStatusResultData } from '@/models/v4/statuses/unitTypeStatusResultData';
@@ -81,7 +82,10 @@ export const useUnitsStore = create<UnitsState>((set, get) => ({
       set({ unitTypeStatuses: response.Data || [] });
     } catch (error) {
       // Silently fail - statuses are optional enhancement
-      console.warn('Failed to fetch unit statuses:', error);
+      logger.warn({
+        message: 'Failed to fetch unit statuses',
+        context: { error },
+      });
     }
   },
 

@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Pressable } from 'react-native';
 
 import { formatDateForDisplay, parseDateISOString, stripHtmlTags } from '@/lib/utils';
@@ -15,8 +16,12 @@ interface ProtocolCardProps {
 }
 
 export const ProtocolCard: React.FC<ProtocolCardProps> = ({ protocol, onPress }) => {
+  const handlePress = useCallback(() => {
+    onPress(protocol.ProtocolId);
+  }, [onPress, protocol.ProtocolId]);
+
   return (
-    <Pressable onPress={() => onPress(protocol.ProtocolId)} testID={`protocol-card-${protocol.ProtocolId}`}>
+    <Pressable onPress={handlePress} testID={`protocol-card-${protocol.ProtocolId}`}>
       <Box className="mb-3 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
         <VStack space="xs">
           <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{protocol.Name}</Text>

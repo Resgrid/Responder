@@ -409,6 +409,9 @@
     "empty": "No se encontraron contactos",
     "emptyDescription": "Añade contactos para gestionar tus conexiones personales y comerciales",
     "entranceCoordinates": "Coordenadas de entrada",
+    "errorTitle": "Error",
+    "openAppError": "No se puede abrir la aplicación de {{action}}",
+    "openLinkFailed": "Error al abrir el enlace de {{action}}:",
     "exitCoordinates": "Coordenadas de salida",
     "expires": "Expira",
     "facebook": "Facebook",
@@ -668,15 +671,21 @@
     "message": "Bienvenido al sitio de la aplicación obytes"
   },
   "personnel": {
+    "contactInformation": "Información de Contacto",
+    "currentStatus": "Estado Actual",
     "empty": "No se encontró personal",
-    "emptyDescription": "Ningún personal coincide con tus criterios de búsqueda o no hay datos de personal disponibles.",
+    "emptyDescription": "Ningún miembro del personal coincide con sus criterios de búsqueda o no hay datos de personal disponibles.",
     "filter": {
-      "description": "Selecciona filtros para refinar la lista de personal. Los cambios se aplican automáticamente.",
+      "description": "Seleccione filtros para refinar la lista de personal. Los cambios se aplican automáticamente.",
       "empty": "No hay opciones de filtro disponibles",
       "emptyDescription": "Las opciones de filtro aparecerán aquí cuando estén disponibles.",
       "title": "Filtrar Personal"
     },
+    "group": "Grupo",
+    "id": "ID",
+    "roles": "Roles",
     "search": "Buscar personal...",
+    "staffing": "Dotación",
     "status": {
       "add_note": "Agregar Nota",
       "calls_tab": "Llamadas",
@@ -881,6 +890,7 @@
     "group": "Grupo",
     "lastUpdate": "Última actualización",
     "location": "Ubicación",
+    "maps_error": "No se puede abrir el mapa",
     "notes": "Notas",
     "plateNumber": "Número de placa",
     "search": "Buscar unidades...",
