@@ -442,10 +442,12 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 	});
 
 	describe('fetchGroups', () => {
-		it('should fetch groups successfully', async () => {
+		it('should fetch groups successfully and filter to only station groups', async () => {
 			const mockGroups = [
 				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 },
 				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: 1 },
+				{ GroupId: '3', Name: 'Response Group', Address: '', GroupType: 'Response', TypeId: 2 },
+				{ GroupId: '4', Name: 'Admin Group', Address: '', GroupType: 'Admin', TypeId: 3 },
 			];
 			mockGetAllGroups.mockResolvedValue({ Data: mockGroups } as any);
 
@@ -456,7 +458,12 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			});
 
 			expect(mockGetAllGroups).toHaveBeenCalled();
-			expect(result.current.groups).toEqual(mockGroups);
+			// Should only contain station groups (TypeId: 1)
+			expect(result.current.groups).toHaveLength(2);
+			expect(result.current.groups).toEqual([
+				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 },
+				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: 1 },
+			]);
 			expect(result.current.isLoadingGroups).toBe(false);
 		});
 

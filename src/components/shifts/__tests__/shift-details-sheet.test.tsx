@@ -41,6 +41,7 @@ jest.mock('react-i18next', () => ({
         'shifts.calendar': 'Calendar',
         'shifts.loading': 'Loading...',
         'shifts.no_shifts': 'No shifts available',
+        'shifts.upcoming_shift_days': 'Upcoming Shift Days',
       };
       return translations[key] || key;
     },
@@ -67,6 +68,13 @@ jest.mock('date-fns', () => ({
   }),
   startOfMonth: jest.fn(() => new Date('2024-01-01')),
   endOfMonth: jest.fn(() => new Date('2024-01-31')),
+  startOfDay: jest.fn((date) => {
+    // Return the date as-is for filtering comparison (future dates will pass the filter)
+    if (date instanceof Date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+    return new Date();
+  }),
 }));
 
 // Mock lucide-react-native
@@ -222,7 +230,7 @@ describe('ShiftDetailsSheet', () => {
     InShift: true,
     PersonnelCount: 10,
     GroupCount: 3,
-    NextDay: '2024-01-15T10:00:00Z',
+    NextDay: '2027-01-15T10:00:00Z',
     NextDayId: 'next-day-1',
     ScheduleType: 1, // Automatic
     AssignmentType: 0, // Optional
@@ -232,7 +240,7 @@ describe('ShiftDetailsSheet', () => {
         ShiftDayId: 'day-1',
         ShiftId: 'shift-1',
         ShiftName: 'Test Shift',
-        ShiftDay: '2024-01-15',
+        ShiftDay: '2027-01-15',
         Start: '08:00:00',
         End: '16:00:00',
         SignedUp: false,
@@ -244,7 +252,7 @@ describe('ShiftDetailsSheet', () => {
         ShiftDayId: 'day-2',
         ShiftId: 'shift-1',
         ShiftName: 'Test Shift',
-        ShiftDay: '2024-01-16',
+        ShiftDay: '2027-01-16',
         Start: '08:00:00',
         End: '16:00:00',
         SignedUp: false,
@@ -476,15 +484,15 @@ describe('ShiftDetailsSheet', () => {
     });
   });
 
-  describe('Recent Shift Days', () => {
+  describe('Upcoming Shift Days', () => {
     it('should display all shift days when available', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      // Check for "Recent Shift Days" text
+      // Check for "Upcoming Shift Days" text
       const textElements = root.findAllByType('text');
-      const hasRecentShiftDaysText = textElements.some((el: any) => el.props.children === 'Recent Shift Days');
-      expect(hasRecentShiftDaysText).toBe(true);
+      const hasUpcomingShiftDaysText = textElements.some((el: any) => el.props.children === 'Upcoming Shift Days');
+      expect(hasUpcomingShiftDaysText).toBe(true);
 
       // Check for shift day cards - should display all available days
       const shiftDayCards = root.findAllByType('shift-day-card');
@@ -493,7 +501,7 @@ describe('ShiftDetailsSheet', () => {
       expect(shiftDayCards[1].props.children).toBe('Shift Day day-2');
     });
 
-    it('should not display recent shift days section when no days available', () => {
+    it('should not display upcoming shift days section when no days available', () => {
       mockUseShiftsStore.mockReturnValue({
         ...defaultStoreState,
         selectedShift: { ...mockShift, Days: [] },
@@ -502,19 +510,19 @@ describe('ShiftDetailsSheet', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      // Should not find "Recent Shift Days" text
+      // Should not find "Upcoming Shift Days" text
       const textElements = root.findAllByType('text');
-      const hasRecentShiftDaysText = textElements.some((el: any) => el.props.children === 'Recent Shift Days');
-      expect(hasRecentShiftDaysText).toBe(false);
+      const hasUpcomingShiftDaysText = textElements.some((el: any) => el.props.children === 'Upcoming Shift Days');
+      expect(hasUpcomingShiftDaysText).toBe(false);
     });
 
     it('should display all shift days when scrolling is enabled', () => {
-      // Create a shift with many days to test scrolling
+      // Create a shift with many days to test scrolling (using future dates)
       const manyDays = Array.from({ length: 10 }, (_, i) => ({
         ShiftDayId: `day-${i + 1}`,
         ShiftId: 'shift-1',
         ShiftName: 'Test Shift',
-        ShiftDay: `2024-01-${i + 15}`,
+        ShiftDay: `2027-01-${String(i + 15).padStart(2, '0')}`,
         Start: '08:00:00',
         End: '16:00:00',
         SignedUp: false,
@@ -550,8 +558,8 @@ describe('ShiftDetailsSheet', () => {
 
       // ScrollView should have proper props for mobile optimization
       const scrollView = scrollViews[0];
-      expect(scrollView.props.showsVerticalScrollIndicator).toBe(false);
-      expect(scrollView.props.contentContainerStyle).toEqual({ paddingBottom: 20 });
+      expect(scrollView.props.showsVerticalScrollIndicator).toBe(true);
+      expect(scrollView.props.contentContainerStyle).toEqual({ paddingBottom: 40, flexGrow: 1 });
     });
   });
 
@@ -663,8 +671,27 @@ describe('ShiftDetailsSheet', () => {
 
     it('should call selectShiftDay when shift day card is pressed', () => {
       const selectShiftDayMock = jest.fn();
+      // Create mock shift with future dates to ensure days are displayed
+      const futureMockShift = {
+        ...mockShift,
+        Days: [
+          {
+            ShiftDayId: 'day-1',
+            ShiftId: 'shift-1',
+            ShiftName: 'Test Shift',
+            ShiftDay: '2027-01-15',
+            Start: '08:00:00',
+            End: '16:00:00',
+            SignedUp: false,
+            ShiftType: 0,
+            Signups: [],
+            Needs: [],
+          },
+        ],
+      };
       mockUseShiftsStore.mockReturnValue({
         ...defaultStoreState,
+        selectedShift: futureMockShift,
         selectShiftDay: selectShiftDayMock,
       });
 
@@ -680,7 +707,7 @@ describe('ShiftDetailsSheet', () => {
         firstCard.props.onPress();
       }
 
-      expect(selectShiftDayMock).toHaveBeenCalledWith(mockShift.Days[0]);
+      expect(selectShiftDayMock).toHaveBeenCalledWith(futureMockShift.Days[0]);
     });
   });
 

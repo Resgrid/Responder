@@ -137,59 +137,199 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   }, [validImages.length, activeIndex]);
 
   const handleImageSelect = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.granted === false) {
-      showToast('error', t('common.permission_denied'));
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const filename = asset.fileName || `image_${Date.now()}.png`;
-      setSelectedImageInfo({ uri: asset.uri, filename });
+    try {
+      // On Web, permissions are handled by the browser, so we skip the permission check
+      // On iOS/Android, we need to request permissions first
+      if (Platform.OS !== 'web') {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+          // Check if user can be asked again or needs to go to settings
+          if (!permissionResult.canAskAgain) {
+            showToast('error', t('callImages.permission_denied_settings'));
+          } else {
+            showToast('error', t('common.permission_denied'));
+          }
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        // allowsEditing is only supported on iOS and Android, not on Web
+        allowsEditing: Platform.OS !== 'web',
+        quality: 0.8,
+      });
+
+      // Handle Android MainActivity destruction - check for pending results
+      if (Platform.OS === 'android' && result.canceled) {
+        const pendingResult = await ImagePicker.getPendingResultAsync();
+        if (pendingResult && 'assets' in pendingResult && pendingResult.assets && pendingResult.assets.length > 0) {
+          const asset = pendingResult.assets[0];
+          if (asset?.uri) {
+            const filename = asset.fileName || `image_${Date.now()}.png`;
+            setSelectedImageInfo({ uri: asset.uri, filename });
+            return;
+          }
+        }
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (asset?.uri) {
+          const filename = asset.fileName || `image_${Date.now()}.png`;
+          setSelectedImageInfo({ uri: asset.uri, filename });
+        } else {
+          console.error('Image picker returned asset without URI');
+          showToast('error', t('callImages.select_error'));
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting image from library:', error);
+      showToast('error', t('callImages.select_error'));
     }
   };
 
   const handleCameraCapture = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (permissionResult.granted === false) {
-      showToast('error', t('common.permission_denied'));
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const filename = `camera_${Date.now()}.png`;
-      setSelectedImageInfo({ uri: asset.uri, filename });
+    try {
+      // On Web, camera permissions are handled by the browser when launching the camera
+      // On iOS/Android, we need to request camera permissions first
+      if (Platform.OS !== 'web') {
+        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (permissionResult.granted === false) {
+          // Check if user can be asked again or needs to go to settings
+          if (!permissionResult.canAskAgain) {
+            showToast('error', t('callImages.permission_denied_settings'));
+          } else {
+            showToast('error', t('common.permission_denied'));
+          }
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        // allowsEditing is only supported on iOS and Android, not on Web
+        allowsEditing: Platform.OS !== 'web',
+        quality: 0.8,
+      });
+
+      // Handle Android MainActivity destruction - check for pending results
+      if (Platform.OS === 'android' && result.canceled) {
+        const pendingResult = await ImagePicker.getPendingResultAsync();
+        if (pendingResult && 'assets' in pendingResult && pendingResult.assets && pendingResult.assets.length > 0) {
+          const asset = pendingResult.assets[0];
+          if (asset?.uri) {
+            const filename = `camera_${Date.now()}.png`;
+            setSelectedImageInfo({ uri: asset.uri, filename });
+            return;
+          }
+        }
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (asset?.uri) {
+          const filename = `camera_${Date.now()}.png`;
+          setSelectedImageInfo({ uri: asset.uri, filename });
+        } else {
+          console.error('Camera returned asset without URI');
+          showToast('error', t('callImages.capture_error'));
+        }
+      }
+    } catch (error) {
+      console.error('Error capturing image from camera:', error);
+      showToast('error', t('callImages.capture_error'));
     }
   };
 
   const handleUploadImage = async () => {
     if (!selectedImageInfo) return;
 
+    // Validate URI before processing
+    if (!selectedImageInfo.uri || typeof selectedImageInfo.uri !== 'string') {
+      console.error('Invalid image URI:', selectedImageInfo.uri);
+      showToast('error', t('callImages.upload_error'));
+      return;
+    }
+
     setIsUploading(true);
     try {
-      // Manipulate image to ensure PNG format and proper compression
-      const manipulatedImage = await ImageManipulator.manipulateAsync(
-        selectedImageInfo.uri,
-        [{ resize: { width: 1024 } }], // Resize to max width of 1024px while maintaining aspect ratio
-        {
-          compress: 0.8,
-          format: ImageManipulator.SaveFormat.PNG, // Ensure PNG format
-        }
-      );
+      let base64Image: string;
 
-      // Read the manipulated image as base64
-      const base64Image = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      // On Web, we can skip image manipulation if there are issues
+      // On native platforms, manipulate the image for consistency
+      if (Platform.OS === 'web') {
+        // On Web, try to manipulate but have a fallback
+        try {
+          const manipulatedImage = await ImageManipulator.manipulateAsync(
+            selectedImageInfo.uri,
+            [{ resize: { width: 1024 } }],
+            {
+              compress: 0.8,
+              format: ImageManipulator.SaveFormat.JPEG,
+              base64: true, // Get base64 directly to avoid FileSystem issues on web
+            }
+          );
+
+          if (manipulatedImage?.base64) {
+            base64Image = manipulatedImage.base64;
+          } else {
+            // Fallback: try to read from data URI if manipulation didn't return base64
+            throw new Error('No base64 returned from manipulation');
+          }
+        } catch (webError) {
+          console.error('Web image manipulation error:', webError);
+          // On web, the URI might already be a data URI or blob URL
+          // Try to extract base64 from data URI
+          if (selectedImageInfo.uri.startsWith('data:')) {
+            const base64Match = selectedImageInfo.uri.match(/base64,(.*)$/);
+            if (base64Match && base64Match[1]) {
+              base64Image = base64Match[1];
+            } else {
+              throw new Error('Could not extract base64 from data URI');
+            }
+          } else {
+            throw webError;
+          }
+        }
+      } else {
+        // Native platforms (iOS/Android)
+        let manipulatedImage;
+        try {
+          manipulatedImage = await ImageManipulator.manipulateAsync(
+            selectedImageInfo.uri,
+            [{ resize: { width: 1024 } }],
+            {
+              compress: 0.8,
+              format: ImageManipulator.SaveFormat.PNG,
+              base64: true, // Get base64 directly
+            }
+          );
+        } catch (manipulateError) {
+          console.error('Error manipulating image:', manipulateError);
+          // Try without resize as fallback for problematic images
+          manipulatedImage = await ImageManipulator.manipulateAsync(
+            selectedImageInfo.uri,
+            [], // No transformations
+            {
+              compress: 0.8,
+              format: ImageManipulator.SaveFormat.JPEG,
+              base64: true,
+            }
+          );
+        }
+
+        if (manipulatedImage?.base64) {
+          base64Image = manipulatedImage.base64;
+        } else if (manipulatedImage?.uri) {
+          // Fallback to FileSystem if base64 wasn't returned
+          base64Image = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        } else {
+          throw new Error('Image manipulation failed - no output');
+        }
+      }
 
       // Get current location if available
       const currentLatitude = latitude;

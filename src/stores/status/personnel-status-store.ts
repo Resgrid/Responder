@@ -110,7 +110,9 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     set({ isLoadingGroups: true });
     try {
       const groupsResult = await getAllGroups();
-      set({ groups: groupsResult.Data || [], isLoadingGroups: false });
+      // Filter to only include Station groups (TypeId === 1)
+      const stationGroups = (groupsResult.Data || []).filter((group) => group.TypeId === 1);
+      set({ groups: stationGroups, isLoadingGroups: false });
     } catch (error) {
       set({ groups: [], isLoadingGroups: false });
     }
