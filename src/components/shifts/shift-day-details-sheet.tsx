@@ -278,8 +278,8 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   };
 
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} isLoading={isShiftDayLoading} loadingText={t('shifts.loading_details')}>
-      <ScrollView className="flex-1">
+    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} isLoading={isShiftDayLoading} loadingText={t('shifts.loading_details')} snapPoints={[90]} minHeight="min-h-[600px]">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}>
         <VStack space="lg" className="p-4">
           {/* Header */}
           <VStack space="sm">

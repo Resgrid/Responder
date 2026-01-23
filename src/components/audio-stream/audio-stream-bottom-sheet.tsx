@@ -140,7 +140,7 @@ export const AudioStreamBottomSheet = () => {
             ) : (
               <Select selectedValue={getCurrentStreamValue()} onValueChange={handleStreamSelection} isDisabled={isLoading || isBuffering}>
                 <SelectTrigger>
-                  <SelectInput placeholder={t('audio_streams.select_placeholder')} />
+                  <SelectInput placeholder={t('audio_streams.select_placeholder')} value={currentStream ? currentStream.Name : t('audio_streams.none')} />
                   <SelectIcon />
                 </SelectTrigger>
                 <SelectPortal>

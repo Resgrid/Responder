@@ -1,4 +1,4 @@
-import { endOfMonth, format, parseISO, startOfMonth } from 'date-fns';
+import { endOfMonth, format, parseISO, startOfDay, startOfMonth } from 'date-fns';
 import { Calendar, Clock, Info, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -176,7 +176,7 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
     }
 
     return (
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}>
         <VStack space="lg" className="p-4">
           {/* Header */}
           <VStack space="sm">
@@ -257,16 +257,27 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
             </HStack>
           </VStack>
 
-          {/* Recent Days */}
+          {/* Upcoming Days */}
           {selectedShift?.Days && selectedShift.Days.length > 0 && (
             <VStack space="md">
               <Text size="lg" className="font-semibold text-gray-900 dark:text-white">
-                Recent Shift Days
+                {t('shifts.upcoming_shift_days')}
               </Text>
               <VStack space="sm">
-                {selectedShift.Days.slice(0, 7).map((day) => (
-                  <ShiftDayCard key={day.ShiftDayId} shiftDay={day} onPress={() => selectShiftDay(day)} />
-                ))}
+                {selectedShift.Days.filter((day) => {
+                  if (!day.ShiftDay) return false;
+                  try {
+                    const shiftDate = startOfDay(parseISO(day.ShiftDay));
+                    const today = startOfDay(new Date());
+                    return shiftDate >= today;
+                  } catch {
+                    return false;
+                  }
+                })
+                  .slice(0, 7)
+                  .map((day) => (
+                    <ShiftDayCard key={day.ShiftDayId} shiftDay={day} onPress={() => selectShiftDay(day)} />
+                  ))}
               </VStack>
             </VStack>
           )}
@@ -306,8 +317,8 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
   if (!selectedShift) return null;
 
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} testID="shift-details-sheet" snapPoints={[80]} minHeight="min-h-[600px]">
-      <VStack space="md" className="h-full">
+    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} testID="shift-details-sheet" snapPoints={[90]} minHeight="min-h-[600px]">
+      <VStack space="md" className="flex-1 h-full">
         {/* Header */}
         <Box className="border-b border-gray-200 pb-4 dark:border-gray-700">
           <Text size="xl" className="text-center font-semibold text-gray-900 dark:text-white">
@@ -324,7 +335,7 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
         </Box>
 
         {/* Content */}
-        <Box className="flex-1">{activeTab === 'info' ? renderShiftInfo() : renderCalendar()}</Box>
+        <Box className="flex-1 overflow-hidden">{activeTab === 'info' ? renderShiftInfo() : renderCalendar()}</Box>
       </VStack>
     </CustomBottomSheet>
   );

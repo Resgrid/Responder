@@ -206,7 +206,7 @@ export const ShiftCalendarView: React.FC<ShiftCalendarViewProps> = ({ shift, shi
 
         {/* Legend */}
         <VStack className="space-y-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-          <Text className="text-sm font-medium text-gray-900 dark:text-white">Legend</Text>
+          <Text className="text-sm font-medium text-gray-900 dark:text-white">{t('shifts.legend')}</Text>
           <HStack className="space-x-4">
             <HStack className="items-center space-x-2">
               <View className="size-3 rounded-full bg-green-500" />
@@ -215,7 +215,7 @@ export const ShiftCalendarView: React.FC<ShiftCalendarViewProps> = ({ shift, shi
 
             <HStack className="items-center space-x-2">
               <View className="size-3 rounded-full bg-orange-500" />
-              <Text className="text-xs text-gray-600 dark:text-gray-400">Available</Text>
+              <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.available')}</Text>
             </HStack>
           </HStack>
         </VStack>

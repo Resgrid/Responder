@@ -89,12 +89,12 @@ export const UnitCard: React.FC<UnitCardProps> = ({ unit, unitTypeStatuses, onPr
   // Find the status data from unit type statuses (custom statuses)
   const customStatusData = statusId ? findUnitStatus(unitType, statusId, unitTypeStatuses) : null;
 
-  // Fall back to default status if custom status not found
+  // Fall back to default status if custom status not found (used for colors only)
   const defaultStatus = statusId && !customStatusData ? getDefaultStatus(statusId) : null;
 
-  // Get status text and colors - prioritize custom, then default, then API response
-  const statusText = customStatusData?.Text || (defaultStatus?.text ? t(defaultStatus.text) : null) || ('CurrentStatus' in unit ? unit.CurrentStatus : null);
-  const buttonColor = customStatusData?.BColor || defaultStatus?.color || ('CurrentStatusColor' in unit ? unit.CurrentStatusColor : null);
+  // Get status text - prioritize custom status, then API response (CurrentStatus from unit)
+  const statusText = customStatusData?.Text || ('CurrentStatus' in unit ? unit.CurrentStatus : null);
+  const buttonColor = customStatusData?.BColor || ('CurrentStatusColor' in unit ? unit.CurrentStatusColor : null) || defaultStatus?.color;
   const textColor = buttonColor ? getContrastTextColor(buttonColor) : '#FFFFFF';
 
   return (
