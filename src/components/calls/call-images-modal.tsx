@@ -154,34 +154,50 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        // allowsEditing is only supported on iOS and Android, not on Web
-        allowsEditing: Platform.OS !== 'web',
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // Disable allowsEditing on all platforms - it can cause issues with high-res images
+        // On iOS: UIImagePickerController bugs cause crashes
+        // On Android: Can cause silent failures with certain device/image configurations
+        allowsEditing: false,
         quality: 0.8,
+        // Use compatible asset representation to avoid iOS crashes with certain image formats
+        ...(Platform.OS === 'ios' && {
+          preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        }),
       });
 
-      // Handle Android MainActivity destruction - check for pending results
-      if (Platform.OS === 'android' && result.canceled) {
+      // Handle Android MainActivity destruction - check for pending results first
+      if (Platform.OS === 'android') {
         const pendingResult = await ImagePicker.getPendingResultAsync();
         if (pendingResult && 'assets' in pendingResult && pendingResult.assets && pendingResult.assets.length > 0) {
           const asset = pendingResult.assets[0];
           if (asset?.uri) {
-            const filename = asset.fileName || `image_${Date.now()}.png`;
+            const filename = asset.fileName || `image_${Date.now()}.jpg`;
             setSelectedImageInfo({ uri: asset.uri, filename });
             return;
           }
+        }
+
+        // If result was canceled and no pending result, user likely dismissed the picker
+        if (result.canceled) {
+          console.log('Image selection was canceled by user');
+          return;
         }
       }
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         if (asset?.uri) {
-          const filename = asset.fileName || `image_${Date.now()}.png`;
+          const filename = asset.fileName || `image_${Date.now()}.jpg`;
           setSelectedImageInfo({ uri: asset.uri, filename });
         } else {
-          console.error('Image picker returned asset without URI');
+          console.error('Image picker returned asset without URI:', JSON.stringify(asset));
           showToast('error', t('callImages.select_error'));
         }
+      } else if (!result.canceled) {
+        // Result was not canceled but we have no assets - this is unexpected
+        console.error('Image picker returned no assets:', JSON.stringify(result));
+        showToast('error', t('callImages.select_error'));
       }
     } catch (error) {
       console.error('Error selecting image from library:', error);
@@ -207,34 +223,54 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        // allowsEditing is only supported on iOS and Android, not on Web
-        allowsEditing: Platform.OS !== 'web',
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // Disable allowsEditing on all platforms - it can cause issues with high-res images
+        // On iOS: UIImagePickerController bugs cause crashes
+        // On Android: Can cause silent failures with certain device/camera configurations
+        allowsEditing: false,
         quality: 0.8,
+        // Ensure we get the image data back
+        exif: false,
+        // Use compatible asset representation to avoid iOS crashes with certain image formats
+        ...(Platform.OS === 'ios' && {
+          preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        }),
       });
 
-      // Handle Android MainActivity destruction - check for pending results
-      if (Platform.OS === 'android' && result.canceled) {
+      // Handle Android MainActivity destruction - check for pending results first
+      if (Platform.OS === 'android') {
+        // Always check for pending results on Android, not just when canceled
+        // The activity might have been destroyed and recreated
         const pendingResult = await ImagePicker.getPendingResultAsync();
         if (pendingResult && 'assets' in pendingResult && pendingResult.assets && pendingResult.assets.length > 0) {
           const asset = pendingResult.assets[0];
           if (asset?.uri) {
-            const filename = `camera_${Date.now()}.png`;
+            const filename = `camera_${Date.now()}.jpg`;
             setSelectedImageInfo({ uri: asset.uri, filename });
             return;
           }
+        }
+
+        // If result was canceled and no pending result, user likely dismissed the camera
+        if (result.canceled) {
+          console.log('Camera capture was canceled by user');
+          return;
         }
       }
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         if (asset?.uri) {
-          const filename = `camera_${Date.now()}.png`;
+          const filename = `camera_${Date.now()}.jpg`;
           setSelectedImageInfo({ uri: asset.uri, filename });
         } else {
-          console.error('Camera returned asset without URI');
+          console.error('Camera returned asset without URI:', JSON.stringify(asset));
           showToast('error', t('callImages.capture_error'));
         }
+      } else if (!result.canceled) {
+        // Result was not canceled but we have no assets - this is unexpected
+        console.error('Camera returned no assets:', JSON.stringify(result));
+        showToast('error', t('callImages.capture_error'));
       }
     } catch (error) {
       console.error('Error capturing image from camera:', error);
@@ -261,15 +297,11 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       if (Platform.OS === 'web') {
         // On Web, try to manipulate but have a fallback
         try {
-          const manipulatedImage = await ImageManipulator.manipulateAsync(
-            selectedImageInfo.uri,
-            [{ resize: { width: 1024 } }],
-            {
-              compress: 0.8,
-              format: ImageManipulator.SaveFormat.JPEG,
-              base64: true, // Get base64 directly to avoid FileSystem issues on web
-            }
-          );
+          const manipulatedImage = await ImageManipulator.manipulateAsync(selectedImageInfo.uri, [{ resize: { width: 1024 } }], {
+            compress: 0.8,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true, // Get base64 directly to avoid FileSystem issues on web
+          });
 
           if (manipulatedImage?.base64) {
             base64Image = manipulatedImage.base64;
@@ -296,15 +328,11 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
         // Native platforms (iOS/Android)
         let manipulatedImage;
         try {
-          manipulatedImage = await ImageManipulator.manipulateAsync(
-            selectedImageInfo.uri,
-            [{ resize: { width: 1024 } }],
-            {
-              compress: 0.8,
-              format: ImageManipulator.SaveFormat.PNG,
-              base64: true, // Get base64 directly
-            }
-          );
+          manipulatedImage = await ImageManipulator.manipulateAsync(selectedImageInfo.uri, [{ resize: { width: 1024 } }], {
+            compress: 0.8,
+            format: ImageManipulator.SaveFormat.PNG,
+            base64: true, // Get base64 directly
+          });
         } catch (manipulateError) {
           console.error('Error manipulating image:', manipulateError);
           // Try without resize as fallback for problematic images
