@@ -16,15 +16,19 @@ import {
   UserIcon,
   X,
 } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import WebView from 'react-native-webview';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
+import { sanitizeHtmlContent } from '@/utils/webview-html';
 
 import { Box } from '../ui/box';
 import { Button, ButtonText } from '../ui/button';
@@ -131,6 +135,85 @@ const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink,
       </HStack>
     </Pressable>
   );
+};
+
+interface HtmlContentFieldProps {
+  label: string;
+  value: string | null | undefined;
+}
+
+const HtmlContentField: React.FC<HtmlContentFieldProps> = ({ label, value }) => {
+  const { colorScheme } = useColorScheme();
+
+  if (!value || value.toString().trim() === '') return null;
+
+  const textColor = colorScheme === 'dark' ? '#E5E7EB' : '#1F2937';
+  const bgColor = colorScheme === 'dark' ? '#374151' : '#F9FAFB';
+
+  return (
+    <VStack space="xs" className="py-2">
+      <Text className="text-sm text-gray-500 dark:text-gray-400">{label}</Text>
+      <View className="min-h-[60px] overflow-hidden rounded-lg">
+        <WebView
+          style={[styles.htmlContent, { backgroundColor: bgColor }]}
+          originWhitelist={['about:']}
+          scrollEnabled={false}
+          showsVerticalScrollIndicator={false}
+          javaScriptEnabled={false}
+          domStorageEnabled={false}
+          source={{
+            html: `
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+                  <style>
+                    body {
+                      color: ${textColor};
+                      font-family: system-ui, -apple-system, sans-serif;
+                      margin: 0;
+                      padding: 8px;
+                      font-size: 14px;
+                      line-height: 1.5;
+                      background-color: ${bgColor};
+                    }
+                    * {
+                      max-width: 100%;
+                    }
+                  </style>
+                </head>
+                <body>${sanitizeHtmlContent(value)}</body>
+              </html>
+            `,
+          }}
+          androidLayerType="software"
+        />
+      </View>
+    </VStack>
+  );
+};
+
+const styles = StyleSheet.create({
+  htmlContent: {
+    flex: 1,
+    minHeight: 60,
+  },
+});
+
+/**
+ * Safely formats a timestamp string with error handling.
+ * Returns formatted date string on success, empty string on failure.
+ */
+const safeFormatTimestamp = (timestamp: string | undefined | null, format: string): string => {
+  if (!timestamp) return '';
+
+  try {
+    const parsed = parseDateISOString(timestamp);
+    return formatDateForDisplay(parsed, format);
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', timestamp, error);
+    return '';
+  }
 };
 
 export const ContactDetailsSheet: React.FC = () => {
@@ -416,9 +499,9 @@ export const ContactDetailsSheet: React.FC = () => {
                 {hasAdditionalInfo ? (
                   <Section title={t('contacts.additionalInformation')} icon={<SettingsIcon size={16} color="#6366F1" />} defaultExpanded={false}>
                     <VStack space="xs">
-                      <ContactField label={t('contacts.description')} value={selectedContact.Description} />
-                      <ContactField label={t('contacts.notes')} value={selectedContact.Notes} />
-                      <ContactField label={t('contacts.otherInfo')} value={selectedContact.OtherInfo} />
+                      <HtmlContentField label={t('contacts.descriptionLabel')} value={selectedContact.Description} />
+                      <HtmlContentField label={t('contacts.notes')} value={selectedContact.Notes} />
+                      <HtmlContentField label={t('contacts.otherInfo')} value={selectedContact.OtherInfo} />
                     </VStack>
                   </Section>
                 ) : null}
@@ -427,11 +510,15 @@ export const ContactDetailsSheet: React.FC = () => {
                 {hasSystemInfo ? (
                   <Section title={t('contacts.systemInformation')} icon={<CalendarIcon size={16} color="#6366F1" />} defaultExpanded={false}>
                     <VStack space="xs">
-                      <ContactField label={t('contacts.addedOn')} value={selectedContact.AddedOn ? new Date(selectedContact.AddedOn).toLocaleDateString() : undefined} icon={<CalendarIcon size={16} color="#6366F1" />} />
+                      <ContactField
+                        label={t('contacts.addedOn')}
+                        value={safeFormatTimestamp(selectedContact.AddedOn, 'yyyy-MM-dd HH:mm') || undefined}
+                        icon={<CalendarIcon size={16} color="#6366F1" />}
+                      />
                       <ContactField label={t('contacts.addedBy')} value={selectedContact.AddedByUserName} icon={<UserIcon size={16} color="#6366F1" />} />
                       <ContactField
                         label={t('contacts.editedOn')}
-                        value={selectedContact.EditedOn ? new Date(selectedContact.EditedOn).toLocaleDateString() : undefined}
+                        value={safeFormatTimestamp(selectedContact.EditedOn, 'yyyy-MM-dd HH:mm') || undefined}
                         icon={<CalendarIcon size={16} color="#6366F1" />}
                       />
                       <ContactField label={t('contacts.editedBy')} value={selectedContact.EditedByUserName} icon={<UserIcon size={16} color="#6366F1" />} />

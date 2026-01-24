@@ -8,6 +8,8 @@ import { getCanConnectToVoiceSession, getDepartmentVoiceSettings } from '../../a
 import { logger } from '../../lib/logging';
 import { type DepartmentVoiceChannelResultData } from '../../models/v4/voice/departmentVoiceResultData';
 import { audioService } from '../../services/audio.service';
+import { headsetButtonService } from '../../services/headset-button.service';
+import { toggleMicrophone } from '../../utils/microphone-toggle';
 import { useBluetoothAudioStore } from './bluetooth-audio-store';
 
 // Helper function to setup audio routing based on selected devices
@@ -90,6 +92,14 @@ interface LiveKitState {
   fetchVoiceSettings: () => Promise<void>;
   fetchCanConnectToVoice: () => Promise<void>;
   requestPermissions: () => Promise<void>;
+
+  // Microphone control
+  toggleMicrophone: () => Promise<void>;
+  setMicrophoneEnabled: (enabled: boolean) => Promise<void>;
+
+  // Headset button PTT
+  startHeadsetButtonMonitoring: () => Promise<void>;
+  stopHeadsetButtonMonitoring: () => void;
 }
 
 export const useLiveKitStore = create<LiveKitState>((set, get) => ({
@@ -236,6 +246,23 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
           context: { error },
         });
       }
+
+      // Start headset button monitoring for PTT
+      try {
+        await headsetButtonService.initialize();
+        headsetButtonService.startMonitoring();
+        useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(true);
+
+        logger.info({
+          message: 'Headset button monitoring started for PTT (AirPods/Bluetooth earbuds)',
+        });
+      } catch (error) {
+        logger.error({
+          message: 'Failed to start headset button monitoring',
+          context: { error },
+        });
+      }
+
       set({
         currentRoom: room,
         currentRoomInfo: roomInfo,
@@ -254,6 +281,21 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
   disconnectFromRoom: async () => {
     const { currentRoom } = get();
     if (currentRoom) {
+      // Stop headset button monitoring
+      try {
+        headsetButtonService.stopMonitoring();
+        useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(false);
+
+        logger.info({
+          message: 'Headset button monitoring stopped',
+        });
+      } catch (error) {
+        logger.error({
+          message: 'Failed to stop headset button monitoring',
+          context: { error },
+        });
+      }
+
       await currentRoom.disconnect();
       await audioService.playDisconnectedFromAudioRoomSound();
 
@@ -322,6 +364,83 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
     } catch (error) {
       logger.error({
         message: 'Failed to fetch can connect to voice',
+        context: { error },
+      });
+    }
+  },
+
+  toggleMicrophone: async () => {
+    const { currentRoom } = get();
+    await toggleMicrophone(currentRoom);
+  },
+
+  setMicrophoneEnabled: async (enabled: boolean) => {
+    const { currentRoom } = get();
+    if (!currentRoom) {
+      logger.warn({ message: 'Cannot set microphone state - no active room' });
+      return;
+    }
+
+    try {
+      const currentState = currentRoom.localParticipant.isMicrophoneEnabled;
+      if (currentState === enabled) return; // Already in desired state
+
+      await currentRoom.localParticipant.setMicrophoneEnabled(enabled);
+
+      logger.info({
+        message: 'Microphone state set',
+        context: { enabled },
+      });
+
+      // Update bluetooth audio store with the action
+      useBluetoothAudioStore.getState().setLastButtonAction({
+        action: enabled ? 'unmute' : 'mute',
+        timestamp: Date.now(),
+      });
+
+      // Play sound feedback
+      if (enabled) {
+        await audioService.playStartTransmittingSound();
+      } else {
+        await audioService.playStopTransmittingSound();
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Failed to set microphone state',
+        context: { error },
+      });
+    }
+  },
+
+  startHeadsetButtonMonitoring: async () => {
+    try {
+      // Initialize and start headset button service
+      await headsetButtonService.initialize();
+      headsetButtonService.startMonitoring();
+      useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(true);
+
+      logger.info({
+        message: 'Headset button monitoring started for PTT',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to start headset button monitoring',
+        context: { error },
+      });
+    }
+  },
+
+  stopHeadsetButtonMonitoring: () => {
+    try {
+      headsetButtonService.stopMonitoring();
+      useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(false);
+
+      logger.info({
+        message: 'Headset button monitoring stopped',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to stop headset button monitoring',
         context: { error },
       });
     }

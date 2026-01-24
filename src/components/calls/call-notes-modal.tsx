@@ -123,8 +123,11 @@ function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
       }
       try {
         await addNote(callId, newNote, currentUser, null, null);
-        setNewNote('');
+        // Dismiss keyboard first, then clear text to ensure proper state update on iOS
         Keyboard.dismiss();
+        requestAnimationFrame(() => {
+          setNewNote('');
+        });
       } catch (error) {
         console.error('Failed to add note:', error);
         showErrorMessage(t('callNotes.addNoteError'));

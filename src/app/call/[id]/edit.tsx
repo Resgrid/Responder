@@ -80,7 +80,7 @@ export default function EditCall() {
   const { id } = useLocalSearchParams();
   const callId = Array.isArray(id) ? id[0] : id;
   const { callPriorities, callTypes, isLoading: callDataLoading, error: callDataError, fetchCallPriorities, fetchCallTypes } = useCallsStore();
-  const { call, isLoading: callDetailLoading, error: callDetailError, fetchCallDetail } = useCallDetailStore();
+  const { call, callExtraData, isLoading: callDetailLoading, error: callDetailError, fetchCallDetail } = useCallDetailStore();
   const { config } = useCoreStore();
   const { trackEvent } = useAnalytics();
   // Safe wrapper for analytics that catches errors and promise rejections
@@ -187,6 +187,44 @@ export default function EditCall() {
       const priority = callPriorities.find((p) => p.Id === call.Priority);
       const type = callTypes.find((t) => t.Id === call.Type);
 
+      // Parse dispatched items from callExtraData
+      const dispatchedUsers: string[] = [];
+      const dispatchedGroups: string[] = [];
+      const dispatchedRoles: string[] = [];
+      const dispatchedUnits: string[] = [];
+
+      if (callExtraData?.Dispatches) {
+        callExtraData.Dispatches.forEach((dispatch) => {
+          // Type indicates what kind of entity was dispatched
+          // Common types: "User", "Unit", "Group", "Role"
+          const dispatchType = dispatch.Type?.toLowerCase() || '';
+          const dispatchId = dispatch.Id;
+
+          if (dispatchId) {
+            if (dispatchType === 'user' || dispatchType === 'personnel') {
+              dispatchedUsers.push(dispatchId);
+            } else if (dispatchType === 'unit') {
+              dispatchedUnits.push(dispatchId);
+            } else if (dispatchType === 'group' || dispatchType === 'station') {
+              dispatchedGroups.push(dispatchId);
+            } else if (dispatchType === 'role') {
+              dispatchedRoles.push(dispatchId);
+            }
+          }
+        });
+      }
+
+      const initialDispatchSelection: DispatchSelection = {
+        everyone: false,
+        users: dispatchedUsers,
+        groups: dispatchedGroups,
+        roles: dispatchedRoles,
+        units: dispatchedUnits,
+      };
+
+      // Update local state for dispatch selection
+      setDispatchSelection(initialDispatchSelection);
+
       reset({
         name: call.Name || '',
         nature: call.Nature || '',
@@ -201,13 +239,7 @@ export default function EditCall() {
         type: type?.Name || '',
         contactName: call.ContactName || '',
         contactInfo: call.ContactInfo || '',
-        dispatchSelection: {
-          everyone: false,
-          users: [],
-          groups: [],
-          roles: [],
-          units: [],
-        },
+        dispatchSelection: initialDispatchSelection,
       });
 
       // Set selected location if coordinates exist
@@ -224,7 +256,7 @@ export default function EditCall() {
         }
       }
     }
-  }, [call, callPriorities, callTypes, reset]);
+  }, [call, callExtraData, callPriorities, callTypes, reset]);
 
   const onSubmit = async (data: FormValues) => {
     try {

@@ -47,6 +47,18 @@ export interface AudioDeviceSelection {
   speaker: AudioDeviceInfo | null;
 }
 
+// PTT mode for headset button control
+export type PttMode = 'toggle' | 'push_to_talk' | 'disabled';
+
+// Headset button configuration
+export interface HeadsetButtonConfig {
+  pttMode: PttMode;
+  playPauseAction: 'toggle_mute' | 'none';
+  doubleClickAction: 'toggle_mute' | 'none';
+  longPressAction: 'toggle_mute' | 'none';
+  soundFeedback: boolean;
+}
+
 interface BluetoothAudioState {
   // Bluetooth state
   bluetoothState: State;
@@ -69,6 +81,10 @@ interface BluetoothAudioState {
   // Button events
   buttonEvents: AudioButtonEvent[];
   lastButtonAction: ButtonAction | null;
+
+  // Headset button PTT state
+  isHeadsetButtonMonitoring: boolean;
+  headsetButtonConfig: HeadsetButtonConfig;
 
   // Actions
   setBluetoothState: (state: State) => void;
@@ -100,6 +116,10 @@ interface BluetoothAudioState {
   addButtonEvent: (event: AudioButtonEvent) => void;
   clearButtonEvents: () => void;
   setLastButtonAction: (action: ButtonAction | null) => void;
+
+  // Headset button PTT actions
+  setIsHeadsetButtonMonitoring: (isMonitoring: boolean) => void;
+  setHeadsetButtonConfig: (config: Partial<HeadsetButtonConfig>) => void;
 }
 
 export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => ({
@@ -122,6 +142,14 @@ export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => 
   isAudioRoutingActive: false,
   buttonEvents: [],
   lastButtonAction: null,
+  isHeadsetButtonMonitoring: false,
+  headsetButtonConfig: {
+    pttMode: 'toggle',
+    playPauseAction: 'toggle_mute',
+    doubleClickAction: 'none',
+    longPressAction: 'none',
+    soundFeedback: true,
+  },
 
   // Bluetooth state actions
   setBluetoothState: (state) => set({ bluetoothState: state }),
@@ -224,5 +252,18 @@ export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => 
     const { availableAudioDevices } = get();
     const updatedDevices = availableAudioDevices.map((device) => (device.id === deviceId ? { ...device, isAvailable } : device));
     set({ availableAudioDevices: updatedDevices });
+  },
+
+  // Headset button PTT actions
+  setIsHeadsetButtonMonitoring: (isMonitoring) => set({ isHeadsetButtonMonitoring: isMonitoring }),
+
+  setHeadsetButtonConfig: (config) => {
+    const { headsetButtonConfig } = get();
+    set({
+      headsetButtonConfig: {
+        ...headsetButtonConfig,
+        ...config,
+      },
+    });
   },
 }));
