@@ -48,6 +48,7 @@ Best Practices:
 - Handle errors gracefully and provide user feedback.
 - Implement proper offline support.
 - Ensure the user interface is intuitive and user-friendly and works seamlessly across different devices and screen sizes.
+- This is an expo managed project that uses prebuild, do not make native code changes outside of expo prebuild capabilities.
 
 Additional Rules:
 

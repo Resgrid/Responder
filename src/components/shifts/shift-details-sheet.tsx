@@ -318,7 +318,7 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={handleClose} testID="shift-details-sheet" snapPoints={[90]} minHeight="min-h-[600px]">
-      <VStack space="md" className="flex-1 h-full">
+      <VStack space="md" className="h-full flex-1">
         {/* Header */}
         <Box className="border-b border-gray-200 pb-4 dark:border-gray-700">
           <Text size="xl" className="text-center font-semibold text-gray-900 dark:text-white">

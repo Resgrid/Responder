@@ -28,6 +28,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
+import { sanitizeHtmlContent } from '@/utils/webview-html';
 
 import { Box } from '../ui/box';
 import { Button, ButtonText } from '../ui/button';
@@ -155,9 +156,11 @@ const HtmlContentField: React.FC<HtmlContentFieldProps> = ({ label, value }) => 
       <View className="min-h-[60px] overflow-hidden rounded-lg">
         <WebView
           style={[styles.htmlContent, { backgroundColor: bgColor }]}
-          originWhitelist={['*']}
+          originWhitelist={['about:']}
           scrollEnabled={false}
           showsVerticalScrollIndicator={false}
+          javaScriptEnabled={false}
+          domStorageEnabled={false}
           source={{
             html: `
               <!DOCTYPE html>
@@ -179,7 +182,7 @@ const HtmlContentField: React.FC<HtmlContentFieldProps> = ({ label, value }) => 
                     }
                   </style>
                 </head>
-                <body>${value}</body>
+                <body>${sanitizeHtmlContent(value)}</body>
               </html>
             `,
           }}

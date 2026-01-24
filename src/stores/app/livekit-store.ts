@@ -9,6 +9,7 @@ import { logger } from '../../lib/logging';
 import { type DepartmentVoiceChannelResultData } from '../../models/v4/voice/departmentVoiceResultData';
 import { audioService } from '../../services/audio.service';
 import { headsetButtonService } from '../../services/headset-button.service';
+import { toggleMicrophone } from '../../utils/microphone-toggle';
 import { useBluetoothAudioStore } from './bluetooth-audio-store';
 
 // Helper function to setup audio routing based on selected devices
@@ -370,38 +371,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
   toggleMicrophone: async () => {
     const { currentRoom } = get();
-    if (!currentRoom) {
-      logger.warn({ message: 'Cannot toggle microphone - no active room' });
-      return;
-    }
-
-    try {
-      const currentMuteState = !currentRoom.localParticipant.isMicrophoneEnabled;
-      await currentRoom.localParticipant.setMicrophoneEnabled(currentMuteState);
-
-      logger.info({
-        message: 'Microphone toggled',
-        context: { enabled: currentMuteState },
-      });
-
-      // Update bluetooth audio store with the action
-      useBluetoothAudioStore.getState().setLastButtonAction({
-        action: currentMuteState ? 'unmute' : 'mute',
-        timestamp: Date.now(),
-      });
-
-      // Play sound feedback
-      if (currentMuteState) {
-        await audioService.playStartTransmittingSound();
-      } else {
-        await audioService.playStopTransmittingSound();
-      }
-    } catch (error) {
-      logger.error({
-        message: 'Failed to toggle microphone',
-        context: { error },
-      });
-    }
+    await toggleMicrophone(currentRoom);
   },
 
   setMicrophoneEnabled: async (enabled: boolean) => {
@@ -442,16 +412,15 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
     }
   },
 
-  startHeadsetButtonMonitoring: () => {
+  startHeadsetButtonMonitoring: async () => {
     try {
       // Initialize and start headset button service
-      headsetButtonService.initialize().then(() => {
-        headsetButtonService.startMonitoring();
-        useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(true);
+      await headsetButtonService.initialize();
+      headsetButtonService.startMonitoring();
+      useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(true);
 
-        logger.info({
-          message: 'Headset button monitoring started for PTT',
-        });
+      logger.info({
+        message: 'Headset button monitoring started for PTT',
       });
     } catch (error) {
       logger.error({

@@ -492,46 +492,14 @@ class HeadsetButtonService {
    */
   async toggleMicrophone(): Promise<void> {
     const liveKitStore = getLiveKitStore().getState();
+    // Import toggleMicrophone dynamically to avoid circular dependency
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { toggleMicrophone: sharedToggle } = require('@/utils/microphone-toggle');
 
-    if (!liveKitStore.currentRoom) {
-      logger.warn({ message: 'Cannot toggle microphone - no active room' });
-      return;
-    }
-
-    try {
-      const currentMuteState = !liveKitStore.currentRoom.localParticipant.isMicrophoneEnabled;
-
-      await liveKitStore.currentRoom.localParticipant.setMicrophoneEnabled(currentMuteState);
-
-      logger.info({
-        message: 'Microphone toggled via headset button',
-        context: { enabled: currentMuteState },
-      });
-
-      // Update bluetooth audio store
-      useBluetoothAudioStore.getState().setLastButtonAction({
-        action: currentMuteState ? 'unmute' : 'mute',
-        timestamp: Date.now(),
-      });
-
-      // Play sound feedback if enabled
-      if (this.config.soundFeedback) {
-        if (currentMuteState) {
-          if (audioService?.playStartTransmittingSound) {
-            await audioService.playStartTransmittingSound();
-          }
-        } else {
-          if (audioService?.playStopTransmittingSound) {
-            await audioService.playStopTransmittingSound();
-          }
-        }
-      }
-    } catch (error) {
-      logger.error({
-        message: 'Failed to toggle microphone via headset button',
-        context: { error },
-      });
-    }
+    await sharedToggle(liveKitStore.currentRoom, {
+      soundFeedback: this.config.soundFeedback,
+      logContext: 'via headset button',
+    });
   }
 
   /**

@@ -166,11 +166,7 @@ function RootLayout() {
 
   return (
     <Providers>
-      <Stack
-        screenOptions={{
-          headerBackTitleVisible: false,
-        }}
-      >
+      <Stack>
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
         <Stack.Screen name="call" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />

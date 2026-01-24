@@ -172,7 +172,8 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
         if (pendingResult && 'assets' in pendingResult && pendingResult.assets && pendingResult.assets.length > 0) {
           const asset = pendingResult.assets[0];
           if (asset?.uri) {
-            const filename = asset.fileName || `image_${Date.now()}.jpg`;
+            // Native Android uses PNG encoding
+            const filename = asset.fileName || `image_${Date.now()}.png`;
             setSelectedImageInfo({ uri: asset.uri, filename });
             return;
           }
@@ -188,7 +189,10 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         if (asset?.uri) {
-          const filename = asset.fileName || `image_${Date.now()}.jpg`;
+          // Derive extension based on platform encoding format
+          // Native platforms use PNG encoding, web uses JPEG
+          const defaultExtension = Platform.OS === 'web' ? 'jpg' : 'png';
+          const filename = asset.fileName || `image_${Date.now()}.${defaultExtension}`;
           setSelectedImageInfo({ uri: asset.uri, filename });
         } else {
           console.error('Image picker returned asset without URI:', JSON.stringify(asset));
@@ -245,7 +249,8 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
         if (pendingResult && 'assets' in pendingResult && pendingResult.assets && pendingResult.assets.length > 0) {
           const asset = pendingResult.assets[0];
           if (asset?.uri) {
-            const filename = `camera_${Date.now()}.jpg`;
+            // Native Android uses PNG encoding
+            const filename = `camera_${Date.now()}.png`;
             setSelectedImageInfo({ uri: asset.uri, filename });
             return;
           }
@@ -261,7 +266,10 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         if (asset?.uri) {
-          const filename = `camera_${Date.now()}.jpg`;
+          // Derive extension based on platform encoding format
+          // Native platforms use PNG encoding, web uses JPEG
+          const defaultExtension = Platform.OS === 'web' ? 'jpg' : 'png';
+          const filename = `camera_${Date.now()}.${defaultExtension}`;
           setSelectedImageInfo({ uri: asset.uri, filename });
         } else {
           console.error('Camera returned asset without URI:', JSON.stringify(asset));

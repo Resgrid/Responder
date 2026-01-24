@@ -113,25 +113,30 @@ export function useHeadsetButtonPTT(options: UseHeadsetButtonPTTOptions = {}): U
 
   const { isHeadsetButtonMonitoring, headsetButtonConfig, lastButtonAction, setHeadsetButtonConfig } = useBluetoothAudioStore();
 
-  // Track if we've done initial setup
-  const initialSetupDone = useRef(false);
-
   // Get current mute state from LiveKit room
   const isMuted = currentRoom ? !currentRoom.localParticipant.isMicrophoneEnabled : true;
 
-  // Initialize service on mount
+  // One-time initialization on mount
   useEffect(() => {
-    if (!initialSetupDone.current) {
-      headsetButtonService.initialize();
-      headsetButtonService.setConfig({
-        pttMode,
-        soundFeedback,
-      });
-      initialSetupDone.current = true;
-    }
+    headsetButtonService.initialize();
+    headsetButtonService.setConfig({
+      pttMode,
+      soundFeedback,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update configuration when props change
+  useEffect(() => {
+    headsetButtonService.setConfig({
+      pttMode,
+      soundFeedback,
+    });
   }, [pttMode, soundFeedback]);
 
   // Auto-start/stop based on LiveKit connection
+  // Note: The guard (!isHeadsetButtonMonitoring) prevents duplicate initialization
+  // if connectToRoom in the LiveKit store already started monitoring
   useEffect(() => {
     if (autoStartOnConnect && isConnected && !isHeadsetButtonMonitoring) {
       startHeadsetButtonMonitoring();
