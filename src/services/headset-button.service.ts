@@ -435,8 +435,15 @@ class HeadsetButtonService {
 
     // Set timer to process the final action
     this.buttonPressTimer = setTimeout(() => {
-      this.executeButtonAction(event, this.buttonPressCount);
-      this.buttonPressCount = 0;
+      (async () => {
+        try {
+          await this.executeButtonAction(event, this.buttonPressCount);
+        } catch (error) {
+          console.error('Error executing button action:', error);
+        } finally {
+          this.buttonPressCount = 0;
+        }
+      })();
     }, this.DOUBLE_CLICK_THRESHOLD);
   }
 

@@ -44,7 +44,7 @@ describe('useHeadsetButtonPTT', () => {
   // Default mock implementations
   const mockToggleMicrophone = jest.fn();
   const mockSetMicrophoneEnabled = jest.fn();
-  const mockStartHeadsetButtonMonitoring = jest.fn();
+  const mockStartHeadsetButtonMonitoring = jest.fn().mockResolvedValue(undefined);
   const mockStopHeadsetButtonMonitoring = jest.fn();
   const mockSetHeadsetButtonConfig = jest.fn();
 

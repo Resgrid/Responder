@@ -98,7 +98,7 @@ interface LiveKitState {
   setMicrophoneEnabled: (enabled: boolean) => Promise<void>;
 
   // Headset button PTT
-  startHeadsetButtonMonitoring: () => void;
+  startHeadsetButtonMonitoring: () => Promise<void>;
   stopHeadsetButtonMonitoring: () => void;
 }
 

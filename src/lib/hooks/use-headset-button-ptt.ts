@@ -139,7 +139,9 @@ export function useHeadsetButtonPTT(options: UseHeadsetButtonPTTOptions = {}): U
   // if connectToRoom in the LiveKit store already started monitoring
   useEffect(() => {
     if (autoStartOnConnect && isConnected && !isHeadsetButtonMonitoring) {
-      startHeadsetButtonMonitoring();
+      startHeadsetButtonMonitoring().catch((error) => {
+        console.error('Failed to start headset button monitoring:', error);
+      });
     } else if (autoStopOnDisconnect && !isConnected && isHeadsetButtonMonitoring) {
       stopHeadsetButtonMonitoring();
     }
@@ -147,7 +149,9 @@ export function useHeadsetButtonPTT(options: UseHeadsetButtonPTTOptions = {}): U
 
   // Start monitoring
   const startMonitoring = useCallback(() => {
-    startHeadsetButtonMonitoring();
+    startHeadsetButtonMonitoring().catch((error) => {
+      console.error('Failed to start headset button monitoring:', error);
+    });
   }, [startHeadsetButtonMonitoring]);
 
   // Stop monitoring
@@ -160,7 +164,9 @@ export function useHeadsetButtonPTT(options: UseHeadsetButtonPTTOptions = {}): U
     if (isHeadsetButtonMonitoring) {
       stopHeadsetButtonMonitoring();
     } else {
-      startHeadsetButtonMonitoring();
+      startHeadsetButtonMonitoring().catch((error) => {
+        console.error('Failed to start headset button monitoring:', error);
+      });
     }
   }, [isHeadsetButtonMonitoring, startHeadsetButtonMonitoring, stopHeadsetButtonMonitoring]);
 

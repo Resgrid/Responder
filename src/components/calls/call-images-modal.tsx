@@ -392,10 +392,26 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     }
   };
 
-  const handleImageError = (itemId: string, error: any) => {
+  const handleImageError = useCallback((itemId: string, error: any) => {
     console.error(`Image failed to load for ${itemId}:`, error);
     setImageErrors((prev) => new Set([...prev, itemId]));
-  };
+  }, []);
+
+  const handleImagePress = useCallback((imageSource: { uri: string }, itemName?: string) => {
+    setFullScreenImage({ source: imageSource, name: itemName });
+  }, []);
+
+  const handleImageLoadError = useCallback((itemId: string) => {
+    handleImageError(itemId, 'expo-image load error');
+  }, [handleImageError]);
+
+  const handleImageLoadSuccess = useCallback((itemId: string) => {
+    setImageErrors((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(itemId);
+      return newSet;
+    });
+  }, []);
 
   // Reset active index when valid images change
 
@@ -438,9 +454,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     return (
       <Box className="w-full items-center justify-center px-4" style={{ width }}>
         <TouchableOpacity
-          onPress={() => {
-            setFullScreenImage({ source: imageSource, name: item.Name });
-          }}
+          onPress={() => handleImagePress(imageSource, item.Name)}
           testID={`image-${item.Id}-touchable`}
           activeOpacity={0.7}
           style={{ width: '100%' }}
@@ -456,17 +470,8 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
             pointerEvents="none"
             cachePolicy="memory-disk"
             recyclingKey={item.Id}
-            onError={() => {
-              handleImageError(item.Id, 'expo-image load error');
-            }}
-            onLoad={() => {
-              // Remove from error set if it loads successfully
-              setImageErrors((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(item.Id);
-                return newSet;
-              });
-            }}
+            onError={() => handleImageLoadError(item.Id)}
+            onLoad={() => handleImageLoadSuccess(item.Id)}
           />
         </TouchableOpacity>
         <Text className="mt-2 text-center font-medium">{item.Name || ''}</Text>

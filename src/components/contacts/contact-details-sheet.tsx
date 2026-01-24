@@ -200,6 +200,22 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * Safely formats a timestamp string with error handling.
+ * Returns formatted date string on success, empty string on failure.
+ */
+const safeFormatTimestamp = (timestamp: string | undefined | null, format: string): string => {
+  if (!timestamp) return '';
+
+  try {
+    const parsed = parseDateISOString(timestamp);
+    return formatDateForDisplay(parsed, format);
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', timestamp, error);
+    return '';
+  }
+};
+
 export const ContactDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
@@ -496,13 +512,13 @@ export const ContactDetailsSheet: React.FC = () => {
                     <VStack space="xs">
                       <ContactField
                         label={t('contacts.addedOn')}
-                        value={selectedContact.AddedOn ? formatDateForDisplay(parseDateISOString(selectedContact.AddedOn), 'yyyy-MM-dd HH:mm') : undefined}
+                        value={safeFormatTimestamp(selectedContact.AddedOn, 'yyyy-MM-dd HH:mm') || undefined}
                         icon={<CalendarIcon size={16} color="#6366F1" />}
                       />
                       <ContactField label={t('contacts.addedBy')} value={selectedContact.AddedByUserName} icon={<UserIcon size={16} color="#6366F1" />} />
                       <ContactField
                         label={t('contacts.editedOn')}
-                        value={selectedContact.EditedOn ? formatDateForDisplay(parseDateISOString(selectedContact.EditedOn), 'yyyy-MM-dd HH:mm') : undefined}
+                        value={safeFormatTimestamp(selectedContact.EditedOn, 'yyyy-MM-dd HH:mm') || undefined}
                         icon={<CalendarIcon size={16} color="#6366F1" />}
                       />
                       <ContactField label={t('contacts.editedBy')} value={selectedContact.EditedByUserName} icon={<UserIcon size={16} color="#6366F1" />} />
