@@ -203,16 +203,17 @@ export default function EditCall() {
   // Pre-populate form when call data is loaded
   useEffect(() => {
     if (call) {
-      console.log('Raw call data:', JSON.stringify(call, null, 2));
-      console.log('Loading call data:', { Priority: call.Priority, Type: call.Type });
-      console.log('Available call types:', callTypes);
-      console.log('Available call priorities:', callPriorities);
+      if (__DEV__) {
+        console.log('Loading call data:', { Priority: call.Priority, Type: call.Type });
+        console.log('Available types count:', callTypes.length, 'priorities count:', callPriorities.length);
+      }
 
       const priority = callPriorities.find((p) => p.Id === call.Priority);
       const type = callTypes.find((t) => t.Id === call.Type);
 
-      console.log('Found priority:', priority);
-      console.log('Found type:', type);
+      if (__DEV__) {
+        console.log('Found priority ID:', priority?.Id, 'type ID:', type?.Id);
+      }
 
       // Parse dispatched items from callExtraData
       const dispatchedUsers: string[] = [];
@@ -287,30 +288,26 @@ export default function EditCall() {
 
   const onSubmit = useCallback(
     async (data: FormValues) => {
-      console.log('onSubmit called!');
-      console.log('Form data:', JSON.stringify(data, null, 2));
+      if (__DEV__) {
+        console.log('onSubmit called');
+      }
       try {
         // If we have latitude and longitude, add them to the data
-        if (selectedLocation?.latitude && selectedLocation?.longitude) {
+        if (selectedLocation?.latitude != null && selectedLocation?.longitude != null) {
           data.latitude = selectedLocation.latitude;
           data.longitude = selectedLocation.longitude;
         }
 
-        console.log('Updating call with data:', data);
-        console.log(
-          'Available priorities:',
-          callPriorities.map((p) => p.Name)
-        );
-        console.log(
-          'Available types:',
-          callTypes.map((t) => t.Name)
-        );
+        if (__DEV__) {
+          console.log('Updating call - has location:', !!data.latitude, 'has priority:', !!data.priority, 'has type:', !!data.type);
+        }
 
         const priority = data.priority ? callPriorities.find((p) => p.Name === data.priority) : null;
         const type = data.type ? callTypes.find((t) => t.Name === data.type) : null;
 
-        console.log('Found priority:', priority);
-        console.log('Found type:', type);
+        if (__DEV__) {
+          console.log('Mapped priority ID:', priority?.Id, 'type ID:', type?.Id);
+        }
 
         if (data.priority && !priority) {
           throw new Error(`Priority "${data.priority}" not found in available priorities`);
@@ -328,7 +325,7 @@ export default function EditCall() {
           type: data.type || '',
           hasNote: !!data.note,
           hasAddress: !!data.address,
-          hasCoordinates: !!(data.latitude && data.longitude),
+          hasCoordinates: data.latitude != null && data.longitude != null,
           hasWhat3Words: !!data.what3words,
           hasPlusCode: !!data.plusCode,
           hasContactName: !!data.contactName,
@@ -346,8 +343,8 @@ export default function EditCall() {
           type: type?.Id || '',
           note: data.note || '',
           address: data.address || '',
-          latitude: data.latitude || 0,
-          longitude: data.longitude || 0,
+          ...(data.latitude != null && { latitude: data.latitude }),
+          ...(data.longitude != null && { longitude: data.longitude }),
           what3words: data.what3words || '',
           plusCode: data.plusCode || '',
           contactName: data.contactName || '',
@@ -359,7 +356,9 @@ export default function EditCall() {
           dispatchEveryone: data.dispatchSelection?.everyone || false,
         };
 
-        console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
+        if (__DEV__) {
+          console.log('Update payload summary - callId:', updatePayload.callId, 'priority:', updatePayload.priority, 'type:', updatePayload.type);
+        }
 
         await useCallDetailStore.getState().updateCall(updatePayload);
 
@@ -873,21 +872,23 @@ export default function EditCall() {
                 variant="solid"
                 action="primary"
                 onPress={async () => {
-                  console.log('Save button pressed');
-                  console.log('Form errors:', errors);
-                  console.log('Current form values:', getValues());
+                  if (__DEV__) {
+                    console.log('Save button pressed');
+                  }
                   try {
-                    console.log('Calling handleSubmit...');
                     await handleSubmit(
                       (data) => {
-                        console.log('Validation passed, calling onSubmit');
+                        if (__DEV__) {
+                          console.log('Validation passed, submitting call update');
+                        }
                         onSubmit(data);
                       },
                       (errors) => {
-                        console.log('Validation failed with errors:', errors);
+                        if (__DEV__) {
+                          console.log('Validation failed, error count:', Object.keys(errors).length);
+                        }
                       }
                     )();
-                    console.log('handleSubmit completed');
                   } catch (error) {
                     console.error('Error in handleSubmit:', error);
                   }

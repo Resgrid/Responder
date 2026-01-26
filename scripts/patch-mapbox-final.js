@@ -35,7 +35,7 @@ while (i < lines.length) {
   // Check if this is a case statement for a deprecated property
   let isDeprecatedCase = false;
   for (const prop of deprecatedProps) {
-    if (line.match(new RegExp(`"${prop}"\\s*->\\s*$`))) {
+    if (line.match(new RegExp(`"${prop}"\\s*->\\s*(?:$|\\{|[^\\n]+)`))) {
       isDeprecatedCase = true;
       // Comment out this line
       result.push(line.replace(/^(\s*)(.*)$/, '$1// $2 // Deprecated in Mapbox SDK 11.8+'));
