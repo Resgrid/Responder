@@ -43,8 +43,8 @@ const formSchema = z.object({
   plusCode: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
-  priority: z.string().min(1, 'Priority is required'),
-  type: z.string().min(1, 'Type is required'),
+  priority: z.string().optional(),
+  type: z.string().optional(),
   contactName: z.string().optional(),
   contactInfo: z.string().optional(),
   dispatchSelection: z.object({
@@ -57,6 +57,24 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+// Helper function to strip HTML tags from rich text content
+const stripHtml = (html: string | undefined | null): string => {
+  if (!html) return '';
+  // Remove HTML tags
+  let text = html.replace(/<[^>]*>/g, '');
+  // Decode common HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+  // Trim whitespace
+  return text.trim();
+};
 
 interface GeocodingResult {
   place_id: string;
@@ -126,6 +144,7 @@ export default function EditCall() {
     formState: { errors },
     setValue,
     reset,
+    getValues,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -184,8 +203,17 @@ export default function EditCall() {
   // Pre-populate form when call data is loaded
   useEffect(() => {
     if (call) {
+      if (__DEV__) {
+        console.log('Loading call data:', { Priority: call.Priority, Type: call.Type });
+        console.log('Available types count:', callTypes.length, 'priorities count:', callPriorities.length);
+      }
+
       const priority = callPriorities.find((p) => p.Id === call.Priority);
       const type = callTypes.find((t) => t.Id === call.Type);
+
+      if (__DEV__) {
+        console.log('Found priority ID:', priority?.Id, 'type ID:', type?.Id);
+      }
 
       // Parse dispatched items from callExtraData
       const dispatchedUsers: string[] = [];
@@ -227,8 +255,8 @@ export default function EditCall() {
 
       reset({
         name: call.Name || '',
-        nature: call.Nature || '',
-        note: call.Note || '',
+        nature: stripHtml(call.Nature),
+        note: stripHtml(call.Note),
         address: call.Address || '',
         coordinates: call.Geolocation || '',
         what3words: '',
@@ -258,107 +286,133 @@ export default function EditCall() {
     }
   }, [call, callExtraData, callPriorities, callTypes, reset]);
 
-  const onSubmit = async (data: FormValues) => {
-    try {
-      // If we have latitude and longitude, add them to the data
-      if (selectedLocation?.latitude && selectedLocation?.longitude) {
-        data.latitude = selectedLocation.latitude;
-        data.longitude = selectedLocation.longitude;
+  const onSubmit = useCallback(
+    async (data: FormValues) => {
+      if (__DEV__) {
+        console.log('onSubmit called');
       }
+      try {
+        // If we have latitude and longitude, add them to the data
+        if (selectedLocation?.latitude != null && selectedLocation?.longitude != null) {
+          data.latitude = selectedLocation.latitude;
+          data.longitude = selectedLocation.longitude;
+        }
 
-      console.log('Updating call with data:', data);
+        if (__DEV__) {
+          console.log('Updating call - has location:', !!data.latitude, 'has priority:', !!data.priority, 'has type:', !!data.type);
+        }
 
-      const priority = callPriorities.find((p) => p.Name === data.priority);
-      const type = callTypes.find((t) => t.Name === data.type);
+        const priority = data.priority ? callPriorities.find((p) => p.Name === data.priority) : null;
+        const type = data.type ? callTypes.find((t) => t.Name === data.type) : null;
 
-      // Analytics: Track call update attempt
-      safeTrack('call_update_attempted', {
-        timestamp: new Date().toISOString(),
-        callId: callId || '',
-        priority: data.priority,
-        type: data.type,
-        hasNote: !!data.note,
-        hasAddress: !!data.address,
-        hasCoordinates: !!(data.latitude && data.longitude),
-        hasWhat3Words: !!data.what3words,
-        hasPlusCode: !!data.plusCode,
-        hasContactName: !!data.contactName,
-        hasContactInfo: !!data.contactInfo,
-        dispatchEveryone: data.dispatchSelection?.everyone || false,
-        dispatchCount: (data.dispatchSelection?.users.length || 0) + (data.dispatchSelection?.groups.length || 0) + (data.dispatchSelection?.roles.length || 0) + (data.dispatchSelection?.units.length || 0),
-      });
+        if (__DEV__) {
+          console.log('Mapped priority ID:', priority?.Id, 'type ID:', type?.Id);
+        }
 
-      // Update the call using the store
-      await useCallDetailStore.getState().updateCall({
-        callId: callId!,
-        name: data.name,
-        nature: data.nature,
-        priority: priority?.Id || 0,
-        type: type?.Id || '',
-        note: data.note || '',
-        address: data.address || '',
-        latitude: data.latitude || 0,
-        longitude: data.longitude || 0,
-        what3words: data.what3words || '',
-        plusCode: data.plusCode || '',
-        contactName: data.contactName || '',
-        contactInfo: data.contactInfo || '',
-        dispatchUsers: data.dispatchSelection?.users || [],
-        dispatchGroups: data.dispatchSelection?.groups || [],
-        dispatchRoles: data.dispatchSelection?.roles || [],
-        dispatchUnits: data.dispatchSelection?.units || [],
-        dispatchEveryone: data.dispatchSelection?.everyone || false,
-      });
+        if (data.priority && !priority) {
+          throw new Error(`Priority "${data.priority}" not found in available priorities`);
+        }
 
-      // Analytics: Track successful call update
-      safeTrack('call_update_success', {
-        timestamp: new Date().toISOString(),
-        callId: callId || '',
-        priority: data.priority,
-        type: data.type,
-        hasLocation: !!(data.latitude && data.longitude),
-        dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
-      });
+        if (data.type && !type) {
+          throw new Error(`Type "${data.type}" not found in available types`);
+        }
 
-      // Show success toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-              <Text className="text-white">{t('call_detail.update_call_success')}</Text>
-            </Box>
-          );
-        },
-      });
+        // Analytics: Track call update attempt
+        safeTrack('call_update_attempted', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          priority: data.priority || '',
+          type: data.type || '',
+          hasNote: !!data.note,
+          hasAddress: !!data.address,
+          hasCoordinates: data.latitude != null && data.longitude != null,
+          hasWhat3Words: !!data.what3words,
+          hasPlusCode: !!data.plusCode,
+          hasContactName: !!data.contactName,
+          hasContactInfo: !!data.contactInfo,
+          dispatchEveryone: data.dispatchSelection?.everyone || false,
+          dispatchCount: (data.dispatchSelection?.users.length || 0) + (data.dispatchSelection?.groups.length || 0) + (data.dispatchSelection?.roles.length || 0) + (data.dispatchSelection?.units.length || 0),
+        });
 
-      // Navigate back to call detail
-      router.back();
-    } catch (error) {
-      console.error('Error updating call:', error);
+        // Update the call using the store
+        const updatePayload = {
+          callId: callId!,
+          name: data.name,
+          nature: data.nature,
+          priority: priority?.Id || 0,
+          type: type?.Id || '',
+          note: data.note || '',
+          address: data.address || '',
+          ...(data.latitude != null && { latitude: data.latitude }),
+          ...(data.longitude != null && { longitude: data.longitude }),
+          what3words: data.what3words || '',
+          plusCode: data.plusCode || '',
+          contactName: data.contactName || '',
+          contactInfo: data.contactInfo || '',
+          dispatchUsers: data.dispatchSelection?.users || [],
+          dispatchGroups: data.dispatchSelection?.groups || [],
+          dispatchRoles: data.dispatchSelection?.roles || [],
+          dispatchUnits: data.dispatchSelection?.units || [],
+          dispatchEveryone: data.dispatchSelection?.everyone || false,
+        };
 
-      // Analytics: Track failed call update
-      safeTrack('call_update_failed', {
-        timestamp: new Date().toISOString(),
-        callId: callId || '',
-        priority: data.priority,
-        type: data.type,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+        if (__DEV__) {
+          console.log('Update payload summary - callId:', updatePayload.callId, 'priority:', updatePayload.priority, 'type:', updatePayload.type);
+        }
 
-      // Show error toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-              <Text className="text-white">{t('call_detail.update_call_error')}</Text>
-            </Box>
-          );
-        },
-      });
-    }
-  };
+        await useCallDetailStore.getState().updateCall(updatePayload);
+
+        // Analytics: Track successful call update
+        safeTrack('call_update_success', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          priority: data.priority || '',
+          type: data.type || '',
+          hasLocation: !!(data.latitude && data.longitude),
+          dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
+        });
+
+        // Show success toast
+        toast.show({
+          placement: 'top',
+          render: () => {
+            return (
+              <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
+                <Text className="text-white">{t('call_detail.update_call_success')}</Text>
+              </Box>
+            );
+          },
+        });
+
+        // Navigate back to call detail
+        router.back();
+      } catch (error) {
+        console.error('Error updating call:', error);
+
+        // Analytics: Track failed call update
+        safeTrack('call_update_failed', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          priority: data.priority || '',
+          type: data.type || '',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+
+        // Show error toast
+        toast.show({
+          placement: 'top',
+          render: () => {
+            return (
+              <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
+                <Text className="text-white">{t('call_detail.update_call_error')}</Text>
+              </Box>
+            );
+          },
+        });
+      }
+    },
+    [selectedLocation, callPriorities, callTypes, callId, safeTrack, toast, t]
+  );
 
   const handleLocationSelected = (location: { latitude: number; longitude: number; address?: string }) => {
     setSelectedLocation(location);
@@ -658,7 +712,7 @@ export default function EditCall() {
             </Card>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-              <FormControl isInvalid={!!errors.priority}>
+              <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.priority')}</FormControlLabelText>
                 </FormControlLabel>
@@ -682,16 +736,11 @@ export default function EditCall() {
                     </Select>
                   )}
                 />
-                {errors.priority && (
-                  <FormControlError>
-                    <Text className="text-red-500">{errors.priority.message}</Text>
-                  </FormControlError>
-                )}
               </FormControl>
             </Card>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-              <FormControl isInvalid={!!errors.type}>
+              <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.type')}</FormControlLabelText>
                 </FormControlLabel>
@@ -715,11 +764,6 @@ export default function EditCall() {
                     </Select>
                   )}
                 />
-                {errors.type && (
-                  <FormControlError>
-                    <Text className="text-red-500">{errors.type.message}</Text>
-                  </FormControlError>
-                )}
               </FormControl>
             </Card>
 
@@ -823,12 +867,39 @@ export default function EditCall() {
               <Button className="mr-10 flex-1" variant="outline" onPress={() => router.back()}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button className="ml-10 flex-1" variant="solid" action="primary" onPress={handleSubmit(onSubmit)}>
+              <Button
+                className="ml-10 flex-1"
+                variant="solid"
+                action="primary"
+                onPress={async () => {
+                  if (__DEV__) {
+                    console.log('Save button pressed');
+                  }
+                  try {
+                    await handleSubmit(
+                      (data) => {
+                        if (__DEV__) {
+                          console.log('Validation passed, submitting call update');
+                        }
+                        onSubmit(data);
+                      },
+                      (errors) => {
+                        if (__DEV__) {
+                          console.log('Validation failed, error count:', Object.keys(errors).length);
+                        }
+                      }
+                    )();
+                  } catch (error) {
+                    console.error('Error in handleSubmit:', error);
+                  }
+                }}
+              >
                 <ButtonText>{t('common.save')}</ButtonText>
               </Button>
             </Box>
           </ScrollView>
         </Box>
+        <Box className="h-8" />
       </View>
 
       {/* Full-screen location picker overlay */}

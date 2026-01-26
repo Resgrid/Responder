@@ -12,6 +12,7 @@ class AudioService {
   private connectToAudioRoomSound: Audio.Sound | null = null;
   private disconnectedFromAudioRoomSound: Audio.Sound | null = null;
   private isInitialized = false;
+  private isPlayingSound: Set<string> = new Set();
 
   private constructor() {
     this.initializeAudio();
@@ -154,17 +155,49 @@ class AudioService {
   }
 
   private async playSound(sound: Audio.Sound | null, soundName: string): Promise<void> {
-    try {
-      if (!sound) {
-        logger.warn({
-          message: `Sound not loaded: ${soundName}`,
-        });
-        return;
-      }
+    if (!sound) {
+      logger.warn({
+        message: `Sound not loaded: ${soundName}`,
+      });
+      return;
+    }
 
+    // Check if this sound is already playing and mark as playing atomically
+    // This must be done before any await to prevent race conditions
+    if (this.isPlayingSound.has(soundName)) {
+      logger.debug({
+        message: `Sound already playing, skipping: ${soundName}`,
+      });
+      return;
+    }
+
+    // Mark as playing immediately after the check, before any async operations
+    this.isPlayingSound.add(soundName);
+
+    try {
       // Ensure audio service is initialized
       if (!this.isInitialized) {
         await this.initializeAudio();
+      }
+
+      // Verify the sound object is still valid before playing
+      try {
+        const status = await sound.getStatusAsync();
+        if (!status.isLoaded) {
+          logger.warn({
+            message: `Sound not in loaded state: ${soundName}`,
+            context: { status },
+          });
+          this.isPlayingSound.delete(soundName);
+          return;
+        }
+      } catch (statusError) {
+        logger.warn({
+          message: `Failed to get sound status: ${soundName}`,
+          context: { error: statusError },
+        });
+        this.isPlayingSound.delete(soundName);
+        return;
       }
 
       // Reset to start and play
@@ -175,11 +208,17 @@ class AudioService {
         message: 'Sound played successfully',
         context: { soundName },
       });
-    } catch (error) {
-      logger.error({
-        message: 'Failed to play sound',
-        context: { soundName, error },
-      });
+
+      // Remove from playing set after a short delay
+      // Most UI sounds are < 500ms, so this is safe
+      setTimeout(() => {
+        this.isPlayingSound.delete(soundName);
+      }, 500);
+    } catch (playError) {
+      // Remove from playing set on error
+      this.isPlayingSound.delete(soundName);
+      // Re-throw the error so the caller can handle it
+      throw playError;
     }
   }
 
@@ -240,6 +279,9 @@ class AudioService {
 
   async cleanup(): Promise<void> {
     try {
+      // Clear the playing sound set
+      this.isPlayingSound.clear();
+
       // Unload start transmitting sound
       if (this.startTransmittingSound) {
         await this.startTransmittingSound.unloadAsync();

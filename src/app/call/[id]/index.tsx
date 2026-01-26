@@ -1,13 +1,18 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, ClockIcon, FileTextIcon, ImageIcon, InfoIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 
+import { useCallDetailMenu } from '@/components/calls/call-detail-menu';
+import CallFilesModal from '@/components/calls/call-files-modal';
+import CallImagesModal from '@/components/calls/call-images-modal';
+import CallNotesModal from '@/components/calls/call-notes-modal';
+import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 // Import a static map component instead of react-native-maps
@@ -27,12 +32,6 @@ import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
-
-import { useCallDetailMenu } from '../../components/calls/call-detail-menu';
-import CallFilesModal from '../../components/calls/call-files-modal';
-import CallImagesModal from '../../components/calls/call-images-modal';
-import CallNotesModal from '../../components/calls/call-notes-modal';
-import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-sheet';
 
 export default function CallDetail() {
   const { id } = useLocalSearchParams();
@@ -178,6 +177,12 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
+            headerLeft: () => (
+              <Pressable onPress={handleBack} className="p-2" testID="back-button">
+                <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
+              </Pressable>
+            ),
+            headerRight: () => <HeaderRightMenu />,
           }}
         />
         <SafeAreaView className="size-full flex-1">
@@ -288,7 +293,12 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            ...(canUserCreateCalls && { headerRight: () => <HeaderRightMenu /> }),
+            headerLeft: () => (
+              <Pressable onPress={handleBack} className="p-2" testID="back-button">
+                <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
+              </Pressable>
+            ),
+            headerRight: () => <HeaderRightMenu />,
           }}
         />
         <View className="size-full flex-1">
@@ -306,7 +316,12 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
-            ...(canUserCreateCalls && { headerRight: () => <HeaderRightMenu /> }),
+            headerLeft: () => (
+              <Pressable onPress={handleBack} className="p-2" testID="back-button">
+                <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
+              </Pressable>
+            ),
+            headerRight: () => <HeaderRightMenu />,
           }}
         />
         <View className="size-full flex-1">
@@ -326,6 +341,12 @@ export default function CallDetail() {
           options={{
             title: t('call_detail.title'),
             headerShown: true,
+            headerLeft: () => (
+              <Pressable onPress={handleBack} className="p-2" testID="back-button">
+                <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
+              </Pressable>
+            ),
+            headerRight: () => <HeaderRightMenu />,
           }}
         />
         <SafeAreaView className="size-full flex-1">
@@ -556,7 +577,12 @@ export default function CallDetail() {
         options={{
           title: t('call_detail.title'),
           headerShown: true,
-          ...(canUserCreateCalls && { headerRight: () => <HeaderRightMenu /> }),
+          headerLeft: () => (
+            <Pressable onPress={handleBack} className="p-2" testID="back-button">
+              <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
+            </Pressable>
+          ),
+          headerRight: () => <HeaderRightMenu />,
         }}
       />
       <ScrollView className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>
