@@ -174,7 +174,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       '@rnmapbox/maps',
       {
-        RNMapboxMapsVersion: '11.0.0',
+        RNMapboxMapsVersion: '11.16.2',
       },
     ],
     [
