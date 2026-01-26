@@ -2,11 +2,31 @@
 
 FILE="node_modules/@rnmapbox/maps/android/src/main/java/com/rnmapbox/rnmbx/components/styles/RNMBXStyleFactory.kt"
 
+# Check if file exists
+if [ ! -f "$FILE" ]; then
+  echo "Error: File does not exist: $FILE" >&2
+  exit 1
+fi
+
+# Detect and require GNU awk
+if command -v gawk >/dev/null 2>&1; then
+  AWK_CMD="gawk"
+elif command -v awk >/dev/null 2>&1 && awk --version 2>&1 | grep -q "GNU Awk"; then
+  AWK_CMD="awk"
+else
+  echo "Error: GNU awk (gawk) is required but not found." >&2
+  echo "Please install gawk (e.g., 'brew install gawk' on macOS or 'apt-get install gawk' on Linux)." >&2
+  exit 1
+fi
+
 # Create backup
 cp "$FILE" "$FILE.bak2"
 
-# Use awk to comment out specific functions
-awk '
+# Create a temporary file for safe processing
+TMPFILE=$(mktemp) || { echo "Error: Failed to create temporary file" >&2; exit 1; }
+
+# Use GNU awk to comment out specific functions
+"$AWK_CMD" '
 BEGIN { 
   commenting = 0
   brace_count = 0
@@ -51,6 +71,15 @@ commenting == 1 {
 
 # Print all other lines as-is
 { print }
-' "$FILE.bak2" > "$FILE"
+' "$FILE.bak2" > "$TMPFILE"
 
-echo "Patching complete!"
+# Check if awk processing was successful
+if [ $? -eq 0 ]; then
+  # Atomically replace the original file
+  mv "$TMPFILE" "$FILE"
+  echo "Patching complete!"
+else
+  echo "Error: AWK processing failed" >&2
+  rm -f "$TMPFILE"
+  exit 1
+fi

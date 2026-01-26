@@ -22,15 +22,21 @@ sed -i.bak2 '
 ' "$FILE"
 
 # Now comment out the function calls that follow these cases
-# This is a bit tricky since we need context, so let's use a simple perl one-liner
+# Comment lines until we reach the next case/else label or closing brace
 perl -i -pe '
-BEGIN { $comment_next = 0; }
+BEGIN { $commenting = 0; }
 if (/\/\/ "(?:fillPatternCrossFade|lineElevationReference|lineCrossSlope|linePatternCrossFade|circleElevationReference|fillExtrusionPatternCrossFade|fillExtrusionHeightAlignment|fillExtrusionBaseAlignment|backgroundPitchAlignment)"/) {
-    $comment_next = 10;  # Comment next 10 lines
+    $commenting = 1;  # Start commenting following lines
+    next;
 }
-if ($comment_next > 0 && /\S/) {
-    s/^(\s*)(\S.*)$/$1\/\/ $2/ unless /^(\s*)\/\//;
-    $comment_next--;
+if ($commenting) {
+    # Stop commenting if we hit next case/else or closing brace at appropriate indent
+    if (/^\s*"[^"]+"\s*->/ || /^\s*else\s*->/ || /^\s*\}/) {
+        $commenting = 0;
+    } elsif (/\S/ && !/^\s*\/\//) {
+        # Comment non-empty lines that aren'\''t already commented
+        s/^(\s*)(\S.*)$/$1\/\/ $2/;
+    }
 }
 ' "$FILE"
 

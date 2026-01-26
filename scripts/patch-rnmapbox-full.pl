@@ -9,11 +9,17 @@ open(my $fh, '<', $file) or die "Cannot open $file: $!";
 my @lines = <$fh>;
 close($fh);
 
-# Backup (restore from original if exists)
+# Backup and restore logic
 if (-f "$file.original") {
-    open(my $orig, '<', "$file.original") or die "Cannot open original: $!";
+    # Restore from backup if it exists
+    open(my $orig, '<', "$file.original") or die "Cannot open original backup: $!";
     @lines = <$orig>;
     close($orig);
+} else {
+    # Create backup from current file on first run
+    open(my $backup, '>', "$file.original") or die "Cannot create backup file $file.original: $!";
+    print $backup @lines or die "Cannot write to backup file $file.original: $!";
+    close($backup) or die "Cannot close backup file $file.original: $!";
 }
 
 my @functions = qw(

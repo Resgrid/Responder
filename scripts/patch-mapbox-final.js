@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 const fs = require('fs');
 const path = require('path');
 
@@ -132,6 +133,14 @@ while (i < lines.length) {
       i++;
     }
   }
+}
+
+// Create backup if it doesn't exist
+const originalFilePath = filePath + '.original';
+if (!fs.existsSync(originalFilePath)) {
+  const originalContent = fs.readFileSync(filePath, 'utf8');
+  fs.writeFileSync(originalFilePath, originalContent);
+  console.log('Created backup at', originalFilePath);
 }
 
 // Write the modified content

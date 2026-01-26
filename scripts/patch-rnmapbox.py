@@ -7,6 +7,9 @@ file_path = "node_modules/@rnmapbox/maps/android/src/main/java/com/rnmapbox/rnmb
 with open(file_path, 'r') as f:
     content = f.read()
 
+# Store original content for backup
+original_content = content
+
 # List of deprecated functions to comment out
 deprecated_functions = [
     'setFillPatternCrossFade',
@@ -35,9 +38,9 @@ for func_name in deprecated_functions:
     
     content = re.sub(pattern, replace_func, content, flags=re.MULTILINE | re.DOTALL)
 
-# Save backup
+# Save backup of original content
 with open(file_path + '.bak', 'w') as f:
-    f.write(content)
+    f.write(original_content)
 
 # Write patched content
 with open(file_path, 'w') as f:

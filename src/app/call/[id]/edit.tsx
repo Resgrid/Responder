@@ -285,132 +285,135 @@ export default function EditCall() {
     }
   }, [call, callExtraData, callPriorities, callTypes, reset]);
 
-  const onSubmit = async (data: FormValues) => {
-    console.log('onSubmit called!');
-    console.log('Form data:', JSON.stringify(data, null, 2));
-    try {
-      // If we have latitude and longitude, add them to the data
-      if (selectedLocation?.latitude && selectedLocation?.longitude) {
-        data.latitude = selectedLocation.latitude;
-        data.longitude = selectedLocation.longitude;
+  const onSubmit = useCallback(
+    async (data: FormValues) => {
+      console.log('onSubmit called!');
+      console.log('Form data:', JSON.stringify(data, null, 2));
+      try {
+        // If we have latitude and longitude, add them to the data
+        if (selectedLocation?.latitude && selectedLocation?.longitude) {
+          data.latitude = selectedLocation.latitude;
+          data.longitude = selectedLocation.longitude;
+        }
+
+        console.log('Updating call with data:', data);
+        console.log(
+          'Available priorities:',
+          callPriorities.map((p) => p.Name)
+        );
+        console.log(
+          'Available types:',
+          callTypes.map((t) => t.Name)
+        );
+
+        const priority = data.priority ? callPriorities.find((p) => p.Name === data.priority) : null;
+        const type = data.type ? callTypes.find((t) => t.Name === data.type) : null;
+
+        console.log('Found priority:', priority);
+        console.log('Found type:', type);
+
+        if (data.priority && !priority) {
+          throw new Error(`Priority "${data.priority}" not found in available priorities`);
+        }
+
+        if (data.type && !type) {
+          throw new Error(`Type "${data.type}" not found in available types`);
+        }
+
+        // Analytics: Track call update attempt
+        safeTrack('call_update_attempted', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          priority: data.priority || '',
+          type: data.type || '',
+          hasNote: !!data.note,
+          hasAddress: !!data.address,
+          hasCoordinates: !!(data.latitude && data.longitude),
+          hasWhat3Words: !!data.what3words,
+          hasPlusCode: !!data.plusCode,
+          hasContactName: !!data.contactName,
+          hasContactInfo: !!data.contactInfo,
+          dispatchEveryone: data.dispatchSelection?.everyone || false,
+          dispatchCount: (data.dispatchSelection?.users.length || 0) + (data.dispatchSelection?.groups.length || 0) + (data.dispatchSelection?.roles.length || 0) + (data.dispatchSelection?.units.length || 0),
+        });
+
+        // Update the call using the store
+        const updatePayload = {
+          callId: callId!,
+          name: data.name,
+          nature: data.nature,
+          priority: priority?.Id || 0,
+          type: type?.Id || '',
+          note: data.note || '',
+          address: data.address || '',
+          latitude: data.latitude || 0,
+          longitude: data.longitude || 0,
+          what3words: data.what3words || '',
+          plusCode: data.plusCode || '',
+          contactName: data.contactName || '',
+          contactInfo: data.contactInfo || '',
+          dispatchUsers: data.dispatchSelection?.users || [],
+          dispatchGroups: data.dispatchSelection?.groups || [],
+          dispatchRoles: data.dispatchSelection?.roles || [],
+          dispatchUnits: data.dispatchSelection?.units || [],
+          dispatchEveryone: data.dispatchSelection?.everyone || false,
+        };
+
+        console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
+
+        await useCallDetailStore.getState().updateCall(updatePayload);
+
+        // Analytics: Track successful call update
+        safeTrack('call_update_success', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          priority: data.priority || '',
+          type: data.type || '',
+          hasLocation: !!(data.latitude && data.longitude),
+          dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
+        });
+
+        // Show success toast
+        toast.show({
+          placement: 'top',
+          render: () => {
+            return (
+              <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
+                <Text className="text-white">{t('call_detail.update_call_success')}</Text>
+              </Box>
+            );
+          },
+        });
+
+        // Navigate back to call detail
+        router.back();
+      } catch (error) {
+        console.error('Error updating call:', error);
+
+        // Analytics: Track failed call update
+        safeTrack('call_update_failed', {
+          timestamp: new Date().toISOString(),
+          callId: callId || '',
+          priority: data.priority || '',
+          type: data.type || '',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+
+        // Show error toast
+        toast.show({
+          placement: 'top',
+          render: () => {
+            return (
+              <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
+                <Text className="text-white">{t('call_detail.update_call_error')}</Text>
+              </Box>
+            );
+          },
+        });
       }
-
-      console.log('Updating call with data:', data);
-      console.log(
-        'Available priorities:',
-        callPriorities.map((p) => p.Name)
-      );
-      console.log(
-        'Available types:',
-        callTypes.map((t) => t.Name)
-      );
-
-      const priority = data.priority ? callPriorities.find((p) => p.Name === data.priority) : null;
-      const type = data.type ? callTypes.find((t) => t.Name === data.type) : null;
-
-      console.log('Found priority:', priority);
-      console.log('Found type:', type);
-
-      if (data.priority && !priority) {
-        throw new Error(`Priority "${data.priority}" not found in available priorities`);
-      }
-
-      if (data.type && !type) {
-        throw new Error(`Type "${data.type}" not found in available types`);
-      }
-
-      // Analytics: Track call update attempt
-      safeTrack('call_update_attempted', {
-        timestamp: new Date().toISOString(),
-        callId: callId || '',
-        priority: data.priority,
-        type: data.type,
-        hasNote: !!data.note,
-        hasAddress: !!data.address,
-        hasCoordinates: !!(data.latitude && data.longitude),
-        hasWhat3Words: !!data.what3words,
-        hasPlusCode: !!data.plusCode,
-        hasContactName: !!data.contactName,
-        hasContactInfo: !!data.contactInfo,
-        dispatchEveryone: data.dispatchSelection?.everyone || false,
-        dispatchCount: (data.dispatchSelection?.users.length || 0) + (data.dispatchSelection?.groups.length || 0) + (data.dispatchSelection?.roles.length || 0) + (data.dispatchSelection?.units.length || 0),
-      });
-
-      // Update the call using the store
-      const updatePayload = {
-        callId: callId!,
-        name: data.name,
-        nature: data.nature,
-        priority: priority?.Id || 0,
-        type: type?.Id || '',
-        note: data.note || '',
-        address: data.address || '',
-        latitude: data.latitude || 0,
-        longitude: data.longitude || 0,
-        what3words: data.what3words || '',
-        plusCode: data.plusCode || '',
-        contactName: data.contactName || '',
-        contactInfo: data.contactInfo || '',
-        dispatchUsers: data.dispatchSelection?.users || [],
-        dispatchGroups: data.dispatchSelection?.groups || [],
-        dispatchRoles: data.dispatchSelection?.roles || [],
-        dispatchUnits: data.dispatchSelection?.units || [],
-        dispatchEveryone: data.dispatchSelection?.everyone || false,
-      };
-
-      console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
-
-      await useCallDetailStore.getState().updateCall(updatePayload);
-
-      // Analytics: Track successful call update
-      safeTrack('call_update_success', {
-        timestamp: new Date().toISOString(),
-        callId: callId || '',
-        priority: data.priority,
-        type: data.type,
-        hasLocation: !!(data.latitude && data.longitude),
-        dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
-      });
-
-      // Show success toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-green-500 p-4 shadow-lg">
-              <Text className="text-white">{t('call_detail.update_call_success')}</Text>
-            </Box>
-          );
-        },
-      });
-
-      // Navigate back to call detail
-      router.back();
-    } catch (error) {
-      console.error('Error updating call:', error);
-
-      // Analytics: Track failed call update
-      safeTrack('call_update_failed', {
-        timestamp: new Date().toISOString(),
-        callId: callId || '',
-        priority: data.priority,
-        type: data.type,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-
-      // Show error toast
-      toast.show({
-        placement: 'top',
-        render: () => {
-          return (
-            <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
-              <Text className="text-white">{t('call_detail.update_call_error')}</Text>
-            </Box>
-          );
-        },
-      });
-    }
-  };
+    },
+    [selectedLocation, callPriorities, callTypes, callId, safeTrack, toast, t]
+  );
 
   const handleLocationSelected = (location: { latitude: number; longitude: number; address?: string }) => {
     setSelectedLocation(location);

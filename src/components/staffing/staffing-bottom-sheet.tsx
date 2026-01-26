@@ -266,7 +266,7 @@ export const StaffingBottomSheet = () => {
 
                 <VStack space="sm">
                   <Text className="font-medium">
-                    {safeT('home.staffing.note')} ({safeT('common.optional')}):
+                    {safeT('home.staffing.note')} ({selectedStaffing?.Note === 2 ? safeT('common.required') : safeT('common.optional')}):
                   </Text>
                   <Textarea size="md" className="min-h-[100px] w-full">
                     <TextareaInput placeholder={safeT('home.staffing.note_placeholder')} value={note} onChangeText={setNote} />

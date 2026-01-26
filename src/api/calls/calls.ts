@@ -164,8 +164,6 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     DispatchList: dispatchList,
   };
 
-  console.log('Sending updateCall request with data:', JSON.stringify(data, null, 2));
-
   const response = await updateCallApi.put<SaveCallResult>(data);
   return response.data;
 };
