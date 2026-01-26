@@ -79,6 +79,21 @@ const mockSoundCreateAsync = Audio.Sound.createAsync as jest.MockedFunction<type
 describe('AudioService', () => {
   let audioService: any;
 
+  const clearMockCalls = () => {
+    mockSound.getStatusAsync.mockClear();
+    mockSound.setPositionAsync.mockClear();
+    mockSound.playAsync.mockClear();
+    mockSound.unloadAsync.mockClear();
+    (logger.error as jest.MockedFunction<any>).mockClear();
+    (logger.warn as jest.MockedFunction<any>).mockClear();
+    (logger.debug as jest.MockedFunction<any>).mockClear();
+    (logger.info as jest.MockedFunction<any>).mockClear();
+    // Clear the isPlayingSound set to prevent race conditions between tests
+    if (audioService) {
+      (audioService as any).isPlayingSound.clear();
+    }
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -136,7 +151,12 @@ describe('AudioService', () => {
 
   describe('playStartTransmittingSound', () => {
     it('should play start transmitting sound successfully', async () => {
-      jest.clearAllMocks();
+      mockSound.getStatusAsync.mockClear();
+      mockSound.setPositionAsync.mockClear();
+      mockSound.playAsync.mockClear();
+      (logger.error as jest.MockedFunction<any>).mockClear();
+      (logger.warn as jest.MockedFunction<any>).mockClear();
+      (logger.debug as jest.MockedFunction<any>).mockClear();
 
       await audioService.playStartTransmittingSound();
 
@@ -145,21 +165,55 @@ describe('AudioService', () => {
     });
 
     it('should handle start transmitting sound playback errors', async () => {
-      jest.clearAllMocks();
-      mockSound.playAsync.mockRejectedValueOnce(new Error('Playback failed'));
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValueOnce({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockRejectedValueOnce(new Error('Playback failed'));
 
       await audioService.playStartTransmittingSound();
 
       expect(logger.error).toHaveBeenCalledWith({
-        message: 'Failed to play sound',
-        context: { soundName: 'startTransmitting', error: expect.any(Error) },
+        message: 'Failed to play start transmitting sound',
+        context: { error: expect.any(Error) },
       });
+    });
+
+    it('should skip playback if sound is not loaded', async () => {
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValueOnce({ isLoaded: false } as any);
+
+      await audioService.playStartTransmittingSound();
+
+      expect(mockSound.setPositionAsync).not.toHaveBeenCalled();
+      expect(mockSound.playAsync).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith({
+        message: 'Sound not in loaded state: startTransmitting',
+        context: { status: { isLoaded: false } },
+      });
+    });
+
+    it('should skip playback if sound is already playing', async () => {
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValue({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockResolvedValue({} as any);
+      mockSound.playAsync.mockResolvedValue({} as any);
+      
+      // Start playing
+      const promise1 = audioService.playStartTransmittingSound();
+      const promise2 = audioService.playStartTransmittingSound();
+
+      await Promise.all([promise1, promise2]);
+
+      // Should only call play once
+      expect(mockSound.playAsync).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('playStopTransmittingSound', () => {
     it('should play stop transmitting sound successfully', async () => {
-      jest.clearAllMocks();
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValue({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockResolvedValue({} as any);
+      mockSound.playAsync.mockResolvedValue({} as any);
 
       await audioService.playStopTransmittingSound();
 
@@ -168,21 +222,25 @@ describe('AudioService', () => {
     });
 
     it('should handle stop transmitting sound playback errors', async () => {
-      jest.clearAllMocks();
-      mockSound.playAsync.mockRejectedValueOnce(new Error('Playback failed'));
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValueOnce({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockRejectedValueOnce(new Error('Playback failed'));
 
       await audioService.playStopTransmittingSound();
 
       expect(logger.error).toHaveBeenCalledWith({
-        message: 'Failed to play sound',
-        context: { soundName: 'stopTransmitting', error: expect.any(Error) },
+        message: 'Failed to play stop transmitting sound',
+        context: { error: expect.any(Error) },
       });
     });
   });
 
   describe('playConnectedDeviceSound', () => {
     it('should play connected device sound successfully', async () => {
-      jest.clearAllMocks();
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValue({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockResolvedValue({} as any);
+      mockSound.playAsync.mockResolvedValue({} as any);
 
       await audioService.playConnectedDeviceSound();
 
@@ -191,21 +249,25 @@ describe('AudioService', () => {
     });
 
     it('should handle connected device sound playback errors', async () => {
-      jest.clearAllMocks();
-      mockSound.playAsync.mockRejectedValueOnce(new Error('Playback failed'));
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValueOnce({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockRejectedValueOnce(new Error('Playback failed'));
 
       await audioService.playConnectedDeviceSound();
 
       expect(logger.error).toHaveBeenCalledWith({
-        message: 'Failed to play sound',
-        context: { soundName: 'connectedDevice', error: expect.any(Error) },
+        message: 'Failed to play connected device sound',
+        context: { error: expect.any(Error) },
       });
     });
   });
 
   describe('playConnectToAudioRoomSound', () => {
     it('should play connect to audio room sound successfully', async () => {
-      jest.clearAllMocks();
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValue({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockResolvedValue({} as any);
+      mockSound.playAsync.mockResolvedValue({} as any);
 
       await audioService.playConnectToAudioRoomSound();
 
@@ -214,21 +276,25 @@ describe('AudioService', () => {
     });
 
     it('should handle connect to audio room sound playback errors', async () => {
-      jest.clearAllMocks();
-      mockSound.playAsync.mockRejectedValueOnce(new Error('Playback failed'));
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValueOnce({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockRejectedValueOnce(new Error('Playback failed'));
 
       await audioService.playConnectToAudioRoomSound();
 
       expect(logger.error).toHaveBeenCalledWith({
-        message: 'Failed to play sound',
-        context: { soundName: 'connectedToAudioRoom', error: expect.any(Error) },
+        message: 'Failed to play connected to audio room sound',
+        context: { error: expect.any(Error) },
       });
     });
   });
 
   describe('playDisconnectedFromAudioRoomSound', () => {
     it('should play disconnected from audio room sound successfully', async () => {
-      jest.clearAllMocks();
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValue({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockResolvedValue({} as any);
+      mockSound.playAsync.mockResolvedValue({} as any);
 
       await audioService.playDisconnectedFromAudioRoomSound();
 
@@ -237,21 +303,22 @@ describe('AudioService', () => {
     });
 
     it('should handle disconnected from audio room sound playback errors', async () => {
-      jest.clearAllMocks();
-      mockSound.playAsync.mockRejectedValueOnce(new Error('Playback failed'));
+      clearMockCalls();
+      mockSound.getStatusAsync.mockResolvedValueOnce({ isLoaded: true } as any);
+      mockSound.setPositionAsync.mockRejectedValueOnce(new Error('Playback failed'));
 
       await audioService.playDisconnectedFromAudioRoomSound();
 
       expect(logger.error).toHaveBeenCalledWith({
-        message: 'Failed to play sound',
-        context: { soundName: 'disconnectedFromAudioRoom', error: expect.any(Error) },
+        message: 'Failed to play disconnected from audio room sound',
+        context: { error: expect.any(Error) },
       });
     });
   });
 
   describe('cleanup', () => {
     it('should cleanup audio resources successfully', async () => {
-      jest.clearAllMocks();
+      clearMockCalls();
 
       await audioService.cleanup();
 
@@ -263,7 +330,7 @@ describe('AudioService', () => {
 
     it('should handle cleanup errors gracefully', async () => {
       // Set up a fresh service instance for this test
-      jest.clearAllMocks();
+      clearMockCalls();
       mockSound.unloadAsync.mockRejectedValueOnce(new Error('Unload failed'));
 
       // Clear module cache and re-import to get fresh instance
@@ -285,7 +352,7 @@ describe('AudioService', () => {
   describe('error handling', () => {
     it('should handle null sound objects gracefully', async () => {
       // Create a new service instance with createAsync that doesn't return sound
-      jest.clearAllMocks();
+      clearMockCalls();
       delete require.cache[require.resolve('../audio.service')];
 
       // Mock createAsync to return null sound to simulate failed sound creation
@@ -304,7 +371,7 @@ describe('AudioService', () => {
     });
 
     it('should handle initialization failures', async () => {
-      jest.clearAllMocks();
+      clearMockCalls();
       (mockAudioSetAudioModeAsync as jest.MockedFunction<any>).mockRejectedValueOnce(new Error('Audio mode failed'));
 
       // Re-import to trigger new initialization

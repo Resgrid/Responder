@@ -510,17 +510,9 @@ export const ContactDetailsSheet: React.FC = () => {
                 {hasSystemInfo ? (
                   <Section title={t('contacts.systemInformation')} icon={<CalendarIcon size={16} color="#6366F1" />} defaultExpanded={false}>
                     <VStack space="xs">
-                      <ContactField
-                        label={t('contacts.addedOn')}
-                        value={safeFormatTimestamp(selectedContact.AddedOn, 'yyyy-MM-dd HH:mm') || undefined}
-                        icon={<CalendarIcon size={16} color="#6366F1" />}
-                      />
+                      <ContactField label={t('contacts.addedOn')} value={safeFormatTimestamp(selectedContact.AddedOn, 'yyyy-MM-dd HH:mm') || undefined} icon={<CalendarIcon size={16} color="#6366F1" />} />
                       <ContactField label={t('contacts.addedBy')} value={selectedContact.AddedByUserName} icon={<UserIcon size={16} color="#6366F1" />} />
-                      <ContactField
-                        label={t('contacts.editedOn')}
-                        value={safeFormatTimestamp(selectedContact.EditedOn, 'yyyy-MM-dd HH:mm') || undefined}
-                        icon={<CalendarIcon size={16} color="#6366F1" />}
-                      />
+                      <ContactField label={t('contacts.editedOn')} value={safeFormatTimestamp(selectedContact.EditedOn, 'yyyy-MM-dd HH:mm') || undefined} icon={<CalendarIcon size={16} color="#6366F1" />} />
                       <ContactField label={t('contacts.editedBy')} value={selectedContact.EditedByUserName} icon={<UserIcon size={16} color="#6366F1" />} />
                     </VStack>
                   </Section>

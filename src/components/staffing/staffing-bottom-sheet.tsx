@@ -2,7 +2,8 @@ import { ArrowLeft, ArrowRight, CircleIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView } from 'react-native';
+import { Platform, ScrollView } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { useAnalytics } from '@/hooks/use-analytics';
 import { translate } from '@/lib/i18n/utils';
@@ -252,36 +253,38 @@ export const StaffingBottomSheet = () => {
           )}
 
           {currentStep === 'add-note' && (
-            <VStack space="md" className="w-full">
-              <VStack space="sm">
-                <Text className="font-medium">{safeT('home.staffing.selected_staffing')}:</Text>
-                <HStack space="sm" className="items-center">
-                  <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: invertColor(selectedStaffing?.BColor || '#000000', true) }}>
-                    {selectedStaffing?.Text}
+            <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} bottomOffset={20} style={{ flexGrow: 0, width: '100%' }}>
+              <VStack space="md" className="w-full">
+                <VStack space="sm">
+                  <Text className="font-medium">{safeT('home.staffing.selected_staffing')}:</Text>
+                  <HStack space="sm" className="items-center">
+                    <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: invertColor(selectedStaffing?.BColor || '#000000', true) }}>
+                      {selectedStaffing?.Text}
+                    </Text>
+                  </HStack>
+                </VStack>
+
+                <VStack space="sm">
+                  <Text className="font-medium">
+                    {safeT('home.staffing.note')} ({safeT('common.optional')}):
                   </Text>
+                  <Textarea size="md" className="min-h-[100px] w-full">
+                    <TextareaInput placeholder={safeT('home.staffing.note_placeholder')} value={note} onChangeText={setNote} />
+                  </Textarea>
+                </VStack>
+
+                <HStack space="sm" className="mt-4 justify-between">
+                  <Button variant="outline" onPress={handlePrevious} className="flex-1">
+                    <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
+                    <ButtonText>{safeT('common.previous')}</ButtonText>
+                  </Button>
+                  <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
+                    <ButtonText>{safeT('common.next')}</ButtonText>
+                    <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
+                  </Button>
                 </HStack>
               </VStack>
-
-              <VStack space="sm">
-                <Text className="font-medium">
-                  {safeT('home.staffing.note')} ({safeT('common.optional')}):
-                </Text>
-                <Textarea size="md" className="min-h-[100px] w-full">
-                  <TextareaInput placeholder={safeT('home.staffing.note_placeholder')} value={note} onChangeText={setNote} />
-                </Textarea>
-              </VStack>
-
-              <HStack space="sm" className="mt-4 justify-between">
-                <Button variant="outline" onPress={handlePrevious} className="flex-1">
-                  <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-                  <ButtonText>{safeT('common.previous')}</ButtonText>
-                </Button>
-                <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                  <ButtonText>{safeT('common.next')}</ButtonText>
-                  <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
-                </Button>
-              </HStack>
-            </VStack>
+            </KeyboardAwareScrollView>
           )}
 
           {currentStep === 'confirm' && (

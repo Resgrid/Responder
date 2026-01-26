@@ -43,8 +43,8 @@ const formSchema = z.object({
   plusCode: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
-  priority: z.string().min(1, 'Priority is required'),
-  type: z.string().min(1, 'Type is required'),
+  priority: z.string().optional(),
+  type: z.string().optional(),
   contactName: z.string().optional(),
   contactInfo: z.string().optional(),
   dispatchSelection: z.object({
@@ -57,6 +57,24 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+// Helper function to strip HTML tags from rich text content
+const stripHtml = (html: string | undefined | null): string => {
+  if (!html) return '';
+  // Remove HTML tags
+  let text = html.replace(/<[^>]*>/g, '');
+  // Decode common HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+  // Trim whitespace
+  return text.trim();
+};
 
 interface GeocodingResult {
   place_id: string;
@@ -126,6 +144,7 @@ export default function EditCall() {
     formState: { errors },
     setValue,
     reset,
+    getValues,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -184,8 +203,16 @@ export default function EditCall() {
   // Pre-populate form when call data is loaded
   useEffect(() => {
     if (call) {
+      console.log('Raw call data:', JSON.stringify(call, null, 2));
+      console.log('Loading call data:', { Priority: call.Priority, Type: call.Type });
+      console.log('Available call types:', callTypes);
+      console.log('Available call priorities:', callPriorities);
+
       const priority = callPriorities.find((p) => p.Id === call.Priority);
       const type = callTypes.find((t) => t.Id === call.Type);
+
+      console.log('Found priority:', priority);
+      console.log('Found type:', type);
 
       // Parse dispatched items from callExtraData
       const dispatchedUsers: string[] = [];
@@ -227,8 +254,8 @@ export default function EditCall() {
 
       reset({
         name: call.Name || '',
-        nature: call.Nature || '',
-        note: call.Note || '',
+        nature: stripHtml(call.Nature),
+        note: stripHtml(call.Note),
         address: call.Address || '',
         coordinates: call.Geolocation || '',
         what3words: '',
@@ -259,6 +286,8 @@ export default function EditCall() {
   }, [call, callExtraData, callPriorities, callTypes, reset]);
 
   const onSubmit = async (data: FormValues) => {
+    console.log('onSubmit called!');
+    console.log('Form data:', JSON.stringify(data, null, 2));
     try {
       // If we have latitude and longitude, add them to the data
       if (selectedLocation?.latitude && selectedLocation?.longitude) {
@@ -267,9 +296,28 @@ export default function EditCall() {
       }
 
       console.log('Updating call with data:', data);
+      console.log(
+        'Available priorities:',
+        callPriorities.map((p) => p.Name)
+      );
+      console.log(
+        'Available types:',
+        callTypes.map((t) => t.Name)
+      );
 
-      const priority = callPriorities.find((p) => p.Name === data.priority);
-      const type = callTypes.find((t) => t.Name === data.type);
+      const priority = data.priority ? callPriorities.find((p) => p.Name === data.priority) : null;
+      const type = data.type ? callTypes.find((t) => t.Name === data.type) : null;
+
+      console.log('Found priority:', priority);
+      console.log('Found type:', type);
+
+      if (data.priority && !priority) {
+        throw new Error(`Priority "${data.priority}" not found in available priorities`);
+      }
+
+      if (data.type && !type) {
+        throw new Error(`Type "${data.type}" not found in available types`);
+      }
 
       // Analytics: Track call update attempt
       safeTrack('call_update_attempted', {
@@ -289,7 +337,7 @@ export default function EditCall() {
       });
 
       // Update the call using the store
-      await useCallDetailStore.getState().updateCall({
+      const updatePayload = {
         callId: callId!,
         name: data.name,
         nature: data.nature,
@@ -308,7 +356,11 @@ export default function EditCall() {
         dispatchRoles: data.dispatchSelection?.roles || [],
         dispatchUnits: data.dispatchSelection?.units || [],
         dispatchEveryone: data.dispatchSelection?.everyone || false,
-      });
+      };
+
+      console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
+
+      await useCallDetailStore.getState().updateCall(updatePayload);
 
       // Analytics: Track successful call update
       safeTrack('call_update_success', {
@@ -658,7 +710,7 @@ export default function EditCall() {
             </Card>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-              <FormControl isInvalid={!!errors.priority}>
+              <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.priority')}</FormControlLabelText>
                 </FormControlLabel>
@@ -682,16 +734,11 @@ export default function EditCall() {
                     </Select>
                   )}
                 />
-                {errors.priority && (
-                  <FormControlError>
-                    <Text className="text-red-500">{errors.priority.message}</Text>
-                  </FormControlError>
-                )}
               </FormControl>
             </Card>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-              <FormControl isInvalid={!!errors.type}>
+              <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.type')}</FormControlLabelText>
                 </FormControlLabel>
@@ -715,11 +762,6 @@ export default function EditCall() {
                     </Select>
                   )}
                 />
-                {errors.type && (
-                  <FormControlError>
-                    <Text className="text-red-500">{errors.type.message}</Text>
-                  </FormControlError>
-                )}
               </FormControl>
             </Card>
 
@@ -823,12 +865,37 @@ export default function EditCall() {
               <Button className="mr-10 flex-1" variant="outline" onPress={() => router.back()}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button className="ml-10 flex-1" variant="solid" action="primary" onPress={handleSubmit(onSubmit)}>
+              <Button
+                className="ml-10 flex-1"
+                variant="solid"
+                action="primary"
+                onPress={async () => {
+                  console.log('Save button pressed');
+                  console.log('Form errors:', errors);
+                  console.log('Current form values:', getValues());
+                  try {
+                    console.log('Calling handleSubmit...');
+                    await handleSubmit(
+                      (data) => {
+                        console.log('Validation passed, calling onSubmit');
+                        onSubmit(data);
+                      },
+                      (errors) => {
+                        console.log('Validation failed with errors:', errors);
+                      }
+                    )();
+                    console.log('handleSubmit completed');
+                  } catch (error) {
+                    console.error('Error in handleSubmit:', error);
+                  }
+                }}
+              >
                 <ButtonText>{t('common.save')}</ButtonText>
               </Button>
             </Box>
           </ScrollView>
         </Box>
+        <Box className="h-8" />
       </View>
 
       {/* Full-screen location picker overlay */}

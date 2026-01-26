@@ -401,9 +401,12 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     setFullScreenImage({ source: imageSource, name: itemName });
   }, []);
 
-  const handleImageLoadError = useCallback((itemId: string) => {
-    handleImageError(itemId, 'expo-image load error');
-  }, [handleImageError]);
+  const handleImageLoadError = useCallback(
+    (itemId: string) => {
+      handleImageError(itemId, 'expo-image load error');
+    },
+    [handleImageError]
+  );
 
   const handleImageLoadSuccess = useCallback((itemId: string) => {
     setImageErrors((prev) => {
@@ -453,14 +456,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     // At this point, imageSource is guaranteed to be non-null
     return (
       <Box className="w-full items-center justify-center px-4" style={{ width }}>
-        <TouchableOpacity
-          onPress={() => handleImagePress(imageSource, item.Name)}
-          testID={`image-${item.Id}-touchable`}
-          activeOpacity={0.7}
-          style={{ width: '100%' }}
-          delayPressIn={0}
-          delayPressOut={0}
-        >
+        <TouchableOpacity onPress={() => handleImagePress(imageSource, item.Name)} testID={`image-${item.Id}-touchable`} activeOpacity={0.7} style={{ width: '100%' }} delayPressIn={0} delayPressOut={0}>
           <Image
             key={`${item.Id}-${index}`}
             source={imageSource}
