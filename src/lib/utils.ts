@@ -20,6 +20,22 @@ export const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(_stor
   return store;
 };
 
+/**
+ * Safely formats a timestamp string with error handling.
+ * Returns formatted date string on success, empty string on failure.
+ */
+export const safeFormatTimestamp = (timestamp: string | undefined | null, format: string): string => {
+  if (!timestamp) return '';
+
+  try {
+    const parsed = parseDateISOString(timestamp);
+    return formatDateForDisplay(parsed, format);
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', timestamp, error);
+    return '';
+  }
+};
+
 export const IS_ANDROID = Platform.OS === 'android';
 export const IS_IOS = Platform.OS === 'ios';
 export const DEFAULT_CENTER_COORDINATE = [-77.036086, 38.910233];
@@ -495,4 +511,27 @@ export function getTimeAgoUtc(time: any): string {
     }
   }
   return time;
+}
+
+/**
+ * Generates a deterministic color from a string (user ID or name)
+ * Returns an HSL color string
+ */
+export function getColorFromString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 65%, 45%)`;
+}
+
+/**
+ * Gets initials from first and last name
+ */
+export function getInitials(firstName?: string, lastName?: string): string {
+  const first = firstName?.trim()?.[0]?.toUpperCase() || '';
+  const last = lastName?.trim()?.[0]?.toUpperCase() || '';
+  return first + last || '?';
 }

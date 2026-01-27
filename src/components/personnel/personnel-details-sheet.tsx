@@ -1,14 +1,15 @@
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
-import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
+import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSecurityStore } from '@/stores/security/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
+import { Avatar, AvatarFallbackText, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Box } from '../ui/box';
 import { Button } from '../ui/button';
@@ -18,29 +19,23 @@ import { HStack } from '../ui/hstack';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
 
-/**
- * Safely formats a timestamp string with error handling.
- * Returns formatted date string on success, empty string on failure.
- */
-const safeFormatTimestamp = (timestamp: string | undefined | null, format: string): string => {
-  if (!timestamp) return '';
 
-  try {
-    const parsed = parseDateISOString(timestamp);
-    return formatDateForDisplay(parsed, format);
-  } catch (error) {
-    console.warn('Failed to parse timestamp:', timestamp, error);
-    return '';
-  }
-};
+
+
 
 export const PersonnelDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
   const { canUserViewPII } = useSecurityStore();
   const { trackEvent } = useAnalytics();
+  const [imageError, setImageError] = useState(false);
 
   const selectedPersonnel = personnel?.find((person) => person.UserId === selectedPersonnelId);
+
+  // Reset image error state when selected personnel changes
+  useEffect(() => {
+    setImageError(false);
+  }, [selectedPersonnelId]);
 
   // Cache formatted timestamps to avoid double parsing
   const formattedStatusTimestamp = useMemo(() => safeFormatTimestamp(selectedPersonnel?.StatusTimestamp, 'yyyy-MM-dd HH:mm Z'), [selectedPersonnel?.StatusTimestamp]);
@@ -86,6 +81,9 @@ export const PersonnelDetailsSheet: React.FC = () => {
   if (!selectedPersonnel || !isDetailsOpen) return null;
 
   const fullName = `${selectedPersonnel.FirstName} ${selectedPersonnel.LastName}`.trim();
+  const avatarUrl = getAvatarUrl(selectedPersonnel.UserId);
+  const initials = getInitials(selectedPersonnel.FirstName, selectedPersonnel.LastName);
+  const fallbackColor = getColorFromString(selectedPersonnel.UserId || fullName);
 
   return (
     <Actionsheet isOpen={isDetailsOpen} onClose={closeDetails} snapPoints={[67]}>
@@ -97,9 +95,23 @@ export const PersonnelDetailsSheet: React.FC = () => {
 
         <Box className="w-full flex-1 p-4">
           <HStack className="mb-4 items-center justify-between">
-            <Heading size="lg" className="text-gray-800 dark:text-gray-100">
-              {fullName}
-            </Heading>
+            <HStack space="md" className="flex-1 items-center">
+              {/* Profile Avatar */}
+              <Avatar size="lg" style={imageError ? { backgroundColor: fallbackColor } : undefined}>
+                {!imageError && (
+                  <AvatarImage
+                    source={{ uri: avatarUrl }}
+                    onError={() => setImageError(true)}
+                  />
+                )}
+                {imageError && (
+                  <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>
+                )}
+              </Avatar>
+              <Heading size="lg" className="flex-1 text-gray-800 dark:text-gray-100">
+                {fullName}
+              </Heading>
+            </HStack>
             <Button variant="link" onPress={closeDetails} className="p-1" testID="close-button">
               <X size={24} className="text-gray-600 dark:text-gray-400" />
             </Button>

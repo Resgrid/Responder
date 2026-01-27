@@ -166,6 +166,26 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
     try {
       const { currentRoom, voipServerWebsocketSslAddress } = get();
 
+      // On Android 14+ (SDK 34+), we MUST have RECORD_AUDIO permission granted
+      // BEFORE starting a foreground service with microphone type.
+      // This is a security requirement - the app must be "eligible" to use the microphone.
+      if (Platform.OS === 'android') {
+        const micPermission = await getRecordingPermissionsAsync();
+        if (!micPermission.granted) {
+          const result = await requestRecordingPermissionsAsync();
+          if (!result.granted) {
+            logger.error({
+              message: 'Cannot connect to room - microphone permission denied',
+              context: { platform: Platform.OS },
+            });
+            throw new Error('Microphone permission is required to join a voice channel');
+          }
+        }
+        logger.info({
+          message: 'Microphone permission verified before starting foreground service',
+        });
+      }
+
       // Disconnect from current room if connected
       if (currentRoom) {
         currentRoom.disconnect();
