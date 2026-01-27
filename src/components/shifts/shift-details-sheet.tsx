@@ -244,7 +244,7 @@ const ShiftDetailsSheetComponent: React.FC<ShiftDetailsSheetProps> = ({ isOpen, 
           {/* Type Badges */}
           <VStack space="md">
             <Text size="lg" className="font-semibold text-gray-900 dark:text-white">
-              {t('shifts.shift_type')}
+              {t('shifts.shift_type.label')}
             </Text>
             <HStack space="sm">
               <Badge action="info" size="md">

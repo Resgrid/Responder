@@ -1,14 +1,15 @@
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
-import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
+import { formatDateForDisplay, getAvatarUrl, parseDateISOString } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSecurityStore } from '@/stores/security/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
+import { Avatar, AvatarFallbackText, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Box } from '../ui/box';
 import { Button } from '../ui/button';
@@ -17,6 +18,29 @@ import { Heading } from '../ui/heading';
 import { HStack } from '../ui/hstack';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
+
+/**
+ * Generates a deterministic color from a string (user ID or name)
+ * Returns an HSL color string
+ */
+function getColorFromString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 65%, 45%)`;
+}
+
+/**
+ * Gets initials from first and last name
+ */
+function getInitials(firstName?: string, lastName?: string): string {
+  const first = firstName?.trim()?.[0]?.toUpperCase() || '';
+  const last = lastName?.trim()?.[0]?.toUpperCase() || '';
+  return first + last || '?';
+}
 
 /**
  * Safely formats a timestamp string with error handling.
@@ -39,8 +63,14 @@ export const PersonnelDetailsSheet: React.FC = () => {
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
   const { canUserViewPII } = useSecurityStore();
   const { trackEvent } = useAnalytics();
+  const [imageError, setImageError] = useState(false);
 
   const selectedPersonnel = personnel?.find((person) => person.UserId === selectedPersonnelId);
+
+  // Reset image error state when selected personnel changes
+  useEffect(() => {
+    setImageError(false);
+  }, [selectedPersonnelId]);
 
   // Cache formatted timestamps to avoid double parsing
   const formattedStatusTimestamp = useMemo(() => safeFormatTimestamp(selectedPersonnel?.StatusTimestamp, 'yyyy-MM-dd HH:mm Z'), [selectedPersonnel?.StatusTimestamp]);
@@ -86,6 +116,9 @@ export const PersonnelDetailsSheet: React.FC = () => {
   if (!selectedPersonnel || !isDetailsOpen) return null;
 
   const fullName = `${selectedPersonnel.FirstName} ${selectedPersonnel.LastName}`.trim();
+  const avatarUrl = getAvatarUrl(selectedPersonnel.UserId);
+  const initials = getInitials(selectedPersonnel.FirstName, selectedPersonnel.LastName);
+  const fallbackColor = getColorFromString(selectedPersonnel.UserId || fullName);
 
   return (
     <Actionsheet isOpen={isDetailsOpen} onClose={closeDetails} snapPoints={[67]}>
@@ -97,9 +130,21 @@ export const PersonnelDetailsSheet: React.FC = () => {
 
         <Box className="w-full flex-1 p-4">
           <HStack className="mb-4 items-center justify-between">
-            <Heading size="lg" className="text-gray-800 dark:text-gray-100">
-              {fullName}
-            </Heading>
+            <HStack space="md" className="flex-1 items-center">
+              {/* Profile Avatar */}
+              <Avatar size="lg" style={imageError ? { backgroundColor: fallbackColor } : undefined}>
+                {!imageError && (
+                  <AvatarImage
+                    source={{ uri: avatarUrl }}
+                    onError={() => setImageError(true)}
+                  />
+                )}
+                <AvatarFallbackText>{initials}</AvatarFallbackText>
+              </Avatar>
+              <Heading size="lg" className="flex-1 text-gray-800 dark:text-gray-100">
+                {fullName}
+              </Heading>
+            </HStack>
             <Button variant="link" onPress={closeDetails} className="p-1" testID="close-button">
               <X size={24} className="text-gray-600 dark:text-gray-400" />
             </Button>

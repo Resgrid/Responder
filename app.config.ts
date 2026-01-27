@@ -264,6 +264,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         microphonePermission: 'Allow Resgrid Responder to access the microphone for audio input used in PTT and calls.',
       },
     ],
+    [
+      'expo-image-picker',
+      {
+        cameraPermission: 'Allow Resgrid Responder to access the camera to take photos for call documentation.',
+        photosPermission: 'Allow Resgrid Responder to access your photos library to attach images to calls.',
+      },
+    ],
     'react-native-ble-manager',
     'expo-secure-store',
     '@livekit/react-native-expo-plugin',
