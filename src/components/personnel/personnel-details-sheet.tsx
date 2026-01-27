@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
-import { formatDateForDisplay, getAvatarUrl, parseDateISOString } from '@/lib/utils';
+import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSecurityStore } from '@/stores/security/store';
 
@@ -19,44 +19,9 @@ import { HStack } from '../ui/hstack';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
 
-/**
- * Generates a deterministic color from a string (user ID or name)
- * Returns an HSL color string
- */
-function getColorFromString(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
 
-  const hue = Math.abs(hash % 360);
-  return `hsl(${hue}, 65%, 45%)`;
-}
 
-/**
- * Gets initials from first and last name
- */
-function getInitials(firstName?: string, lastName?: string): string {
-  const first = firstName?.trim()?.[0]?.toUpperCase() || '';
-  const last = lastName?.trim()?.[0]?.toUpperCase() || '';
-  return first + last || '?';
-}
 
-/**
- * Safely formats a timestamp string with error handling.
- * Returns formatted date string on success, empty string on failure.
- */
-const safeFormatTimestamp = (timestamp: string | undefined | null, format: string): string => {
-  if (!timestamp) return '';
-
-  try {
-    const parsed = parseDateISOString(timestamp);
-    return formatDateForDisplay(parsed, format);
-  } catch (error) {
-    console.warn('Failed to parse timestamp:', timestamp, error);
-    return '';
-  }
-};
 
 export const PersonnelDetailsSheet: React.FC = () => {
   const { t } = useTranslation();

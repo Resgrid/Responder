@@ -1,4 +1,4 @@
-import { formatLocalDateString, isSameDate, isToday, getTodayLocalString } from '../utils';
+import { formatLocalDateString, isSameDate, isToday, getTodayLocalString, safeFormatTimestamp, getColorFromString, getInitials } from '../utils';
 
 describe('Date Utility Functions', () => {
   describe('formatLocalDateString', () => {
@@ -203,6 +203,47 @@ describe('Date Utility Functions', () => {
       
       // These might be passed due to type issues in JavaScript
       expect(() => formatLocalDateString(validDate)).not.toThrow();
+    });
+  });
+
+  describe('getColorFromString', () => {
+    it('generates deterministic color from string', () => {
+      const color1 = getColorFromString('test-string');
+      const color2 = getColorFromString('test-string');
+      expect(color1).toBe(color2);
+      expect(color1).toMatch(/^hsl\(\d+, 65%, 45%\)$/);
+    });
+
+    it('generates different colors for different strings', () => {
+      const color1 = getColorFromString('string-1');
+      const color2 = getColorFromString('string-2');
+      expect(color1).not.toBe(color2);
+    });
+  });
+
+  describe('getInitials', () => {
+    it('returns initials from first and last name', () => {
+      expect(getInitials('John', 'Doe')).toBe('JD');
+    });
+
+    it('handles missing first name', () => {
+      expect(getInitials(undefined, 'Doe')).toBe('D');
+    });
+
+    it('handles missing last name', () => {
+      expect(getInitials('John')).toBe('J');
+    });
+
+    it('handles empty strings', () => {
+      expect(getInitials('', '')).toBe('?');
+    });
+
+    it('handles extra whitespace', () => {
+      expect(getInitials(' John ', ' Doe ')).toBe('JD');
+    });
+
+    it('returns ? for no input', () => {
+      expect(getInitials()).toBe('?');
     });
   });
 });

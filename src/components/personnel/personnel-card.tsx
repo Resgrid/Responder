@@ -2,7 +2,7 @@ import { Mail, Phone, Users } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable } from 'react-native';
 
-import { formatDateForDisplay, getAvatarUrl, parseDateISOString } from '@/lib/utils';
+import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { useSecurityStore } from '@/stores/security/store';
 
@@ -13,29 +13,7 @@ import { HStack } from '../ui/hstack';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
 
-/**
- * Generates a deterministic color from a string (user ID or name)
- * Returns a hex color string
- */
-function getColorFromString(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
 
-  // Generate HSL color with good saturation and lightness for visibility
-  const hue = Math.abs(hash % 360);
-  return `hsl(${hue}, 65%, 45%)`;
-}
-
-/**
- * Gets initials from first and last name
- */
-function getInitials(firstName?: string, lastName?: string): string {
-  const first = firstName?.trim()?.[0]?.toUpperCase() || '';
-  const last = lastName?.trim()?.[0]?.toUpperCase() || '';
-  return first + last || '?';
-}
 
 interface PersonnelCardProps {
   personnel: PersonnelInfoResultData;
@@ -46,6 +24,10 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
   const fullName = `${personnel.FirstName} ${personnel.LastName}`.trim();
   const { canUserViewPII } = useSecurityStore();
   const [imageError, setImageError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [personnel.UserId]);
 
   const avatarUrl = getAvatarUrl(personnel.UserId);
   const initials = getInitials(personnel.FirstName, personnel.LastName);
@@ -102,14 +84,12 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
               </VStack>
             ) : personnel.GroupName ? (
               <VStack space="xs">
-                {personnel.GroupName ? (
-                  <HStack space="xs" className="items-center">
-                    <Users size={16} className="text-gray-600 dark:text-gray-400" />
-                    <Text className="text-sm text-gray-600 dark:text-gray-300" numberOfLines={1}>
-                      {personnel.GroupName}
-                    </Text>
-                  </HStack>
-                ) : null}
+                <HStack space="xs" className="items-center">
+                  <Users size={16} className="text-gray-600 dark:text-gray-400" />
+                  <Text className="text-sm text-gray-600 dark:text-gray-300" numberOfLines={1}>
+                    {personnel.GroupName}
+                  </Text>
+                </HStack>
               </VStack>
             ) : null}
 
@@ -145,7 +125,7 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
             ) : null}
 
             {/* Last Status Update */}
-            {personnel.StatusTimestamp ? <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">Status: {formatDateForDisplay(parseDateISOString(personnel.StatusTimestamp), 'yyyy-MM-dd HH:mm Z')}</Text> : null}
+            {personnel.StatusTimestamp ? <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">Status: {safeFormatTimestamp(personnel.StatusTimestamp, 'yyyy-MM-dd HH:mm Z')}</Text> : null}
           </VStack>
         </HStack>
       </Box>

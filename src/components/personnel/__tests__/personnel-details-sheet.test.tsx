@@ -128,6 +128,10 @@ jest.mock('react-i18next', () => ({
 jest.mock('@/lib/utils', () => ({
   formatDateForDisplay: (date: any) => 'Formatted Date',
   parseDateISOString: (date: string) => new Date(date),
+  safeFormatTimestamp: (timestamp: string, format: string) => 'Formatted Date',
+  getAvatarUrl: (userId: string) => `https://example.com/avatar/${userId}`,
+  getInitials: (first: string, last: string) => 'JD',
+  getColorFromString: (str: string) => '#000000',
 }));
 
 describe('PersonnelDetailsSheet', () => {
