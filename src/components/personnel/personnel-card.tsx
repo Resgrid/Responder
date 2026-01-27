@@ -63,7 +63,9 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
                 onError={() => setImageError(true)}
               />
             )}
-            <AvatarFallbackText>{initials}</AvatarFallbackText>
+            {imageError && (
+              <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>
+            )}
           </Avatar>
 
           <VStack space="xs" className="flex-1">

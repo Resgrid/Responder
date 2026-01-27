@@ -139,7 +139,9 @@ export const PersonnelDetailsSheet: React.FC = () => {
                     onError={() => setImageError(true)}
                   />
                 )}
-                <AvatarFallbackText>{initials}</AvatarFallbackText>
+                {imageError && (
+                  <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>
+                )}
               </Avatar>
               <Heading size="lg" className="flex-1 text-gray-800 dark:text-gray-100">
                 {fullName}
