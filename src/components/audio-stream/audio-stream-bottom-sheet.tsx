@@ -4,20 +4,21 @@ import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
+import { Button, ButtonText } from '@/components/ui/button';
+import { HStack } from '@/components/ui/hstack';
+import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
+import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useToast } from '@/hooks/use-toast';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
-
-import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
-import { Button, ButtonText } from '../ui/button';
-import { HStack } from '../ui/hstack';
-import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '../ui/select';
-import { VStack } from '../ui/vstack';
 
 export const AudioStreamBottomSheet = () => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
+  const toast = useToast();
 
   const { isBottomSheetVisible, setIsBottomSheetVisible, availableStreams, currentStream, isLoadingStreams, isPlaying, isLoading, isBuffering, fetchAvailableStreams, playStream, stopStream } = useAudioStreamStore();
 
@@ -84,9 +85,11 @@ export const AudioStreamBottomSheet = () => {
         });
 
         console.error('Failed to handle stream selection:', error);
+
+        toast.error(t('audio_streams.error_loading_stream'));
       }
     },
-    [availableStreams, stopStream, playStream, trackEvent, currentStream]
+    [availableStreams, stopStream, playStream, trackEvent, currentStream, t, toast]
   );
 
   const getCurrentStreamValue = () => {
@@ -242,3 +245,4 @@ export const AudioStreamBottomSheet = () => {
     </Actionsheet>
   );
 };
+

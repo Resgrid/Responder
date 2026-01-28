@@ -19,10 +19,6 @@ import { HStack } from '../ui/hstack';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
 
-
-
-
-
 export const PersonnelDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
@@ -98,15 +94,8 @@ export const PersonnelDetailsSheet: React.FC = () => {
             <HStack space="md" className="flex-1 items-center">
               {/* Profile Avatar */}
               <Avatar size="lg" style={imageError ? { backgroundColor: fallbackColor } : undefined}>
-                {!imageError && (
-                  <AvatarImage
-                    source={{ uri: avatarUrl }}
-                    onError={() => setImageError(true)}
-                  />
-                )}
-                {imageError && (
-                  <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>
-                )}
+                {!imageError && <AvatarImage source={{ uri: avatarUrl }} onError={() => setImageError(true)} />}
+                {imageError && <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>}
               </Avatar>
               <Heading size="lg" className="flex-1 text-gray-800 dark:text-gray-100">
                 {fullName}
