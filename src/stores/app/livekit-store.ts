@@ -1,6 +1,6 @@
 import notifee, { AndroidImportance } from '@notifee/react-native';
-import { Audio } from 'expo-av';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
+import { Audio } from 'expo-av';
 import { Room, RoomEvent } from 'livekit-client';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
@@ -24,10 +24,10 @@ const setupAudioRouting = async (room: Room): Promise<void> => {
 
     logger.info({
       message: 'Setting up audio routing',
-      context: { 
-        speakerType: speaker?.type, 
+      context: {
+        speakerType: speaker?.type,
         speakerName: speaker?.name,
-        micType: microphone?.type 
+        micType: microphone?.type,
       },
     });
 
@@ -39,15 +39,15 @@ const setupAudioRouting = async (room: Room): Promise<void> => {
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         // Default to earpiece unless speaker is explicitly selected
-        playThroughEarpieceAndroid: true, 
+        playThroughEarpieceAndroid: true,
       };
 
       // If speaker device is selected (explicitly 'speaker' type), force speaker output
       if (speaker?.type === 'speaker') {
         logger.debug({ message: 'Routing audio to Speakerphone' });
         audioModeConfig.playThroughEarpieceAndroid = false;
-        
-        // On iOS, we might need to handle this differently if we wanted to force speaker, 
+
+        // On iOS, we might need to handle this differently if we wanted to force speaker,
         // but typically standard routing handles it or AVRoutePickerView is used.
         // For Expo AV, we can sometimes influence it.
       } else {
@@ -60,9 +60,8 @@ const setupAudioRouting = async (room: Room): Promise<void> => {
 
     // Handle LiveKit specific device switching if needed (mostly for web/desktop, but good to have)
     if (speaker?.id && speaker.id !== 'default-speaker' && speaker.type === 'bluetooth') {
-       // logic for specific bluetooth device selection if feasible
+      // logic for specific bluetooth device selection if feasible
     }
-
   } catch (error) {
     logger.error({
       message: 'Failed to setup audio routing',

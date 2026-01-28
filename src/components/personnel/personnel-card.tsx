@@ -13,8 +13,6 @@ import { HStack } from '../ui/hstack';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
 
-
-
 interface PersonnelCardProps {
   personnel: PersonnelInfoResultData;
   onPress: (id: string) => void;

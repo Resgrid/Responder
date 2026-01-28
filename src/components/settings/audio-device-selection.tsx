@@ -114,7 +114,7 @@ export const AudioDeviceSelection: React.FC<AudioDeviceSelectionProps> = ({ show
   const availableMicrophones = availableAudioDevices.filter((device) => {
     // Microphones include bluetooth, wired, and default input devices
     // Specifially exclude devices that are explicitly speakers
-    return (device.type === 'bluetooth' || device.type === 'wired' || device.type === 'default');
+    return device.type === 'bluetooth' || device.type === 'wired' || device.type === 'default';
   });
 
   const availableSpeakers = availableAudioDevices.filter((device) => {
