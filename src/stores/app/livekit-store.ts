@@ -1,4 +1,5 @@
 import notifee, { AndroidImportance } from '@notifee/react-native';
+import { Audio } from 'expo-av';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Room, RoomEvent } from 'livekit-client';
 import { Platform } from 'react-native';
@@ -13,44 +14,55 @@ import { toggleMicrophone } from '../../utils/microphone-toggle';
 import { useBluetoothAudioStore } from './bluetooth-audio-store';
 
 // Helper function to setup audio routing based on selected devices
+// Helper function to setup audio routing based on selected devices
 const setupAudioRouting = async (room: Room): Promise<void> => {
   try {
     const bluetoothStore = useBluetoothAudioStore.getState();
-    const { selectedAudioDevices, connectedDevice } = bluetoothStore;
+    const { selectedAudioDevices } = bluetoothStore;
+    const speaker = selectedAudioDevices.speaker;
+    const microphone = selectedAudioDevices.microphone;
 
-    // If we have a connected Bluetooth device, prioritize it
-    if (connectedDevice && connectedDevice.hasAudioCapability) {
-      logger.info({
-        message: 'Using Bluetooth device for audio routing',
-        context: { deviceName: connectedDevice.name },
-      });
+    logger.info({
+      message: 'Setting up audio routing',
+      context: { 
+        speakerType: speaker?.type, 
+        speakerName: speaker?.name,
+        micType: microphone?.type 
+      },
+    });
 
-      // Update selected devices to use Bluetooth
-      const deviceName = connectedDevice.name || 'Bluetooth Device';
-      const bluetoothMicrophone = connectedDevice.supportsMicrophoneControl ? { id: connectedDevice.id, name: deviceName, type: 'bluetooth' as const, isAvailable: true } : selectedAudioDevices.microphone;
-
-      const bluetoothSpeaker = {
-        id: connectedDevice.id,
-        name: deviceName,
-        type: 'bluetooth' as const,
-        isAvailable: true,
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      // Default configuration for voice call
+      const audioModeConfig: any = {
+        allowsRecordingIOS: true,
+        staysActiveInBackground: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        // Default to earpiece unless speaker is explicitly selected
+        playThroughEarpieceAndroid: true, 
       };
 
-      bluetoothStore.setSelectedMicrophone(bluetoothMicrophone);
-      bluetoothStore.setSelectedSpeaker(bluetoothSpeaker);
+      // If speaker device is selected (explicitly 'speaker' type), force speaker output
+      if (speaker?.type === 'speaker') {
+        logger.debug({ message: 'Routing audio to Speakerphone' });
+        audioModeConfig.playThroughEarpieceAndroid = false;
+        
+        // On iOS, we might need to handle this differently if we wanted to force speaker, 
+        // but typically standard routing handles it or AVRoutePickerView is used.
+        // For Expo AV, we can sometimes influence it.
+      } else {
+        logger.debug({ message: 'Routing audio to Earpiece/Headset' });
+        audioModeConfig.playThroughEarpieceAndroid = true;
+      }
 
-      // Note: Actual audio routing would be implemented via native modules
-      // This is a placeholder for the audio routing logic
-      logger.debug({
-        message: 'Audio routing configured for Bluetooth device',
-      });
-    } else {
-      // Use default audio devices (selected devices or default)
-      logger.debug({
-        message: 'Using default audio devices',
-        context: { selectedAudioDevices },
-      });
+      await Audio.setAudioModeAsync(audioModeConfig);
     }
+
+    // Handle LiveKit specific device switching if needed (mostly for web/desktop, but good to have)
+    if (speaker?.id && speaker.id !== 'default-speaker' && speaker.type === 'bluetooth') {
+       // logic for specific bluetooth device selection if feasible
+    }
+
   } catch (error) {
     logger.error({
       message: 'Failed to setup audio routing',
@@ -466,3 +478,13 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
     }
   },
 }));
+
+// Subscribe to bluetooth store changes to trigger audio routing updates
+useBluetoothAudioStore.subscribe((state, prevState) => {
+  if (state.selectedAudioDevices !== prevState.selectedAudioDevices) {
+    const room = useLiveKitStore.getState().currentRoom;
+    if (room) {
+      setupAudioRouting(room);
+    }
+  }
+});
