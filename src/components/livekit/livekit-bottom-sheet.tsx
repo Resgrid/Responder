@@ -333,8 +333,9 @@ const styles = StyleSheet.create({
   },
   controls: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly',
     marginTop: 16,
+    width: '100%',
   },
   controlButton: {
     alignItems: 'center',

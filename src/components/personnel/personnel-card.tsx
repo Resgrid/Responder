@@ -39,15 +39,8 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
         <HStack space="md" className="items-start">
           {/* Profile Avatar */}
           <Avatar size="md" style={imageError ? { backgroundColor: fallbackColor } : undefined}>
-            {!imageError && (
-              <AvatarImage
-                source={{ uri: avatarUrl }}
-                onError={() => setImageError(true)}
-              />
-            )}
-            {imageError && (
-              <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>
-            )}
+            {!imageError && <AvatarImage source={{ uri: avatarUrl }} onError={() => setImageError(true)} />}
+            {imageError && <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>}
           </Avatar>
 
           <VStack space="xs" className="flex-1">
