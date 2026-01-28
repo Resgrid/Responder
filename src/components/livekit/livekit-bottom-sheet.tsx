@@ -32,6 +32,7 @@ export const LiveKitBottomSheet = () => {
   const { trackEvent } = useAnalytics();
 
   const [currentView, setCurrentView] = useState<BottomSheetView>(BottomSheetView.ROOM_SELECT);
+  const [previousView, setPreviousView] = useState<BottomSheetView>(BottomSheetView.ROOM_SELECT);
   const [isMuted, setIsMuted] = useState(true); // Default to muted
   const [permissionsRequested, setPermissionsRequested] = useState(false);
 
@@ -181,12 +182,15 @@ export const LiveKitBottomSheet = () => {
   }, [disconnectFromRoom]);
 
   const handleShowAudioSettings = useCallback(() => {
+    if (currentView !== BottomSheetView.AUDIO_SETTINGS) {
+      setPreviousView(currentView);
+    }
     setCurrentView(BottomSheetView.AUDIO_SETTINGS);
-  }, []);
+  }, [currentView]);
 
   const handleBackFromAudioSettings = useCallback(() => {
-    setCurrentView(BottomSheetView.CONNECTED);
-  }, []);
+    setCurrentView(previousView);
+  }, [previousView]);
 
   const renderRoomSelect = () => (
     <View style={styles.content}>
