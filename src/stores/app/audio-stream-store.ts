@@ -190,7 +190,7 @@ export const useAudioStreamStore = create<AudioStreamState>((set, get) => ({
         isBuffering: false,
       });
 
-      throw error;
+
     }
   },
 
