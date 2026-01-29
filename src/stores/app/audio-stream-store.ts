@@ -32,7 +32,7 @@ interface AudioStreamState {
   // Stream operations
   fetchAvailableStreams: () => Promise<void>;
   playStream: (stream: DepartmentAudioResultStreamData) => Promise<void>;
-  stopStream: () => Promise<void>;
+  stopStream: (clearState?: boolean) => Promise<void>;
   cleanup: () => Promise<void>;
 }
 
@@ -79,12 +79,17 @@ export const useAudioStreamStore = create<AudioStreamState>((set, get) => ({
     try {
       const { soundObject: currentSound, stopStream } = get();
 
-      // Stop current stream if playing
-      if (currentSound) {
-        await stopStream();
-      }
+      // Optimistically set the current stream and loading state
+      set({
+        currentStream: stream,
+        isLoading: true,
+        isBuffering: true,
+      });
 
-      set({ isLoading: true, isBuffering: true });
+      // Stop current stream if playing, but don't clear the state since we just set it
+      if (currentSound) {
+        await stopStream(false);
+      }
 
       logger.debug({
         message: 'Starting audio stream',
@@ -189,12 +194,10 @@ export const useAudioStreamStore = create<AudioStreamState>((set, get) => ({
         isLoading: false,
         isBuffering: false,
       });
-
-
     }
   },
 
-  stopStream: async () => {
+  stopStream: async (clearState = true) => {
     try {
       const { soundObject, currentStream } = get();
 
@@ -208,13 +211,21 @@ export const useAudioStreamStore = create<AudioStreamState>((set, get) => ({
         });
       }
 
-      set({
-        soundObject: null,
-        currentStream: null,
-        isPlaying: false,
-        isLoading: false,
-        isBuffering: false,
-      });
+      if (clearState) {
+        set({
+          soundObject: null,
+          currentStream: null,
+          isPlaying: false,
+          isLoading: false,
+          isBuffering: false,
+        });
+      } else {
+        // If not clearing state, just clear the sound object
+        set({
+          soundObject: null,
+          isPlaying: false,
+        });
+      }
     } catch (error) {
       logger.error({
         message: 'Failed to stop audio stream',

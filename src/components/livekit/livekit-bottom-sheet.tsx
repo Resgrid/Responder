@@ -32,6 +32,7 @@ export const LiveKitBottomSheet = () => {
   const { trackEvent } = useAnalytics();
 
   const [currentView, setCurrentView] = useState<BottomSheetView>(BottomSheetView.ROOM_SELECT);
+  const [previousView, setPreviousView] = useState<BottomSheetView>(BottomSheetView.ROOM_SELECT);
   const [isMuted, setIsMuted] = useState(true); // Default to muted
   const [permissionsRequested, setPermissionsRequested] = useState(false);
 
@@ -181,12 +182,15 @@ export const LiveKitBottomSheet = () => {
   }, [disconnectFromRoom]);
 
   const handleShowAudioSettings = useCallback(() => {
+    if (currentView !== BottomSheetView.AUDIO_SETTINGS) {
+      setPreviousView(currentView);
+    }
     setCurrentView(BottomSheetView.AUDIO_SETTINGS);
-  }, []);
+  }, [currentView]);
 
   const handleBackFromAudioSettings = useCallback(() => {
-    setCurrentView(BottomSheetView.CONNECTED);
-  }, []);
+    setCurrentView(previousView);
+  }, [previousView]);
 
   const renderRoomSelect = () => (
     <View style={styles.content}>
@@ -300,14 +304,12 @@ export const LiveKitBottomSheet = () => {
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
-        <View className="w-full p-4">
-          <HStack className="mb-4 items-center justify-between">
+        <View className="w-full">
+          <HStack className="mb-2 items-center justify-between px-4 pt-2">
             <Text className="text-xl font-bold">{t('livekit.title')}</Text>
-            {currentView === BottomSheetView.CONNECTED && (
-              <TouchableOpacity onPress={handleShowAudioSettings} testID="header-audio-settings-button">
-                <Headphones size={20} color="#6B7280" />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={handleShowAudioSettings} testID="header-audio-settings-button">
+              <Headphones size={20} color="#6B7280" />
+            </TouchableOpacity>
           </HStack>
 
           <View className="min-h-[400px]" testID="bottom-sheet-content">
@@ -323,7 +325,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     width: '100%',
-    paddingHorizontal: 16,
   },
   roomList: {
     flex: 1,
