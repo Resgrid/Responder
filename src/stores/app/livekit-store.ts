@@ -1,3 +1,4 @@
+import { AudioSession } from '@livekit/react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Audio } from 'expo-av';
@@ -14,53 +15,79 @@ import { toggleMicrophone } from '../../utils/microphone-toggle';
 import { useBluetoothAudioStore } from './bluetooth-audio-store';
 
 // Helper function to setup audio routing based on selected devices
-// Helper function to setup audio routing based on selected devices
 const setupAudioRouting = async (room: Room): Promise<void> => {
   try {
     const bluetoothStore = useBluetoothAudioStore.getState();
     const { selectedAudioDevices } = bluetoothStore;
     const speaker = selectedAudioDevices.speaker;
-    const microphone = selectedAudioDevices.microphone;
 
     logger.info({
       message: 'Setting up audio routing',
       context: {
         speakerType: speaker?.type,
         speakerName: speaker?.name,
-        micType: microphone?.type,
+        platform: Platform.OS,
       },
     });
 
-    if (Platform.OS === 'android' || Platform.OS === 'ios') {
-      // Default configuration for voice call
-      const audioModeConfig: any = {
-        allowsRecordingIOS: true,
-        staysActiveInBackground: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        // Default to earpiece unless speaker is explicitly selected
-        playThroughEarpieceAndroid: true,
-      };
+    if (Platform.OS === 'android') {
+      let outputType = 'speaker'; // default
 
-      // If speaker device is selected (explicitly 'speaker' type), force speaker output
-      if (speaker?.type === 'speaker') {
-        logger.debug({ message: 'Routing audio to Speakerphone' });
-        audioModeConfig.playThroughEarpieceAndroid = false;
-
-        // On iOS, we might need to handle this differently if we wanted to force speaker,
-        // but typically standard routing handles it or AVRoutePickerView is used.
-        // For Expo AV, we can sometimes influence it.
+      if (speaker?.type === 'bluetooth') {
+        outputType = 'bluetooth';
+      } else if (speaker?.type === 'wired') {
+        outputType = 'headset';
+      } else if (speaker?.type === 'speaker') {
+        outputType = 'speaker';
       } else {
-        logger.debug({ message: 'Routing audio to Earpiece/Headset' });
-        audioModeConfig.playThroughEarpieceAndroid = true;
+        outputType = 'earpiece';
       }
 
-      await Audio.setAudioModeAsync(audioModeConfig);
-    }
+      logger.debug({ message: `Routing audio to ${outputType} on Android` });
 
-    // Handle LiveKit specific device switching if needed (mostly for web/desktop, but good to have)
-    if (speaker?.id && speaker.id !== 'default-speaker' && speaker.type === 'bluetooth') {
-      // logic for specific bluetooth device selection if feasible
+      try {
+        // Ensure we are in a call-compatible mode
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          staysActiveInBackground: true,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: outputType !== 'speaker',
+        });
+
+        if (outputType === 'bluetooth') {
+          await AudioSession.startAudioSession();
+        }
+
+        await AudioSession.selectAudioOutput(outputType);
+      } catch (e) {
+        logger.warn({ message: 'Failed to select audio output via AudioSession', context: { error: e } });
+      }
+    } else if (Platform.OS === 'ios') {
+      await AudioSession.startAudioSession();
+
+      if (speaker?.type === 'bluetooth') {
+        // Bluetooth preferred
+        await AudioSession.setAppleAudioConfiguration({
+          audioCategory: 'playAndRecord',
+          audioCategoryOptions: ['allowBluetooth', 'allowBluetoothA2DP', 'mixWithOthers'],
+          audioMode: 'voiceChat',
+        });
+      } else if (speaker?.type === 'speaker') {
+        // Force speaker
+        await AudioSession.setAppleAudioConfiguration({
+          audioCategory: 'playAndRecord',
+          audioCategoryOptions: ['defaultToSpeaker', 'mixWithOthers'],
+          audioMode: 'videoChat',
+        });
+      } else {
+        // Earpiece / Default
+        await AudioSession.setAppleAudioConfiguration({
+          audioCategory: 'playAndRecord',
+          audioCategoryOptions: ['mixWithOthers'],
+          audioMode: 'voiceChat',
+        });
+      }
     }
   } catch (error) {
     logger.error({

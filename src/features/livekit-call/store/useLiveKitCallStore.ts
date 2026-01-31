@@ -4,6 +4,7 @@ import { create } from 'zustand';
 
 import { logger } from '../../../lib/logging';
 import { callKeepService } from '../../../services/callkeep.service.ios';
+import { inCallAudio } from '../../../utils/InCallAudio';
 
 export interface RoomInfo {
   id: string;
@@ -105,6 +106,8 @@ export const useLiveKitCallStore = create<LiveKitCallState>((set, get) => ({
               newRoom.localParticipant.setMicrophoneEnabled(true);
               newRoom.localParticipant.setCameraEnabled(false); // No video
 
+              inCallAudio.playSound('connected');
+
               // Start CallKeep call for iOS background audio support
               if (Platform.OS === 'ios') {
                 callKeepService
@@ -132,6 +135,8 @@ export const useLiveKitCallStore = create<LiveKitCallState>((set, get) => ({
                 localParticipant: null,
                 // Keep error if there was one leading to disconnect
               });
+              
+              inCallAudio.playSound('disconnected');
 
               // End CallKeep call for iOS when disconnected
               if (Platform.OS === 'ios') {
@@ -288,6 +293,14 @@ export const useLiveKitCallStore = create<LiveKitCallState>((set, get) => ({
         try {
           await room.localParticipant.setMicrophoneEnabled(enabled);
           get().actions._updateParticipants(); // reflect change in participant state
+          
+          // Play transmit sounds
+          if (enabled) {
+            inCallAudio.playSound('transmit_start');
+          } else {
+            inCallAudio.playSound('transmit_stop');
+          }
+
           logger.info({
             message: 'Microphone state changed',
             context: { enabled, participantIdentity: room.localParticipant.identity },
