@@ -278,6 +278,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     '@config-plugins/react-native-callkeep',
     './customGradle.plugin.js',
     './customManifest.plugin.js',
+    './plugins/withInCallAudioModule.js',
     ['app-icon-badge', appIconBadgeConfig],
   ],
   extra: {

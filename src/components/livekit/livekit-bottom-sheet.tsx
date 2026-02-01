@@ -28,6 +28,7 @@ export const LiveKitBottomSheet = () => {
     useLiveKitStore();
 
   const { selectedAudioDevices } = useBluetoothAudioStore();
+
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
 

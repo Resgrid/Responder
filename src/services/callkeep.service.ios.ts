@@ -1,6 +1,7 @@
 import { RTCAudioSession } from '@livekit/react-native-webrtc';
+import { config } from 'dotenv';
 import { Platform } from 'react-native';
-import RNCallKeep, { AudioSessionCategoryOption, AudioSessionMode, CONSTANTS as CK_CONSTANTS } from 'react-native-callkeep';
+import RNCallKeep, { AudioSessionCategoryOption, AudioSessionMode } from 'react-native-callkeep';
 
 import { logger } from '../lib/logging';
 
@@ -21,6 +22,7 @@ export class CallKeepService {
   private isSetup = false;
   private isCallActive = false;
   private muteStateCallback: ((muted: boolean) => void) | null = null;
+  private endCallCallback: (() => void) | null = null;
 
   private constructor() {}
 
@@ -142,19 +144,23 @@ export class CallKeepService {
       // Report connecting state
       RNCallKeep.reportConnectingOutgoingCallWithUUID(currentCallUUID);
 
-      // Small delay to ensure proper state transition
-      setTimeout(() => {
-        if (currentCallUUID) {
-          RNCallKeep.reportConnectedOutgoingCallWithUUID(currentCallUUID);
-          this.isCallActive = true;
-          logger.debug({
-            message: 'CallKeep call reported as connected',
-            context: { uuid: currentCallUUID },
-          });
-        }
-      }, 100);
-
-      return currentCallUUID;
+      // Wait for the system to register the call before resolving
+      // This ensures that subsequent calls (like setMuted) happen after "Connected" state
+      return new Promise<string>((resolve) => {
+        setTimeout(() => {
+          if (currentCallUUID) {
+            RNCallKeep.reportConnectedOutgoingCallWithUUID(currentCallUUID);
+            this.isCallActive = true;
+            logger.debug({
+              message: 'CallKeep call reported as connected',
+              context: { uuid: currentCallUUID },
+            });
+            resolve(currentCallUUID);
+          } else {
+            resolve('');
+          }
+        }, 800);
+      });
     } catch (error) {
       logger.error({
         message: 'Failed to start CallKeep call',
@@ -210,11 +216,40 @@ export class CallKeepService {
   }
 
   /**
+   * Set the mute state of the current call
+   */
+  async setMuted(muted: boolean): Promise<void> {
+    if (Platform.OS !== 'ios' || !currentCallUUID) {
+      return;
+    }
+
+    try {
+      RNCallKeep.setMutedCall(currentCallUUID, muted);
+      logger.debug({
+        message: 'CallKeep mute state updated',
+        context: { muted, uuid: currentCallUUID },
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to update CallKeep mute state',
+        context: { error, muted, uuid: currentCallUUID },
+      });
+    }
+  }
+
+  /**
    * Set a callback to handle mute state changes from CallKit
    * This should be called by the LiveKit store to sync mute state
    */
   setMuteStateCallback(callback: ((muted: boolean) => void) | null): void {
     this.muteStateCallback = callback;
+  }
+
+  /**
+   * Set a callback to handle end call events from CallKit
+   */
+  setEndCallCallback(callback: (() => void) | null): void {
+    this.endCallCallback = callback;
   }
 
   /**
@@ -261,6 +296,18 @@ export class CallKeepService {
       if (callUUID === currentCallUUID) {
         currentCallUUID = null;
         this.isCallActive = false;
+
+        // Notify callback if set
+        if (this.endCallCallback) {
+          try {
+            this.endCallCallback();
+          } catch (error) {
+            logger.warn({
+              message: 'Failed to execute end call callback',
+              context: { error, callUUID },
+            });
+          }
+        }
       }
     });
 
@@ -274,6 +321,11 @@ export class CallKeepService {
 
     // Mute/unmute events
     RNCallKeep.addEventListener('didPerformSetMutedCallAction', ({ muted, callUUID }) => {
+      // Check internal gate
+      if (!this._shouldEmitMuteEvents) {
+        return;
+      }
+
       logger.debug({
         message: 'CallKeep mute state changed',
         context: { muted, callUUID },
@@ -291,6 +343,30 @@ export class CallKeepService {
         }
       }
     });
+  }
+
+  // Internal flag to control if we should emit mute events
+  private _shouldEmitMuteEvents = true;
+
+  /**
+   * Remove the CallKeep mute listener.
+   * This is used to prevent PTT loop oscillation when a specialized device is active.
+   */
+  removeMuteListener(): void {
+    if (Platform.OS === 'ios') {
+      this._shouldEmitMuteEvents = false;
+      logger.debug({ message: 'CallKeep mute listener disabled (internal flag)' });
+    }
+  }
+
+  /**
+   * Restore the CallKeep mute listener.
+   */
+  restoreMuteListener(): void {
+    if (Platform.OS === 'ios') {
+      this._shouldEmitMuteEvents = true;
+      logger.debug({ message: 'CallKeep mute listener restored (internal flag)' });
+    }
   }
 
   /**

@@ -10,6 +10,7 @@ import type { Room } from 'livekit-client';
 
 import { logger } from '@/lib/logging';
 import { audioService } from '@/services/audio.service';
+import { headsetButtonService } from '@/services/headset-button.service';
 import { useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
 
 export interface ToggleMicrophoneOptions {
@@ -56,6 +57,9 @@ export async function toggleMicrophone(room: Room | null, options: ToggleMicroph
       action: currentMuteState ? 'unmute' : 'mute',
       timestamp: Date.now(),
     });
+
+    // Sync headset state
+    headsetButtonService.setMicrophoneState(currentMuteState);
 
     // Play sound feedback if enabled
     if (soundFeedback) {

@@ -48,6 +48,11 @@ describe('Analytics Integration Test', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     mockUseAnalytics.mockReturnValue({
       trackEvent: mockTrackEvent,
     });

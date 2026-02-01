@@ -67,15 +67,15 @@ jest.mock('../../ui/actionsheet', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    Actionsheet: ({ children, testID, ...props }: any) => 
+    Actionsheet: ({ children, testID, ...props }: any) =>
       React.createElement(View, { testID, ...props }, children),
-    ActionsheetBackdrop: ({ children, ...props }: any) => 
+    ActionsheetBackdrop: ({ children, ...props }: any) =>
       React.createElement(View, { ...props }, children),
-    ActionsheetContent: ({ children, ...props }: any) => 
+    ActionsheetContent: ({ children, ...props }: any) =>
       React.createElement(View, { ...props }, children),
-    ActionsheetDragIndicator: ({ children, ...props }: any) => 
+    ActionsheetDragIndicator: ({ children, ...props }: any) =>
       React.createElement(View, { ...props }, children),
-    ActionsheetDragIndicatorWrapper: ({ children, ...props }: any) => 
+    ActionsheetDragIndicatorWrapper: ({ children, ...props }: any) =>
       React.createElement(View, { ...props }, children),
   };
 });
@@ -84,7 +84,7 @@ jest.mock('../../ui/box', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    Box: ({ children, ...props }: any) => 
+    Box: ({ children, ...props }: any) =>
       React.createElement(View, { ...props }, children),
   };
 });
@@ -93,7 +93,7 @@ jest.mock('../../ui/button', () => {
   const React = require('react');
   const { TouchableOpacity } = require('react-native');
   return {
-    Button: ({ children, testID, onPress, ...props }: any) => 
+    Button: ({ children, testID, onPress, ...props }: any) =>
       React.createElement(TouchableOpacity, { testID, onPress, ...props }, children),
   };
 });
@@ -102,7 +102,7 @@ jest.mock('../../ui/divider', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    Divider: ({ ...props }: any) => 
+    Divider: ({ ...props }: any) =>
       React.createElement(View, { ...props }),
   };
 });
@@ -111,7 +111,7 @@ jest.mock('../../ui/heading', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {
-    Heading: ({ children, ...props }: any) => 
+    Heading: ({ children, ...props }: any) =>
       React.createElement(Text, { ...props }, children),
   };
 });
@@ -120,7 +120,7 @@ jest.mock('../../ui/hstack', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    HStack: ({ children, ...props }: any) => 
+    HStack: ({ children, ...props }: any) =>
       React.createElement(View, { style: { flexDirection: 'row' }, ...props }, children),
   };
 });
@@ -129,7 +129,7 @@ jest.mock('../../ui/text', () => {
   const React = require('react');
   const { Text: RNText } = require('react-native');
   return {
-    Text: ({ children, ...props }: any) => 
+    Text: ({ children, ...props }: any) =>
       React.createElement(RNText, { ...props }, children),
   };
 });
@@ -138,7 +138,7 @@ jest.mock('../../ui/vstack', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    VStack: ({ children, ...props }: any) => 
+    VStack: ({ children, ...props }: any) =>
       React.createElement(View, { style: { flexDirection: 'column' }, ...props }, children),
   };
 });
@@ -164,11 +164,17 @@ describe('NoteDetailsSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
 
     // Mock AppState to prevent MMKV issues
     const { AppState } = require('react-native');
     jest.spyOn(AppState, 'addEventListener').mockImplementation(() => ({}) as any);
-    jest.spyOn(AppState, 'removeEventListener').mockImplementation(() => {});
+    jest.spyOn(AppState, 'removeEventListener').mockImplementation(() => { });
 
     mockUseTranslation.mockReturnValue({
       t: (key: string) => key,

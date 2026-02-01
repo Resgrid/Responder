@@ -1,6 +1,10 @@
-import { Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
+import RNCallKeep from 'react-native-callkeep';
 
 import { logger } from '../lib/logging';
+
+// UUID for the CallKeep call - should be unique per session
+let currentCallUUID: string | null = null;
 
 export interface CallKeepConfig {
   appName: string;
@@ -11,13 +15,12 @@ export interface CallKeepConfig {
   ringtoneSound?: string;
 }
 
-/**
- * Android implementation of CallKeepService
- * This is a no-op implementation since CallKeep is iOS-specific
- * but provides the same interface for cross-platform compatibility
- */
 export class CallKeepService {
   private static instance: CallKeepService | null = null;
+  private isSetup = false;
+  private isCallActive = false;
+  private muteStateCallback: ((muted: boolean) => void) | null = null;
+  private endCallCallback: (() => void) | null = null;
 
   private constructor() {}
 
@@ -29,68 +32,316 @@ export class CallKeepService {
   }
 
   /**
-   * Setup CallKeep - no-op on Android
+   * Setup CallKeep with the required configuration
+   * This should be called once during app initialization
    */
   async setup(config: CallKeepConfig): Promise<void> {
-    logger.debug({
-      message: 'CallKeep setup skipped - Android platform does not require CallKeep',
-      context: { platform: Platform.OS },
-    });
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    if (this.isSetup) {
+      logger.debug({
+        message: 'CallKeep (Android) already setup',
+      });
+      return;
+    }
+
+    try {
+      const options = {
+        ios: {
+          appName: config.appName,
+        },
+        android: {
+          alertTitle: 'Permissions required',
+          alertDescription: 'This application needs to access your phone accounts',
+          cancelButton: 'Cancel',
+          okButton: 'OK',
+          additionalPermissions: [
+            PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+            ...(Platform.Version >= 30 ? [PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS] : []),
+          ],
+          // Important for VoIP on Android O+
+          selfManaged: true,
+          foregroundService: {
+            channelId: 'call_channel',
+            channelName: 'Active Call',
+            notificationTitle: 'Call in progress',
+            notificationIcon: 'ic_notification',
+          },
+        },
+      };
+
+      await RNCallKeep.setup(options);
+
+      // On Android, we might need to ask for permissions explicitly if not handled by setup
+      if (Platform.Version >= 23) {
+        if (Platform.Version >= 30) {
+          const hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
+          if (!hasPermission) {
+            await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
+          }
+        }
+        RNCallKeep.setAvailable(true);
+      }
+
+      this.setupEventListeners();
+      this.isSetup = true;
+
+      logger.info({
+        message: 'CallKeep (Android) setup completed successfully',
+        context: { config },
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to setup CallKeep (Android)',
+        context: { error, config },
+      });
+      throw error;
+    }
   }
 
   /**
-   * Start a call - no-op on Android
+   * Start a CallKit call to keep the app alive in the background
+   * This should be called when connecting to a LiveKit room
    */
   async startCall(roomName: string, handle?: string): Promise<string> {
-    logger.debug({
-      message: 'CallKeep startCall skipped - Android platform does not require CallKeep',
-      context: { platform: Platform.OS, roomName, handle },
-    });
-    return '';
+    if (Platform.OS !== 'android') {
+      return '';
+    }
+
+    if (!this.isSetup) {
+      // Auto-setup if not ready (fallback)
+      logger.warn({ message: 'CallKeep not setup before startCall, attempting setup' });
+    }
+
+    if (currentCallUUID) {
+      logger.debug({
+        message: 'Existing call UUID found, ending before starting a new one',
+        context: { currentCallUUID },
+      });
+      await this.endCall();
+    }
+
+    try {
+      // Generate a new UUID for this call
+      currentCallUUID = this.generateUUID();
+      const callHandle = handle || 'Voice Channel';
+      const contactIdentifier = `Voice Channel: ${roomName}`;
+
+      logger.info({
+        message: 'Starting CallKeep (Android) call',
+        context: {
+          uuid: currentCallUUID,
+          handle: callHandle,
+          roomName,
+        },
+      });
+
+      // Start the call - Self Managed ConnectionService
+      // On Android, displayIncomingCall is often used for self-managed, but startCall works for outgoing.
+      // We simulate an "outgoing" call to the room.
+      RNCallKeep.startCall(currentCallUUID, callHandle, contactIdentifier, 'generic', false);
+
+      // For Android self-managed, we often need to set activity
+      RNCallKeep.setCurrentCallActive(currentCallUUID);
+
+      this.isCallActive = true;
+      return currentCallUUID;
+    } catch (error) {
+      logger.error({
+        message: 'Failed to start CallKeep (Android) call',
+        context: { error, roomName, handle },
+      });
+      currentCallUUID = null;
+      throw error;
+    }
   }
 
   /**
-   * End a call - no-op on Android
+   * End the active CallKit call
+   * This should be called when disconnecting from a LiveKit room
    */
   async endCall(): Promise<void> {
-    logger.debug({
-      message: 'CallKeep endCall skipped - Android platform does not require CallKeep',
-      context: { platform: Platform.OS },
-    });
+    if (!currentCallUUID) {
+      return;
+    }
+
+    try {
+      logger.info({
+        message: 'Ending CallKeep (Android) call',
+        context: { uuid: currentCallUUID },
+      });
+
+      RNCallKeep.endCall(currentCallUUID);
+      currentCallUUID = null;
+      this.isCallActive = false;
+    } catch (error) {
+      logger.error({
+        message: 'Failed to end CallKeep call',
+        context: { error, uuid: currentCallUUID },
+      });
+      currentCallUUID = null;
+      this.isCallActive = false;
+    }
   }
 
   /**
-   * Set mute state callback - no-op on Android
+   * Set the mute state of the current call
+   */
+  async setMuted(muted: boolean): Promise<void> {
+    if (!currentCallUUID) {
+      return;
+    }
+
+    try {
+      RNCallKeep.setMutedCall(currentCallUUID, muted);
+      logger.debug({
+        message: 'CallKeep (Android) mute state updated',
+        context: { muted, uuid: currentCallUUID },
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to update CallKeep mute state',
+        context: { error, muted, uuid: currentCallUUID },
+      });
+    }
+  }
+
+  /**
+   * Set a callback to handle mute state changes from CallKit
+   * This should be called by the LiveKit store to sync mute state
    */
   setMuteStateCallback(callback: ((muted: boolean) => void) | null): void {
-    logger.debug({
-      message: 'CallKeep setMuteStateCallback skipped - Android platform does not require CallKeep',
-      context: { platform: Platform.OS },
-    });
+    this.muteStateCallback = callback;
   }
 
   /**
-   * Check if call is active - always false on Android
+   * Set a callback to handle end call events from CallKit
+   */
+  setEndCallCallback(callback: (() => void) | null): void {
+    this.endCallCallback = callback;
+  }
+
+  /**
+   * Check if there's an active CallKit call
    */
   isCallActiveNow(): boolean {
-    return false;
+    return this.isCallActive && currentCallUUID !== null;
   }
 
   /**
-   * Get current call UUID - always null on Android
+   * Get the current call UUID
    */
   getCurrentCallUUID(): string | null {
-    return null;
+    return currentCallUUID;
   }
 
   /**
-   * Clean up resources - no-op on Android
+   * Setup event listeners for CallKeep events
+   */
+  private setupEventListeners(): void {
+    // Android specific events if any
+
+    // Call ended from System UI
+    RNCallKeep.addEventListener('endCall', ({ callUUID }) => {
+      logger.info({
+        message: 'CallKeep call ended from system UI',
+        context: { callUUID },
+      });
+
+      if (callUUID === currentCallUUID) {
+        currentCallUUID = null;
+        this.isCallActive = false;
+
+        // Notify callback if set
+        if (this.endCallCallback) {
+          try {
+            this.endCallCallback();
+          } catch (error) {
+            logger.warn({
+              message: 'Failed to execute end call callback',
+              context: { error, callUUID },
+            });
+          }
+        }
+      }
+    });
+
+    // Mute/unmute events
+    RNCallKeep.addEventListener('didPerformSetMutedCallAction', ({ muted, callUUID }) => {
+      logger.debug({
+        message: 'CallKeep mute state changed',
+        context: { muted, callUUID },
+      });
+
+      // Call the registered callback if available
+      if (this.muteStateCallback) {
+        try {
+          this.muteStateCallback(muted);
+        } catch (error) {
+          logger.warn({
+            message: 'Failed to execute mute state callback',
+            context: { error, muted, callUUID },
+          });
+        }
+      }
+    });
+  }
+
+  /**
+   * Generate a UUID for CallKeep calls
+   */
+  private generateUUID(): string {
+    // RN 0.76 typically provides global crypto.randomUUID via Hermes/JSI
+    const rndUUID = (global as any)?.crypto?.randomUUID?.();
+    if (typeof rndUUID === 'string') return rndUUID;
+    // Fallback
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  /**
+   * Remove the CallKeep mute listener (No-op on Android or handled differently)
+   */
+  removeMuteListener(): void {
+    // Android implementation if needed
+  }
+
+  /**
+   * Restore the CallKeep mute listener (No-op on Android or handled differently)
+   */
+  restoreMuteListener(): void {
+    // Android implementation if needed
+  }
+
+  /**
+   * Clean up resources - call this when the service is no longer needed
    */
   async cleanup(): Promise<void> {
-    logger.debug({
-      message: 'CallKeep cleanup skipped - Android platform does not require CallKeep',
-      context: { platform: Platform.OS },
-    });
+    try {
+      if (this.isCallActive) {
+        await this.endCall();
+      }
+
+      // Remove event listeners
+      RNCallKeep.removeEventListener('endCall');
+      RNCallKeep.removeEventListener('didPerformSetMutedCallAction');
+
+      this.isSetup = false;
+
+      logger.debug({
+        message: 'CallKeep service cleaned up',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Error during CallKeep cleanup',
+        context: { error },
+      });
+    }
   }
 }
 

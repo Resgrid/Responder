@@ -350,6 +350,12 @@ describe('CallImagesModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     mockUseCallDetailStore.mockReturnValue(mockStore as any);
     mockUseAuthStore.getState.mockReturnValue({
       userId: 'test-user-id',

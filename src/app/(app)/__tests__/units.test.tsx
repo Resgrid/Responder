@@ -257,6 +257,11 @@ describe('Units', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     Object.assign(mockUnitsStore, {
       units: [],
       searchQuery: '',

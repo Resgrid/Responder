@@ -160,6 +160,11 @@ describe('PersonnelDetailsSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     mockPersonnelStore.personnel = [];
     mockPersonnelStore.selectedPersonnelId = null;
     mockPersonnelStore.isDetailsOpen = false;

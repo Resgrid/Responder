@@ -1,7 +1,8 @@
+import { AudioSession } from '@livekit/react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Audio } from 'expo-av';
-import { Room, RoomEvent } from 'livekit-client';
+import { ConnectionState, Room, RoomEvent } from 'livekit-client';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -9,58 +10,88 @@ import { getCanConnectToVoiceSession, getDepartmentVoiceSettings } from '../../a
 import { logger } from '../../lib/logging';
 import { type DepartmentVoiceChannelResultData } from '../../models/v4/voice/departmentVoiceResultData';
 import { audioService } from '../../services/audio.service';
+import { callKeepService } from '../../services/callkeep.service';
 import { headsetButtonService } from '../../services/headset-button.service';
 import { toggleMicrophone } from '../../utils/microphone-toggle';
 import { useBluetoothAudioStore } from './bluetooth-audio-store';
 
-// Helper function to setup audio routing based on selected devices
+// Module level timestamp for debounce
+let lastLocalMuteChangeTimestamp = 0;
+
 // Helper function to setup audio routing based on selected devices
 const setupAudioRouting = async (room: Room): Promise<void> => {
   try {
     const bluetoothStore = useBluetoothAudioStore.getState();
     const { selectedAudioDevices } = bluetoothStore;
     const speaker = selectedAudioDevices.speaker;
-    const microphone = selectedAudioDevices.microphone;
 
     logger.info({
       message: 'Setting up audio routing',
       context: {
         speakerType: speaker?.type,
         speakerName: speaker?.name,
-        micType: microphone?.type,
+        platform: Platform.OS,
       },
     });
 
-    if (Platform.OS === 'android' || Platform.OS === 'ios') {
-      // Default configuration for voice call
-      const audioModeConfig: any = {
-        allowsRecordingIOS: true,
-        staysActiveInBackground: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        // Default to earpiece unless speaker is explicitly selected
-        playThroughEarpieceAndroid: true,
-      };
+    if (Platform.OS === 'android') {
+      let outputType = 'speaker'; // default
 
-      // If speaker device is selected (explicitly 'speaker' type), force speaker output
-      if (speaker?.type === 'speaker') {
-        logger.debug({ message: 'Routing audio to Speakerphone' });
-        audioModeConfig.playThroughEarpieceAndroid = false;
-
-        // On iOS, we might need to handle this differently if we wanted to force speaker,
-        // but typically standard routing handles it or AVRoutePickerView is used.
-        // For Expo AV, we can sometimes influence it.
+      if (speaker?.type === 'bluetooth') {
+        outputType = 'bluetooth';
+      } else if (speaker?.type === 'wired') {
+        outputType = 'headset';
+      } else if (speaker?.type === 'speaker') {
+        outputType = 'speaker';
       } else {
-        logger.debug({ message: 'Routing audio to Earpiece/Headset' });
-        audioModeConfig.playThroughEarpieceAndroid = true;
+        outputType = 'earpiece';
       }
 
-      await Audio.setAudioModeAsync(audioModeConfig);
-    }
+      logger.debug({ message: `Routing audio to ${outputType} on Android` });
 
-    // Handle LiveKit specific device switching if needed (mostly for web/desktop, but good to have)
-    if (speaker?.id && speaker.id !== 'default-speaker' && speaker.type === 'bluetooth') {
-      // logic for specific bluetooth device selection if feasible
+      try {
+        // Ensure we are in a call-compatible mode
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          staysActiveInBackground: true,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: outputType !== 'speaker',
+        });
+
+        if (outputType === 'bluetooth') {
+          await AudioSession.startAudioSession();
+        }
+
+        await AudioSession.selectAudioOutput(outputType);
+      } catch (e) {
+        logger.warn({ message: 'Failed to select audio output via AudioSession', context: { error: e } });
+      }
+    } else if (Platform.OS === 'ios') {
+      // AudioSession.startAudioSession(); // Handled by CallKeep - DO NOT call this here for iOS
+
+      if (speaker?.type === 'bluetooth') {
+        // Bluetooth preferred
+        await AudioSession.setAppleAudioConfiguration({
+          audioCategory: 'playAndRecord',
+          audioCategoryOptions: ['allowBluetooth', 'allowBluetoothA2DP', 'mixWithOthers'],
+          audioMode: 'voiceChat',
+        });
+      } else if (speaker?.type === 'speaker') {
+        // Force speaker
+        await AudioSession.setAppleAudioConfiguration({
+          audioCategory: 'playAndRecord',
+          audioCategoryOptions: ['defaultToSpeaker', 'mixWithOthers'],
+          audioMode: 'videoChat',
+        });
+      } else {
+        // Earpiece / Default
+        await AudioSession.setAppleAudioConfiguration({
+          audioCategory: 'playAndRecord',
+          audioCategoryOptions: ['mixWithOthers'],
+          audioMode: 'voiceChat',
+        });
+      }
     }
   } catch (error) {
     logger.error({
@@ -204,8 +235,13 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       set({ isConnecting: true });
 
-      // Create a new room
-      const room = new Room();
+      // Create a new room with default options to ensure no auto-publish if possible
+      const room = new Room({
+        // Prevent auto-publishing if that's a default behavior (though usually it isn't)
+        publishDefaults: {
+          // Additional config can go here
+        },
+      });
 
       // Setup room event listeners
       room.on(RoomEvent.ParticipantConnected, (participant) => {
@@ -218,6 +254,52 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
           //audioService.playConnectToAudioRoomSound();
         }
       });
+
+      // Register CallKeep listeners for iOS & Android
+      if (Platform.OS !== 'web') {
+        // Sync mute state from CallKeep to LiveKit
+        // Sync mute state from CallKeep to LiveKit
+        callKeepService.setMuteStateCallback((muted: boolean) => {
+          // DEBOUNCE: Ignore CallKeep events if they happen too close to a local action
+          // This prevents the "Oscillation Loop" (Device -> CallKeep -> App -> CallKeep -> Device)
+          const now = Date.now();
+          if (now - lastLocalMuteChangeTimestamp < 500) {
+            logger.debug({
+              message: 'Ignoring CallKeep mute event (Debounce)',
+              context: { muted, timeSinceLastAction: now - lastLocalMuteChangeTimestamp },
+            });
+            return;
+          }
+
+          const { selectedAudioDevices, connectedDevice } = useBluetoothAudioStore.getState();
+          logger.debug({
+            message: 'CallKeep mute callback received',
+            context: { muted, connectedDeviceId: connectedDevice?.id },
+          });
+
+          const currentState = get();
+          if (currentState.isConnected && currentState.currentRoom) {
+            const shouldBeEnabled = !muted;
+            const isEnabled = currentState.currentRoom.localParticipant.isMicrophoneEnabled;
+
+            if (isEnabled !== shouldBeEnabled) {
+              logger.info({ message: 'Syncing mute state from CallKit', context: { muted, shouldBeEnabled } });
+              currentState.setMicrophoneEnabled(shouldBeEnabled);
+            } else {
+              logger.debug({ message: 'Ignoring duplicate CallKeep mute state' });
+            }
+          }
+        });
+
+        // Handle end call (double tap on Airpods)
+        callKeepService.setEndCallCallback(() => {
+          const currentState = get();
+          if (currentState.isConnected) {
+            logger.info({ message: 'CallKeep Triggered End Call' });
+            currentState.disconnectFromRoom();
+          }
+        });
+      }
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
         logger.info({
@@ -238,7 +320,16 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       // Connect to the room
       await room.connect(voipServerWebsocketSslAddress, token);
 
+      set({
+        currentRoom: room,
+        currentRoomInfo: roomInfo,
+        isConnected: true,
+        isConnecting: false,
+      });
+
       // Set microphone to muted by default, camera to disabled (audio-only call)
+      // This ensures we start in a known state.
+      logger.info({ message: 'Setting initial microphone state to MUTED (False)' });
       await room.localParticipant.setMicrophoneEnabled(false);
       await room.localParticipant.setCameraEnabled(false);
 
@@ -246,6 +337,29 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       await setupAudioRouting(room);
 
       await audioService.playConnectToAudioRoomSound();
+
+      // Start CallKeep call (iOS & Android)
+      if (Platform.OS !== 'web') {
+        // Using a generic handle or room name
+        const roomName = roomInfo?.Name || 'Voice Channel';
+        callKeepService
+          .startCall(roomName)
+          .then(async () => {
+            // Simple initialization: Sync Mute State
+            // We start muted.
+            try {
+              await callKeepService.setMuted(true);
+              logger.info({ message: 'CallKeep initial mute state set to TRUE' });
+            } catch (error) {
+              logger.warn({ message: 'Failed to set initial CallKeep mute', context: { error } });
+            }
+
+            // We now handle mute events from CallKeep even for PTT devices,
+            // relying on debounce logic to prevent loops.
+            logger.info({ message: 'CallKeep started' });
+          })
+          .catch((e) => logger.warn({ message: 'Failed to start CallKeep', context: { error: e } }));
+      }
 
       try {
         const startForegroundService = async () => {
@@ -270,7 +384,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
           });
         };
 
-        await startForegroundService();
+        if (Platform.OS === 'android') {
+          await startForegroundService();
+        }
       } catch (error) {
         logger.error({
           message: 'Failed to register foreground service',
@@ -293,13 +409,6 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
           context: { error },
         });
       }
-
-      set({
-        currentRoom: room,
-        currentRoomInfo: roomInfo,
-        isConnected: true,
-        isConnecting: false,
-      });
     } catch (error) {
       logger.error({
         message: 'Failed to connect to room',
@@ -330,6 +439,18 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       await currentRoom.disconnect();
       await audioService.playDisconnectedFromAudioRoomSound();
 
+      // Small delay on iOS to allow sound to play before CallKeep potentially kills audio session
+      if (Platform.OS === 'ios') {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+
+      // End CallKeep call (iOS & Android)
+      if (Platform.OS !== 'web') {
+        callKeepService.endCall().catch((e) => logger.warn({ message: 'Failed to end CallKeep', context: { error: e } }));
+        callKeepService.setMuteStateCallback(null);
+        callKeepService.setEndCallCallback(null);
+      }
+
       try {
         await notifee.stopForegroundService();
       } catch (error) {
@@ -352,18 +473,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       let rooms: DepartmentVoiceChannelResultData[] = [];
       if (response.Data.VoiceEnabled && response.Data?.Channels) {
-        //rooms.push({
-        //  id: '0',
-        //  name: 'No Channel Selected',
-        //});
-
         rooms.push(...response.Data.Channels);
-      } //else {
-      //  rooms.push({
-      //    id: '0',
-      //    name: 'No Channel Selected',
-      //  });
-      //}
+      }
 
       set({
         isVoiceEnabled: response.Data.VoiceEnabled,
@@ -412,6 +523,15 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       return;
     }
 
+    // Safeguard: Do not attempt to publish/unpublish if room is not connected
+    if (currentRoom.state !== ConnectionState.Connected) {
+      logger.warn({
+        message: 'Ignored microphone state change - room not connected',
+        context: { state: currentRoom.state, desiredEnabled: enabled },
+      });
+      return;
+    }
+
     try {
       const currentState = currentRoom.localParticipant.isMicrophoneEnabled;
       if (currentState === enabled) return; // Already in desired state
@@ -428,6 +548,17 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         action: enabled ? 'unmute' : 'mute',
         timestamp: Date.now(),
       });
+
+      // Update timestamp for debounce
+      lastLocalMuteChangeTimestamp = Date.now();
+
+      // Sync headset state
+      headsetButtonService.setMicrophoneState(enabled);
+
+      // Sync CallKeep state (iOS & Android)
+      if (Platform.OS !== 'web') {
+        callKeepService.setMuted(!enabled);
+      }
 
       // Play sound feedback
       if (enabled) {

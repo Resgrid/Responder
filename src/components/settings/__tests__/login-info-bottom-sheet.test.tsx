@@ -173,6 +173,11 @@ describe('LoginInfoBottomSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
 
     // Default mock for analytics
     mockUseAnalytics.mockReturnValue({
@@ -249,6 +254,11 @@ describe('LoginInfoBottomSheet', () => {
   describe('Analytics Integration', () => {
     beforeEach(() => {
       jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     });
 
     it('tracks analytics when sheet becomes visible', () => {

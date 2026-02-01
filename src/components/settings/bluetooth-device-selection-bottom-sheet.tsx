@@ -1,7 +1,7 @@
 import { BluetoothIcon, RefreshCwIcon, WifiIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useToast } from '@/hooks/use-toast';
 import { usePreferredBluetoothDevice } from '@/lib/hooks/use-preferred-bluetooth-device';
 import { logger } from '@/lib/logging';
 import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
@@ -30,9 +31,11 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const { trackEvent } = useAnalytics();
+  const toast = useToast();
   const { preferredDevice, setPreferredDevice } = usePreferredBluetoothDevice();
   const { availableDevices, isScanning, bluetoothState, connectedDevice, connectionError } = useBluetoothAudioStore();
   const [hasScanned, setHasScanned] = useState(false);
+  const [connectingDeviceId, setConnectingDeviceId] = useState<string | null>(null);
 
   // Analytics tracking function for bottom sheet view
   const trackViewAnalytics = useCallback(() => {
@@ -105,13 +108,18 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
         bluetoothState,
       });
 
-      Alert.alert(t('bluetooth.scan_error_title'), error instanceof Error ? error.message : t('bluetooth.scan_error_message'), [{ text: t('common.ok') }]);
+      toast.error(error instanceof Error ? error.message : t('bluetooth.scan_error_message'), t('bluetooth.scan_error_title'));
     }
-  }, [t, trackEvent, bluetoothState, availableDevices.length, preferredDevice, connectedDevice]);
+  }, [t, trackEvent, bluetoothState, availableDevices.length, preferredDevice, connectedDevice, toast]);
 
   const handleDeviceSelect = React.useCallback(
     async (device: BluetoothAudioDevice) => {
+      // Prevent multiple concurrent connection attempts
+      if (connectingDeviceId) return;
+
       try {
+        setConnectingDeviceId(device.id);
+
         // Track device selection start
         trackEvent('bluetooth_device_selection_started', {
           timestamp: new Date().toISOString(),
@@ -124,6 +132,32 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
           previousPreferredDeviceId: preferredDevice?.id || '',
           currentConnectedDeviceId: connectedDevice?.id || '',
         });
+
+        // Special handling for System Audio / Airpods "virtual" device
+        if (device.id === 'system-audio') {
+          // Just set it as preferred, no actual BLE connection needed
+          const selectedDevice = {
+            id: device.id,
+            name: device.name || t('bluetooth.system_audio', 'System Audio / Airpods'),
+          };
+
+          await setPreferredDevice(selectedDevice);
+
+          // If we had a BLE device connected, disconnect it
+          if (connectedDevice && connectedDevice.id !== 'system-audio') {
+            try {
+              await bluetoothAudioService.disconnectDevice();
+            } catch (e) {
+              logger.warn({ message: 'Failed to disconnect previous BLE device', context: { error: e } });
+            }
+          }
+
+          onClose();
+          setConnectingDeviceId(null);
+          return;
+        }
+
+        // --- Standard BLE Device Logic Below ---
 
         // First, clear any existing preferred device
         await setPreferredDevice(null);
@@ -179,6 +213,9 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
             wasSuccessful: true,
             hadToDisconnectPrevious: !!connectedDevice,
           });
+
+          // Only close on success
+          onClose();
         } catch (connectionError) {
           logger.warn({
             message: 'Failed to connect to selected device immediately',
@@ -194,10 +231,10 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
             connectionError: connectionError instanceof Error ? connectionError.message : 'Unknown connection error',
             hadToDisconnectPrevious: !!connectedDevice,
           });
-          // Don't show error to user as they may just want to set preference
-        }
 
-        onClose();
+          const errorMessage = connectionError instanceof Error ? connectionError.message : t('bluetooth.connection_error_message', 'Failed to connect to device');
+          toast.error(errorMessage, t('common.error'));
+        }
       } catch (error) {
         logger.error({
           message: 'Failed to set preferred Bluetooth device',
@@ -212,10 +249,13 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
         });
 
-        Alert.alert(t('bluetooth.selection_error_title'), t('bluetooth.selection_error_message'), [{ text: t('common.ok') }]);
+        const errorMessage = error instanceof Error ? error.message : t('bluetooth.selection_error_message');
+        toast.error(errorMessage, t('bluetooth.selection_error_title'));
+      } finally {
+        setConnectingDeviceId(null);
       }
     },
-    [setPreferredDevice, onClose, t, connectedDevice, trackEvent, preferredDevice]
+    [setPreferredDevice, onClose, t, connectedDevice, trackEvent, preferredDevice, connectingDeviceId, toast]
   );
 
   const handleClearSelection = React.useCallback(async () => {
@@ -243,8 +283,11 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
         timestamp: new Date().toISOString(),
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
       });
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(errorMessage, t('common.error'));
     }
-  }, [setPreferredDevice, onClose, trackEvent, preferredDevice, connectedDevice]);
+  }, [setPreferredDevice, onClose, trackEvent, preferredDevice, connectedDevice, toast, t]);
 
   const stopScan = React.useCallback(() => {
     if (isScanning) {
@@ -268,16 +311,25 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
     ({ item }: { item: BluetoothAudioDevice }) => {
       const isSelected = preferredDevice?.id === item.id;
       const isConnected = connectedDevice?.id === item.id;
+      const isConnecting = connectingDeviceId === item.id;
+      const isDisabled = connectingDeviceId !== null;
 
       return (
         <Pressable
-          onPress={() => handleDeviceSelect(item)}
-          className={`mb-2 rounded-lg border p-4 ${isSelected ? 'border-primary-500 bg-primary-50 dark:bg-primary-950' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+          onPress={() => !isDisabled && handleDeviceSelect(item)}
+          disabled={isDisabled}
+          className={`mb-2 rounded-lg border p-4 ${isSelected ? 'border-primary-500 bg-primary-50 dark:bg-primary-950' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'} ${isDisabled && !isConnecting ? 'opacity-50' : ''}`}
         >
           <HStack className="items-center justify-between">
             <VStack className="flex-1">
               <HStack className="items-center">
-                <BluetoothIcon size={16} className="mr-2 text-primary-600" />
+                {isConnecting ? (
+                  <Box className="mr-2 size-4">
+                    <Spinner size="small" />
+                  </Box>
+                ) : (
+                  <BluetoothIcon size={16} className="mr-2 text-primary-600" />
+                )}
                 <Text className={`font-medium ${isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-neutral-900 dark:text-neutral-100'}`}>{item.name || t('bluetooth.unknown_device')}</Text>
                 {isConnected && <WifiIcon size={14} className="ml-2 text-green-600" />}
               </HStack>
@@ -297,7 +349,7 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
         </Pressable>
       );
     },
-    [preferredDevice, connectedDevice, handleDeviceSelect, t]
+    [preferredDevice, connectedDevice, handleDeviceSelect, t, connectingDeviceId]
   );
 
   const renderEmptyState = useCallback(() => {
@@ -352,7 +404,9 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
         </HStack>
 
         {/* Device List */}
-        <FlatList data={availableDevices} renderItem={renderDeviceItem} keyExtractor={(item) => item.id} ListEmptyComponent={renderEmptyState} className="flex-1" showsVerticalScrollIndicator={false} />
+        <Box className="flex-1">
+          <FlatList data={availableDevices} renderItem={renderDeviceItem} keyExtractor={(item) => item.id} ListEmptyComponent={renderEmptyState} showsVerticalScrollIndicator={false} estimatedItemSize={94} />
+        </Box>
 
         {/* Bluetooth State Info */}
         {bluetoothState !== State.PoweredOn && (

@@ -29,7 +29,7 @@ export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
 
-        <VStack className={`w-full ${minHeight}`} space="md">
+        <VStack className={`w-full flex-1 ${minHeight}`} space="md">
           {isLoading ? (
             <Center className="h-32">
               <VStack space="sm" className="items-center">

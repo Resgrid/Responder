@@ -273,6 +273,12 @@ describe('ShiftDetailsSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     mockUseShiftsStore.mockReturnValue(defaultStoreState);
     mockTrackEvent.mockClear();
 

@@ -241,6 +241,11 @@ describe('CalendarItemDetailsSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
 
     mockUseTranslation.mockReturnValue({
       t: mockT,

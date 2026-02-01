@@ -32,6 +32,11 @@ jest.mock('@/stores/notes/store', () => ({
 describe('Notes Screen Analytics', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
   });
 
   it('tracks notes view analytics event with correct data', () => {

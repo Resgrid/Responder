@@ -1,8 +1,10 @@
 import { Asset } from 'expo-asset';
 import { Audio, type AVPlaybackSource, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
 import { logger } from '@/lib/logging';
+
+const { InCallAudioModule } = NativeModules;
 
 class AudioService {
   private static instance: AudioService;
@@ -13,6 +15,7 @@ class AudioService {
   private disconnectedFromAudioRoomSound: Audio.Sound | null = null;
   private isInitialized = false;
   private isPlayingSound: Set<string> = new Set();
+  private isNativeAudioInitialized = false;
 
   private constructor() {
     this.initializeAudio();
@@ -42,9 +45,14 @@ class AudioService {
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: true,
-        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
         interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
       });
+
+      // Initialize native audio module on Android
+      if (Platform.OS === 'android') {
+        this.initializeNativeAudio();
+      }
 
       // Pre-load audio assets for production builds
       await this.preloadAudioAssets();
@@ -60,6 +68,34 @@ class AudioService {
     } catch (error) {
       logger.error({
         message: 'Failed to initialize audio service',
+        context: { error },
+      });
+    }
+  }
+
+  private initializeNativeAudio(): void {
+    if (this.isNativeAudioInitialized) return;
+
+    try {
+      if (InCallAudioModule) {
+        InCallAudioModule.initializeAudio?.();
+
+        // Map sound names to resource names (must match files in res/raw copied by plugin)
+        // verify these match the filenames in plugins/withInCallAudioModule.js
+        InCallAudioModule.loadSound('startTransmitting', 'space_notification1');
+        InCallAudioModule.loadSound('stopTransmitting', 'space_notification2');
+        InCallAudioModule.loadSound('connectedDevice', 'positive_interface_beep');
+        InCallAudioModule.loadSound('connectedToAudioRoom', 'software_interface_start');
+        InCallAudioModule.loadSound('disconnectedFromAudioRoom', 'software_interface_back');
+
+        this.isNativeAudioInitialized = true;
+        logger.info({ message: 'Native InCallAudioModule initialized (Android)' });
+      } else {
+        logger.warn({ message: 'InCallAudioModule not found on Android' });
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Failed to initialize native in-call audio',
         context: { error },
       });
     }
@@ -155,6 +191,24 @@ class AudioService {
   }
 
   private async playSound(sound: Audio.Sound | null, soundName: string): Promise<void> {
+    // If Android and Native Module is available, use it for specific sounds
+    if (Platform.OS === 'android' && this.isNativeAudioInitialized && InCallAudioModule) {
+      try {
+        InCallAudioModule.playSound(soundName);
+        logger.debug({
+          message: 'Sound played via native module (Android)',
+          context: { soundName },
+        });
+        return;
+      } catch (error) {
+        logger.warn({
+          message: 'Failed to play native sound, falling back to expo-av',
+          context: { soundName, error },
+        });
+        // Fallthrough to expo-av if native fails
+      }
+    }
+
     if (!sound) {
       logger.warn({
         message: `Sound not loaded: ${soundName}`,
@@ -281,6 +335,15 @@ class AudioService {
     try {
       // Clear the playing sound set
       this.isPlayingSound.clear();
+
+      if (Platform.OS === 'android' && this.isNativeAudioInitialized && InCallAudioModule) {
+        try {
+          InCallAudioModule.cleanup?.();
+          this.isNativeAudioInitialized = false;
+        } catch (e) {
+          /* ignore */
+        }
+      }
 
       // Unload start transmitting sound
       if (this.startTransmittingSound) {
