@@ -273,6 +273,11 @@ describe('CalendarScreen', () => {
     });
 
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
   });
 
   it('renders calendar screen correctly', () => {

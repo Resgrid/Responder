@@ -201,6 +201,11 @@ describe('LoginForm Server URL Integration', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     mockTrackEvent.mockClear();
     mockServerUrlBottomSheet.mockClear();
   });

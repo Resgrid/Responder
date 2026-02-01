@@ -133,6 +133,32 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
           currentConnectedDeviceId: connectedDevice?.id || '',
         });
 
+        // Special handling for System Audio / Airpods "virtual" device
+        if (device.id === 'system-audio') {
+          // Just set it as preferred, no actual BLE connection needed
+          const selectedDevice = {
+            id: device.id,
+            name: device.name || t('bluetooth.system_audio', 'System Audio / Airpods'),
+          };
+
+          await setPreferredDevice(selectedDevice);
+
+          // If we had a BLE device connected, disconnect it
+          if (connectedDevice && connectedDevice.id !== 'system-audio') {
+            try {
+              await bluetoothAudioService.disconnectDevice();
+            } catch (e) {
+              logger.warn({ message: 'Failed to disconnect previous BLE device', context: { error: e } });
+            }
+          }
+
+          onClose();
+          setConnectingDeviceId(null);
+          return;
+        }
+
+        // --- Standard BLE Device Logic Below ---
+
         // First, clear any existing preferred device
         await setPreferredDevice(null);
 
@@ -298,7 +324,7 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
             <VStack className="flex-1">
               <HStack className="items-center">
                 {isConnecting ? (
-                  <Box className="mr-2 h-4 w-4">
+                  <Box className="mr-2 size-4">
                     <Spinner size="small" />
                   </Box>
                 ) : (
@@ -379,14 +405,7 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
 
         {/* Device List */}
         <Box className="flex-1">
-          <FlatList
-            data={availableDevices}
-            renderItem={renderDeviceItem}
-            keyExtractor={(item) => item.id}
-            ListEmptyComponent={renderEmptyState}
-            showsVerticalScrollIndicator={false}
-            estimatedItemSize={94}
-          />
+          <FlatList data={availableDevices} renderItem={renderDeviceItem} keyExtractor={(item) => item.id} ListEmptyComponent={renderEmptyState} showsVerticalScrollIndicator={false} estimatedItemSize={94} />
         </Box>
 
         {/* Bluetooth State Info */}

@@ -45,7 +45,7 @@ class AudioService {
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: true,
-        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
         interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
       });
 

@@ -132,6 +132,11 @@ describe('CalendarItemDetailsSheet - Analytics Only', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     (useAnalytics as jest.Mock).mockReturnValue({
       trackEvent: mockTrackEvent,
     });

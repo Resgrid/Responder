@@ -46,6 +46,11 @@ describe('NoteDetailsSheet Integration', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     // Reset mock store
     mockStoreState = {
       notes: [],

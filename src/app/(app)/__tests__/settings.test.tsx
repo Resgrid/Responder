@@ -301,6 +301,11 @@ describe('Settings Screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
 
     // Default mocks
     mockUseColorScheme.mockReturnValue({

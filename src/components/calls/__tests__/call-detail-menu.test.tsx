@@ -114,6 +114,11 @@ describe('useCallDetailMenu', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
 
     // Default mock for analytics
     useAnalytics.mockReturnValue({

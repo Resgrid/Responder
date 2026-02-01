@@ -305,6 +305,11 @@ describe('CallFilesModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     // Reset to default state
     mockStoreState = {
       callFiles: defaultMockFiles,

@@ -188,6 +188,11 @@ describe('BluetoothAudioModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     mockDateNow.mockReturnValue(1642248000000); // Reset to default timestamp
 
     // Mock analytics

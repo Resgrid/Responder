@@ -43,6 +43,11 @@ jest.mock('@/lib/logging', () => ({
 describe('Login Analytics Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
   });
 
   it('should call trackEvent with login_viewed when useFocusEffect is triggered', () => {

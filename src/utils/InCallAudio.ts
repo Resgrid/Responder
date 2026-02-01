@@ -29,45 +29,70 @@ type SoundName = keyof typeof SOUNDS;
 
 class InCallAudioService {
   private isInitialized = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initialize();
+    this.initialize().catch((err) => {
+      logger.error({ message: 'Initial InCallAudio initialization failed', context: { error: err } });
+    });
   }
 
-  public initialize() {
-    if (Platform.OS === 'android') {
+  public async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = (async () => {
       try {
-        if (InCallAudioModule) {
-          InCallAudioModule.initializeAudio?.();
-          // Preload sounds
-          Object.entries(SOUNDS).forEach(([name, config]) => {
-            InCallAudioModule.loadSound(name, config.android);
-          });
-          this.isInitialized = true;
-          logger.info({ message: 'InCallAudio initialized (Android)' });
+        if (Platform.OS === 'android') {
+          if (InCallAudioModule) {
+            await InCallAudioModule.initializeAudio?.();
+            // Preload sounds
+            const preloadPromises = Object.entries(SOUNDS).map(([name, config]) =>
+              InCallAudioModule.loadSound(name, (config as any).android)
+            );
+            await Promise.all(preloadPromises);
+
+            this.isInitialized = true;
+            logger.info({ message: 'InCallAudio initialized (Android)' });
+          } else {
+            logger.warn({ message: 'InCallAudioModule not found on Android' });
+          }
         } else {
-          logger.warn({ message: 'InCallAudioModule not found on Android' });
+          // iOS / Web: expo-av handles loading on play or we can preload if needed,
+          // but simple play usually works fine.
+          await Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+            interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+            staysActiveInBackground: true,
+            shouldDuckAndroid: false,
+          });
+
+          this.isInitialized = true;
+          logger.info({ message: 'InCallAudio initialized (iOS)' });
         }
       } catch (error) {
-        logger.error({ message: 'Failed to initialize InCallAudio (Android)', context: { error } });
+        logger.error({
+          message: `Failed to initialize InCallAudio (${Platform.OS})`,
+          context: { error },
+        });
+        this.initPromise = null; // Allow retry on next call
+        throw error;
       }
-    } else {
-      // iOS / Web: expo-av handles loading on play or we can preload if needed,
-      // but simple play usually works fine.
-      Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: false,
-      }).catch((err) => logger.warn({ message: 'Failed to set audio mode (iOS)', context: { error: err } }));
+    })();
 
-      this.isInitialized = true;
-    }
+    return this.initPromise;
   }
 
   public async playSound(name: SoundName) {
-    if (!this.isInitialized) {
-      this.initialize();
+    try {
+      await this.initialize();
+    } catch (err) {
+      logger.warn({ message: 'Attempting to play sound without successful initialization', context: { name, err } });
     }
 
     try {
@@ -78,14 +103,15 @@ class InCallAudioService {
       } else {
         // iOS
         const source = SOUNDS[name].ios;
-        const { sound } = await Audio.Sound.createAsync(source);
-        await sound.playAsync();
-        // Unload after playback to free resources
-        sound.setOnPlaybackStatusUpdate(async (status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            await sound.unloadAsync();
+        const { sound } = await Audio.Sound.createAsync(
+          source,
+          { shouldPlay: true },
+          async (status) => {
+            if (status.isLoaded && status.didJustFinish) {
+              await sound.unloadAsync();
+            }
           }
-        });
+        );
       }
     } catch (error) {
       logger.warn({ message: 'Failed to play in-call sound', context: { name, error } });

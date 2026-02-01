@@ -9,7 +9,7 @@
     "postinstall": "patch-package",
     "prebuild": "cross-env EXPO_NO_DOTENV=1 yarn expo prebuild",
     "android": "cross-env EXPO_NO_DOTENV=1 expo run:android",
-    "ios": "cross-env EXPO_NO_DOTENV=1 expo run:ios",
+    "ios": "cross-env EXPO_NO_DOTENV=1 expo run:ios --device",
     "web": "cross-env EXPO_NO_DOTENV=1 expo start --web",
     "xcode": "xed -b ios",
     "doctor": "npx expo-doctor@latest",

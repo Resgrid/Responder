@@ -325,6 +325,11 @@ describe('ContactDetailsSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
 
     // Default mock for analytics
     mockUseAnalytics.mockReturnValue({

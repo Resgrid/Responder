@@ -44,6 +44,11 @@ describe('NoteDetailsSheet Analytics', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     // Reset mock store
     mockStore.notes = [];
     mockStore.selectedNoteId = null;

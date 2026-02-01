@@ -186,6 +186,10 @@ describe('Onboarding Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (useFocusEffect as jest.Mock).mockImplementation((callback) => callback());
 

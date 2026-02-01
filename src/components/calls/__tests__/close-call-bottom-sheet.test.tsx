@@ -207,6 +207,11 @@ const mockUseToastStore = useToastStore as jest.MockedFunction<typeof useToastSt
 describe('CloseCallBottomSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     // Clear the console.error mock as well
     (console.error as jest.Mock).mockClear();
 

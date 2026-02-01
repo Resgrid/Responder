@@ -129,6 +129,11 @@ import { AudioStreamBottomSheet } from '../audio-stream-bottom-sheet';
 describe('AudioStreamBottomSheet Analytics', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
   });
 
   describe('Analytics Hook Integration', () => {

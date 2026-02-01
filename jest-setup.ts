@@ -320,6 +320,43 @@ jest.mock('react-native', () => {
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
     },
+
+    // NativeEventEmitter
+    NativeEventEmitter: class {
+      addListener = jest.fn();
+      removeListener = jest.fn();
+      removeAllListeners = jest.fn();
+    },
+
+    // NativeModules
+    NativeModules: {
+      InCallAudioModule: {
+        initializeAudio: jest.fn(),
+        loadSound: jest.fn(),
+        playSound: jest.fn(),
+        cleanup: jest.fn(),
+      },
+      LivekitReactNativeModule: {
+        // Add stub methods as needed
+        configureAudio: jest.fn(),
+        startAudioSession: jest.fn(),
+        stopAudioSession: jest.fn(),
+        showAudioRoutePicker: jest.fn(),
+      },
+      PlatformConstants: {
+        forceTouchAvailable: false,
+      },
+      ImageLoader: {
+        getSize: jest.fn((url) => Promise.resolve({ width: 0, height: 0 })),
+        prefetchImage: jest.fn(),
+      },
+      SettingsManager: {
+        settings: {
+          AppleLocale: 'en_US',
+          AppleLanguages: ['en'],
+        },
+      },
+    },
   };
 });
 
@@ -399,6 +436,29 @@ jest.mock('livekit-client', () => ({
     Connecting: 'connecting',
     Disconnected: 'disconnected',
     Reconnecting: 'reconnecting',
+  },
+}));
+
+jest.mock('@livekit/react-native', () => ({
+  AudioSession: {
+    startAudioSession: jest.fn().mockResolvedValue(undefined),
+    stopAudioSession: jest.fn().mockResolvedValue(undefined),
+    configureAudio: jest.fn().mockResolvedValue(undefined),
+  },
+  useRoom: jest.fn().mockReturnValue({
+    room: null,
+    participants: [],
+    audioTracks: [],
+  }),
+  useParticipant: jest.fn().mockReturnValue({
+    cameraPublication: null,
+    microphonePublication: null,
+    screenSharePublication: null,
+  }),
+  MediaStreamTrack: class {},
+  mediaDevices: {
+    enumerateDevices: jest.fn().mockResolvedValue([]),
+    getUserMedia: jest.fn().mockResolvedValue({}),
   },
 }));
 

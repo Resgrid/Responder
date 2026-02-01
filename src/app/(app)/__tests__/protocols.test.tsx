@@ -294,6 +294,11 @@ const mockProtocols: CallProtocolsResultData[] = [
 describe('Protocols Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     // Reset mock store to default state
     Object.assign(mockProtocolsStore, {
       protocols: [],

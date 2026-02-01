@@ -447,6 +447,11 @@ describe('MessagesScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
     mockedUseMessagesStore.mockReturnValue(mockStore);
     mockedUseSecurityStore.mockReturnValue(mockSecurityStore);
     mockUseAnalytics.mockReturnValue({

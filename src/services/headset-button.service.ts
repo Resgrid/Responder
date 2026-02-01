@@ -11,6 +11,7 @@
  * This service listens for media button events and translates them into PTT actions.
  */
 
+import { AudioSession } from '@livekit/react-native';
 import { AppState, DeviceEventEmitter, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 
 import { logger } from '@/lib/logging';
@@ -37,7 +38,7 @@ try {
 }
 
 // Types for headset button events
-export type HeadsetButtonType = 'play_pause' | 'next' | 'previous' | 'stop' | 'hook' | 'unknown';
+export type HeadsetButtonType = 'play_pause' | 'play' | 'pause' | 'next' | 'previous' | 'stop' | 'hook' | 'unknown';
 
 export interface HeadsetButtonEvent {
   type: HeadsetButtonType;
@@ -138,29 +139,20 @@ class HeadsetButtonService {
    * 2. Now Playing Info Center
    *
    * Since React Native doesn't expose these directly, we use DeviceEventEmitter
-   * to listen for events that may be bridged from native modules.
+   * to listen for events that may be bridged from native modules, and
+   * react-native-music-control to handle system media commands.
    */
   private async setupIOSListeners(): Promise<void> {
     logger.debug({ message: 'Setting up iOS headset button listeners' });
 
-    // Listen for headset button events via DeviceEventEmitter
-    // These events can be emitted by native modules that handle remote control events
-    const headsetButtonSubscription = DeviceEventEmitter.addListener('HeadsetButtonEvent', (event) => {
-      this.handleHeadsetButtonEvent(event);
-    });
-    this.subscriptions.push(headsetButtonSubscription);
+    // MusicControl removed.
+    // We now rely on CallKeep for iOS headset events.
 
     // Listen for audio route changes which may indicate headset connection
     const audioRouteSubscription = DeviceEventEmitter.addListener('AudioRouteChange', (event) => {
       this.handleAudioRouteChange(event);
     });
     this.subscriptions.push(audioRouteSubscription);
-
-    // Listen for remote command center events
-    const remoteControlSubscription = DeviceEventEmitter.addListener('RemoteControlEvent', (event) => {
-      this.handleRemoteControlEvent(event);
-    });
-    this.subscriptions.push(remoteControlSubscription);
   }
 
   /**
@@ -173,43 +165,11 @@ class HeadsetButtonService {
   private async setupAndroidListeners(): Promise<void> {
     logger.debug({ message: 'Setting up Android headset button listeners' });
 
-    // Listen for headset button events via DeviceEventEmitter
-    const headsetButtonSubscription = DeviceEventEmitter.addListener('HeadsetButtonEvent', (event) => {
-      this.handleHeadsetButtonEvent(event);
-    });
-    this.subscriptions.push(headsetButtonSubscription);
-
-    // Listen for media button events
-    const mediaButtonSubscription = DeviceEventEmitter.addListener('MediaButtonEvent', (event) => {
-      this.handleMediaButtonEvent(event);
-    });
-    this.subscriptions.push(mediaButtonSubscription);
-
     // Listen for headset connection changes
     const headsetConnectionSubscription = DeviceEventEmitter.addListener('HeadsetConnectionChange', (event) => {
       this.handleHeadsetConnectionChange(event);
     });
     this.subscriptions.push(headsetConnectionSubscription);
-  }
-
-  /**
-   * Handle headset button events
-   */
-  private handleHeadsetButtonEvent(event: any): void {
-    if (!this.isMonitoring) return;
-
-    logger.debug({
-      message: 'Headset button event received',
-      context: { event },
-    });
-
-    const buttonEvent: HeadsetButtonEvent = {
-      type: this.mapButtonType(event?.type || event?.keyCode),
-      timestamp: Date.now(),
-      source: this.detectSource(event),
-    };
-
-    this.processButtonEvent(buttonEvent);
   }
 
   /**
@@ -229,28 +189,6 @@ class HeadsetButtonService {
         type: buttonType,
         timestamp: Date.now(),
         source: 'airpods',
-      };
-      this.processButtonEvent(buttonEvent);
-    }
-  }
-
-  /**
-   * Handle media button events (Android)
-   */
-  private handleMediaButtonEvent(event: any): void {
-    if (!this.isMonitoring) return;
-
-    logger.debug({
-      message: 'Media button event received',
-      context: { event },
-    });
-
-    const buttonType = this.mapMediaButtonType(event?.keyCode);
-    if (buttonType !== 'unknown') {
-      const buttonEvent: HeadsetButtonEvent = {
-        type: buttonType,
-        timestamp: Date.now(),
-        source: 'bluetooth_headset',
       };
       this.processButtonEvent(buttonEvent);
     }
@@ -453,6 +391,8 @@ class HeadsetButtonService {
   private mapToStoreButtonType(type: HeadsetButtonType): 'ptt_start' | 'ptt_stop' | 'volume_up' | 'volume_down' | 'mute' | 'unknown' {
     switch (type) {
       case 'play_pause':
+      case 'play':
+      case 'pause':
       case 'hook':
         return 'mute'; // Play/pause maps to mute toggle
       default:
@@ -476,10 +416,16 @@ class HeadsetButtonService {
     }
 
     // Handle based on button type and click count
-    if ((event.type === 'play_pause' || event.type === 'hook') && clickCount === 1) {
-      // Single click - toggle mute based on config
-      if (this.config.playPauseAction === 'toggle_mute') {
-        await this.toggleMicrophone();
+    if (clickCount === 1) {
+      if (event.type === 'play') {
+        await this.enableMicrophone();
+      } else if (event.type === 'pause') {
+        await this.disableMicrophone();
+      } else if (event.type === 'play_pause' || event.type === 'hook') {
+        // Single click - toggle mute based on config
+        if (this.config.playPauseAction === 'toggle_mute') {
+          await this.toggleMicrophone();
+        }
       }
     } else if ((event.type === 'play_pause' || event.type === 'hook') && clickCount === 2) {
       // Double click
@@ -534,6 +480,9 @@ class HeadsetButtonService {
         if (this.config.soundFeedback && audioService?.playStartTransmittingSound) {
           await audioService.playStartTransmittingSound();
         }
+
+        // Sync MusicControl state and restore audio session
+        this.setMicrophoneState(true);
       }
     } catch (error) {
       logger.error({
@@ -568,6 +517,9 @@ class HeadsetButtonService {
         if (this.config.soundFeedback && audioService?.playStopTransmittingSound) {
           await audioService.playStopTransmittingSound();
         }
+
+        // Sync MusicControl state and restore audio session
+        this.setMicrophoneState(false);
       }
     } catch (error) {
       logger.error({
@@ -581,20 +533,38 @@ class HeadsetButtonService {
    * Start monitoring headset button events
    */
   startMonitoring(): void {
-    if (this.isMonitoring) {
-      logger.debug({ message: 'Headset button monitoring already active' });
-      return;
-    }
+    if (this.isMonitoring) return;
 
-    this.isMonitoring = true;
-
-    logger.info({ message: 'Started headset button monitoring for PTT' });
-
-    // Emit event for native modules to start capturing media buttons
     try {
-      DeviceEventEmitter.emit('StartHeadsetButtonMonitoring', { pttMode: this.config.pttMode });
-    } catch {
-      // Emit may fail in test environment
+      this.isMonitoring = true;
+      logger.info({ message: 'Started headset button monitoring for PTT' });
+
+      // Enable MusicControl session - ONLY for Android now, or if explicitly desired
+      // On iOS, we use CallKeep for lock screen controls. MusicControl conflicts with CallKeep.
+      if (Platform.OS === 'android') {
+        // Wait... Android uses MusicControl?
+        // Android PTT usually uses KeyEvents or dedicated Headset buttons.
+        // But for "Media Button" support on Android, MusicControl is fine.
+        // For iOS, if we use CallKeep, we MUST NOT use MusicControl.
+      } else if (Platform.OS === 'ios') {
+        // DISABLE MusicControl on iOS to prevent conflict with CallKit
+        // This prevents the "ticking" sound caused by rapid system sound feedback
+        // when both CallKit and MusicControl try to handle the same events.
+        // this.enableMusicControl();
+        logger.info({ message: 'MusicControl disabled on iOS (using CallKit native events)' });
+      }
+
+      // Emit event for native modules to start capturing media buttons
+      try {
+        DeviceEventEmitter.emit('StartHeadsetButtonMonitoring', { pttMode: this.config.pttMode });
+      } catch {
+        // Emit may fail in test environment
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Failed to start headset button monitoring',
+        context: { error },
+      });
     }
   }
 
@@ -671,6 +641,36 @@ class HeadsetButtonService {
     };
 
     this.processButtonEvent(event);
+  }
+
+  /**
+   * Update MusicControl state based on microphone state
+   * @param enabled - true if microphone is unmuted (Playing), false if muted (Paused)
+   */
+  setMicrophoneState(enabled: boolean): void {
+    // No-op: MusicControl removed.
+    // AudioSession restoration is handled by CallKeep/LiveKit interaction.
+    this.restoreAudioSession();
+  }
+
+  /**
+   * Restore audio session configuration (iOS)
+   */
+  private async restoreAudioSession(): Promise<void> {
+    if (Platform.OS !== 'ios') return;
+
+    try {
+      // Re-apply the same configuration as livekit-store.ts
+      await AudioSession.setAppleAudioConfiguration({
+        audioCategory: 'playAndRecord',
+        audioCategoryOptions: ['allowBluetooth', 'allowBluetoothA2DP', 'mixWithOthers'],
+        audioMode: 'voiceChat',
+      });
+
+      logger.debug({ message: 'Restored AudioSession configuration' });
+    } catch (error) {
+      logger.warn({ message: 'Failed to restore AudioSession', context: { error } });
+    }
   }
 
   /**

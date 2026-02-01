@@ -24,6 +24,24 @@ export interface BluetoothAudioDevice {
   device: Device;
 }
 
+export const SYSTEM_AUDIO_DEVICE: BluetoothAudioDevice = {
+  id: 'system-audio',
+  name: 'System Audio',
+  isConnected: false,
+  hasAudioCapability: true,
+  supportsMicrophoneControl: true,
+  device: {
+    id: 'system-audio',
+    name: 'System Audio / Airpods',
+    rssi: -50,
+    advertising: {
+      isConnectable: true,
+      serviceUUIDs: [],
+      txPowerLevel: 0,
+    },
+  },
+};
+
 export interface AudioButtonEvent {
   type: 'press' | 'long_press' | 'double_press';
   button: 'ptt_start' | 'ptt_stop' | 'volume_up' | 'volume_down' | 'mute' | 'unknown';
@@ -127,7 +145,7 @@ export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => 
   bluetoothState: State.Unknown,
   isScanning: false,
   isConnecting: false,
-  availableDevices: [],
+  availableDevices: [SYSTEM_AUDIO_DEVICE],
   connectedDevice: null,
   preferredDevice: null,
   availableAudioDevices: [
@@ -184,7 +202,7 @@ export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => 
     set({ availableDevices: filteredDevices });
   },
 
-  clearDevices: () => set({ availableDevices: [] }),
+  clearDevices: () => set({ availableDevices: [SYSTEM_AUDIO_DEVICE] }),
 
   setConnectedDevice: (device) => {
     set({ connectedDevice: device });

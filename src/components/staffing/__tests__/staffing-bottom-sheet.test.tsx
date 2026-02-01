@@ -253,6 +253,11 @@ describe('StaffingBottomSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
+    mockTrackEvent.mockReset();
 
     mockUseCoreStore.mockReturnValue({
       activeStaffing: mockActiveStaffing,
