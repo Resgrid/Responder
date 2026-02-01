@@ -153,6 +153,12 @@ class HeadsetButtonService {
       this.handleAudioRouteChange(event);
     });
     this.subscriptions.push(audioRouteSubscription);
+
+    // Listen for headset button events
+    const headsetButtonSubscription = DeviceEventEmitter.addListener('headset-button', (event) => {
+      this.handleRemoteControlEvent(event);
+    });
+    this.subscriptions.push(headsetButtonSubscription);
   }
 
   /**
@@ -170,6 +176,12 @@ class HeadsetButtonService {
       this.handleHeadsetConnectionChange(event);
     });
     this.subscriptions.push(headsetConnectionSubscription);
+
+    // Listen for headset button events
+    const headsetButtonSubscription = DeviceEventEmitter.addListener('headset-button', (event) => {
+      this.handleRemoteControlEvent(event);
+    });
+    this.subscriptions.push(headsetButtonSubscription);
   }
 
   /**
@@ -238,7 +250,9 @@ class HeadsetButtonService {
     if (typeof type === 'string') {
       switch (type.toLowerCase()) {
         case 'play':
+          return 'play';
         case 'pause':
+          return 'pause';
         case 'play_pause':
         case 'playpause':
           return 'play_pause';
@@ -264,9 +278,11 @@ class HeadsetButtonService {
     if (typeof type === 'number') {
       switch (type) {
         case 85: // KEYCODE_MEDIA_PLAY_PAUSE
-        case 126: // KEYCODE_MEDIA_PLAY
-        case 127: // KEYCODE_MEDIA_PAUSE
           return 'play_pause';
+        case 126: // KEYCODE_MEDIA_PLAY
+          return 'play';
+        case 127: // KEYCODE_MEDIA_PAUSE
+          return 'pause';
         case 87: // KEYCODE_MEDIA_NEXT
           return 'next';
         case 88: // KEYCODE_MEDIA_PREVIOUS
@@ -291,9 +307,11 @@ class HeadsetButtonService {
 
     switch (command.toLowerCase()) {
       case 'toggleplaypause':
-      case 'play':
-      case 'pause':
         return 'play_pause';
+      case 'play':
+        return 'play';
+      case 'pause':
+        return 'pause';
       case 'nexttrack':
         return 'next';
       case 'previoustrack':
@@ -313,9 +331,11 @@ class HeadsetButtonService {
 
     switch (keyCode) {
       case 85: // KEYCODE_MEDIA_PLAY_PAUSE
-      case 126: // KEYCODE_MEDIA_PLAY
-      case 127: // KEYCODE_MEDIA_PAUSE
         return 'play_pause';
+      case 126: // KEYCODE_MEDIA_PLAY
+        return 'play';
+      case 127: // KEYCODE_MEDIA_PAUSE
+        return 'pause';
       case 87: // KEYCODE_MEDIA_NEXT
         return 'next';
       case 88: // KEYCODE_MEDIA_PREVIOUS

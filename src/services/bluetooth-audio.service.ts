@@ -358,24 +358,22 @@ export class BluetoothAudioService {
         context: { deviceId },
       });
 
-      // 1. Remove from persistent storage
-      const PREFERRED_BLUETOOTH_DEVICE_KEY = 'preferredBluetoothDevice';
-      // removeItem is imported from '@/lib/storage'
-      removeItem(PREFERRED_BLUETOOTH_DEVICE_KEY); // Returns a promise but void, we can await or not, usually safe to fire and forget here or await.
-      // Checking storage.tsx it is async?
-      // export async function removeItem(key: string) { storage.delete(key); }
-      // It is async, so we should await it if we want to be sure. However, it's not critical to block.
-      // Let's await to be safe.
-      // But wait my import check earlier showed removeItem.
-      // I will just call it.
-
-      // 2. Clear from store
       const store = useBluetoothAudioStore.getState();
-      if (store.preferredDevice && store.preferredDevice.id === deviceId) {
+      const PREFERRED_BLUETOOTH_DEVICE_KEY = 'preferredBluetoothDevice';
+
+      // 1. Only remove from persistent storage and store if it's the preferred device
+      if (store.preferredDevice?.id === deviceId) {
+        logger.info({
+          message: 'Removing device from persistent storage and store',
+          context: { deviceId },
+        });
+
+        // removeItem is imported from '@/lib/storage' and is async
+        await removeItem(PREFERRED_BLUETOOTH_DEVICE_KEY);
         store.setPreferredDevice(null);
       }
 
-      // 3. Disconnect if currently connected
+      // 2. Disconnect if currently connected
       if (store.connectedDevice && store.connectedDevice.id === deviceId) {
         logger.info({ message: 'Disconnecting device being forgotten', context: { deviceId } });
         await this.disconnectDevice();

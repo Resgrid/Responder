@@ -73,17 +73,23 @@ describe('BluetoothAudioService - forgetPreferredDevice', () => {
     (useBluetoothAudioStore.getState as jest.Mock).mockReturnValue(mockStore);
   });
 
-  it('should remove preferred device from storage', async () => {
+  it('should remove preferred device from storage if IDs match', async () => {
     await service.forgetPreferredDevice('test-device-id');
     expect(removeItem).toHaveBeenCalledWith('preferredBluetoothDevice');
   });
 
-  it('should clear preferred device from store', async () => {
+  it('should NOT remove preferred device from storage if IDs do not match', async () => {
+    mockStore.preferredDevice = { id: 'other-device-id', name: 'Other Device' };
+    await service.forgetPreferredDevice('test-device-id');
+    expect(removeItem).not.toHaveBeenCalled();
+  });
+
+  it('should clear preferred device from store if IDs match', async () => {
     await service.forgetPreferredDevice('test-device-id');
     expect(mockStore.setPreferredDevice).toHaveBeenCalledWith(null);
   });
 
-  it('should not clear preferred device from store if IDs do not match', async () => {
+  it('should NOT clear preferred device from store if IDs do not match', async () => {
     mockStore.preferredDevice = { id: 'other-device-id', name: 'Other Device' };
     await service.forgetPreferredDevice('test-device-id');
     expect(mockStore.setPreferredDevice).not.toHaveBeenCalled();

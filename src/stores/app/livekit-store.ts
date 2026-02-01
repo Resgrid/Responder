@@ -4,7 +4,6 @@ import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from '
 import { Audio } from 'expo-av';
 import { ConnectionState, Room, RoomEvent } from 'livekit-client';
 import { Platform } from 'react-native';
-import { set } from 'zod';
 import { create } from 'zustand';
 
 import { getCanConnectToVoiceSession, getDepartmentVoiceSettings } from '../../api/voice';
