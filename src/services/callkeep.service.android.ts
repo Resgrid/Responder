@@ -57,7 +57,10 @@ export class CallKeepService {
           alertDescription: 'This application needs to access your phone accounts',
           cancelButton: 'Cancel',
           okButton: 'OK',
-          additionalPermissions: [PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE],
+          additionalPermissions: [
+            PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+            ...(Platform.Version >= 30 ? [PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS] : []),
+          ],
           // Important for VoIP on Android O+
           selfManaged: true,
           foregroundService: {
@@ -73,6 +76,12 @@ export class CallKeepService {
 
       // On Android, we might need to ask for permissions explicitly if not handled by setup
       if (Platform.Version >= 23) {
+        if (Platform.Version >= 30) {
+          const hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
+          if (!hasPermission) {
+            await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
+          }
+        }
         RNCallKeep.setAvailable(true);
       }
 
