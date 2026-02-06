@@ -340,6 +340,17 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       // Start CallKeep call (iOS & Android)
       if (Platform.OS !== 'web') {
+        // Request phone permissions for CallKeep headset controls (Android only)
+        if (Platform.OS === 'android') {
+          const hasPhonePermission = await callKeepService.requestPhonePermissions();
+          if (!hasPhonePermission) {
+            logger.warn({
+              message: 'Phone permission not granted - headset controls may not work properly',
+            });
+            // Don't block connection - continue without phone permission
+          }
+        }
+
         // Using a generic handle or room name
         const roomName = roomInfo?.Name || 'Voice Channel';
         callKeepService
