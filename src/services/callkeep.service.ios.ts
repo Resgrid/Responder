@@ -99,6 +99,16 @@ export class CallKeepService {
   }
 
   /**
+   * Request phone permissions (iOS implementation - no-op)
+   * This permission is only required on Android for CallKeep headset controls
+   * On iOS, we always return true as no additional permissions are needed
+   */
+  async requestPhonePermissions(): Promise<boolean> {
+    // iOS does not require READ_PHONE_NUMBERS permission
+    return true;
+  }
+
+  /**
    * Start a CallKit call to keep the app alive in the background
    * This should be called when connecting to a LiveKit room
    */

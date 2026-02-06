@@ -74,14 +74,10 @@ export class CallKeepService {
 
       await RNCallKeep.setup(options);
 
-      // On Android, we might need to ask for permissions explicitly if not handled by setup
+      // Set available for Android 23+
+      // Note: Phone permissions are now requested on-demand when connecting to a voice call
+      // to avoid prompting users who don't need voice features
       if (Platform.Version >= 23) {
-        if (Platform.Version >= 30) {
-          const hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
-          if (!hasPermission) {
-            await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
-          }
-        }
         RNCallKeep.setAvailable(true);
       }
 
@@ -98,6 +94,59 @@ export class CallKeepService {
         context: { error, config },
       });
       throw error;
+    }
+  }
+
+  /**
+   * Request phone permissions required for CallKeep to manage calls
+   * This should be called just before connecting to a voice call
+   * Returns true if permissions are granted or not required
+   */
+  async requestPhonePermissions(): Promise<boolean> {
+    if (Platform.OS !== 'android') {
+      return true;
+    }
+
+    // READ_PHONE_NUMBERS is only required on Android 11+ (API 30+)
+    if (Platform.Version < 30) {
+      return true;
+    }
+
+    try {
+      const hasPermission = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS
+      );
+
+      if (hasPermission) {
+        logger.debug({
+          message: 'READ_PHONE_NUMBERS permission already granted',
+        });
+        return true;
+      }
+
+      const result = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS,
+        {
+          title: 'Phone Permission Required',
+          message: 'This app needs phone access to manage voice calls with your headset',
+          buttonPositive: 'Grant',
+          buttonNegative: 'Deny',
+        }
+      );
+
+      const granted = result === PermissionsAndroid.RESULTS.GRANTED;
+      logger.info({
+        message: 'READ_PHONE_NUMBERS permission request result',
+        context: { granted, result },
+      });
+
+      return granted;
+    } catch (error) {
+      logger.error({
+        message: 'Failed to request phone permissions',
+        context: { error },
+      });
+      return false;
     }
   }
 
