@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 import { getCalendarItem, getCalendarItems, getCalendarItemsForDateRange, getCalendarItemTypes, setCalendarAttending } from '@/api/calendar/calendar';
 import { logger } from '@/lib/logging';
-import { isSameDate } from '@/lib/utils';
+import { isDateInRange, getTodayLocalString } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { type GetAllCalendarItemTypesResult } from '@/models/v4/calendar/calendarItemTypeResultData';
 import type { ApiResponse } from '@/types/api';
@@ -108,10 +108,12 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
       const response = (await getCalendarItemsForDateRange(today.toISOString(), today.toISOString())) as ApiResponse<CalendarItemResultData[]>;
 
-      // Filter items to ensure they're really for today (additional client-side validation)
-      // Use Start field for date comparison as it contains the timezone-aware date from .NET backend
+      // Filter items to ensure they're really for today.
+      // Always use range-based filtering so timed multi-day events (where IsMultiDay may
+      // not be set by the API) still appear on every day they cover, including day one.
+      const todayStr = getTodayLocalString();
       const todayItems = response.Data.filter((item: CalendarItemResultData) => {
-        return isSameDate(item.Start, new Date());
+        return isDateInRange(todayStr, item.Start, item.End, item.IsAllDay);
       });
 
       set({

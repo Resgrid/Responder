@@ -318,6 +318,68 @@ export function isToday(date: string | Date): boolean {
   return isSameDate(date, new Date());
 }
 
+/**
+ * Extracts the date portion (YYYY-MM-DD) from an ISO string or Date object WITHOUT
+ * timezone conversion. For all-day events stored as midnight UTC ("2026-03-04T00:00:00Z"),
+ * this returns the intended calendar date ("2026-03-04") regardless of the device timezone.
+ */
+export function extractDatePart(date: string | Date): string {
+  if (date instanceof Date) {
+    return formatLocalDateString(date);
+  }
+  // For ISO strings, extract date portion directly to avoid timezone conversion
+  if (typeof date === 'string' && date.length >= 10) {
+    const datePart = date.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      return datePart;
+    }
+  }
+  return formatLocalDateString(new Date(date));
+}
+
+/**
+ * Resolves the last inclusive date (YYYY-MM-DD) for an all-day event's End field.
+ *
+ * The .NET backend has two conventions depending on the endpoint/timezone mode:
+ *  - UTC (Z suffix):   End = midnight of the day AFTER the last day (exclusive).
+ *                      e.g. event ends Mar 5 → End = "2026-03-06T00:00:00Z" → subtract 1.
+ *  - Local (no Z):     End = midnight of the last day itself (inclusive).
+ *                      e.g. event ends Mar 5 → End = "2026-03-05T00:00:00" → use as-is.
+ */
+export function resolveAllDayEndDate(eventEnd: string): string {
+  const endDatePart = eventEnd.slice(0, 10);
+  // Detect UTC or explicit offset (e.g. +05:30) → exclusive next-day convention
+  const hasTimezone = eventEnd.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(eventEnd);
+  if (hasTimezone) {
+    const parts = endDatePart.split('-');
+    const year = parseInt(parts[0] ?? '0', 10);
+    const month = parseInt(parts[1] ?? '0', 10);
+    const day = parseInt(parts[2] ?? '0', 10);
+    return formatLocalDateString(new Date(year, month - 1, day - 1));
+  }
+  // No timezone indicator → local midnight, date portion IS the last included day
+  return endDatePart;
+}
+
+/**
+ * Checks if a given date (YYYY-MM-DD string) falls within a calendar event's date range.
+ * For all-day events the End date convention is detected automatically — see resolveAllDayEndDate.
+ * For timed events End is treated as inclusive (date-portion comparison).
+ */
+export function isDateInRange(date: string, eventStart: string, eventEnd: string, isAllDay: boolean): boolean {
+  const dateStr = date.slice(0, 10);
+  const startStr = eventStart.slice(0, 10);
+
+  if (isAllDay) {
+    const endStr = resolveAllDayEndDate(eventEnd);
+    return dateStr >= startStr && dateStr <= endStr;
+  }
+
+  // For timed events compare the date portions inclusively
+  const endStr = eventEnd.slice(0, 10);
+  return dateStr >= startStr && dateStr <= endStr;
+}
+
 export function formatDateString(date: Date): string {
   const day = date.getDate(); // yields date
   const month = date.getMonth() + 1; // yields month (add one as '.getMonth()' is zero indexed)

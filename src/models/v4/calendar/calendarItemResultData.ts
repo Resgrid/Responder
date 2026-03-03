@@ -13,6 +13,7 @@ export class CalendarItemResultData {
   public RecurrenceException: string = '';
   public ItemType: number = 0;
   public IsAllDay: boolean = false;
+  public IsMultiDay: boolean = false;
   public Location: string = '';
   public SignupType: number = 0;
   public Reminder: number = 0;

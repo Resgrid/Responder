@@ -13,6 +13,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { extractDatePart, resolveAllDayEndDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { defaultWebViewProps, generateWebViewHtml } from '@/utils/webview-html';
 
@@ -33,8 +34,18 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
     });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString([], {
+  // For all-day events the API stores midnight UTC as the date portion.
+  // Extract the date string directly to avoid timezone-induced day shifts.
+  const parseDateForDisplay = (dateString: string, isAllDay: boolean): Date => {
+    if (isAllDay) {
+      const parts = extractDatePart(dateString).split('-');
+      return new Date(parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10) - 1, parseInt(parts[2] ?? '0', 10));
+    }
+    return new Date(dateString);
+  };
+
+  const formatDate = (dateString: string, isAllDay: boolean = false) => {
+    return parseDateForDisplay(dateString, isAllDay).toLocaleDateString([], {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -43,6 +54,14 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
 
   const getEventDuration = () => {
     if (item.IsAllDay) {
+      if (item.IsMultiDay) {
+        // Resolve the last inclusive end date, honoring both UTC-exclusive and local-inclusive conventions
+        const lastDayStr = resolveAllDayEndDate(item.End);
+        const parts = lastDayStr.split('-');
+        const lastDay = new Date(parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10) - 1, parseInt(parts[2] ?? '0', 10));
+        const endStr = lastDay.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return `${t('calendar.allDay')} · ${endStr}`;
+      }
       return t('calendar.allDay');
     }
     const start = formatTime(item.Start);
@@ -76,9 +95,34 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
           {/* Date and Time */}
           <HStack className="items-center" space="sm">
             <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
-            <Text className="text-sm text-gray-600 dark:text-gray-300">{formatDate(item.Start)}</Text>
-            <Clock size={16} className="ml-2 text-gray-500 dark:text-gray-400" />
-            <Text className="text-sm text-gray-600 dark:text-gray-300">{getEventDuration()}</Text>
+            {item.IsMultiDay ? (
+              <Text className="text-sm text-gray-600 dark:text-gray-300">
+                {formatDate(item.Start, item.IsAllDay)}
+                {' – '}
+                {(() => {
+                  if (item.IsAllDay) {
+                    const lastDayStr = resolveAllDayEndDate(item.End);
+                    const parts = lastDayStr.split('-');
+                    const lastDay = new Date(parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10) - 1, parseInt(parts[2] ?? '0', 10));
+                    return lastDay.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                  }
+                  return formatDate(item.End, false);
+                })()}
+              </Text>
+            ) : (
+              <Text className="text-sm text-gray-600 dark:text-gray-300">{formatDate(item.Start, item.IsAllDay)}</Text>
+            )}
+            {!item.IsAllDay ? (
+              <>
+                <Clock size={16} className="ml-2 text-gray-500 dark:text-gray-400" />
+                <Text className="text-sm text-gray-600 dark:text-gray-300">{getEventDuration()}</Text>
+              </>
+            ) : (
+              <>
+                <Clock size={16} className="ml-2 text-gray-500 dark:text-gray-400" />
+                <Text className="text-sm text-gray-600 dark:text-gray-300">{t('calendar.allDay')}</Text>
+              </>
+            )}
           </HStack>
 
           {/* Location */}

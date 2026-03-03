@@ -9,7 +9,7 @@ import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { formatLocalDateString, getTodayLocalString, isSameDate } from '@/lib/utils';
+import { extractDatePart, formatLocalDateString, getTodayLocalString, isDateInRange, resolveAllDayEndDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -34,11 +34,19 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
 
     // Mark dates that have events
     selectedMonthItems.forEach((item: CalendarItemResultData) => {
-      // Parse full ISO string and format as local YYYY-MM-DD to avoid timezone drift
-      const startDateObj = new Date(item.Start);
-      const endDateObj = new Date(item.End);
-      const startDate = formatLocalDateString(startDateObj);
-      const endDate = formatLocalDateString(endDateObj);
+      // For all-day events extract the date directly from the ISO string to avoid
+      // UTC-to-local shifts (e.g. "2026-03-04T00:00:00Z" → "2026-03-04").
+      // For timed events convert through local Date as before.
+      const startDate = item.IsAllDay ? extractDatePart(item.Start) : formatLocalDateString(new Date(item.Start));
+
+      // For all-day events resolve the last inclusive date honoring both UTC-exclusive
+      // (Z suffix) and local-inclusive (no Z) end conventions from the backend.
+      let endDate: string;
+      if (item.IsAllDay) {
+        endDate = resolveAllDayEndDate(item.End);
+      } else {
+        endDate = formatLocalDateString(new Date(item.End));
+      }
 
       // Mark start date
       if (!marked[startDate]) {
@@ -48,39 +56,40 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
         };
       }
 
-      // Add a dot for this event (different colors based on event type)
-      marked[startDate].dots.push({
+      const eventDot = {
         key: item.CalendarItemId,
-        color: item.TypeColor || '#3B82F6', // Use event type color or default blue
-      });
+        color: item.TypeColor || '#3B82F6',
+      };
 
-      // If it's a multi-day event, mark the range
-      if (startDate !== endDate) {
-        // Use local Date constructors to avoid timezone issues
-        const start = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate());
-        const end = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate());
-        const current = new Date(start);
+      if (startDate === endDate) {
+        // Single-day event: just add a dot to that day
+        marked[startDate].dots.push(eventDot);
+      } else {
+        // Multi-day event: iterate every day in the range and add a dot to each
+        const startParts = startDate.split('-');
+        const endParts = endDate.split('-');
+        const rangeStart = new Date(
+          parseInt(startParts[0] ?? '0', 10),
+          parseInt(startParts[1] ?? '0', 10) - 1,
+          parseInt(startParts[2] ?? '0', 10),
+        );
+        const rangeEnd = new Date(
+          parseInt(endParts[0] ?? '0', 10),
+          parseInt(endParts[1] ?? '0', 10) - 1,
+          parseInt(endParts[2] ?? '0', 10),
+        );
+        const current = new Date(rangeStart);
 
-        while (current <= end) {
+        while (current <= rangeEnd) {
           const dateStr = formatLocalDateString(current);
           if (!marked[dateStr]) {
-            marked[dateStr] = {
-              marked: true,
-              dots: [],
-            };
+            marked[dateStr] = { marked: true, dots: [] };
           }
-
-          // Add period marking for multi-day events
-          if (dateStr === startDate) {
-            marked[dateStr].startingDay = true;
-            marked[dateStr].color = item.TypeColor || '#3B82F6';
-          } else if (dateStr === endDate) {
-            marked[dateStr].endingDay = true;
-            marked[dateStr].color = item.TypeColor || '#3B82F6';
-          } else {
-            marked[dateStr].color = item.TypeColor || '#3B82F6';
+          // Ensure dots array exists (may have been initialised without it)
+          if (!marked[dateStr].dots) {
+            marked[dateStr].dots = [];
           }
-
+          marked[dateStr].dots.push(eventDot);
           current.setDate(current.getDate() + 1);
         }
       }
@@ -231,7 +240,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
           {(() => {
             const eventsForDay = selectedMonthItems.filter((item) => {
               // Use isSameDate for timezone-safe date comparison with .NET backend timezone-aware dates
-              return selectedDate ? isSameDate(item.Start, selectedDate) : false;
+              return selectedDate ? isDateInRange(selectedDate, item.Start, item.End, item.IsAllDay) : false;
             });
 
             if (eventsForDay.length > 0) {
