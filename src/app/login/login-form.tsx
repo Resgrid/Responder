@@ -37,9 +37,10 @@ export type LoginFormProps = {
   onSubmit?: SubmitHandler<FormType>;
   isLoading?: boolean;
   error?: string;
+  onSsoPress?: () => void;
 };
 
-export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = undefined }: LoginFormProps) => {
+export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = undefined, onSsoPress }: LoginFormProps) => {
   const { colorScheme } = useColorScheme();
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
@@ -158,10 +159,15 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
             </Button>
           )}
 
-          {/* Server URL Change Button */}
-          <Button className="mt-14 w-full" variant="outline" onPress={handleServerUrlPress}>
-            <ButtonText className="text-sm">{t('login.change_server_url')}</ButtonText>
-          </Button>
+          {/* Server URL and SSO Buttons */}
+          <View className="mt-14 w-full flex-row gap-2">
+            <Button className="flex-1" variant="outline" onPress={handleServerUrlPress}>
+              <ButtonText className="text-xs">{t('login.change_server_url')}</ButtonText>
+            </Button>
+            <Button className="flex-1" variant="outline" onPress={onSsoPress}>
+              <ButtonText className="text-xs">{t('login.sso.login_with_sso_button')}</ButtonText>
+            </Button>
+          </View>
         </View>
       </ScrollView>
 

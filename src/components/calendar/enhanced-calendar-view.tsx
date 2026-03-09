@@ -68,16 +68,8 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
         // Multi-day event: iterate every day in the range and add a dot to each
         const startParts = startDate.split('-');
         const endParts = endDate.split('-');
-        const rangeStart = new Date(
-          parseInt(startParts[0] ?? '0', 10),
-          parseInt(startParts[1] ?? '0', 10) - 1,
-          parseInt(startParts[2] ?? '0', 10),
-        );
-        const rangeEnd = new Date(
-          parseInt(endParts[0] ?? '0', 10),
-          parseInt(endParts[1] ?? '0', 10) - 1,
-          parseInt(endParts[2] ?? '0', 10),
-        );
+        const rangeStart = new Date(parseInt(startParts[0] ?? '0', 10), parseInt(startParts[1] ?? '0', 10) - 1, parseInt(startParts[2] ?? '0', 10));
+        const rangeEnd = new Date(parseInt(endParts[0] ?? '0', 10), parseInt(endParts[1] ?? '0', 10) - 1, parseInt(endParts[2] ?? '0', 10));
         const current = new Date(rangeStart);
 
         while (current <= rangeEnd) {

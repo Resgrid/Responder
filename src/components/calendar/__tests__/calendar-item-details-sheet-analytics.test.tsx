@@ -179,6 +179,7 @@ describe('CalendarItemDetailsSheet Analytics', () => {
     RecurrenceException: '',
     ItemType: 1,
     IsAllDay: false,
+    IsMultiDay: false,
     Location: 'Test Location',
     SignupType: 1,
     Reminder: 0,

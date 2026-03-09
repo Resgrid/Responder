@@ -52,9 +52,7 @@ class InCallAudioService {
           if (InCallAudioModule) {
             await InCallAudioModule.initializeAudio?.();
             // Preload sounds
-            const preloadPromises = Object.entries(SOUNDS).map(([name, config]) =>
-              InCallAudioModule.loadSound(name, (config as any).android)
-            );
+            const preloadPromises = Object.entries(SOUNDS).map(([name, config]) => InCallAudioModule.loadSound(name, (config as any).android));
             await Promise.all(preloadPromises);
 
             this.isInitialized = true;
@@ -103,15 +101,11 @@ class InCallAudioService {
       } else {
         // iOS
         const source = SOUNDS[name].ios;
-        const { sound } = await Audio.Sound.createAsync(
-          source,
-          { shouldPlay: true },
-          async (status) => {
-            if (status.isLoaded && status.didJustFinish) {
-              await sound.unloadAsync();
-            }
+        const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true }, async (status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            await sound.unloadAsync();
           }
-        );
+        });
       }
     } catch (error) {
       logger.warn({ message: 'Failed to play in-call sound', context: { name, error } });

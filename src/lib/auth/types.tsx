@@ -3,6 +3,14 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
+export type SsoProvider = 'oidc' | 'saml2';
+
+export interface ExternalTokenCredentials {
+  provider: SsoProvider;
+  externalToken: string;
+  departmentCode: string;
+}
+
 export interface LoginCredentials {
   username: string;
   password: string;

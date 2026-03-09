@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 import { getCalendarItem, getCalendarItems, getCalendarItemsForDateRange, getCalendarItemTypes, setCalendarAttending } from '@/api/calendar/calendar';
 import { logger } from '@/lib/logging';
-import { isDateInRange, getTodayLocalString } from '@/lib/utils';
+import { getTodayLocalString, isDateInRange } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { type GetAllCalendarItemTypesResult } from '@/models/v4/calendar/calendarItemTypeResultData';
 import type { ApiResponse } from '@/types/api';

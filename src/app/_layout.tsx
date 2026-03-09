@@ -10,9 +10,11 @@ import { registerGlobals } from '@livekit/react-native';
 import { createNavigationContainerRef, DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
+import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { Stack, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect } from 'react';
 import { LogBox, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -24,6 +26,7 @@ import { LiveKitBottomSheet } from '@/components/livekit';
 import { PushNotificationModal } from '@/components/push-notification/push-notification-modal';
 import { ToastContainer } from '@/components/toast/toast-container';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import { handleSamlCallbackUrl } from '@/hooks/use-saml-login';
 import { hydrateAuth, useAuth } from '@/lib/auth';
 import { loadKeepAliveState } from '@/lib/hooks/use-keep-alive';
 import { loadSelectedTheme } from '@/lib/hooks/use-selected-theme';
@@ -32,6 +35,9 @@ import { getDeviceUuid, setDeviceUuid } from '@/lib/storage/app';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
 import { uuidv4 } from '@/lib/utils';
 import { appInitializationService } from '@/services/app-initialization.service';
+
+// Ensure OIDC / OAuth in-app browser sessions complete properly on iOS
+WebBrowser.maybeCompleteAuthSession();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 //SplashScreen.preventAutoHideAsync();
@@ -106,6 +112,20 @@ function RootLayout() {
 
     hydrateAuth();
 
+    // Handle SAML deep-link callbacks (cold start)
+    Linking.getInitialURL().then((url) => {
+      if (url && url.includes('saml_response')) {
+        handleSamlCallbackUrl(url).catch((err: unknown) => logger.error({ message: 'SAML cold-start deep-link handler failed', context: { err } }));
+      }
+    });
+
+    // Handle SAML deep-link callbacks (warm start)
+    const samlSubscription = Linking.addEventListener('url', ({ url }) => {
+      if (url.includes('saml_response')) {
+        handleSamlCallbackUrl(url).catch((err: unknown) => logger.error({ message: 'SAML warm-start deep-link handler failed', context: { err } }));
+      }
+    });
+
     // Clear the badge count on app startup
     Notifications.setBadgeCountAsync(0)
       .then(() => {
@@ -162,6 +182,10 @@ function RootLayout() {
           context: { error },
         });
       });
+
+    return () => {
+      samlSubscription.remove();
+    };
   }, [ref]);
 
   return (
@@ -171,6 +195,7 @@ function RootLayout() {
         <Stack.Screen name="call" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="login/index" options={{ headerShown: false }} />
+        <Stack.Screen name="login/sso" options={{ headerShown: true }} />
       </Stack>
     </Providers>
   );

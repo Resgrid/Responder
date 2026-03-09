@@ -9,8 +9,8 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { extractDatePart, resolveAllDayEndDate } from '@/lib/utils';
+import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 
 interface CompactCalendarItemProps {
   item: CalendarItemResultData;

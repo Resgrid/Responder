@@ -215,7 +215,7 @@ describe('LoginForm Server URL Integration', () => {
 
     // Check that the form renders properly - there should be multiple text elements
     expect(screen.getAllByTestId('text').length).toBeGreaterThan(0);
-    expect(screen.getAllByTestId('button')).toHaveLength(2);
+    expect(screen.getAllByTestId('button')).toHaveLength(3);
   });
 
   it('should track analytics and show bottom sheet when server URL button is pressed', () => {
@@ -245,7 +245,7 @@ describe('LoginForm Server URL Integration', () => {
 
     // Check that the loading button is rendered with spinner
     expect(screen.getByTestId('button-spinner')).toBeTruthy();
-    expect(screen.getAllByTestId('button')).toHaveLength(2);
+    expect(screen.getAllByTestId('button')).toHaveLength(3);
   });
 
   it('should render with different prop combinations', () => {
@@ -257,7 +257,7 @@ describe('LoginForm Server URL Integration', () => {
     );
 
     // Check basic rendering
-    expect(screen.getAllByTestId('button')).toHaveLength(2);
+    expect(screen.getAllByTestId('button')).toHaveLength(3);
 
     // Test with error
     rerender(
@@ -268,6 +268,6 @@ describe('LoginForm Server URL Integration', () => {
     );
 
     // Should still render the basic structure
-    expect(screen.getAllByTestId('button')).toHaveLength(2);
+    expect(screen.getAllByTestId('button')).toHaveLength(3);
   });
 });

@@ -14,6 +14,7 @@ export const useAuth = () => {
     isLoading: store.status === 'loading',
     error: store.error,
     login: store.login,
+    loginWithSso: store.loginWithSso,
     logout: store.logout,
     status: store.status,
     hydrate: store.hydrate,
