@@ -160,7 +160,7 @@ export const SsoDepartmentForm: React.FC<SsoDepartmentFormProps> = ({ onSsoConfi
 
           {busy ? (
             <Button className="mt-8 w-full">
-              <ButtonSpinner color={colors.light.neutral[400]} />
+              <ButtonSpinner color={colors[colorScheme ?? 'light'].neutral[400]} />
               <ButtonText className="ml-2 text-sm font-medium">{t('login.sso.looking_up')}</ButtonText>
             </Button>
           ) : (
