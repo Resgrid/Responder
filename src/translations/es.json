@@ -587,6 +587,7 @@
       "department_not_found": "Departamento no encontrado. Por favor verifica el código e intenta de nuevo.",
       "login_with_sso_button": "Iniciar sesión con SSO",
       "looking_up": "Buscando cuenta...",
+      "lookup_network_error": "No se pudo contactar el servidor. Por favor verifica tu conexión e intenta de nuevo.",
       "or_sign_in_with_password": "— o inicia sesión con contraseña —",
       "page_title": "Iniciar sesión con SSO",
       "sign_in_with_sso": "Iniciar sesión con SSO",

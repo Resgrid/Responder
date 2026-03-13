@@ -587,6 +587,7 @@
       "department_not_found": "Department not found. Please check the code and try again.",
       "login_with_sso_button": "Login with SSO",
       "looking_up": "Looking up account...",
+      "lookup_network_error": "Could not reach the server. Please check your connection and try again.",
       "or_sign_in_with_password": "— or sign in with password —",
       "page_title": "Login with SSO",
       "sign_in_with_sso": "Sign in with SSO",

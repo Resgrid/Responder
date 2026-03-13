@@ -67,9 +67,10 @@ export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions)
           externalToken: samlResponse,
           departmentCode,
         });
-        removeItem(PENDING_SAML_DEPT_CODE_KEY);
+        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
         return true;
       } catch (error) {
+        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
         logger.error({
           message: 'SAML: token exchange failed',
           context: { error: error instanceof Error ? error.message : String(error) },
@@ -108,7 +109,7 @@ export async function handleSamlCallbackUrl(url: string): Promise<boolean> {
       externalToken: samlResponse,
       departmentCode,
     });
-    removeItem(PENDING_SAML_DEPT_CODE_KEY);
+    await removeItem(PENDING_SAML_DEPT_CODE_KEY);
     return true;
   } catch (error) {
     logger.error({

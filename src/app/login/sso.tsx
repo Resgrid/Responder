@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import { SsoDepartmentForm, SsoLoginButtons } from '@/app/login/sso-section';
 import { FocusAwareStatusBar } from '@/components/ui';
@@ -112,17 +113,27 @@ export default function SsoLogin() {
 
       {ssoPhase === 'department' ? (
         <SsoDepartmentForm onSsoConfigResolved={handleSsoConfigResolved} onLookupUser={handleLookupUser} isLoading={status === 'loading'} />
-      ) : ssoEnabled ? (
+      ) : ssoConfig !== null && ssoEnabled ? (
         <SsoLoginButtons
           departmentCode={username}
-          ssoConfig={ssoConfig!}
+          ssoConfig={ssoConfig}
           onOidcPress={() => oidc.promptAsync()}
           onSamlPress={() => saml.startSamlLogin()}
           onChangeDepartment={handleChangeDepartment}
           oidcRequestReady={!!oidc.request}
           isLoading={status === 'loading'}
         />
-      ) : null}
+      ) : (
+        <View className="flex-1 items-center justify-center p-6">
+          <Text className="mb-6 text-center text-base">{t('login.sso.sso_not_enabled')}</Text>
+          <Button variant="outline" size="md" action="secondary" onPress={handleChangeDepartment} className="mb-3 w-full">
+            <ButtonText>{t('login.sso.change_department')}</ButtonText>
+          </Button>
+          <Button variant="solid" size="md" action="primary" onPress={() => router.replace('/login')} className="w-full">
+            <ButtonText>{t('login.sso.or_sign_in_with_password')}</ButtonText>
+          </Button>
+        </View>
+      )}
 
       {/* Error modal */}
       <Modal isOpen={isErrorModalVisible} onClose={() => setIsErrorModalVisible(false)} size="full">

@@ -58,6 +58,8 @@ export const SsoDepartmentForm: React.FC<SsoDepartmentFormProps> = ({ onSsoConfi
         } else {
           onSsoConfigResolved(trimmedUsername, config);
         }
+      } catch {
+        setLookupError(t('login.sso.lookup_network_error'));
       } finally {
         setLocalLoading(false);
       }

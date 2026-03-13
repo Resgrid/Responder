@@ -23,15 +23,15 @@ export async function fetchDepartmentSsoConfig(departmentCode: string): Promise<
       params: { departmentCode },
     });
     return (response.data?.Data as DepartmentSsoConfig) ?? null;
-  } catch {
-    return null;
+  } catch (err) {
+    throw new Error(`SSO config lookup failed for department "${departmentCode}": ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
 /**
  * Resolves SSO config for a user by username (and optionally a specific department ID).
  * Calls GET /connect/sso-config-for-user.
- * Returns null on network error; returns a config with ssoEnabled=false if the
+ * Throws on network/server error; returns a config with ssoEnabled=false if the
  * username doesn't exist (the backend intentionally avoids account-enumeration leaks).
  */
 export async function fetchUserSsoConfig(username: string, departmentId?: number): Promise<DepartmentSsoConfig | null> {
@@ -43,7 +43,7 @@ export async function fetchUserSsoConfig(username: string, departmentId?: number
     }
     const response = await axios.get(`${baseUrl}/connect/sso-config-for-user`, { params });
     return (response.data?.Data as DepartmentSsoConfig) ?? null;
-  } catch {
-    return null;
+  } catch (err) {
+    throw new Error(`SSO config lookup failed for user "${username}": ${err instanceof Error ? err.message : String(err)}`);
   }
 }

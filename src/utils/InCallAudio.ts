@@ -101,7 +101,8 @@ class InCallAudioService {
       } else {
         // iOS
         const source = SOUNDS[name].ios;
-        const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true }, async (status) => {
+        const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true });
+        sound.setOnPlaybackStatusUpdate(async (status) => {
           if (status.isLoaded && status.didJustFinish) {
             await sound.unloadAsync();
           }

@@ -52,11 +52,12 @@ describe('ssoDiscovery', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null when the API call throws an error', async () => {
+    it('throws when the API call fails', async () => {
       mockedAxios.get = jest.fn().mockRejectedValue(new Error('Network error'));
 
-      const result = await fetchDepartmentSsoConfig('DEPT001');
-      expect(result).toBeNull();
+      await expect(fetchDepartmentSsoConfig('DEPT001')).rejects.toThrow(
+        'SSO config lookup failed for department "DEPT001"'
+      );
     });
 
     it('handles a SAML providerType', async () => {
@@ -131,11 +132,12 @@ describe('ssoDiscovery', () => {
       );
     });
 
-    it('returns null on network error', async () => {
+    it('throws on network error', async () => {
       mockedAxios.get = jest.fn().mockRejectedValue(new Error('Network error'));
 
-      const result = await fetchUserSsoConfig('jdoe@example.com');
-      expect(result).toBeNull();
+      await expect(fetchUserSsoConfig('jdoe@example.com')).rejects.toThrow(
+        'SSO config lookup failed for user "jdoe@example.com"'
+      );
     });
 
     it('returns ssoEnabled=false config when user is unknown (no account enumeration)', async () => {
