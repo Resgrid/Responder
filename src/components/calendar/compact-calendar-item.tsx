@@ -9,6 +9,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { extractDatePart, resolveAllDayEndDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 
 interface CompactCalendarItemProps {
@@ -31,7 +32,13 @@ export const CompactCalendarItem: React.FC<CompactCalendarItemProps> = ({ item, 
     });
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string, isAllDay: boolean = false) => {
+    // For all-day events extract the date portion directly to avoid timezone-induced day shifts
+    if (isAllDay) {
+      const parts = extractDatePart(dateString).split('-');
+      const d = new Date(parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10) - 1, parseInt(parts[2] ?? '0', 10));
+      return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    }
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
       return '';
@@ -68,7 +75,23 @@ export const CompactCalendarItem: React.FC<CompactCalendarItemProps> = ({ item, 
               {/* Date and time on same line as title for mobile efficiency */}
               <HStack className="mt-0.5 items-center" space="xs">
                 <Calendar size={12} className="text-gray-500 dark:text-gray-400" />
-                <Text className="text-xs text-gray-600 dark:text-gray-300">{formatDate(item.Start)}</Text>
+                {item.IsMultiDay ? (
+                  <Text className="text-xs text-gray-600 dark:text-gray-300">
+                    {formatDate(item.Start, item.IsAllDay)}
+                    {' – '}
+                    {(() => {
+                      if (item.IsAllDay) {
+                        const lastDayStr = resolveAllDayEndDate(item.End);
+                        const parts = lastDayStr.split('-');
+                        const lastDay = new Date(parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10) - 1, parseInt(parts[2] ?? '0', 10));
+                        return lastDay.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                      }
+                      return formatDate(item.End, false);
+                    })()}
+                  </Text>
+                ) : (
+                  <Text className="text-xs text-gray-600 dark:text-gray-300">{formatDate(item.Start, item.IsAllDay)}</Text>
+                )}
                 <Clock size={12} className="ml-1 text-gray-500 dark:text-gray-400" />
                 <Text className="text-xs text-gray-600 dark:text-gray-300">{getEventDuration()}</Text>
               </HStack>

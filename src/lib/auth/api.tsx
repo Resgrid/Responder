@@ -5,7 +5,7 @@ import queryString from 'query-string';
 import { logger } from '@/lib/logging';
 
 import { getBaseApiUrl } from '../storage/app';
-import type { AuthResponse, LoginCredentials, LoginResponse } from './types';
+import type { AuthResponse, ExternalTokenCredentials, LoginCredentials, LoginResponse } from './types';
 
 const authApi = axios.create({
   baseURL: getBaseApiUrl(),
@@ -76,6 +76,49 @@ export const refreshTokenRequest = async (refreshToken: string): Promise<AuthRes
     logger.error({
       message: 'Token refresh failed',
       context: { error },
+    });
+    throw error;
+  }
+};
+
+export const externalTokenRequest = async (credentials: ExternalTokenCredentials): Promise<LoginResponse> => {
+  try {
+    const data = queryString.stringify({
+      provider: credentials.provider,
+      external_token: credentials.externalToken,
+      department_code: credentials.departmentCode,
+      scope: Env.IS_MOBILE_APP ? 'openid email profile offline_access mobile' : 'openid email profile offline_access',
+    });
+
+    const response = await authApi.post<AuthResponse>('/connect/external-token', data);
+
+    if (response.status === 200) {
+      logger.info({
+        message: 'External token exchange successful',
+        context: { provider: credentials.provider, departmentCode: credentials.departmentCode },
+      });
+
+      return {
+        successful: true,
+        message: 'Login successful',
+        authResponse: response.data,
+      };
+    }
+
+    logger.error({
+      message: 'External token exchange failed',
+      context: { response, provider: credentials.provider },
+    });
+
+    return {
+      successful: false,
+      message: 'SSO login failed',
+      authResponse: null,
+    };
+  } catch (error) {
+    logger.error({
+      message: 'External token exchange error',
+      context: { error, provider: credentials.provider },
     });
     throw error;
   }

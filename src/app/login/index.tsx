@@ -32,32 +32,22 @@ export default function Login() {
     }, [trackEvent])
   );
 
+  // Handle successful authenticated state → navigate to app
   useEffect(() => {
     if (status === 'signedIn' && isAuthenticated) {
-      logger.info({
-        message: 'Login successful, redirecting to home',
-      });
-
-      // Track successful login
-      trackEvent('login_success', {
-        timestamp: new Date().toISOString(),
-      });
-
+      logger.info({ message: 'Login successful, redirecting to home' });
+      trackEvent('login_success', { timestamp: new Date().toISOString() });
       router.push('/(app)');
     }
   }, [status, isAuthenticated, router, trackEvent]);
 
+  // Show error modal on login failure
   useEffect(() => {
     if (status === 'error') {
-      logger.error({
-        message: 'Login failed',
-        context: { error },
-      });
+      logger.error({ message: 'Login failed', context: { error } });
 
-      // Safe analytics: classify and truncate error before tracking
       try {
         const timestamp = new Date().toISOString();
-        // Treat error as string and classify based on content
         const rawMessage = error ?? '';
         let errorCode = 'unknown_error';
         if (rawMessage.includes('TypeError')) {
@@ -67,16 +57,13 @@ export default function Login() {
         } else if (rawMessage.toLowerCase().includes('auth')) {
           errorCode = 'auth_error';
         }
-        // Truncate message to 100 chars
-        const message = rawMessage.slice(0, 100);
         trackEvent('login_failed', {
           timestamp,
           errorCode,
           category: 'login_error',
-          message,
+          message: rawMessage.slice(0, 100),
         });
       } catch {
-        // Swallow analytics errors, log non-sensitive warning
         logger.warn({ message: 'Failed to track login_failed event' });
       }
 
@@ -84,14 +71,13 @@ export default function Login() {
     }
   }, [status, error, trackEvent]);
 
-  const onSubmit: LoginFormProps['onSubmit'] = async (data) => {
+  const onLocalLoginSubmit: LoginFormProps['onSubmit'] = async (data) => {
     const usernameHash = data.username ? CryptoJS.HmacSHA256(data.username, Env.LOGGING_KEY || '').toString() : null;
     logger.info({
       message: 'Starting Login (button press)',
       context: { hasUsername: Boolean(data.username), usernameHash },
     });
 
-    // Track login attempt
     try {
       trackEvent('login_attempted', {
         timestamp: new Date().toISOString(),
@@ -112,15 +98,11 @@ export default function Login() {
   return (
     <>
       <FocusAwareStatusBar />
-      <LoginForm onSubmit={onSubmit} isLoading={status === 'loading'} {...(error ? { error } : {})} />
 
-      <Modal
-        isOpen={isErrorModalVisible}
-        onClose={() => {
-          setIsErrorModalVisible(false);
-        }}
-        size="full"
-      >
+      <LoginForm onSubmit={onLocalLoginSubmit} isLoading={status === 'loading'} onSsoPress={() => router.push('/login/sso')} {...(error ? { error } : {})} />
+
+      {/* Error modal */}
+      <Modal isOpen={isErrorModalVisible} onClose={() => setIsErrorModalVisible(false)} size="full">
         <ModalBackdrop />
         <ModalContent className="m-4 w-full max-w-3xl rounded-2xl">
           <ModalHeader>

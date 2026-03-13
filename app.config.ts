@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: Env.NAME,
   description: `${Env.NAME} Resgrid Responder`,
   owner: Env.EXPO_ACCOUNT_OWNER,
-  scheme: Env.SCHEME,
+  scheme: [Env.SCHEME, 'resgrid'],
   slug: 'resgrid-responder',
   version: Env.VERSION.toString(),
   orientation: 'default',
@@ -55,6 +55,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       UIViewControllerBasedStatusBarAppearance: false,
       NSBluetoothAlwaysUsageDescription: 'Allow Resgrid Responder to connect to bluetooth devices for PTT.',
       NSMicrophoneUsageDescription: 'Allow Resgrid Responder to access the microphone for voice communication and push-to-talk functionality during emergency response.',
+      LSApplicationQueriesSchemes: ['resgrid'],
     },
     entitlements: {
       ...((Env.APP_ENV === 'production' || Env.APP_ENV === 'internal') && {
@@ -76,6 +77,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     softwareKeyboardLayoutMode: 'pan',
     package: Env.PACKAGE,
     googleServicesFile: 'google-services.json',
+    intentFilters: [
+      {
+        action: 'VIEW',
+        data: [{ scheme: 'resgrid' }],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ],
     permissions: [
       'android.permission.WAKE_LOCK',
       'android.permission.RECORD_AUDIO',
@@ -273,6 +281,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'react-native-ble-manager',
     'expo-secure-store',
+    'expo-web-browser',
     '@livekit/react-native-expo-plugin',
     '@config-plugins/react-native-webrtc',
     '@config-plugins/react-native-callkeep',

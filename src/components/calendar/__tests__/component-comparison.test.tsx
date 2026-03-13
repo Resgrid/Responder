@@ -117,6 +117,7 @@ describe('Calendar Component Comparison', () => {
     RecurrenceException: '',
     ItemType: 1,
     IsAllDay: false,
+    IsMultiDay: false,
     Location: 'Test Location Address, City, State 12345',
     SignupType: 1,
     Reminder: 0,

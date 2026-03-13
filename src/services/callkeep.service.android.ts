@@ -57,10 +57,7 @@ export class CallKeepService {
           alertDescription: 'This application needs to access your phone accounts',
           cancelButton: 'Cancel',
           okButton: 'OK',
-          additionalPermissions: [
-            PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
-            ...(Platform.Version >= 30 ? [PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS] : []),
-          ],
+          additionalPermissions: [PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE, ...(Platform.Version >= 30 ? [PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS] : [])],
           // Important for VoIP on Android O+
           selfManaged: true,
           foregroundService: {
@@ -113,9 +110,7 @@ export class CallKeepService {
     }
 
     try {
-      const hasPermission = await PermissionsAndroid.check(
-        PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS
-      );
+      const hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
 
       if (hasPermission) {
         logger.debug({
@@ -124,15 +119,12 @@ export class CallKeepService {
         return true;
       }
 
-      const result = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS,
-        {
-          title: 'Phone Permission Required',
-          message: 'This app needs phone access to manage voice calls with your headset',
-          buttonPositive: 'Grant',
-          buttonNegative: 'Deny',
-        }
-      );
+      const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS, {
+        title: 'Phone Permission Required',
+        message: 'This app needs phone access to manage voice calls with your headset',
+        buttonPositive: 'Grant',
+        buttonNegative: 'Deny',
+      });
 
       const granted = result === PermissionsAndroid.RESULTS.GRANTED;
       logger.info({

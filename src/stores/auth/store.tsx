@@ -5,8 +5,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { logger } from '@/lib/logging';
 
-import { loginRequest, refreshTokenRequest } from '../../lib/auth/api';
-import type { AuthResponse, AuthStatus, LoginCredentials } from '../../lib/auth/types';
+import { externalTokenRequest, loginRequest, refreshTokenRequest } from '../../lib/auth/api';
+import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage';
@@ -52,6 +52,7 @@ interface AuthState {
 
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
+  loginWithSso: (credentials: ExternalTokenCredentials) => Promise<void>;
   logout: (reason?: string) => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   hydrate: () => void;
@@ -153,6 +154,82 @@ const useAuthStore = create<AuthState>()(
           set({
             status: 'error',
             error: error instanceof Error ? error.message : 'Login failed',
+          });
+        }
+      },
+
+      loginWithSso: async (credentials: ExternalTokenCredentials) => {
+        try {
+          set({ status: 'loading' });
+          const response = await externalTokenRequest(credentials);
+
+          if (response.successful) {
+            const idToken = response.authResponse?.id_token;
+            if (!idToken) {
+              logger.error({
+                message: 'No ID token received during SSO login',
+                context: { provider: credentials.provider },
+              });
+              throw new Error('No ID token received from SSO');
+            }
+
+            const tokenParts = idToken.split('.');
+            if (tokenParts.length < 3 || !tokenParts[1]) {
+              logger.error({
+                message: 'Invalid ID token format during SSO login',
+                context: { provider: credentials.provider },
+              });
+              throw new Error('Invalid ID token format');
+            }
+
+            const payload = sanitizeJson(decodeJwtPayload(tokenParts[1]));
+            const now = Date.now();
+            const authResponseWithTimestamp = {
+              ...response.authResponse!,
+              obtained_at: now,
+            };
+
+            setItem<AuthResponse>('authResponse', authResponseWithTimestamp);
+
+            const profileData = JSON.parse(payload) as ProfileModel;
+
+            set({
+              accessToken: response.authResponse?.access_token ?? null,
+              refreshToken: response.authResponse?.refresh_token ?? null,
+              accessTokenObtainedAt: now,
+              refreshTokenObtainedAt: now,
+              status: 'signedIn',
+              error: null,
+              profile: profileData,
+              userId: profileData.sub,
+              isFirstTime: false,
+            });
+
+            logger.info({
+              message: 'SSO login successful',
+              context: {
+                provider: credentials.provider,
+                userId: profileData.sub,
+              },
+            });
+          } else {
+            logger.error({
+              message: 'SSO login failed - unsuccessful response',
+              context: { provider: credentials.provider, message: response.message },
+            });
+            set({ status: 'error', error: response.message });
+          }
+        } catch (error) {
+          logger.error({
+            message: 'SSO login failed with exception',
+            context: {
+              provider: credentials.provider,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            },
+          });
+          set({
+            status: 'error',
+            error: error instanceof Error ? error.message : 'SSO login failed',
           });
         }
       },

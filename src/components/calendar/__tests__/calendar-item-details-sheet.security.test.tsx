@@ -145,6 +145,7 @@ const mockItem: CalendarItemResultData = {
   ItemType: 1,
   Location: 'Test Location',
   IsAllDay: false,
+  IsMultiDay: false,
   SignupType: 0,
   Reminder: 0,
   LockEditing: false,

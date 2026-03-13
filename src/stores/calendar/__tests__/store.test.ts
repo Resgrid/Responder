@@ -19,6 +19,8 @@ jest.mock('@/api/calendar/calendar', () => ({
 // Mock the utils module
 jest.mock('@/lib/utils', () => ({
 	isSameDate: jest.fn(),
+	getTodayLocalString: jest.fn(),
+	isDateInRange: jest.fn(),
 }));
 
 // Mock the logger
@@ -69,6 +71,7 @@ const mockCalendarItem = {
 	RecurrenceException: '',
 	ItemType: 1,
 	IsAllDay: false,
+	IsMultiDay: false,
 	Location: 'Test Location',
 	SignupType: 1,
 	Reminder: 0,
@@ -131,6 +134,13 @@ describe('Calendar Store', () => {
 			return d1.getFullYear() === d2.getFullYear() && 
 				   d1.getMonth() === d2.getMonth() && 
 				   d1.getDate() === d2.getDate();
+		});
+		mockedUtils.getTodayLocalString.mockReturnValue('2024-01-15');
+		mockedUtils.isDateInRange.mockImplementation((date: string, eventStart: string, _eventEnd: string) => {
+			const dateStr = date.slice(0, 10);
+			const startStr = eventStart.slice(0, 10);
+			const endStr = _eventEnd.slice(0, 10);
+			return dateStr >= startStr && dateStr <= endStr;
 		});
 		
 		// Reset store state
@@ -202,18 +212,6 @@ describe('Calendar Store', () => {
 				...createMockBaseResponse(),
 			};
 			mockedApi.getCalendarItemsForDateRange.mockResolvedValue(mockResponse);
-
-			// Mock isSameDate to return true only for the today item
-			mockedUtils.isSameDate.mockImplementation((date1: string | Date, date2: string | Date) => {
-				const d1 = new Date(date1);
-				const d2 = new Date(date2);
-				// Only return true for items on 2024-01-15
-				if (d1.getFullYear() === 2024 && d1.getMonth() === 0 && d1.getDate() === 15 &&
-					d2.getFullYear() === 2024 && d2.getMonth() === 0 && d2.getDate() === 15) {
-					return true;
-				}
-				return false;
-			});
 
 			const { result } = renderHook(() => useCalendarStore());
 

@@ -19,7 +19,7 @@ import { RefreshControl } from '@/components/ui/refresh-control';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
-import { isSameDate } from '@/lib/utils';
+import { isDateInRange } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
 
@@ -110,8 +110,11 @@ export default function CalendarScreen() {
     if (!selectedDate) return [];
 
     return selectedMonthItems.filter((item) => {
-      // Use Start field for consistent date comparison with .NET backend timezone-aware dates
-      return isSameDate(item.Start, selectedDate);
+      // Always use range-based filtering so that:
+      // 1. timed multi-day events (regardless of IsMultiDay flag) show on every covered day
+      // 2. all-day events use the exclusive-end convention
+      // 3. single-day events still work (start === end collapses to an exact match)
+      return isDateInRange(selectedDate, item.Start, item.End, item.IsAllDay);
     });
   };
 

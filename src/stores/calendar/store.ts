@@ -3,8 +3,8 @@ import { create } from 'zustand';
 
 import { getCalendarItem, getCalendarItems, getCalendarItemsForDateRange, getCalendarItemTypes, setCalendarAttending } from '@/api/calendar/calendar';
 import { logger } from '@/lib/logging';
-import { isSameDate } from '@/lib/utils';
-import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
+import { getTodayLocalString, isDateInRange } from '@/lib/utils';
+import { type CalendarItemResultData, mapCalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { type GetAllCalendarItemTypesResult } from '@/models/v4/calendar/calendarItemTypeResultData';
 import type { ApiResponse } from '@/types/api';
 
@@ -108,10 +108,12 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
       const response = (await getCalendarItemsForDateRange(today.toISOString(), today.toISOString())) as ApiResponse<CalendarItemResultData[]>;
 
-      // Filter items to ensure they're really for today (additional client-side validation)
-      // Use Start field for date comparison as it contains the timezone-aware date from .NET backend
-      const todayItems = response.Data.filter((item: CalendarItemResultData) => {
-        return isSameDate(item.Start, new Date());
+      // Filter items to ensure they're really for today.
+      // Always use range-based filtering so timed multi-day events (where IsMultiDay may
+      // not be set by the API) still appear on every day they cover, including day one.
+      const todayStr = getTodayLocalString();
+      const todayItems = response.Data.map(mapCalendarItemResultData).filter((item: CalendarItemResultData) => {
+        return isDateInRange(todayStr, item.Start, item.End, item.IsAllDay);
       });
 
       set({
@@ -152,7 +154,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
       const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
-        upcomingCalendarItems: response.Data,
+        upcomingCalendarItems: response.Data.map(mapCalendarItemResultData),
         isUpcomingLoading: false,
         updateCalendarItems: false,
       });
@@ -178,7 +180,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
       const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
-        calendarItems: response.Data,
+        calendarItems: response.Data.map(mapCalendarItemResultData),
         isLoading: false,
         updateCalendarItems: false,
       });
@@ -200,7 +202,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     try {
       const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
-        selectedMonthItems: response.Data,
+        selectedMonthItems: response.Data.map(mapCalendarItemResultData),
         isLoading: false,
         updateCalendarItems: false,
       });
@@ -265,7 +267,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     set({ isItemLoading: true, error: null });
     try {
       const response = (await getCalendarItem(calendarItemId)) as ApiResponse<CalendarItemResultData>;
-      set({ viewCalendarItem: response.Data, isItemLoading: false });
+      set({ viewCalendarItem: mapCalendarItemResultData(response.Data), isItemLoading: false });
       logger.info({
         message: 'Calendar item fetched successfully',
         context: { calendarItemId },
