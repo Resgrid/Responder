@@ -321,6 +321,14 @@ jest.mock('react-native', () => {
       removeEventListener: jest.fn(),
     },
 
+    // I18nManager
+    I18nManager: {
+      allowRTL: jest.fn(),
+      forceRTL: jest.fn(),
+      swapLeftAndRightInRTL: jest.fn(),
+      isRTL: false,
+    },
+
     // NativeEventEmitter
     NativeEventEmitter: class {
       addListener = jest.fn();

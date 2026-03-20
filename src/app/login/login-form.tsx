@@ -188,10 +188,7 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
           {/* Language Selector */}
           <View className="mt-4 w-full flex-row items-center justify-center gap-2">
             <GlobeIcon size={16} className="text-gray-500" />
-            <Select
-              onValueChange={(val) => setLanguage(val as Language)}
-              selectedValue={language ?? 'en'}
-            >
+            <Select onValueChange={(val) => setLanguage(val as Language)} selectedValue={language ?? 'en'}>
               <SelectTrigger className="border-0 bg-transparent">
                 <SelectInput placeholder={t('login.select_language')} className="text-xs text-gray-500" />
                 <SelectIcon as={GlobeIcon} className="mr-1 text-gray-500" />
