@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertTriangle, EyeIcon, EyeOffIcon } from 'lucide-react-native';
+import { AlertTriangle, EyeIcon, EyeOffIcon, GlobeIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
 import type { SubmitHandler } from 'react-hook-form';
@@ -14,9 +14,24 @@ import { View } from '@/components/ui';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { FormControl, FormControlError, FormControlErrorIcon, FormControlErrorText, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import colors from '@/constants/colors';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { translate, useSelectedLanguage } from '@/lib';
+import type { Language } from '@/lib/i18n/resources';
+
+const LANGUAGES: { label: string; value: Language }[] = [
+  { label: 'English', value: 'en' },
+  { label: 'Español', value: 'es' },
+  { label: 'Svenska', value: 'sv' },
+  { label: 'Deutsch', value: 'de' },
+  { label: 'Français', value: 'fr' },
+  { label: 'Italiano', value: 'it' },
+  { label: 'Polski', value: 'pl' },
+  { label: 'Українська', value: 'uk' },
+  { label: 'العربية', value: 'ar' },
+];
 
 const loginFormSchema = z.object({
   username: z
@@ -44,6 +59,7 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
   const { colorScheme } = useColorScheme();
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { language, setLanguage } = useSelectedLanguage();
   const {
     control,
     handleSubmit,
@@ -167,6 +183,31 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
             <Button className="flex-1" variant="outline" onPress={onSsoPress}>
               <ButtonText className="text-xs">{t('login.sso.login_with_sso_button')}</ButtonText>
             </Button>
+          </View>
+
+          {/* Language Selector */}
+          <View className="mt-4 w-full flex-row items-center justify-center gap-2">
+            <GlobeIcon size={16} className="text-gray-500" />
+            <Select
+              onValueChange={(val) => setLanguage(val as Language)}
+              selectedValue={language ?? 'en'}
+            >
+              <SelectTrigger className="border-0 bg-transparent">
+                <SelectInput placeholder={t('login.select_language')} className="text-xs text-gray-500" />
+                <SelectIcon as={GlobeIcon} className="mr-1 text-gray-500" />
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdrop />
+                <SelectContent className="max-h-[60vh] pb-20">
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  {LANGUAGES.map((lang) => (
+                    <SelectItem key={lang.value} label={lang.label} value={lang.value} />
+                  ))}
+                </SelectContent>
+              </SelectPortal>
+            </Select>
           </View>
         </View>
       </ScrollView>

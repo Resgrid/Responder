@@ -39,3 +39,4 @@ expo-env.d.ts
 # @end expo-cli
 .env.production
 .env.staging
+.dual-graph/

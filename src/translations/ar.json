@@ -598,6 +598,7 @@
       "username_placeholder": "أدخل اسم المستخدم أو بريدك الإلكتروني",
       "username_required": "اسم المستخدم مطلوب"
     },
+    "select_language": "اللغة",
     "title": "تسجيل الدخول",
     "username": "اسم المستخدم",
     "username_placeholder": "أدخل اسم المستخدم الخاص بك"
@@ -808,6 +809,12 @@
     "background_location": "الموقع في الخلفية",
     "contact_us": "اتصل بنا",
     "english": "إنجليزي",
+    "french": "فرنسي",
+    "german": "ألماني",
+    "italian": "إيطالي",
+    "polish": "بولندي",
+    "swedish": "سويدي",
+    "ukrainian": "أوكراني",
     "enter_password": "أدخل كلمة المرور الخاصة بك",
     "enter_server_url": "أدخل عنوان URL لواجهة برمجة تطبيقات Resgrid (مثال: https://api.resgrid.com)",
     "enter_username": "أدخل اسم المستخدم الخاص بك",
