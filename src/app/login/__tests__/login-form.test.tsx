@@ -113,6 +113,28 @@ jest.mock('@/components/ui/text', () => {
   };
 });
 
+jest.mock('@/components/ui/select', () => {
+  const React = jest.requireActual('react');
+  const mockView = (name: string) =>
+    React.forwardRef(({ children, ...props }: any, ref: any) =>
+      React.createElement('div', { ...props, ref, testID: name }, children)
+    );
+  return {
+    Select: React.forwardRef(({ children, onValueChange, selectedValue, ...props }: any, ref: any) =>
+      React.createElement('div', { ...props, ref, testID: 'select' }, children)
+    ),
+    SelectTrigger: mockView('select-trigger'),
+    SelectInput: mockView('select-input'),
+    SelectIcon: mockView('select-icon'),
+    SelectPortal: mockView('select-portal'),
+    SelectBackdrop: mockView('select-backdrop'),
+    SelectContent: mockView('select-content'),
+    SelectDragIndicator: mockView('select-drag-indicator'),
+    SelectDragIndicatorWrapper: mockView('select-drag-indicator-wrapper'),
+    SelectItem: mockView('select-item'),
+  };
+});
+
 // Mock React Native components
 jest.mock('react-native', () => {
   const ReactNative = jest.requireActual('react-native');
@@ -126,6 +148,12 @@ jest.mock('react-native', () => {
     Keyboard: {
       dismiss: jest.fn(),
     },
+    I18nManager: {
+      allowRTL: jest.fn(),
+      forceRTL: jest.fn(),
+      swapLeftAndRightInRTL: jest.fn(),
+      isRTL: false,
+    },
   };
 });
 
@@ -134,6 +162,7 @@ jest.mock('lucide-react-native', () => ({
   AlertTriangle: jest.fn(() => 'AlertTriangle'),
   EyeIcon: jest.fn(() => 'EyeIcon'),
   EyeOffIcon: jest.fn(() => 'EyeOffIcon'),
+  GlobeIcon: jest.fn(() => 'GlobeIcon'),
 }));
 
 // Mock nativewind
@@ -147,6 +176,10 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: jest.fn(),
+  },
 }));
 
 // Mock react-hook-form

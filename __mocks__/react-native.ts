@@ -34,6 +34,12 @@ export const Linking = {
   openURL: jest.fn().mockResolvedValue(undefined),
 };
 
+export const I18nManager = {
+  allowRTL: jest.fn(),
+  forceRTL: jest.fn(),
+  isRTL: false,
+};
+
 export const useColorScheme = jest.fn().mockReturnValue('light');
 
 export const useWindowDimensions = jest.fn().mockReturnValue({
@@ -60,4 +66,5 @@ export default {
   Text,
   StyleSheet,
   useColorScheme,
+  I18nManager,
 };

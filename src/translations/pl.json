@@ -45,7 +45,7 @@
     "selection_error_message": "Nie można zapisać preferowanego urządzenia",
     "selection_error_title": "Błąd wyboru",
     "supports_mic_control": "Sterowanie mikrofonem",
-    "tap_scan_to_find_devices": "Naciśnij „Skanuj", aby znaleźć urządzenia audio Bluetooth",
+    "tap_scan_to_find_devices": "Naciśnij \u201eSkanuj\u201d, aby znaleźć urządzenia audio Bluetooth",
     "unknown_device": "Nieznane urządzenie"
   },
   "calendar": {
