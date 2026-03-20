@@ -598,6 +598,7 @@
       "username_placeholder": "Introduce tu usuario o correo",
       "username_required": "El usuario es obligatorio"
     },
+    "select_language": "Idioma",
     "title": "Iniciar sesión",
     "username": "Nombre de usuario",
     "username_placeholder": "Introduce tu nombre de usuario"
@@ -808,6 +809,12 @@
     "background_location": "Ubicación en segundo plano",
     "contact_us": "Contáctanos",
     "english": "Inglés",
+    "french": "Francés",
+    "german": "Alemán",
+    "italian": "Italiano",
+    "polish": "Polaco",
+    "swedish": "Sueco",
+    "ukrainian": "Ucraniano",
     "enter_password": "Introduce tu contraseña",
     "enter_server_url": "Introduce la URL de la API de Resgrid (ej: https://api.resgrid.com)",
     "enter_username": "Introduce tu nombre de usuario",

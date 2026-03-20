@@ -598,6 +598,7 @@
       "username_placeholder": "Enter your username or email",
       "username_required": "Username is required"
     },
+    "select_language": "Language",
     "title": "Login",
     "username": "Username",
     "username_placeholder": "Enter your username"
@@ -808,6 +809,12 @@
     "background_location": "Background Location",
     "contact_us": "Contact Us",
     "english": "English",
+    "french": "French",
+    "german": "German",
+    "italian": "Italian",
+    "polish": "Polish",
+    "swedish": "Swedish",
+    "ukrainian": "Ukrainian",
     "enter_password": "Enter your password",
     "enter_server_url": "Enter Resgrid API URL (e.g., https://api.resgrid.com)",
     "enter_username": "Enter your username",
