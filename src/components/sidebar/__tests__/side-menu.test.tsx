@@ -61,6 +61,7 @@ jest.mock('@/lib/utils', () => ({
 jest.mock('lucide-react-native', () => ({
   Calendar: 'Calendar',
   CalendarCheck: 'CalendarCheck',
+  CloudAlert: 'CloudAlert',
   Contact: 'Contact',
   Headphones: 'Headphones',
   Home: 'Home',
@@ -83,11 +84,19 @@ jest.mock('@/components/ui/avatar', () => {
   return {
     Avatar: React.forwardRef(({ children, ...props }: any, ref: any) => {
       const MockedAvatar = 'MockedAvatar' as any;
-      return <MockedAvatar ref={ref} {...props}>{children}</MockedAvatar>;
+      return (
+        <MockedAvatar ref={ref} {...props}>
+          {children}
+        </MockedAvatar>
+      );
     }),
     AvatarFallbackText: React.forwardRef(({ children, ...props }: any, ref: any) => {
       const MockedAvatarFallbackText = 'MockedAvatarFallbackText' as any;
-      return <MockedAvatarFallbackText ref={ref} {...props}>{children}</MockedAvatarFallbackText>;
+      return (
+        <MockedAvatarFallbackText ref={ref} {...props}>
+          {children}
+        </MockedAvatarFallbackText>
+      );
     }),
     AvatarImage: React.forwardRef((props: any, ref: any) => {
       const MockedAvatarImage = 'MockedAvatarImage' as any;
@@ -101,7 +110,11 @@ jest.mock('@/components/ui/box', () => {
   return {
     Box: React.forwardRef(({ children, ...props }: any, ref: any) => {
       const MockedBox = 'MockedBox' as any;
-      return <MockedBox ref={ref} {...props}>{children}</MockedBox>;
+      return (
+        <MockedBox ref={ref} {...props}>
+          {children}
+        </MockedBox>
+      );
     }),
   };
 });
@@ -121,7 +134,11 @@ jest.mock('@/components/ui/hstack', () => {
   return {
     HStack: React.forwardRef(({ children, ...props }: any, ref: any) => {
       const MockedHStack = 'MockedHStack' as any;
-      return <MockedHStack ref={ref} {...props}>{children}</MockedHStack>;
+      return (
+        <MockedHStack ref={ref} {...props}>
+          {children}
+        </MockedHStack>
+      );
     }),
   };
 });
@@ -131,7 +148,11 @@ jest.mock('@/components/ui/scroll-view', () => {
   return {
     ScrollView: React.forwardRef(({ children, ...props }: any, ref: any) => {
       const MockedScrollView = 'MockedScrollView' as any;
-      return <MockedScrollView ref={ref} {...props}>{children}</MockedScrollView>;
+      return (
+        <MockedScrollView ref={ref} {...props}>
+          {children}
+        </MockedScrollView>
+      );
     }),
   };
 });
@@ -141,7 +162,11 @@ jest.mock('@/components/ui/text', () => {
   return {
     Text: React.forwardRef(({ children, ...props }: any, ref: any) => {
       const MockedText = 'MockedText' as any;
-      return <MockedText ref={ref} {...props}>{children}</MockedText>;
+      return (
+        <MockedText ref={ref} {...props}>
+          {children}
+        </MockedText>
+      );
     }),
   };
 });
@@ -151,7 +176,11 @@ jest.mock('@/components/ui/vstack', () => {
   return {
     VStack: React.forwardRef(({ children, ...props }: any, ref: any) => {
       const MockedVStack = 'MockedVStack' as any;
-      return <MockedVStack ref={ref} {...props}>{children}</MockedVStack>;
+      return (
+        <MockedVStack ref={ref} {...props}>
+          {children}
+        </MockedVStack>
+      );
     }),
   };
 });
@@ -585,4 +614,4 @@ describe('SideMenu', () => {
       expect(screen.getByTestId('side-menu-audio-button')).toBeTruthy();
     });
   });
-}); 
+});

@@ -26,4 +26,5 @@ export class CallResultData {
   public DispatchedOnUtc: string = '';
   public Latitude: string = '';
   public Longitude: string = '';
+  public CheckInTimersEnabled: boolean = false;
 }

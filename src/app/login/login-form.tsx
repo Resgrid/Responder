@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertTriangle, EyeIcon, EyeOffIcon, GlobeIcon } from 'lucide-react-native';
+import { AlertTriangle, ChevronDownIcon, EyeIcon, EyeOffIcon, GlobeIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
 import type { SubmitHandler } from 'react-hook-form';
@@ -9,16 +9,16 @@ import { Image, Keyboard, ScrollView } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as z from 'zod';
 
-import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { View } from '@/components/ui';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { FormControl, FormControlError, FormControlErrorIcon, FormControlErrorText, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { Pressable } from '@/components/ui/pressable';
 import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import colors from '@/constants/colors';
 import { useAnalytics } from '@/hooks/use-analytics';
-import { translate, useSelectedLanguage } from '@/lib';
+import { useSelectedLanguage } from '@/lib';
 import type { Language } from '@/lib/i18n/resources';
 
 const LANGUAGES: { label: string; value: Language }[] = [
@@ -53,9 +53,10 @@ export type LoginFormProps = {
   isLoading?: boolean;
   error?: string;
   onSsoPress?: () => void;
+  onServerUrlPress?: () => void;
 };
 
-export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = undefined, onSsoPress }: LoginFormProps) => {
+export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = undefined, onSsoPress, onServerUrlPress }: LoginFormProps) => {
   const { colorScheme } = useColorScheme();
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
@@ -67,10 +68,9 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
   } = useForm<FormType>({
     resolver: zodResolver(loginFormSchema),
   });
+  const selectedLanguageLabel = LANGUAGES.find((option) => option.value === (language ?? 'en'))?.label ?? LANGUAGES[0].label;
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showServerUrl, setShowServerUrl] = useState(false);
-
   const handleState = () => {
     setShowPassword((showState) => {
       return !showState;
@@ -89,8 +89,8 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
     } catch (error) {
       console.warn('Failed to track login server URL press analytics:', error);
     }
-    setShowServerUrl(true);
-  }, [trackEvent]);
+    onServerUrlPress?.();
+  }, [onServerUrlPress, trackEvent]);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={10}>
@@ -177,21 +177,22 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
 
           {/* Server URL and SSO Buttons */}
           <View className="mt-14 w-full flex-row gap-2">
-            <Button className="flex-1" variant="outline" onPress={handleServerUrlPress}>
-              <ButtonText className="text-xs">{t('login.change_server_url')}</ButtonText>
-            </Button>
-            <Button className="flex-1" variant="outline" onPress={onSsoPress}>
-              <ButtonText className="text-xs">{t('login.sso.login_with_sso_button')}</ButtonText>
-            </Button>
+            <Pressable accessibilityRole="button" className="h-10 flex-1 items-center justify-center rounded border border-outline-300 bg-transparent px-4" onPress={handleServerUrlPress} testID="server-url-button">
+              <Text className="text-xs text-primary-500">{t('login.change_server_url')}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" className="h-10 flex-1 items-center justify-center rounded border border-outline-300 bg-transparent px-4" onPress={onSsoPress} testID="sso-button">
+              <Text className="text-xs text-primary-500">{t('login.sso.login_with_sso_button')}</Text>
+            </Pressable>
           </View>
 
           {/* Language Selector */}
-          <View className="mt-4 w-full flex-row items-center justify-center gap-2">
-            <GlobeIcon size={16} className="text-gray-500" />
+          <View className="mt-6 w-full items-center justify-center">
             <Select onValueChange={(val) => setLanguage(val as Language)} selectedValue={language ?? 'en'}>
-              <SelectTrigger className="border-0 bg-transparent">
-                <SelectInput placeholder={t('login.select_language')} className="text-xs text-gray-500" />
-                <SelectIcon as={GlobeIcon} className="mr-1 text-gray-500" />
+              <SelectTrigger testID="login-language-trigger" className="min-h-0 border-0 bg-transparent p-2">
+                <GlobeIcon size={16} className={`mr-2 ${colorScheme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`} />
+                <Text className={`mr-1 text-sm ${colorScheme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`}>{t('login.select_language')}:</Text>
+                <SelectInput value={selectedLanguageLabel} placeholder={t('login.select_language')} className={`flex-0 px-0 text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-100' : 'text-neutral-700'}`} />
+                <SelectIcon as={ChevronDownIcon} className={`ml-1 ${colorScheme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`} />
               </SelectTrigger>
               <SelectPortal>
                 <SelectBackdrop />
@@ -208,8 +209,6 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
           </View>
         </View>
       </ScrollView>
-
-      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} />
     </KeyboardAvoidingView>
   );
 };

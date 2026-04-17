@@ -10,6 +10,9 @@ const withForegroundService = (config) => {
 
     const mainApplication = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
 
+    // Allow cleartext HTTP traffic for dev server connectivity (required for targetSdk 35+)
+    mainApplication.$['android:usesCleartextTraffic'] = 'true';
+
     mainApplication['service'] = mainApplication['service'] || [];
     mainApplication['service'].push({
       $: {

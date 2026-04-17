@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Alert } from 'react-native';
 
 import { BackgroundGeolocationItem } from '@/components/settings/background-geolocation-item';
 import { BluetoothDeviceItem } from '@/components/settings/bluetooth-device-item';
@@ -16,9 +17,7 @@ import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sh
 import { ThemeItem } from '@/components/settings/theme-item';
 import { ToggleItem } from '@/components/settings/toggle-item';
 import { FocusAwareStatusBar, ScrollView } from '@/components/ui';
-import { AlertDialog, AlertDialogBackdrop, AlertDialogBody, AlertDialogContent, AlertDialogFooter, AlertDialogHeader } from '@/components/ui/alert-dialog';
 import { Box } from '@/components/ui/box';
-import { Button, ButtonText } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
@@ -27,7 +26,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth, useAuthStore } from '@/lib';
 import { logger } from '@/lib/logging';
 import { getBaseApiUrl } from '@/lib/storage/app';
-import { clearAllAppData } from '@/lib/storage/clear-all-data';
+import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/clear-all-data';
 import { openLinkInBrowser } from '@/lib/utils';
 import { useUnitsStore } from '@/stores/units/store';
 
@@ -40,7 +39,6 @@ export default function Settings() {
   const { login, status, isAuthenticated } = useAuth();
   const [showServerUrl, setShowServerUrl] = React.useState(false);
   const [showUnitSelection, setShowUnitSelection] = React.useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { units } = useUnitsStore();
 
@@ -85,18 +83,8 @@ export default function Settings() {
     setShowLoginInfo(true);
   }, [trackEvent]);
 
-  const handleLogoutPress = useCallback(() => {
-    trackEvent('settings_logout_pressed', {
-      timestamp: new Date().toISOString(),
-    });
-    setShowLogoutConfirm(true);
-  }, [trackEvent]);
-
-  const handleLogoutConfirm = useCallback(async () => {
+  const performLogout = useCallback(async () => {
     setIsLoggingOut(true);
-    trackEvent('settings_logout_confirmed', {
-      timestamp: new Date().toISOString(),
-    });
 
     logger.info({
       message: 'User confirmed logout, clearing all app data',
@@ -109,6 +97,7 @@ export default function Settings() {
         clearStorage: true,
         clearFilters: true,
         clearSecure: false, // Keep secure keys for re-login
+        preserveStorageKeys: [...LOGOUT_PRESERVED_STORAGE_KEYS],
       });
 
       // Sign out the user
@@ -126,16 +115,55 @@ export default function Settings() {
       await signOut();
     } finally {
       setIsLoggingOut(false);
-      setShowLogoutConfirm(false);
     }
-  }, [trackEvent, signOut]);
+  }, [signOut]);
+
+  const handleLogoutConfirm = useCallback(async () => {
+    trackEvent('settings_logout_confirmed', {
+      timestamp: new Date().toISOString(),
+    });
+
+    await performLogout();
+  }, [performLogout, trackEvent]);
 
   const handleLogoutCancel = useCallback(() => {
     trackEvent('settings_logout_cancelled', {
       timestamp: new Date().toISOString(),
     });
-    setShowLogoutConfirm(false);
   }, [trackEvent]);
+
+  const handleLogoutPress = useCallback(() => {
+    trackEvent('settings_logout_pressed', {
+      timestamp: new Date().toISOString(),
+    });
+
+    Alert.alert(t('settings.logout_confirm_title'), t('settings.logout_confirm_message'), [
+      {
+        text: t('settings.logout_confirm_cancel'),
+        style: 'cancel',
+        onPress: handleLogoutCancel,
+      },
+      {
+        text: t('settings.logout_confirm_yes'),
+        style: 'destructive',
+        onPress: () => {
+          void handleLogoutConfirm();
+        },
+      },
+    ]);
+  }, [handleLogoutCancel, handleLogoutConfirm, t, trackEvent]);
+
+  const handleServerUrlChanged = useCallback(async () => {
+    if (!isAuthenticated || isLoggingOut) {
+      return;
+    }
+
+    trackEvent('settings_server_url_changed_logout', {
+      timestamp: new Date().toISOString(),
+    });
+
+    await performLogout();
+  }, [isAuthenticated, isLoggingOut, performLogout, trackEvent]);
 
   const handleSupportLinkPress = useCallback(
     (linkType: string, url: string) => {
@@ -210,28 +238,7 @@ export default function Settings() {
       </ScrollView>
 
       <LoginInfoBottomSheet isOpen={showLoginInfo} onClose={() => setShowLoginInfo(false)} onSubmit={handleLoginInfoSubmit} />
-      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} />
-
-      {/* Logout Confirmation Dialog */}
-      <AlertDialog isOpen={showLogoutConfirm} onClose={handleLogoutCancel}>
-        <AlertDialogBackdrop />
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <Heading size="lg">{t('settings.logout_confirm_title')}</Heading>
-          </AlertDialogHeader>
-          <AlertDialogBody className="mb-4 mt-3">
-            <Text>{t('settings.logout_confirm_message')}</Text>
-          </AlertDialogBody>
-          <AlertDialogFooter>
-            <Button variant="outline" action="secondary" onPress={handleLogoutCancel} disabled={isLoggingOut} className="mr-3">
-              <ButtonText>{t('settings.logout_confirm_cancel')}</ButtonText>
-            </Button>
-            <Button action="negative" onPress={handleLogoutConfirm} disabled={isLoggingOut}>
-              <ButtonText>{isLoggingOut ? '...' : t('settings.logout_confirm_yes')}</ButtonText>
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} onUrlChanged={handleServerUrlChanged} />
     </Box>
   );
 }

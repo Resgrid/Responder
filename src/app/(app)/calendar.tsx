@@ -168,7 +168,6 @@ export default function CalendarScreen() {
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={true}
-        estimatedItemSize={100}
         refreshControl={<RefreshControl refreshing={isTodaysLoading} onRefresh={handleRefresh} colors={['#3B82F6']} tintColor="#3B82F6" />}
       />
     );
@@ -201,7 +200,6 @@ export default function CalendarScreen() {
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={true}
-        estimatedItemSize={100}
         refreshControl={<RefreshControl refreshing={isUpcomingLoading} onRefresh={handleRefresh} colors={['#3B82F6']} tintColor="#3B82F6" />}
       />
     );
@@ -218,14 +216,7 @@ export default function CalendarScreen() {
             ) : getItemsForSelectedDate().length === 0 ? (
               <Text className="py-8 text-center text-gray-500 dark:text-gray-400">{t('calendar.selectedDate.empty')}</Text>
             ) : (
-              <FlatList
-                data={getItemsForSelectedDate()}
-                renderItem={renderCompactCalendarItem}
-                keyExtractor={(item) => item.CalendarItemId}
-                showsVerticalScrollIndicator={true}
-                contentContainerStyle={{ padding: 8 }}
-                estimatedItemSize={60}
-              />
+              <FlatList data={getItemsForSelectedDate()} renderItem={renderCompactCalendarItem} keyExtractor={(item) => item.CalendarItemId} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: 8 }} />
             )}
           </View>
         ) : (

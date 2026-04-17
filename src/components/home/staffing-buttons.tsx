@@ -6,6 +6,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { invertColor } from '@/lib/utils';
+import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useStaffingBottomSheetStore } from '@/stores/staffing/staffing-bottom-sheet-store';
@@ -16,15 +17,15 @@ export const StaffingButtons: React.FC = () => {
   const { activeStaffing } = useCoreStore();
   const { setIsOpen } = useStaffingBottomSheetStore();
 
-  const handleStaffingPress = (staffing: any) => {
+  const handleStaffingPress = (staffing: StatusesResultData) => {
     setIsOpen(true, staffing);
   };
 
-  if (isLoadingOptions) {
+  if (isLoadingOptions || activeStaffing === null) {
     return <Loading />;
   }
 
-  if (activeStaffing?.length === 0) {
+  if (activeStaffing.length === 0) {
     return (
       <VStack className="p-4">
         <Text className="text-center text-gray-500">{t('home.staffing.no_options_available')}</Text>
@@ -34,7 +35,7 @@ export const StaffingButtons: React.FC = () => {
 
   return (
     <VStack space="sm" className="p-4" testID="staffing-buttons">
-      {activeStaffing?.map((staffing) => (
+      {activeStaffing.map((staffing) => (
         <Button
           key={staffing.Id}
           variant="solid"

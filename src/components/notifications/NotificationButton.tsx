@@ -34,7 +34,7 @@ export const NotificationButton = ({ onPress }: NotificationButtonProps) => {
       accessibilityLabel={hasNotifications ? `${t('settings.notifications_button')}, ${notificationCount} unread` : t('settings.notifications_button')}
     >
       <View className="relative">
-        <BellIcon size={24} className="text-gray-700 dark:text-gray-300" strokeWidth={2} />
+        <BellIcon size={24} className="text-white" strokeWidth={2} />
 
         {hasNotifications ? (
           <View className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-red-500" testID="notification-badge">

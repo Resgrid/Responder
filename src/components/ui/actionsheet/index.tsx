@@ -4,7 +4,7 @@ import { createActionsheet } from '@gluestack-ui/actionsheet';
 import type { VariantProps } from '@gluestack-ui/nativewind-utils';
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import { withStates } from '@gluestack-ui/nativewind-utils/withStates';
-import { AnimatePresence, createMotionAnimatedComponent, Motion } from '@legendapp/motion';
+import { AnimatePresence } from '@legendapp/motion';
 import { FlashList } from '@shopify/flash-list';
 import { cssInterop } from 'nativewind';
 import React, { type ComponentType, type RefAttributes, useMemo } from 'react';
@@ -44,16 +44,33 @@ const ItemWrapper = React.forwardRef<React.ElementRef<typeof Pressable>, Pressab
   return <Pressable {...props} ref={ref} />;
 });
 
-const AnimatedPressable = createMotionAnimatedComponent(Pressable);
+interface MotionCompatProps {
+  initial?: unknown;
+  animate?: unknown;
+  exit?: unknown;
+  transition?: unknown;
+}
+
+const MotionCompatPressable = React.forwardRef<React.ElementRef<typeof Pressable>, React.ComponentPropsWithoutRef<typeof Pressable> & MotionCompatProps>(
+  ({ initial: _initial, animate: _animate, exit: _exit, transition: _transition, ...props }, ref) => {
+    return <Pressable {...props} ref={ref} />;
+  }
+);
+
+const MotionCompatView = React.forwardRef<React.ElementRef<typeof View>, React.ComponentPropsWithoutRef<typeof View> & MotionCompatProps>(
+  ({ initial: _initial, animate: _animate, exit: _exit, transition: _transition, ...props }, ref) => {
+    return <View {...props} ref={ref} />;
+  }
+);
 
 export const UIActionsheet = createActionsheet({
   Root: View,
-  Content: Motion.View,
+  Content: MotionCompatView,
   Item: Platform.OS === 'web' ? ItemWrapper : (withStates(ItemWrapper) as ComponentType<PressableProps & RefAttributes<View>>),
   ItemText: Text,
   DragIndicator: View,
   IndicatorWrapper: View,
-  Backdrop: AnimatedPressable,
+  Backdrop: MotionCompatPressable,
   ScrollView: ScrollView,
   VirtualizedList: VirtualizedList,
   FlatList: FlashList,
@@ -109,7 +126,7 @@ cssInterop(UIActionsheet.Icon, {
 const actionsheetStyle = tva({ base: 'w-full h-full web:pointer-events-none' });
 
 const actionsheetContentStyle = tva({
-  base: 'items-center rounded-tl-3xl rounded-tr-3xl p-5 pt-2 bg-background-0 web:pointer-events-auto web:select-none shadow-hard-5 border border-b-0 border-outline-100',
+  base: 'absolute bottom-0 left-0 right-0 items-center rounded-tl-3xl rounded-tr-3xl p-5 pt-2 bg-background-0 web:pointer-events-auto web:select-none shadow-hard-5 border border-b-0 border-outline-100',
 });
 
 const actionsheetItemStyle = tva({
@@ -156,7 +173,7 @@ const actionsheetDragIndicatorWrapperStyle = tva({
 });
 
 const actionsheetBackdropStyle = tva({
-  base: 'absolute left-0 top-0 right-0 bottom-0 bg-background-dark web:cursor-default web:pointer-events-auto',
+  base: 'absolute left-0 top-0 right-0 bottom-0 bg-background-dark opacity-40 web:cursor-default web:pointer-events-auto',
 });
 
 const actionsheetScrollViewStyle = tva({
@@ -267,13 +284,14 @@ type IActionsheetIconProps = VariantProps<typeof actionsheetIconStyle> &
     as?: React.ElementType;
   };
 
-const Actionsheet = React.forwardRef<React.ElementRef<typeof UIActionsheet>, IActionsheetProps>(({ className, ...props }, ref) => {
+const Actionsheet = React.forwardRef<React.ElementRef<typeof UIActionsheet>, IActionsheetProps>(({ className, useRNModal = true, ...props }, ref) => {
   return (
     <UIActionsheet
       className={actionsheetStyle({
         class: className,
       })}
       ref={ref}
+      useRNModal={useRNModal}
       {...props}
     />
   );
@@ -347,15 +365,6 @@ const ActionsheetDragIndicatorWrapper = React.forwardRef<React.ElementRef<typeof
 const ActionsheetBackdrop = React.forwardRef<React.ElementRef<typeof UIActionsheet.Backdrop>, IActionsheetBackdropProps>(({ className, ...props }, ref) => {
   return (
     <UIActionsheet.Backdrop
-      initial={{
-        opacity: 0,
-      }}
-      animate={{
-        opacity: 0.5,
-      }}
-      exit={{
-        opacity: 0,
-      }}
       {...props}
       className={actionsheetBackdropStyle({
         class: className,

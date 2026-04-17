@@ -1,13 +1,17 @@
+import { ChevronDownIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, useWindowDimensions } from 'react-native';
 
+import { getSystemConfig } from '@/api/config';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import type { ResgridSystemLocation } from '@/models/v4/configs/getSystemConfigResultData';
 import { useServerUrlStore } from '@/stores/app/server-url-store';
+import useAuthStore from '@/stores/auth/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
 import { Button, ButtonSpinner, ButtonText } from '../ui/button';
@@ -15,8 +19,10 @@ import { Center } from '../ui/center';
 import { FormControl, FormControlError, FormControlErrorText, FormControlHelperText, FormControlLabel, FormControlLabelText } from '../ui/form-control';
 import { HStack } from '../ui/hstack';
 import { Input, InputField } from '../ui/input';
+import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '../ui/select';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
+
 interface ServerUrlForm {
   url: string;
 }
@@ -24,18 +30,41 @@ interface ServerUrlForm {
 interface ServerUrlBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  onUrlChanged?: () => Promise<void>;
 }
 
 const URL_PATTERN = /^https?:\/\/.+/;
+const CUSTOM_SERVER_VALUE = '__custom__';
+const API_PATH_SUFFIX = `/api/${Env.API_VERSION}`;
 
-export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetProps) {
+const normalizeInputUrl = (url: string) => url.trim().replace(/\/+$/, '');
+
+const normalizeBaseUrl = (url: string) => {
+  const trimmedUrl = normalizeInputUrl(url);
+
+  if (trimmedUrl.endsWith(API_PATH_SUFFIX)) {
+    return trimmedUrl.slice(0, -API_PATH_SUFFIX.length).replace(/\/+$/, '');
+  }
+
+  return trimmedUrl;
+};
+
+const normalizeCustomDisplayUrl = (url: string) => normalizeBaseUrl(url).replace(/^(https?:\/\/[^/]+).*$/, '$1');
+
+const buildApiUrl = (url: string) => `${normalizeBaseUrl(url)}${API_PATH_SUFFIX}`;
+
+export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUrlBottomSheetProps) {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoadingServerOptions, setIsLoadingServerOptions] = React.useState(true);
+  const [locations, setLocations] = React.useState<ResgridSystemLocation[]>([]);
+  const [selectedServer, setSelectedServer] = React.useState<string>(CUSTOM_SERVER_VALUE);
   const { setUrl, getUrl } = useServerUrlStore();
   const { trackEvent } = useAnalytics();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
 
   const {
     control,
@@ -45,9 +74,50 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
   } = useForm<ServerUrlForm>();
 
   React.useEffect(() => {
-    if (isOpen) {
-      getUrl().then((url) => setValue('url', url.replace(`/api/${Env.API_VERSION}`, '')));
+    if (!isOpen) {
+      setIsLoadingServerOptions(true);
+      return undefined;
     }
+
+    let isMounted = true;
+
+    const loadServerOptions = async () => {
+      try {
+        const [currentUrl, systemConfig] = await Promise.all([getUrl(), getSystemConfig()]);
+        const normalizedCurrentUrl = normalizeBaseUrl(currentUrl);
+        const nextLocations = systemConfig.Data?.Locations ?? [];
+        const matchingLocation = nextLocations.find((location) => normalizeBaseUrl(location.ApiUrl) === normalizedCurrentUrl);
+
+        if (isMounted) {
+          setLocations(nextLocations);
+          setValue('url', matchingLocation ? normalizeInputUrl(matchingLocation.ApiUrl) : normalizeCustomDisplayUrl(currentUrl));
+          setSelectedServer(matchingLocation?.Name ?? CUSTOM_SERVER_VALUE);
+        }
+      } catch (error) {
+        const currentUrl = await getUrl();
+
+        if (isMounted) {
+          setLocations([]);
+          setValue('url', normalizeCustomDisplayUrl(currentUrl));
+          setSelectedServer(CUSTOM_SERVER_VALUE);
+        }
+
+        logger.error({
+          message: 'Failed to load system config for server URLs',
+          context: { error },
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoadingServerOptions(false);
+        }
+      }
+    };
+
+    loadServerOptions();
+
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, setValue, getUrl]);
 
   // Track analytics when sheet becomes visible
@@ -74,20 +144,27 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
   const onFormSubmit = async (data: ServerUrlForm) => {
     try {
       setIsLoading(true);
+      const selectedLocation = locations.find((location) => location.Name === selectedServer);
+      const resolvedBaseUrl = selectedServer === CUSTOM_SERVER_VALUE ? data.url : (selectedLocation?.ApiUrl ?? data.url);
+      const normalizedResolvedBaseUrl = normalizeBaseUrl(resolvedBaseUrl);
 
       // Track form submission analytics
       try {
         trackEvent('server_url_form_submitted', {
           timestamp: new Date().toISOString(),
-          hasUrl: !!data.url,
-          urlLength: data.url?.length || 0,
+          hasUrl: !!normalizedResolvedBaseUrl,
+          urlLength: normalizedResolvedBaseUrl.length,
           isLandscape,
         });
       } catch (error) {
         console.warn('Failed to track server URL form submission analytics:', error);
       }
 
-      await setUrl(`${data.url}/api/${Env.API_VERSION}`);
+      await setUrl(buildApiUrl(normalizedResolvedBaseUrl));
+
+      if (isAuthenticated && onUrlChanged) {
+        await onUrlChanged();
+      }
 
       // Track successful submission
       try {
@@ -101,7 +178,7 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
 
       logger.info({
         message: 'Server URL updated successfully',
-        context: { url: data.url },
+        context: { url: normalizedResolvedBaseUrl },
       });
       onClose();
     } catch (error) {
@@ -139,6 +216,25 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
     onClose();
   }, [trackEvent, onClose, isLandscape]);
 
+  const handleServerChange = useCallback(
+    (nextServer: string) => {
+      setSelectedServer(nextServer);
+
+      if (nextServer === CUSTOM_SERVER_VALUE) {
+        return;
+      }
+
+      const selectedLocation = locations.find((location) => location.Name === nextServer);
+
+      if (selectedLocation) {
+        setValue('url', normalizeInputUrl(selectedLocation.ApiUrl));
+      }
+    },
+    [locations, setValue]
+  );
+
+  const isCustomSelected = selectedServer === CUSTOM_SERVER_VALUE;
+
   return (
     <Actionsheet isOpen={isOpen} onClose={handleClose} snapPoints={[80]}>
       <ActionsheetBackdrop />
@@ -149,7 +245,37 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
 
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }} showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}>
           <VStack space="lg" className="mt-4 w-full">
-            <FormControl isRequired isInvalid={!!errors.url}>
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{t('settings.server')}</FormControlLabelText>
+              </FormControlLabel>
+              {isLoadingServerOptions ? (
+                <Center testID="server-options-loading" className={`min-h-16 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}>
+                  <ButtonSpinner />
+                  <Text className={`mt-2 ${colorScheme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>{t('loading.loadingData')}</Text>
+                </Center>
+              ) : (
+                <Select onValueChange={handleServerChange} selectedValue={selectedServer}>
+                  <SelectTrigger className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}>
+                    <SelectInput placeholder={t('settings.server')} value={selectedServer === CUSTOM_SERVER_VALUE ? t('settings.custom') : locations.find((location) => location.Name === selectedServer)?.Name} />
+                    <SelectIcon as={ChevronDownIcon} className="mr-3" />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdrop />
+                    <SelectContent className="max-h-[60vh] pb-20">
+                      <SelectDragIndicatorWrapper>
+                        <SelectDragIndicator />
+                      </SelectDragIndicatorWrapper>
+                      {locations.map((location) => (
+                        <SelectItem key={location.Name} label={location.Name} value={location.Name} />
+                      ))}
+                      <SelectItem label={t('settings.custom')} value={CUSTOM_SERVER_VALUE} />
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+              )}
+            </FormControl>
+            <FormControl isRequired={isCustomSelected} isInvalid={isCustomSelected ? !!errors.url : false}>
               <FormControlLabel>
                 <FormControlLabelText className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{t('settings.server_url')}</FormControlLabelText>
               </FormControlLabel>
@@ -157,10 +283,16 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
                 control={control}
                 name="url"
                 rules={{
-                  required: t('form.required'),
-                  pattern: {
-                    value: URL_PATTERN,
-                    message: t('form.invalid_url'),
+                  validate: (value) => {
+                    if (!isCustomSelected) {
+                      return true;
+                    }
+
+                    if (!value) {
+                      return t('form.required');
+                    }
+
+                    return URL_PATTERN.test(value) ? true : t('form.invalid_url');
                   },
                 }}
                 render={({ field: { onChange, value } }) => (
@@ -169,6 +301,7 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
                       value={value}
                       onChangeText={onChange}
                       placeholder={t('settings.enter_server_url')}
+                      editable={isCustomSelected && !isLoadingServerOptions}
                       autoCapitalize="none"
                       autoCorrect={false}
                       keyboardType="url"
@@ -196,7 +329,7 @@ export function ServerUrlBottomSheet({ isOpen, onClose }: ServerUrlBottomSheetPr
               <Button variant="outline" className="flex-1" onPress={handleClose} size={isLandscape ? 'md' : 'sm'}>
                 <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button className="flex-1 bg-primary-600" onPress={handleSubmit(onFormSubmit)} disabled={isLoading} size={isLandscape ? 'md' : 'sm'}>
+              <Button className="flex-1 bg-primary-600" onPress={handleSubmit(onFormSubmit)} disabled={isLoading || isLoadingServerOptions} size={isLandscape ? 'md' : 'sm'}>
                 {isLoading ? <ButtonSpinner /> : <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.save')}</ButtonText>}
               </Button>
             </HStack>

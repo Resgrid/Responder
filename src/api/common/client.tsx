@@ -55,6 +55,8 @@ const isTransientRefreshError = (error: unknown): boolean => {
 // Request interceptor for API calls
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    config.baseURL = getBaseApiUrl();
+
     const authStore = useAuthStore.getState();
     const { accessToken, isAuthenticated, isAccessTokenExpiringSoon, shouldRefreshToken } = authStore;
 

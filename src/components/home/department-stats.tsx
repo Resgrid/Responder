@@ -38,13 +38,13 @@ export const DepartmentStats: React.FC = () => {
     return (
       <HStack space="md" className="p-4" testID="department-stats">
         <Card className="flex-1 bg-background-50 p-4">
-          <Box className="h-16 animate-pulse rounded bg-gray-200" />
+          <Box className="h-16 rounded bg-gray-200" />
         </Card>
         <Card className="flex-1 bg-background-50 p-4">
-          <Box className="h-16 animate-pulse rounded bg-gray-200" />
+          <Box className="h-16 rounded bg-gray-200" />
         </Card>
         <Card className="flex-1 bg-background-50 p-4">
-          <Box className="h-16 animate-pulse rounded bg-gray-200" />
+          <Box className="h-16 rounded bg-gray-200" />
         </Card>
       </HStack>
     );

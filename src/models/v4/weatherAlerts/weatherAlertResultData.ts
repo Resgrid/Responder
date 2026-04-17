@@ -1,0 +1,30 @@
+export class WeatherAlertResultData {
+  public AlertId: string = '';
+  public DepartmentId: number = 0;
+  public Title: string = '';
+  public Event: string = '';
+  public Headline: string = '';
+  public Description: string = '';
+  public Instruction: string = '';
+  public AreaDescription: string = '';
+  public Severity: string = '';
+  public Certainty: string = '';
+  public Urgency: string = '';
+  public Category: string = '';
+  public Status: string = '';
+  public Sender: string = '';
+  public SenderName: string = '';
+  public Source: string = '';
+  public SourceType: string = '';
+  public Effective: string = '';
+  public Onset: string = '';
+  public Expires: string = '';
+  public Polygon: string = '';
+  public CenterGeoLocation: string = '';
+  public Latitude: string = '';
+  public Longitude: string = '';
+  public RadiusMiles: number = 0;
+  public ExternalId: string = '';
+  public CreatedOn: string = '';
+  public CreatedOnUtc: string = '';
+}

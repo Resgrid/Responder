@@ -3,9 +3,11 @@ import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { ActiveCallTab } from '@/components/home/active-call-tab';
 import { DepartmentStats } from '@/components/home/department-stats';
 import { StaffingButtons } from '@/components/home/staffing-buttons';
 import { StatusButtons } from '@/components/home/status-buttons';
+import { SummaryStatsRow } from '@/components/home/summary-stats-row';
 import { UserStaffingCard } from '@/components/home/user-staffing-card';
 import { UserStatusCard } from '@/components/home/user-status-card';
 import { StaffingBottomSheet } from '@/components/staffing/staffing-bottom-sheet';
@@ -14,26 +16,49 @@ import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
 import { VStack } from '@/components/ui/vstack';
+import { WeatherAlertBanner } from '@/components/weather-alerts/weather-alert-banner';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useCoreStore } from '@/stores/app/core-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
+import { useCheckInStore } from '@/stores/calls/check-in-store';
+import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
 
 export default function HomeDashboard() {
   const { t } = useTranslation();
   const { refreshAll } = useHomeStore();
+  const getStatusesAndStaffing = useCoreStore((state) => state.getStatusesAndStaffing);
   const { trackEvent } = useAnalytics();
+  const activeCall = useActiveCallStore((state) => state.activeCall);
+  const overdueCount = useCheckInStore((state) => state.timerStatuses.filter((s) => s.Status === 'Overdue').length);
+  const calls = useCallsStore((state) => state.calls);
+  const fetchCalls = useCallsStore((state) => state.fetchCalls);
+  const fetchGlobalOverdueCount = useCheckInStore((state) => state.fetchGlobalOverdueCount);
 
   // Initialize data when component mounts
   useEffect(() => {
     refreshAll();
-  }, [refreshAll]);
+    getStatusesAndStaffing();
+    void fetchCalls();
+  }, [getStatusesAndStaffing, refreshAll, fetchCalls]);
 
-  // Track analytics when view becomes visible
+  // Re-compute global overdue count whenever the calls list changes
+  useEffect(() => {
+    if (calls.length > 0) {
+      void fetchGlobalOverdueCount(calls);
+    }
+  }, [calls, fetchGlobalOverdueCount]);
+
+  // Track analytics when view becomes visible, and refresh overdue count on focus
   useFocusEffect(
     useCallback(() => {
       trackEvent('home_viewed', {
         timestamp: new Date().toISOString(),
       });
-    }, [trackEvent])
+      if (calls.length > 0) {
+        void fetchGlobalOverdueCount(calls);
+      }
+    }, [trackEvent, calls, fetchGlobalOverdueCount])
   );
 
   const tabs: TabItem[] = [
@@ -49,12 +74,24 @@ export default function HomeDashboard() {
     },
   ];
 
+  if (activeCall) {
+    tabs.push({
+      key: 'call',
+      title: t('home.tabs.call'),
+      badge: overdueCount > 0 ? overdueCount : undefined,
+      content: <ActiveCallTab />,
+    });
+  }
+
   return (
     <>
       <VStack className="size-full flex-1" testID="home-dashboard-container">
         <FocusAwareStatusBar />
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* Weather Alert Banner */}
+          <WeatherAlertBanner />
+
           {/* Department Statistics */}
           {/*<DepartmentStats />*/}
 
@@ -67,6 +104,10 @@ export default function HomeDashboard() {
               <UserStaffingCard />
             </VStack>
           </HStack>
+
+          <VStack className="px-4 pb-4">
+            <SummaryStatsRow />
+          </VStack>
 
           {/* Status/Staffing Tabs */}
           <VStack className="flex-1 px-4 pb-4">

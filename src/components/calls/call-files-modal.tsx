@@ -1,16 +1,14 @@
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { useFocusEffect } from '@react-navigation/native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Download, File, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { Alert, Pressable, ScrollView } from 'react-native';
 
 import { getCallAttachmentFile } from '@/api/calls/callFiles';
+import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Box } from '@/components/ui/box';
 import { Button } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -40,10 +38,6 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
   const handleIndicatorColor = useMemo(() => (colorScheme === 'dark' ? '#4B5563' : '#D1D5DB'), [colorScheme]);
   const iconColor = useMemo(() => (colorScheme === 'dark' ? '#F3F4F6' : '#111827'), [colorScheme]);
 
-  // Bottom sheet ref and snap points
-  const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => ['67%'], []);
-
   // Track if modal was actually opened to avoid false close events
   const wasModalOpenRef = useRef(false);
 
@@ -69,41 +63,29 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
     }, [isOpen, trackEvent, callId, callFiles?.length, isLoadingFiles, errorFiles])
   );
 
-  // Handle modal open/close
+  // Fetch files when the sheet opens.
   useEffect(() => {
     if (isOpen) {
-      bottomSheetRef.current?.expand();
       fetchCallFiles(callId);
-    } else {
-      bottomSheetRef.current?.close();
     }
   }, [isOpen, callId, fetchCallFiles]);
 
-  // Handle sheet changes
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        // Only track close analytics if modal was actually opened
-        if (wasModalOpenRef.current) {
-          try {
-            trackEvent('call_files_modal_closed', {
-              timestamp: new Date().toISOString(),
-              callId,
-              wasManualClose: false, // This means it was closed by gesture
-            });
-          } catch (error) {
-            console.warn('Failed to track call files modal close analytics:', error);
-          }
-          wasModalOpenRef.current = false;
-        }
-        onClose();
+  const handleClose = useCallback(() => {
+    if (wasModalOpenRef.current) {
+      try {
+        trackEvent('call_files_modal_closed', {
+          timestamp: new Date().toISOString(),
+          callId,
+          wasManualClose: true,
+        });
+      } catch (error) {
+        console.warn('Failed to track call files modal close analytics:', error);
       }
-    },
-    [onClose, trackEvent, callId]
-  );
+      wasModalOpenRef.current = false;
+    }
 
-  // Render backdrop
-  const renderBackdrop = useCallback((props: BottomSheetBackdropProps) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />, []);
+    onClose();
+  }, [callId, onClose, trackEvent]);
 
   // Format file size for display
   const formatFileSize = (bytes: number): string => {
@@ -321,53 +303,24 @@ export const CallFilesModal: React.FC<CallFilesModalProps> = ({ isOpen, onClose,
   };
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      index={isOpen ? 0 : -1}
-      snapPoints={snapPoints}
-      onChange={handleSheetChanges}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose={true}
-      handleIndicatorStyle={{ backgroundColor: handleIndicatorColor }}
-      backgroundStyle={{ backgroundColor }}
-    >
-      <BottomSheetView style={{ flex: 1, backgroundColor }} testID="call-files-modal">
+    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} snapPoints={[67]} minHeight="min-h-[500px]" testID="call-files-modal-sheet">
+      <VStack style={{ flex: 1, backgroundColor }} testID="call-files-modal">
         {/* Fixed Header */}
         <VStack space="md" style={{ backgroundColor }}>
           <Box className="w-full flex-row items-center justify-between border-b border-gray-200 px-4 pb-4 pt-2 dark:border-gray-700">
             <Heading size="lg">{t('calls.files.title')}</Heading>
-            <Button
-              variant="link"
-              onPress={() => {
-                // Only track close analytics if modal was actually opened
-                if (wasModalOpenRef.current) {
-                  try {
-                    trackEvent('call_files_modal_closed', {
-                      timestamp: new Date().toISOString(),
-                      callId,
-                      wasManualClose: true, // This means it was closed by button press
-                    });
-                  } catch (error) {
-                    console.warn('Failed to track call files modal close analytics:', error);
-                  }
-                  wasModalOpenRef.current = false;
-                }
-                onClose();
-              }}
-              className="p-1"
-              testID="close-button"
-            >
+            <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
               <X size={24} color={iconColor} />
             </Button>
           </Box>
         </VStack>
 
         {/* Scrollable Files List */}
-        <ScrollView style={{ flex: 1, backgroundColor }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
+        <ScrollView testID="scroll-view" style={{ flex: 1, backgroundColor }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
           {renderFilesContent()}
         </ScrollView>
-      </BottomSheetView>
-    </BottomSheet>
+      </VStack>
+    </CustomBottomSheet>
   );
 };
 

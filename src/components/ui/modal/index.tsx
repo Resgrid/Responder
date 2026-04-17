@@ -95,8 +95,8 @@ type IModalFooterProps = React.ComponentProps<typeof UIModal.Footer> & VariantPr
 
 type IModalCloseButtonProps = React.ComponentProps<typeof UIModal.CloseButton> & VariantProps<typeof modalCloseButtonStyle> & { className?: string };
 
-const Modal = React.forwardRef<React.ElementRef<typeof UIModal>, IModalProps>(({ className, size = 'md', ...props }, ref) => (
-  <UIModal ref={ref} {...props} pointerEvents="box-none" className={modalStyle({ size, class: className })} context={{ size }} />
+const Modal = React.forwardRef<React.ElementRef<typeof UIModal>, IModalProps>(({ className, size = 'md', useRNModal = true, ...props }, ref) => (
+  <UIModal ref={ref} {...props} useRNModal={useRNModal} pointerEvents="box-none" className={modalStyle({ size, class: className })} context={{ size }} />
 ));
 
 const ModalBackdrop = React.forwardRef<React.ElementRef<typeof UIModal.Backdrop>, IModalBackdropProps>(({ className, ...props }, ref) => {

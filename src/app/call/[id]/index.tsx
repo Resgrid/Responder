@@ -1,18 +1,19 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeftIcon, ClockIcon, FileTextIcon, ImageIcon, InfoIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, ClockIcon, FileTextIcon, ImageIcon, InfoIcon, PaperclipIcon, RouteIcon, TimerIcon, UserIcon, UsersIcon, VideoIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 
-import { useCallDetailMenu } from '@/components/calls/call-detail-menu';
+import { CallDetailActionSheetPanel, HeaderRightMenuButton, useCallDetailMenu } from '@/components/calls/call-detail-menu';
 import CallFilesModal from '@/components/calls/call-files-modal';
 import CallImagesModal from '@/components/calls/call-images-modal';
 import CallNotesModal from '@/components/calls/call-notes-modal';
 import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
+import { CheckInTabPanel } from '@/components/check-in/check-in-tab-panel';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 // Import a static map component instead of react-native-maps
@@ -25,10 +26,13 @@ import { HStack } from '@/components/ui/hstack';
 import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { VideoFeedTabPanel } from '@/components/video-feeds/video-feed-tab-panel';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
+import { useCheckInStore } from '@/stores/calls/check-in-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
@@ -117,11 +121,15 @@ export default function CallDetail() {
     setIsCloseCallModalOpen(true);
   };
 
+  const handleSetActiveCall = () => {
+    if (call) {
+      useActiveCallStore.getState().setActiveCall(call);
+      showToast('success', t('home.active_call.set_active'));
+    }
+  };
+
   // Initialize the call detail menu hook
-  const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
-    onEditCall: handleEditCall,
-    onCloseCall: handleCloseCall,
-  });
+  const { isMenuOpen, openMenu, closeMenu, canEdit } = useCallDetailMenu();
 
   useEffect(() => {
     reset();
@@ -182,7 +190,7 @@ export default function CallDetail() {
                 <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
               </Pressable>
             ),
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
           }}
         />
         <SafeAreaView className="size-full flex-1">
@@ -298,7 +306,7 @@ export default function CallDetail() {
                 <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
               </Pressable>
             ),
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
           }}
         />
         <View className="size-full flex-1">
@@ -321,7 +329,7 @@ export default function CallDetail() {
                 <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
               </Pressable>
             ),
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
           }}
         />
         <View className="size-full flex-1">
@@ -346,7 +354,7 @@ export default function CallDetail() {
                 <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
               </Pressable>
             ),
-            headerRight: () => <HeaderRightMenu />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
           }}
         />
         <SafeAreaView className="size-full flex-1">
@@ -568,6 +576,24 @@ export default function CallDetail() {
       },
     ];
 
+    tabs.push({
+      key: 'video',
+      title: t('call_detail.tabs.video'),
+      icon: <VideoIcon size={16} />,
+      content: <VideoFeedTabPanel callId={parseInt(call.CallId)} canEdit={canUserCreateCalls ?? false} />,
+    });
+
+    if (call?.CheckInTimersEnabled) {
+      const overdueCount = useCheckInStore.getState().timerStatuses.filter((s) => s.Status === 'Overdue').length;
+      tabs.push({
+        key: 'checkin',
+        title: t('check_in.tab_title'),
+        icon: <TimerIcon size={16} />,
+        badge: overdueCount > 0 ? overdueCount : undefined,
+        content: <CheckInTabPanel callId={parseInt(call.CallId)} checkInTimersEnabled={true} />,
+      });
+    }
+
     return tabs;
   };
 
@@ -582,7 +608,7 @@ export default function CallDetail() {
               <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
             </Pressable>
           ),
-          headerRight: () => <HeaderRightMenu />,
+          headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
         }}
       />
       <ScrollView className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>
@@ -594,12 +620,13 @@ export default function CallDetail() {
             </Heading>
           </HStack>
           <VStack className="space-y-1">
-            <Box style={{ height: 80 }}>
+            <Box style={styles.natureContainer}>
               <WebView
-                style={[styles.container, { height: 80 }]}
+                style={[styles.container, styles.natureWebView]}
                 originWhitelist={['*']}
-                scrollEnabled={false}
-                showsVerticalScrollIndicator={false}
+                scrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}
                 source={{
                   html: `
                                 <!DOCTYPE html>
@@ -611,7 +638,7 @@ export default function CallDetail() {
                                         color: ${textColor};
                                         font-family: system-ui, -apple-system, sans-serif;
                                         margin: 0;
-                                        padding: 0;
+                                        padding: 4px 0 16px;
                                         font-size: 16px;
                                         line-height: 1.5;
                                       }
@@ -693,7 +720,7 @@ export default function CallDetail() {
       <CloseCallBottomSheet isOpen={isCloseCallModalOpen} onClose={() => setIsCloseCallModalOpen(false)} callId={callId || ''} />
 
       {/* Call Detail Menu ActionSheet */}
-      <CallDetailActionSheet />
+      <CallDetailActionSheetPanel isOpen={isMenuOpen} onClose={closeMenu} onEditCall={handleEditCall} onCloseCall={handleCloseCall} onSetActiveCall={handleSetActiveCall} />
     </>
   );
 }
@@ -702,5 +729,11 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     backgroundColor: 'transparent',
+  },
+  natureContainer: {
+    minHeight: 132,
+  },
+  natureWebView: {
+    height: 132,
   },
 });

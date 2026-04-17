@@ -23,7 +23,7 @@ describe('API Client - Token Refresh', () => {
   beforeEach(() => {
     mockAxios = new MockAdapter(api);
     jest.clearAllMocks();
-    
+
     // Reset auth store
     useAuthStore.setState({
       accessToken: null,
@@ -43,6 +43,16 @@ describe('API Client - Token Refresh', () => {
   });
 
   describe('Request Interceptor - Proactive Token Refresh', () => {
+    it('uses the latest stored base url for each request', async () => {
+      const storageApp = require('@/lib/storage/app');
+      storageApp.getBaseApiUrl = jest.fn(() => 'https://api.changed.test');
+      mockAxios.onGet('/test-endpoint').reply(200, { success: true });
+
+      await api.get('/test-endpoint');
+
+      expect(mockAxios.history.get[0]?.baseURL).toBe('https://api.changed.test');
+    });
+
     it('should refresh token before API call when access token is expiring soon', async () => {
       const now = Date.now();
       const expiringSoonTokenObtainedAt = now - (3600 * 1000 - 4 * 60 * 1000); // 56 minutes ago (expires in 4 minutes)
@@ -76,7 +86,7 @@ describe('API Client - Token Refresh', () => {
 
       // Verify refresh was called
       expect(mockedRefreshTokenRequest).toHaveBeenCalledWith('valid-refresh-token');
-      
+
       // Verify token was updated in store
       const authState = useAuthStore.getState();
       expect(authState.accessToken).toBe('new-access-token');
@@ -116,7 +126,7 @@ describe('API Client - Token Refresh', () => {
 
       // Verify refresh was NOT called
       expect(mockedRefreshTokenRequest).not.toHaveBeenCalled();
-      
+
       // Verify token was not changed
       const authState = useAuthStore.getState();
       expect(authState.accessToken).toBe('valid-token');
@@ -148,13 +158,13 @@ describe('API Client - Token Refresh', () => {
 
       // Verify refresh was attempted in request interceptor
       expect(mockedRefreshTokenRequest).toHaveBeenCalledWith('valid-refresh-token');
-      
+
       // When refresh fails, user should be logged out automatically
       const authState = useAuthStore.getState();
       expect(authState.status).toBe('signedOut');
       expect(authState.accessToken).toBe(null);
       expect(authState.refreshToken).toBe(null);
-      
+
       // Verify the API call still succeeded with the original (expired) token
       expect(response.status).toBe(200);
       expect(response.data).toEqual({ success: true });
@@ -248,7 +258,7 @@ describe('API Client - Token Refresh', () => {
 
     it('should logout when refresh token is expired', async () => {
       const now = Date.now();
-      const expiredRefreshTokenObtainedAt = now - (366 * 24 * 60 * 60 * 1000); // Over 1 year ago
+      const expiredRefreshTokenObtainedAt = now - 366 * 24 * 60 * 60 * 1000; // Over 1 year ago
 
       // Set up state with expired refresh token
       useAuthStore.setState({
@@ -299,11 +309,7 @@ describe('API Client - Token Refresh', () => {
       });
 
       // Mock 401 response first, then success with new token
-      mockAxios
-        .onGet('/test-endpoint')
-        .replyOnce(401, { error: 'Unauthorized' })
-        .onGet('/test-endpoint')
-        .reply(200, { success: true });
+      mockAxios.onGet('/test-endpoint').replyOnce(401, { error: 'Unauthorized' }).onGet('/test-endpoint').reply(200, { success: true });
 
       // Mock successful refresh
       mockedRefreshTokenRequest.mockResolvedValueOnce({
@@ -320,7 +326,7 @@ describe('API Client - Token Refresh', () => {
 
       // Verify refresh was called
       expect(mockedRefreshTokenRequest).toHaveBeenCalledWith('valid-refresh-token');
-      
+
       // Verify tokens were updated
       const authState = useAuthStore.getState();
       expect(authState.accessToken).toBe('new-access-token');

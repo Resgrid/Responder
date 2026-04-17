@@ -2,7 +2,7 @@ import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { getCallPriorities } from '@/api/calls/callPriorities';
-import { getCalls } from '@/api/calls/calls';
+import { getCallExtraData, getCalls } from '@/api/calls/calls';
 import { getCallTypes } from '@/api/calls/callTypes';
 import { useCallsStore } from '../store';
 
@@ -13,6 +13,7 @@ jest.mock('@/api/calls/callTypes');
 
 const mockGetCallPriorities = getCallPriorities as jest.MockedFunction<typeof getCallPriorities>;
 const mockGetCalls = getCalls as jest.MockedFunction<typeof getCalls>;
+const mockGetCallExtraData = getCallExtraData as jest.MockedFunction<typeof getCallExtraData>;
 const mockGetCallTypes = getCallTypes as jest.MockedFunction<typeof getCallTypes>;
 
 describe('useCallsStore', () => {
@@ -23,9 +24,13 @@ describe('useCallsStore', () => {
       calls: [],
       callPriorities: [],
       callTypes: [],
+      callExtrasById: {},
+      loadingCallExtraIds: {},
       isLoading: false,
       error: null,
     });
+
+    mockGetCallExtraData.mockResolvedValue({ Data: { Dispatches: [] } } as any);
   });
 
   describe('fetchCallTypes', () => {

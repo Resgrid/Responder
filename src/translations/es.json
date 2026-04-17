@@ -225,7 +225,8 @@
       "dispatched": "Despachadas",
       "info": "Información",
       "protocols": "Protocolos",
-      "timeline": "Actividad"
+      "timeline": "Actividad",
+      "video": "Video"
     },
     "timestamp": "Marca de tiempo",
     "title": "Detalles de la llamada",
@@ -240,6 +241,7 @@
     "address_not_found": "Dirección no encontrada, intente con una dirección diferente",
     "address_placeholder": "Introduce la dirección de la llamada",
     "address_required": "Por favor introduce una dirección para buscar",
+    "assigned_to_me": "Asignada a mí",
     "call_details": "Detalles de la llamada",
     "call_location": "Ubicación de la llamada",
     "call_number": "Número de llamada",
@@ -298,6 +300,7 @@
     "no_open_calls": "No hay llamadas abiertas disponibles",
     "note": "Nota",
     "note_placeholder": "Introduce la nota de la llamada",
+    "only_calls_im_on": "Solo llamadas en las que estoy",
     "personnel": "Personas",
     "plus_code": "Código Plus",
     "plus_code_found": "Código plus encontrado y ubicación actualizada",
@@ -337,6 +340,37 @@
     "what3words_placeholder": "Introduce dirección what3words (ej: filled.count.soap)",
     "what3words_required": "Por favor introduce una dirección what3words para buscar"
   },
+  "check_in": {
+    "add_note": "Agregar Nota (Opcional)",
+    "check_in_error": "Error al guardar registro",
+    "check_in_success": "Registro guardado exitosamente",
+    "confirm_check_in": "Confirmar Registro",
+    "duration": "Duración",
+    "elapsed": "Transcurrido",
+    "history": "Historial de Registros",
+    "last_check_in": "Último registro",
+    "minutes_ago": "hace {{count}} min",
+    "no_timers": "No hay temporizadores configurados",
+    "offline_queued": "Registro en cola para cuando esté en línea",
+    "perform_check_in": "Registrarse",
+    "progress": "{{elapsed}} / {{total}} min",
+    "quick_check_in": "Registro Rápido",
+    "select_type": "Seleccionar Tipo de Registro",
+    "status_ok": "OK",
+    "status_overdue": "Vencido",
+    "status_warning": "Advertencia",
+    "tab_title": "Registro",
+    "timer_interval": "Cada {{minutes}} min",
+    "timers_disabled": "Temporizadores deshabilitados para esta llamada",
+    "type_hazmat": "Exposición Hazmat",
+    "type_ic": "Comandante de Incidente",
+    "type_par": "PAR",
+    "type_personnel": "Personal",
+    "type_rehab": "Rehabilitación",
+    "type_sector_rotation": "Rotación de Sector",
+    "type_unit": "Unidad",
+    "unknown_unit": "Unidad desconocida"
+  },
   "common": {
     "active": "Activo",
     "add": "Añadir",
@@ -345,6 +379,7 @@
     "cancel": "Cancelar",
     "close": "Cerrar",
     "confirm": "Confirmar",
+    "confirm_location": "Confirmar ubicación",
     "delete": "Eliminar",
     "deleting": "Eliminando...",
     "discard": "Descartar",
@@ -472,6 +507,14 @@
     "required": "Este campo es obligatorio"
   },
   "home": {
+    "active_call": {
+      "clear_active": "Borrar Llamada Activa",
+      "no_active_call": "No hay llamada activa seleccionada",
+      "select_call": "Seleccionar una llamada para rastrear",
+      "set_active": "Establecer como Llamada Activa",
+      "title": "Llamada Activa",
+      "view_details": "Ver Detalles de Llamada"
+    },
     "error": {
       "no_user_id": "ID de usuario no disponible"
     },
@@ -505,7 +548,14 @@
       "update_failed": "Error al actualizar el estado",
       "updated_successfully": "Estado actualizado exitosamente"
     },
+    "summary": {
+      "active_calls": "Llamadas activas",
+      "active_severe_weather_alerts": "Alertas meteorológicas severas/de emergencia activas",
+      "calls_im_on": "Llamadas en las que estoy",
+      "pending_missed_checkins": "Check-ins pendientes/perdidos"
+    },
     "tabs": {
+      "call": "Llamada",
       "dashboard": "Panel",
       "map": "Mapa",
       "staffing": "Personal",
@@ -808,6 +858,7 @@
     "background_geolocation_warning": "Esta función permite que la aplicación rastree tu ubicación en segundo plano. Ayuda con la coordinación de respuesta de emergencia pero puede impactar la duración de la batería.",
     "background_location": "Ubicación en segundo plano",
     "contact_us": "Contáctanos",
+    "custom": "Personalizado",
     "english": "Inglés",
     "enter_password": "Introduce tu contraseña",
     "enter_server_url": "Introduce la URL de la API de Resgrid (ej: https://api.resgrid.com)",
@@ -953,7 +1004,8 @@
     "protocols": "Protocolos",
     "settings": "Configuración",
     "shifts": "Turnos",
-    "units": "Unidades"
+    "units": "Unidades",
+    "weatherAlerts": "Alertas Meteorológicas"
   },
   "units": {
     "coordinates": "Coordenadas",
@@ -973,6 +1025,116 @@
     "title": "Unidades",
     "vehicleInfo": "Información del vehículo",
     "vin": "VIN"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "copy_url": "Copy URL",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "delete_success": "Video feed deleted successfully",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_dash": "DASH",
+    "format_embed": "Embed",
+    "format_hls": "HLS",
+    "format_mjpeg": "MJPEG",
+    "format_other": "Other",
+    "format_rtsp": "RTSP",
+    "format_webrtc": "WebRTC",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "save_error": "Failed to save video feed",
+    "save_success": "Video feed saved successfully",
+    "status_active": "Active",
+    "status_error": "Error",
+    "status_inactive": "Inactive",
+    "title": "Video Feeds",
+    "type_body_cam": "Body Cam",
+    "type_drone": "Drone",
+    "type_fixed_camera": "Fixed Camera",
+    "type_other": "Other",
+    "type_satellite": "Satellite Feed",
+    "type_traffic_cam": "Traffic Cam",
+    "type_weather_cam": "Weather Cam",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player.",
+    "url_copied": "URL copied to clipboard",
+    "watch": "Watch"
+  },
+  "weatherAlerts": {
+    "activeAlerts": "Alertas Activas",
+    "banner": {
+      "moreAlerts": "+{{count}} más"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Ambiental",
+      "Fire": "Incendio",
+      "Geo": "Geológico",
+      "Health": "Salud",
+      "Infra": "Infraestructura",
+      "Met": "Meteorológico",
+      "Other": "Otro",
+      "Transport": "Transporte"
+    },
+    "certainty": {
+      "Likely": "Probable",
+      "Observed": "Observado",
+      "Possible": "Posible",
+      "Unknown": "Desconocido",
+      "Unlikely": "Improbable",
+      "label": "Certeza"
+    },
+    "detail": {
+      "area": "Área Afectada",
+      "description": "Descripción",
+      "effective": "Vigente",
+      "expires": "Expira",
+      "instructions": "Instrucciones",
+      "metadata": "Detalles",
+      "onset": "Inicio",
+      "sender": "Remitente",
+      "status": "Estado",
+      "timing": "Horario"
+    },
+    "filter": {
+      "all": "Todos",
+      "extreme": "Extremo",
+      "minor": "Menor",
+      "moderate": "Moderado",
+      "severe": "Severo"
+    },
+    "noActiveAlerts": "No hay alertas meteorológicas activas",
+    "search": "Buscar alertas...",
+    "severity": {
+      "Extreme": "Extremo",
+      "Minor": "Menor",
+      "Moderate": "Moderado",
+      "Severe": "Severo",
+      "Unknown": "Desconocido"
+    },
+    "status": {
+      "Actual": "Real",
+      "Draft": "Borrador",
+      "Exercise": "Ejercicio",
+      "System": "Sistema",
+      "Test": "Prueba"
+    },
+    "title": "Alertas Meteorológicas",
+    "urgency": {
+      "Expected": "Esperada",
+      "Future": "Futura",
+      "Immediate": "Inmediata",
+      "Past": "Pasada",
+      "Unknown": "Desconocida",
+      "label": "Urgencia"
+    }
   },
   "welcome": "Bienvenido al sitio de la aplicación obytes"
 }

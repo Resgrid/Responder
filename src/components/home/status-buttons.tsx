@@ -6,6 +6,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { invertColor } from '@/lib/utils';
+import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
@@ -16,16 +17,18 @@ export const StatusButtons: React.FC = () => {
   const { activeStatuses } = useCoreStore();
   const { setIsOpen } = usePersonnelStatusBottomSheetStore();
 
-  const handleStatusPress = (statusId: number, statusData: any) => {
+  const handleStatusPress = (statusData: StatusesResultData) => {
     // Open the bottom sheet with the selected status
     setIsOpen(true, statusData);
   };
 
-  if (isLoadingOptions) {
+  if (isLoadingOptions || activeStatuses === null) {
     return <Loading />;
   }
 
-  if (activeStatuses?.length === 0) {
+  const visibleStatuses = activeStatuses.filter((status) => ![4, 5, 6, 7].includes(status.Id));
+
+  if (visibleStatuses.length === 0) {
     return (
       <VStack className="p-4">
         <Text className="text-center text-gray-500">{t('home.status.no_options_available')}</Text>
@@ -35,24 +38,22 @@ export const StatusButtons: React.FC = () => {
 
   return (
     <VStack space="sm" className="p-4" testID="status-buttons">
-      {activeStatuses
-        ?.filter((status) => ![4, 5, 6, 7].includes(status.Id))
-        .map((status) => (
-          <Button
-            key={status.Id}
-            variant="solid"
-            className="w-full justify-center px-3 py-2"
-            action="primary"
-            size="lg"
-            style={{
-              backgroundColor: status.BColor,
-            }}
-            onPress={() => handleStatusPress(status.Id, status)}
-            testID={`status-button-${status.Id}`}
-          >
-            <ButtonText style={{ color: invertColor(status.BColor, true) }}>{status.Text}</ButtonText>
-          </Button>
-        ))}
+      {visibleStatuses.map((status) => (
+        <Button
+          key={status.Id}
+          variant="solid"
+          className="w-full justify-center px-3 py-2"
+          action="primary"
+          size="lg"
+          style={{
+            backgroundColor: status.BColor,
+          }}
+          onPress={() => handleStatusPress(status)}
+          testID={`status-button-${status.Id}`}
+        >
+          <ButtonText style={{ color: invertColor(status.BColor, true) }}>{status.Text}</ButtonText>
+        </Button>
+      ))}
     </VStack>
   );
 };

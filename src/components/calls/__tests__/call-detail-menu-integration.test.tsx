@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
-import { useCallDetailMenu } from '../call-detail-menu';
+import { CallDetailActionSheetPanel, HeaderRightMenuButton, useCallDetailMenu } from '../call-detail-menu';
 
 // Mock the security store
 jest.mock('@/stores/security/store', () => ({
@@ -62,6 +62,7 @@ jest.mock('@/components/ui/hstack', () => ({
 jest.mock('lucide-react-native', () => ({
   EditIcon: () => null,
   XIcon: () => null,
+  TimerIcon: () => null,
   MoreVerticalIcon: () => {
     const { View } = require('react-native');
     return <View />;
@@ -83,15 +84,17 @@ describe('Call Detail Menu Integration Test', () => {
   const { useAnalytics } = require('@/hooks/use-analytics');
 
   const TestComponent = () => {
-    const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
-      onEditCall: mockOnEditCall,
-      onCloseCall: mockOnCloseCall,
-    });
+    const { isMenuOpen, openMenu, closeMenu, canEdit } = useCallDetailMenu();
 
     return (
       <>
-        <HeaderRightMenu />
-        <CallDetailActionSheet />
+        <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />
+        <CallDetailActionSheetPanel
+          isOpen={isMenuOpen}
+          onClose={closeMenu}
+          onEditCall={mockOnEditCall}
+          onCloseCall={mockOnCloseCall}
+        />
       </>
     );
   };

@@ -1,8 +1,9 @@
-import { Box, Loader2 } from 'lucide-react-native';
+import { Loader2 } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { Box } from '../ui/box';
 import { HStack } from '../ui/hstack';
 import { Spinner } from '../ui/spinner';
 import { Text } from '../ui/text';
@@ -56,7 +57,11 @@ export const Loading: React.FC<LoadingProps> = ({ text, fullscreen = false, size
           </HStack>
         );
       case 'icon':
-        return <Loader2 size={size === 'small' ? 24 : size === 'large' ? 32 : 40} className="text-primary animate-spin" />;
+        return (
+          <View className="animate-spin">
+            <Loader2 size={size === 'small' ? 24 : size === 'large' ? 32 : 40} className="text-primary" />
+          </View>
+        );
       case 'spinner':
       default:
         return <Spinner size={size} className="text-primary" />;
@@ -131,10 +136,12 @@ export const ListSkeleton: React.FC<{
   height?: number;
   spacing?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'xs' | '3xl' | '4xl';
 }> = ({ count = 5, height = 60, spacing = 'sm' }) => {
+  const skeletonKeys = Array.from({ length: count }, (_, index) => `skeleton-${height}-${index}`);
+
   return (
     <VStack space={spacing} className="w-full">
-      {Array.from({ length: count }).map((_, index) => (
-        <Skeleton key={index} height={height} />
+      {skeletonKeys.map((key) => (
+        <Skeleton key={key} height={height} />
       ))}
     </VStack>
   );

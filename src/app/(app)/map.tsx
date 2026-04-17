@@ -363,13 +363,13 @@ export default function HomeMap() {
 
       {/* Drawer for Portrait Mode */}
       {!isLandscape && (
-        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)}>
+        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} size="lg">
           <DrawerBackdrop onPress={() => setIsSideMenuOpen(false)} />
-          <DrawerContent className="w-4/5 bg-white p-1 dark:bg-gray-900">
-            <DrawerBody>
+          <DrawerContent className="bg-white dark:bg-gray-900">
+            <DrawerBody className="p-0">
               <SideMenu onNavigate={() => setIsSideMenuOpen(false)} />
             </DrawerBody>
-            <DrawerFooter>
+            <DrawerFooter className="border-t border-gray-200 p-3 dark:border-gray-800">
               <Button onPress={() => setIsSideMenuOpen(false)} className="w-full bg-primary-600">
                 <ButtonText>{t('common.close')}</ButtonText>
               </Button>

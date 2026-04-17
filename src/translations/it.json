@@ -225,7 +225,8 @@
       "dispatched": "Inviato",
       "info": "Info",
       "protocols": "Protocolli",
-      "timeline": "Attività"
+      "timeline": "Attività",
+      "video": "Video"
     },
     "timestamp": "Marca temporale",
     "title": "Dettagli chiamata",
@@ -240,6 +241,7 @@
     "address_not_found": "Indirizzo non trovato, provare con un indirizzo diverso",
     "address_placeholder": "Inserire l'indirizzo della chiamata",
     "address_required": "Inserire un indirizzo da cercare",
+    "assigned_to_me": "Assegnata a me",
     "call_details": "Dettagli chiamata",
     "call_location": "Posizione della chiamata",
     "call_number": "Numero chiamata",
@@ -298,6 +300,7 @@
     "no_open_calls": "Nessuna chiamata aperta disponibile",
     "note": "Nota",
     "note_placeholder": "Inserire la nota della chiamata",
+    "only_calls_im_on": "Solo chiamate a cui sono assegnato",
     "personnel": "Personale",
     "plus_code": "Plus Code",
     "plus_code_found": "Plus Code trovato e posizione aggiornata",
@@ -337,6 +340,37 @@
     "what3words_placeholder": "Inserire l'indirizzo what3words (es.: filled.count.soap)",
     "what3words_required": "Inserire un indirizzo what3words da cercare"
   },
+  "check_in": {
+    "add_note": "Aggiungi Nota (Opzionale)",
+    "check_in_error": "Registrazione check-in fallita",
+    "check_in_success": "Check-in registrato con successo",
+    "confirm_check_in": "Conferma Check-In",
+    "duration": "Durata",
+    "elapsed": "Trascorso",
+    "history": "Cronologia Check-In",
+    "last_check_in": "Ultimo check-in",
+    "minutes_ago": "{{count}} min fa",
+    "no_timers": "Nessun timer check-in configurato",
+    "offline_queued": "Check-in in coda per quando online",
+    "perform_check_in": "Check-In",
+    "progress": "{{elapsed}} / {{total}} min",
+    "quick_check_in": "Check-In Rapido",
+    "select_type": "Seleziona Tipo Check-In",
+    "status_ok": "OK",
+    "status_overdue": "Scaduto",
+    "status_warning": "Attenzione",
+    "tab_title": "Check-In",
+    "timer_interval": "Ogni {{minutes}} min",
+    "timers_disabled": "Timer check-in disabilitati per questa chiamata",
+    "type_hazmat": "Esposizione Hazmat",
+    "type_ic": "Comandante Incidente",
+    "type_par": "PAR",
+    "type_personnel": "Personale",
+    "type_rehab": "Riabilitazione",
+    "type_sector_rotation": "Rotazione Settore",
+    "type_unit": "Unità",
+    "unknown_unit": "Unità sconosciuta"
+  },
   "common": {
     "active": "Attivo",
     "add": "Aggiungi",
@@ -345,6 +379,7 @@
     "cancel": "Annulla",
     "close": "Chiudi",
     "confirm": "Conferma",
+    "confirm_location": "Conferma posizione",
     "delete": "Elimina",
     "deleting": "Eliminazione...",
     "discard": "Ignora",
@@ -472,6 +507,14 @@
     "required": "Questo campo è obbligatorio"
   },
   "home": {
+    "active_call": {
+      "clear_active": "Cancella Chiamata Attiva",
+      "no_active_call": "Nessuna chiamata attiva selezionata",
+      "select_call": "Seleziona una chiamata da tracciare",
+      "set_active": "Imposta come Chiamata Attiva",
+      "title": "Chiamata Attiva",
+      "view_details": "Visualizza Dettagli Chiamata"
+    },
     "error": {
       "no_user_id": "ID utente non disponibile"
     },
@@ -505,7 +548,14 @@
       "update_failed": "Impossibile aggiornare lo stato",
       "updated_successfully": "Stato aggiornato con successo"
     },
+    "summary": {
+      "active_calls": "Chiamate attive",
+      "active_severe_weather_alerts": "Allerte meteo gravi/di emergenza attive",
+      "calls_im_on": "Chiamate a cui sono assegnato",
+      "pending_missed_checkins": "Check-in in sospeso/mancati"
+    },
     "tabs": {
+      "call": "Chiamata",
       "dashboard": "Pannello",
       "map": "Mappa",
       "staffing": "Personale",
@@ -808,6 +858,7 @@
     "background_geolocation_warning": "Questa funzionalità consente all'app di tracciare la posizione in background. Facilita il coordinamento delle risposte di emergenza ma può influire sull'autonomia della batteria.",
     "background_location": "Posizione in background",
     "contact_us": "Contattaci",
+    "custom": "Personalizzato",
     "english": "Inglese",
     "enter_password": "Inserire la password",
     "enter_server_url": "Inserire l'URL API Resgrid (es.: https://api.resgrid.com)",
@@ -953,7 +1004,8 @@
     "protocols": "Protocolli",
     "settings": "Impostazioni",
     "shifts": "Turni",
-    "units": "Unità"
+    "units": "Unità",
+    "weatherAlerts": "Allerte Meteo"
   },
   "units": {
     "coordinates": "Coordinate",
@@ -973,6 +1025,116 @@
     "title": "Unità",
     "vehicleInfo": "Informazioni sul veicolo",
     "vin": "VIN"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "copy_url": "Copy URL",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "delete_success": "Video feed deleted successfully",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_dash": "DASH",
+    "format_embed": "Embed",
+    "format_hls": "HLS",
+    "format_mjpeg": "MJPEG",
+    "format_other": "Other",
+    "format_rtsp": "RTSP",
+    "format_webrtc": "WebRTC",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "save_error": "Failed to save video feed",
+    "save_success": "Video feed saved successfully",
+    "status_active": "Active",
+    "status_error": "Error",
+    "status_inactive": "Inactive",
+    "title": "Video Feeds",
+    "type_body_cam": "Body Cam",
+    "type_drone": "Drone",
+    "type_fixed_camera": "Fixed Camera",
+    "type_other": "Other",
+    "type_satellite": "Satellite Feed",
+    "type_traffic_cam": "Traffic Cam",
+    "type_weather_cam": "Weather Cam",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player.",
+    "url_copied": "URL copied to clipboard",
+    "watch": "Watch"
+  },
+  "weatherAlerts": {
+    "activeAlerts": "Allerte Attive",
+    "banner": {
+      "moreAlerts": "+{{count}} altre"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Ambientale",
+      "Fire": "Incendio",
+      "Geo": "Geologico",
+      "Health": "Salute",
+      "Infra": "Infrastruttura",
+      "Met": "Meteorologico",
+      "Other": "Altro",
+      "Transport": "Trasporto"
+    },
+    "certainty": {
+      "Likely": "Probabile",
+      "Observed": "Osservato",
+      "Possible": "Possibile",
+      "Unknown": "Sconosciuto",
+      "Unlikely": "Improbabile",
+      "label": "Certezza"
+    },
+    "detail": {
+      "area": "Area Interessata",
+      "description": "Descrizione",
+      "effective": "In vigore",
+      "expires": "Scade",
+      "instructions": "Istruzioni",
+      "metadata": "Dettagli",
+      "onset": "Inizio",
+      "sender": "Mittente",
+      "status": "Stato",
+      "timing": "Tempistica"
+    },
+    "filter": {
+      "all": "Tutti",
+      "extreme": "Estremo",
+      "minor": "Lieve",
+      "moderate": "Moderato",
+      "severe": "Grave"
+    },
+    "noActiveAlerts": "Nessuna allerta meteo attiva",
+    "search": "Cerca avvisi...",
+    "severity": {
+      "Extreme": "Estremo",
+      "Minor": "Lieve",
+      "Moderate": "Moderato",
+      "Severe": "Grave",
+      "Unknown": "Sconosciuto"
+    },
+    "status": {
+      "Actual": "Reale",
+      "Draft": "Bozza",
+      "Exercise": "Esercitazione",
+      "System": "Sistema",
+      "Test": "Test"
+    },
+    "title": "Allerte Meteo",
+    "urgency": {
+      "Expected": "Prevista",
+      "Future": "Futura",
+      "Immediate": "Immediata",
+      "Past": "Passata",
+      "Unknown": "Sconosciuta",
+      "label": "Urgenza"
+    }
   },
   "welcome": "Benvenuto/a su Resgrid Responder"
 }

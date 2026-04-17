@@ -16,7 +16,7 @@ export const UserStatusCard: React.FC = () => {
   if (isLoadingUser) {
     return (
       <Card className="bg-background-50 p-4" testID="user-status-card">
-        <Box className="h-16 animate-pulse rounded bg-gray-200" />
+        <Box className="h-16 rounded bg-gray-200" />
       </Card>
     );
   }

@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import * as FileSystem from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -91,7 +91,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [isAddingImage, setIsAddingImage] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [fullScreenImage, setFullScreenImage] = useState<{ source: ImageSourcePropType; name?: string } | null>(null);
-  const flatListRef = useRef<FlashList<CallFileResultData>>(null);
+  const flatListRef = useRef<FlashListRef<CallFileResultData>>(null);
 
   const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage, clearCallImages } = useCallDetailStore();
 
@@ -360,7 +360,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
         } else if (manipulatedImage?.uri) {
           // Fallback to FileSystem if base64 wasn't returned
           base64Image = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: 'base64',
           });
         } else {
           throw new Error('Image manipulation failed - no output');
@@ -611,13 +611,8 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
               snapToInterval={width}
               snapToAlignment="start"
               decelerationRate="fast"
-              estimatedItemSize={width}
               // Memory optimization: only render visible items plus a small buffer
               drawDistance={width}
-              // Optimize for memory by removing items that are far from viewport
-              overrideItemLayout={(layout, item, index, maxColumns, extraData) => {
-                layout.size = width;
-              }}
               className="w-full"
               contentContainerStyle={{ paddingHorizontal: 0 }}
               ListEmptyComponent={() => (

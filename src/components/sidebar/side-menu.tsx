@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarCheck, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map, Megaphone, Mic, Notebook, Settings, Truck, User, Users } from 'lucide-react-native';
+import { Calendar, CalendarCheck, CloudAlert, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map as MapIcon, Megaphone, Mic, Notebook, Settings, Truck, User, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
 
@@ -42,82 +42,86 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const { departmentCode } = useSecurityStore();
   const securityStoreState = securityStore();
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 'home',
-      title: t('tabs.home'),
-      icon: Home,
-      route: '/(app)/home',
-      testID: 'side-menu-home',
-    },
-    {
-      id: 'messages',
-      title: t('tabs.messages'),
-      icon: Mail,
-      route: '/(app)/messages',
-      testID: 'side-menu-messages',
-    },
-    {
-      id: 'contacts',
-      title: t('tabs.contacts'),
-      icon: Contact,
-      route: '/(app)/contacts',
-      testID: 'side-menu-contacts',
-    },
-    {
-      id: 'map',
-      title: t('tabs.map'),
-      icon: Map,
-      route: '/(app)/map',
-      testID: 'side-menu-map',
-    },
-    {
-      id: 'notes',
-      title: t('tabs.notes'),
-      icon: Notebook,
-      route: '/(app)/notes',
-      testID: 'side-menu-notes',
-    },
-    {
-      id: 'protocols',
-      title: t('tabs.protocols'),
-      icon: ListTree,
-      route: '/(app)/protocols',
-      testID: 'side-menu-protocols',
-    },
-    {
-      id: 'calendar',
-      title: t('tabs.calendar'),
-      icon: Calendar,
-      route: '/calendar',
-      testID: 'side-menu-calendar',
-    },
-    {
-      id: 'shifts',
-      title: t('tabs.shifts'),
-      icon: CalendarCheck,
-      route: '/(app)/shifts',
-      testID: 'side-menu-shifts',
-    },
-    {
-      id: 'settings',
-      title: t('tabs.settings'),
-      icon: Settings,
-      route: '/(app)/settings',
-      testID: 'side-menu-settings',
-    },
-  ];
+  const menuItems: MenuItem[] = useMemo(
+    () => [
+      {
+        id: 'home',
+        title: t('tabs.home'),
+        icon: Home,
+        route: '/(app)/home',
+        testID: 'side-menu-home',
+      },
+      {
+        id: 'messages',
+        title: t('tabs.messages'),
+        icon: Mail,
+        route: '/(app)/messages',
+        testID: 'side-menu-messages',
+      },
+      {
+        id: 'contacts',
+        title: t('tabs.contacts'),
+        icon: Contact,
+        route: '/(app)/contacts',
+        testID: 'side-menu-contacts',
+      },
+      {
+        id: 'map',
+        title: t('tabs.map'),
+        icon: MapIcon,
+        route: '/(app)/map',
+        testID: 'side-menu-map',
+      },
+      {
+        id: 'notes',
+        title: t('tabs.notes'),
+        icon: Notebook,
+        route: '/(app)/notes',
+        testID: 'side-menu-notes',
+      },
+      {
+        id: 'protocols',
+        title: t('tabs.protocols'),
+        icon: ListTree,
+        route: '/(app)/protocols',
+        testID: 'side-menu-protocols',
+      },
+      {
+        id: 'calendar',
+        title: t('tabs.calendar'),
+        icon: Calendar,
+        route: '/calendar',
+        testID: 'side-menu-calendar',
+      },
+      {
+        id: 'shifts',
+        title: t('tabs.shifts'),
+        icon: CalendarCheck,
+        route: '/(app)/shifts',
+        testID: 'side-menu-shifts',
+      },
+      {
+        id: 'weatherAlerts',
+        title: t('tabs.weatherAlerts'),
+        icon: CloudAlert,
+        route: '/(app)/weather-alerts',
+        testID: 'side-menu-weather-alerts',
+      },
+      {
+        id: 'settings',
+        title: t('tabs.settings'),
+        icon: Settings,
+        route: '/(app)/settings',
+        testID: 'side-menu-settings',
+      },
+    ],
+    [t]
+  );
 
   const handleNavigation = useCallback(
     (route: string) => {
-      // Use requestAnimationFrame to ensure navigation happens smoothly
-      requestAnimationFrame(() => {
-        router.push(route as any);
-        // Add a small delay before closing to allow navigation to start
-        setTimeout(() => {
-          onNavigate?.();
-        }, 50);
-      });
+      onNavigate?.();
+      router.push(route as any);
     },
     [router, onNavigate]
   );
@@ -163,7 +167,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
 
   return (
     <Box className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} testID="side-menu-container">
-      <ScrollView className="mt-4 flex-1">
+      <ScrollView className="flex-1" contentContainerStyle={styles.contentContainer}>
         <VStack space="md" className="flex-1 p-4">
           {/* Profile Section */}
           <Box className={`rounded-xl p-3 ${isDark ? 'border border-gray-700 bg-gray-800' : 'border border-gray-200 bg-gray-50'}`} testID="side-menu-profile">
@@ -277,3 +281,10 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
 SideMenu.displayName = 'SideMenu';
 
 export default SideMenu;
+
+const styles = StyleSheet.create({
+  contentContainer: {
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+});
