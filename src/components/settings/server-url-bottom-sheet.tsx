@@ -70,6 +70,7 @@ export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUr
     control,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<ServerUrlForm>();
 
@@ -196,6 +197,10 @@ export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUr
       logger.error({
         message: 'Failed to update server URL',
         context: { error },
+      });
+
+      setError('root', {
+        message: error instanceof Error ? error.message : t('common.error'),
       });
     } finally {
       setIsLoading(false);
@@ -324,6 +329,14 @@ export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUr
                 {t('settings.server_url_note')}
               </Text>
             </Center>
+
+            <HStack space="md" className="mt-4">
+              {errors.root?.message ? (
+                <Text size="sm" className="w-full text-center text-red-500">
+                  {errors.root.message}
+                </Text>
+              ) : null}
+            </HStack>
 
             <HStack space="md" className="mt-4">
               <Button variant="outline" className="flex-1" onPress={handleClose} size={isLandscape ? 'md' : 'sm'}>

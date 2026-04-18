@@ -181,20 +181,21 @@ jest.mock('react-native', () => {
     ActivityIndicator: mockComponent('ActivityIndicator'),
     FlatList: React.forwardRef((props: any, ref: any) => {
       const { data, renderItem, keyExtractor, ListHeaderComponent, ListFooterComponent, ListEmptyComponent, ...rest } = props;
-      const items = data && data.length > 0
-        ? data.map((item: any, index: number) => {
-            const key = keyExtractor ? keyExtractor(item, index) : String(index);
-            return renderItem
-              ? React.createElement(React.Fragment, { key }, renderItem({ item, index, separators: {} as any }))
-              : null;
-          })
-        : (ListEmptyComponent ? [React.createElement(ListEmptyComponent, { key: 'empty' })] : []);
+      const items =
+        data && data.length > 0
+          ? data.map((item: any, index: number) => {
+              const key = keyExtractor ? keyExtractor(item, index) : String(index);
+              return renderItem ? React.createElement(React.Fragment, { key }, renderItem({ item, index, separators: {} as any })) : null;
+            })
+          : ListEmptyComponent
+            ? [React.createElement(ListEmptyComponent, { key: 'empty' })]
+            : [];
       return React.createElement(
         'RNFlatList',
         { ...rest, ref },
         ListHeaderComponent ? React.createElement(ListHeaderComponent, { key: 'header' }) : null,
         ...items,
-        ListFooterComponent ? React.createElement(ListFooterComponent, { key: 'footer' }) : null,
+        ListFooterComponent ? React.createElement(ListFooterComponent, { key: 'footer' }) : null
       );
     }),
     SectionList: mockComponent('SectionList'),
@@ -861,9 +862,7 @@ jest.mock('@/components/ui/bottom-sheet', () => {
   const React = require('react');
   const { View } = require('react-native');
 
-  const CustomBottomSheet = React.forwardRef(({ children, testID }: any, ref: any) =>
-    React.createElement(View, { testID: testID ?? 'custom-bottom-sheet', ref }, children)
-  );
+  const CustomBottomSheet = React.forwardRef(({ children, testID }: any, ref: any) => React.createElement(View, { testID: testID ?? 'custom-bottom-sheet', ref }, children));
   CustomBottomSheet.displayName = 'CustomBottomSheet';
 
   return { CustomBottomSheet };
@@ -965,9 +964,7 @@ jest.mock('@/components/ui/badge', () => {
 jest.mock('@/components/ui/icon', () => {
   const React = require('react');
   const { View } = require('react-native');
-  const Icon = React.forwardRef(({ as: As, ...props }: any, ref: any) =>
-    As ? React.createElement(As, { ...props, ref }) : React.createElement(View, { ...props, ref })
-  );
+  const Icon = React.forwardRef(({ as: As, ...props }: any, ref: any) => (As ? React.createElement(As, { ...props, ref }) : React.createElement(View, { ...props, ref })));
   Icon.displayName = 'Icon';
   return { Icon };
 });
@@ -1003,31 +1000,19 @@ jest.mock('@/components/ui/button', () => {
   const React = require('react');
   const { Pressable, Text, View, ActivityIndicator } = require('react-native');
 
-  const Button = React.forwardRef((props: any, ref: any) =>
-    React.createElement(Pressable, { ...props, ref })
-  );
+  const Button = React.forwardRef((props: any, ref: any) => React.createElement(Pressable, { ...props, ref }));
   Button.displayName = 'Button';
 
-  const ButtonText = React.forwardRef((props: any, ref: any) =>
-    React.createElement(Text, { ...props, ref })
-  );
+  const ButtonText = React.forwardRef((props: any, ref: any) => React.createElement(Text, { ...props, ref }));
   ButtonText.displayName = 'ButtonText';
 
-  const ButtonIcon = React.forwardRef(({ as: Icon, ...props }: any, ref: any) =>
-    Icon
-      ? React.createElement(Icon, { ...props, ref })
-      : React.createElement(View, { ...props, ref })
-  );
+  const ButtonIcon = React.forwardRef(({ as: Icon, ...props }: any, ref: any) => (Icon ? React.createElement(Icon, { ...props, ref }) : React.createElement(View, { ...props, ref })));
   ButtonIcon.displayName = 'ButtonIcon';
 
-  const ButtonGroup = React.forwardRef((props: any, ref: any) =>
-    React.createElement(View, { ...props, ref })
-  );
+  const ButtonGroup = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
   ButtonGroup.displayName = 'ButtonGroup';
 
-  const ButtonSpinner = React.forwardRef((props: any, ref: any) =>
-    React.createElement(ActivityIndicator, { ...props, ref })
-  );
+  const ButtonSpinner = React.forwardRef((props: any, ref: any) => React.createElement(ActivityIndicator, { ...props, ref }));
   ButtonSpinner.displayName = 'ButtonSpinner';
 
   return { Button, ButtonText, ButtonIcon, ButtonGroup, ButtonSpinner };

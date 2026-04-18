@@ -21,6 +21,7 @@ import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useRolesStore } from '@/stores/roles/store';
+import { sanitizeHtmlContent } from '@/utils/webview-html';
 
 function getColor(call: CallResultData, priority: CallPriorityResultData | undefined) {
   if (!call) {
@@ -220,6 +221,7 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority, callExtraDat
           <WebView
             style={[styles.container, { height: 80 }]}
             originWhitelist={['*']}
+            javaScriptEnabled={false}
             scrollEnabled={false}
             showsVerticalScrollIndicator={false}
             source={{
@@ -242,7 +244,7 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority, callExtraDat
                       }
                     </style>
                   </head>
-                  <body>${call.Nature}</body>
+                  <body>${sanitizeHtmlContent(call.Nature)}</body>
                 </html>
               `,
             }}

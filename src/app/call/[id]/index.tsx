@@ -36,6 +36,7 @@ import { useCheckInStore } from '@/stores/calls/check-in-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
+import { sanitizeHtmlContent } from '@/utils/webview-html';
 
 export default function CallDetail() {
   const { id } = useLocalSearchParams();
@@ -403,6 +404,7 @@ export default function CallDetail() {
                   <WebView
                     style={[styles.container, { height: 200 }]}
                     originWhitelist={['*']}
+                    javaScriptEnabled={false}
                     scrollEnabled={false}
                     showsVerticalScrollIndicator={false}
                     source={{
@@ -425,7 +427,7 @@ export default function CallDetail() {
                                       }
                                     </style>
                                   </head>
-                                  <body>${call.Note}</body>
+                                  <body>${sanitizeHtmlContent(call.Note)}</body>
                                 </html>
                               `,
                     }}
@@ -480,6 +482,7 @@ export default function CallDetail() {
                       <WebView
                         style={[styles.container, { height: 200 }]}
                         originWhitelist={['*']}
+                        javaScriptEnabled={false}
                         scrollEnabled={false}
                         showsVerticalScrollIndicator={false}
                         source={{
@@ -502,7 +505,7 @@ export default function CallDetail() {
                                       }
                                     </style>
                                   </head>
-                                  <body>${protocol.ProtocolText}</body>
+                                  <body>${sanitizeHtmlContent(protocol.ProtocolText)}</body>
                                 </html>
                               `,
                         }}
@@ -624,6 +627,7 @@ export default function CallDetail() {
               <WebView
                 style={[styles.container, styles.natureWebView]}
                 originWhitelist={['*']}
+                javaScriptEnabled={false}
                 scrollEnabled={true}
                 showsVerticalScrollIndicator={true}
                 nestedScrollEnabled={true}
@@ -647,7 +651,7 @@ export default function CallDetail() {
                                       }
                                     </style>
                                   </head>
-                                  <body>${call.Nature}</body>
+                                  <body>${sanitizeHtmlContent(call.Nature)}</body>
                                 </html>
                               `,
                 }}
