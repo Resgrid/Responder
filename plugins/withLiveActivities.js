@@ -37,6 +37,15 @@ function entitlementsXml(appGroupId) {
 `;
 }
 
+function resolveAppGroupId(cfg, appGroupId) {
+  if (appGroupId) {
+    return appGroupId;
+  }
+
+  const bundleId = cfg.ios?.bundleIdentifier ?? 'com.example.app';
+  return `group.${bundleId}`;
+}
+
 /**
  * Returns the Info.plist XML for the widget extension target.
  */
@@ -92,7 +101,7 @@ const withLiveActivitiesInfoPlist = (config) => {
  * WidgetKit extension sandbox.  CallCheckInAttributes.swift is duplicated
  * so that both the extension and the main app each have the type in scope.
  */
-const withLiveActivitiesFiles = (config) => {
+const withLiveActivitiesFiles = (config, appGroupId) => {
   return withDangerousMod(config, [
     'ios',
     async (cfg) => {
@@ -101,8 +110,7 @@ const withLiveActivitiesFiles = (config) => {
       const widgetDir = path.join(iosRoot, WIDGET_EXTENSION_NAME);
       const appName = IOSConfig.XcodeUtils.getHackyProjectName(projectRoot, cfg) || 'ResgridResponder';
       const appDir = path.join(iosRoot, appName);
-      const bundleId = cfg.ios?.bundleIdentifier ?? 'com.example.app';
-      const appGroupId = `group.${bundleId}`;
+      const resolvedAppGroupId = resolveAppGroupId(cfg, appGroupId);
 
       // ── 1. Widget extension directory ──────────────────────────────────────
       if (!fs.existsSync(widgetDir)) {
@@ -138,7 +146,7 @@ struct CheckInTimerWidgetBundle: WidgetBundle {
       fs.writeFileSync(path.join(widgetDir, 'Info.plist'), widgetInfoPlistXml());
 
       // ── 5. Widget extension entitlements (App Group) ───────────────────────
-      fs.writeFileSync(path.join(widgetDir, `${WIDGET_EXTENSION_NAME}.entitlements`), entitlementsXml(appGroupId));
+      fs.writeFileSync(path.join(widgetDir, `${WIDGET_EXTENSION_NAME}.entitlements`), entitlementsXml(resolvedAppGroupId));
 
       // ── 6. LiveActivityModule.swift → main app dir ─────────────────────────
       //   This file imports React and uses RCTPromiseResolveBlock; it must be
@@ -173,13 +181,12 @@ struct CheckInTimerWidgetBundle: WidgetBundle {
  * This uses the managed withEntitlementsPlist modifier so that the change
  * is written back through Expo's plist serialiser (safe, idempotent).
  */
-const withLiveActivitiesAppEntitlements = (config) => {
+const withLiveActivitiesAppEntitlements = (config, appGroupId) => {
   return withEntitlementsPlist(config, (cfg) => {
-    const bundleId = cfg.ios?.bundleIdentifier ?? 'com.example.app';
-    const appGroupId = `group.${bundleId}`;
+    const resolvedAppGroupId = resolveAppGroupId(cfg, appGroupId);
     const existing = cfg.modResults['com.apple.security.application-groups'];
-    if (!Array.isArray(existing) || !existing.includes(appGroupId)) {
-      cfg.modResults['com.apple.security.application-groups'] = [...(Array.isArray(existing) ? existing : []), appGroupId];
+    if (!Array.isArray(existing) || !existing.includes(resolvedAppGroupId)) {
+      cfg.modResults['com.apple.security.application-groups'] = [...(Array.isArray(existing) ? existing : []), resolvedAppGroupId];
     }
     return cfg;
   });
@@ -306,10 +313,10 @@ const withLiveActivitiesXcodeProject = (config) => {
  *   3. Entitlements for the main app (withEntitlementsPlist)
  *   4. Xcode project registration last (needs the files to already exist)
  */
-module.exports = (config) => {
+module.exports = (config, { appGroupId } = {}) => {
   config = withLiveActivitiesInfoPlist(config);
-  config = withLiveActivitiesFiles(config);
-  config = withLiveActivitiesAppEntitlements(config);
+  config = withLiveActivitiesFiles(config, appGroupId);
+  config = withLiveActivitiesAppEntitlements(config, appGroupId);
   config = withLiveActivitiesXcodeProject(config);
   return config;
 };

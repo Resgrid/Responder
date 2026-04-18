@@ -289,7 +289,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './customGradle.plugin.js',
     './customManifest.plugin.js',
     './plugins/withInCallAudioModule.js',
-    './plugins/withLiveActivities.js',
+    [
+      './plugins/withLiveActivities.js',
+      {
+        appGroupId: Env.IOS_APP_GROUP,
+      },
+    ],
     ['app-icon-badge', appIconBadgeConfig],
   ],
   extra: {
