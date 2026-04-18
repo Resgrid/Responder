@@ -7,6 +7,7 @@ import { signalRService } from '@/services/signalr.service';
 
 import { useCoreStore } from '../app/core-store';
 import { securityStore, useSecurityStore } from '../security/store';
+import { useWeatherAlertsStore } from '../weather-alerts/weather-alerts-store';
 
 interface SignalRState {
   isUpdateHubConnected: boolean;
@@ -56,7 +57,18 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
         name: Env.CHANNEL_HUB_NAME,
         eventingUrl: eventingUrl,
         hubName: Env.CHANNEL_HUB_NAME,
-        methods: ['personnelStatusUpdated', 'personnelStaffingUpdated', 'unitStatusUpdated', 'callsUpdated', 'callAdded', 'callClosed', 'onConnected'],
+        methods: [
+          'personnelStatusUpdated',
+          'personnelStaffingUpdated',
+          'unitStatusUpdated',
+          'callsUpdated',
+          'callAdded',
+          'callClosed',
+          'weatherAlertReceived',
+          'weatherAlertUpdated',
+          'weatherAlertExpired',
+          'onConnected',
+        ],
       });
 
       await signalRService.invoke(Env.CHANNEL_HUB_NAME, 'connect', parseInt(securityStore.getState().rights?.DepartmentId ?? '0'));
@@ -108,6 +120,42 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'callClosed',
           context: { message },
         });
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+      });
+
+      signalRService.on('weatherAlertReceived', (message) => {
+        logger.info({
+          message: 'weatherAlertReceived',
+          context: { message },
+        });
+        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+        if (alertId) {
+          useWeatherAlertsStore.getState().handleAlertReceived(alertId);
+        }
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+      });
+
+      signalRService.on('weatherAlertUpdated', (message) => {
+        logger.info({
+          message: 'weatherAlertUpdated',
+          context: { message },
+        });
+        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+        if (alertId) {
+          useWeatherAlertsStore.getState().handleAlertUpdated(alertId);
+        }
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+      });
+
+      signalRService.on('weatherAlertExpired', (message) => {
+        logger.info({
+          message: 'weatherAlertExpired',
+          context: { message },
+        });
+        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+        if (alertId) {
+          useWeatherAlertsStore.getState().handleAlertExpired(alertId);
+        }
         set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
       });
 

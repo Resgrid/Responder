@@ -11,9 +11,7 @@ jest.mock('@/components/home/department-stats', () => ({
   DepartmentStats: () => {
     const React = require('react');
     const { View, Text } = require('react-native');
-    return React.createElement(View, { testID: 'department-stats' },
-      React.createElement(Text, null, 'Department Stats')
-    );
+    return React.createElement(View, { testID: 'department-stats' }, React.createElement(Text, null, 'Department Stats'));
   },
 }));
 
@@ -21,9 +19,7 @@ jest.mock('@/components/home/user-status-card', () => ({
   UserStatusCard: () => {
     const React = require('react');
     const { View, Text } = require('react-native');
-    return React.createElement(View, { testID: 'user-status-card' },
-      React.createElement(Text, null, 'User Status Card')
-    );
+    return React.createElement(View, { testID: 'user-status-card' }, React.createElement(Text, null, 'User Status Card'));
   },
 }));
 
@@ -31,9 +27,7 @@ jest.mock('@/components/home/user-staffing-card', () => ({
   UserStaffingCard: () => {
     const React = require('react');
     const { View, Text } = require('react-native');
-    return React.createElement(View, { testID: 'user-staffing-card' },
-      React.createElement(Text, null, 'User Staffing Card')
-    );
+    return React.createElement(View, { testID: 'user-staffing-card' }, React.createElement(Text, null, 'User Staffing Card'));
   },
 }));
 
@@ -41,9 +35,7 @@ jest.mock('@/components/home/status-buttons', () => ({
   StatusButtons: () => {
     const React = require('react');
     const { View, Text } = require('react-native');
-    return React.createElement(View, { testID: 'status-buttons' },
-      React.createElement(Text, null, 'Status Buttons')
-    );
+    return React.createElement(View, { testID: 'status-buttons' }, React.createElement(Text, null, 'Status Buttons'));
   },
 }));
 
@@ -51,9 +43,15 @@ jest.mock('@/components/home/staffing-buttons', () => ({
   StaffingButtons: () => {
     const React = require('react');
     const { View, Text } = require('react-native');
-    return React.createElement(View, { testID: 'staffing-buttons' },
-      React.createElement(Text, null, 'Staffing Buttons')
-    );
+    return React.createElement(View, { testID: 'staffing-buttons' }, React.createElement(Text, null, 'Staffing Buttons'));
+  },
+}));
+
+jest.mock('@/components/home/summary-stats-row', () => ({
+  SummaryStatsRow: () => {
+    const React = require('react');
+    const { View, Text } = require('react-native');
+    return React.createElement(View, { testID: 'summary-stats-row' }, React.createElement(Text, null, 'Summary Stats Row'));
   },
 }));
 
@@ -118,10 +116,10 @@ jest.mock('@/components/ui/shared-tabs', () => ({
   SharedTabs: ({ tabs }: any) => {
     const React = require('react');
     const { View } = require('react-native');
-    return React.createElement(View, { testID: 'shared-tabs' },
-      tabs.map((tab: any) =>
-        React.createElement(View, { key: tab.key, testID: `tab-${tab.key}` }, tab.content)
-      )
+    return React.createElement(
+      View,
+      { testID: 'shared-tabs' },
+      tabs.map((tab: any) => React.createElement(View, { key: tab.key, testID: `tab-${tab.key}` }, tab.content))
     );
   },
 }));
@@ -132,21 +130,29 @@ jest.mock('expo-router', () => ({
     Screen: ({ options }: any) => {
       const React = require('react');
       const { View, Text } = require('react-native');
-      return React.createElement(View, {
-        testID: 'stack-screen',
-        'data-title': options.title,
-        'data-header-title': options.headerTitle
-      }, React.createElement(Text, null, 'Stack Screen'));
+      return React.createElement(
+        View,
+        {
+          testID: 'stack-screen',
+          'data-title': options.title,
+          'data-header-title': options.headerTitle,
+        },
+        React.createElement(Text, null, 'Stack Screen')
+      );
     },
   },
   Tabs: {
     Screen: ({ options }: any) => {
       const React = require('react');
       const { View, Text } = require('react-native');
-      return React.createElement(View, {
-        testID: 'tabs-screen',
-        'data-title': options.title
-      }, React.createElement(Text, null, 'Tabs Screen'));
+      return React.createElement(
+        View,
+        {
+          testID: 'tabs-screen',
+          'data-title': options.title,
+        },
+        React.createElement(Text, null, 'Tabs Screen')
+      );
     },
   },
   useRouter: () => ({
@@ -182,10 +188,15 @@ const MockHomeDashboard = () => {
     }, [trackEvent])
   );
 
-  return React.createElement(View, { testID: 'home-dashboard-container' },
-    React.createElement(ScrollView, null,
+  return React.createElement(
+    View,
+    { testID: 'home-dashboard-container' },
+    React.createElement(
+      ScrollView,
+      null,
       React.createElement(View, { testID: 'user-status-card' }),
       React.createElement(View, { testID: 'user-staffing-card' }),
+      React.createElement(View, { testID: 'summary-stats-row' }),
       React.createElement(View, { testID: 'shared-tabs' })
     )
   );
@@ -273,4 +284,4 @@ describe('HomeDashboard', () => {
     // Check that main container is present
     expect(screen.getByTestId('home-dashboard-container')).toBeTruthy();
   });
-}); 
+});

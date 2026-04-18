@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { LoginFormProps } from '@/app/login/login-form';
+import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { FocusAwareStatusBar } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
@@ -18,6 +19,7 @@ import { LoginForm } from './login-form';
 
 export default function Login() {
   const [isErrorModalVisible, setIsErrorModalVisible] = useState(false);
+  const [isServerUrlSheetVisible, setIsServerUrlSheetVisible] = useState(false);
   const { t } = useTranslation();
   const router = useRouter();
   const { login, status, error, isAuthenticated } = useAuth();
@@ -99,7 +101,9 @@ export default function Login() {
     <>
       <FocusAwareStatusBar />
 
-      <LoginForm onSubmit={onLocalLoginSubmit} isLoading={status === 'loading'} onSsoPress={() => router.push('/login/sso')} {...(error ? { error } : {})} />
+      <LoginForm onSubmit={onLocalLoginSubmit} isLoading={status === 'loading'} onSsoPress={() => router.push('/login/sso')} onServerUrlPress={() => setIsServerUrlSheetVisible(true)} {...(error ? { error } : {})} />
+
+      {isServerUrlSheetVisible ? <ServerUrlBottomSheet isOpen={isServerUrlSheetVisible} onClose={() => setIsServerUrlSheetVisible(false)} /> : null}
 
       {/* Error modal */}
       <Modal isOpen={isErrorModalVisible} onClose={() => setIsErrorModalVisible(false)} size="full">

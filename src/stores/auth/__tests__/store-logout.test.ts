@@ -85,7 +85,7 @@ describe('Auth Store - Logout Functionality', () => {
       expect(state.status).toBe('signedOut');
       expect(state.error).toBeNull();
       expect(state.profile).toBeNull();
-      expect(state.isFirstTime).toBe(true);
+      expect(state.isFirstTime).toBe(false);
       expect(state.userId).toBeNull();
     });
 
@@ -109,7 +109,7 @@ describe('Auth Store - Logout Functionality', () => {
 
     it('should log forced logout with reason', async () => {
       const logoutReason = 'Token refresh failed';
-      
+
       await useAuthStore.getState().logout(logoutReason);
 
       // Verify error was logged for forced logout
@@ -138,6 +138,4 @@ describe('Auth Store - Logout Functionality', () => {
       });
     });
   });
-
-
 });

@@ -2,6 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react-native';
 import { Text as RNText, View } from 'react-native';
 
+// Restore real bottom-sheet since jest-setup.ts mocks it globally
+jest.unmock('@/components/ui/bottom-sheet');
+
 import { CustomBottomSheet } from '../bottom-sheet';
 
 // Mock nativewind

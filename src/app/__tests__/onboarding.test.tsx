@@ -57,8 +57,7 @@ jest.mock('react-native-reanimated', () => {
   const React = require('react');
   const { View } = require('react-native');
 
-  const AnimatedView = ({ children, style, ...props }: any) =>
-    React.createElement(View, { style, ...props }, children);
+  const AnimatedView = ({ children, style, ...props }: any) => React.createElement(View, { style, ...props }, children);
 
   return {
     useSharedValue: jest.fn(() => ({ value: 0 })),
@@ -103,8 +102,7 @@ jest.mock('react-native-svg', () => {
 
   return {
     __esModule: true,
-    default: ({ children, ...props }: any) =>
-      React.createElement(View, { testID: 'svg', ...props }, children),
+    default: ({ children, ...props }: any) => React.createElement(View, { testID: 'svg', ...props }, children),
   };
 });
 
@@ -113,15 +111,9 @@ jest.mock('@/components/ui/button', () => {
   const React = require('react');
   const { TouchableOpacity, Text } = require('react-native');
 
-  const Button = ({ children, onPress, testID, className, size, variant, action, ...props }: any) =>
-    React.createElement(
-      TouchableOpacity,
-      { onPress, testID, ...props },
-      children
-    );
+  const Button = ({ children, onPress, testID, className, size, variant, action, ...props }: any) => React.createElement(TouchableOpacity, { onPress, testID, ...props }, children);
 
-  const ButtonText = ({ children, ...props }: any) =>
-    React.createElement(Text, props, children);
+  const ButtonText = ({ children, ...props }: any) => React.createElement(Text, props, children);
 
   return {
     Button,
@@ -133,8 +125,7 @@ jest.mock('@/components/ui/pressable', () => {
   const React = require('react');
   const { TouchableOpacity } = require('react-native');
 
-  const Pressable = ({ children, onPress, ...props }: any) =>
-    React.createElement(TouchableOpacity, { onPress, ...props }, children);
+  const Pressable = ({ children, onPress, ...props }: any) => React.createElement(TouchableOpacity, { onPress, ...props }, children);
 
   return {
     Pressable,
@@ -145,8 +136,7 @@ jest.mock('@/components/ui/text', () => {
   const React = require('react');
   const { Text: RNText } = require('react-native');
 
-  const Text = ({ children, className, ...props }: any) =>
-    React.createElement(RNText, props, children);
+  const Text = ({ children, className, ...props }: any) => React.createElement(RNText, props, children);
 
   return {
     Text,
@@ -157,14 +147,11 @@ jest.mock('@/components/ui', () => {
   const React = require('react');
   const { View, StatusBar, SafeAreaView: RNSafeAreaView } = require('react-native');
 
-  const FocusAwareStatusBar = (props: any) =>
-    React.createElement(StatusBar, props);
+  const FocusAwareStatusBar = (props: any) => React.createElement(StatusBar, props);
 
-  const SafeAreaView = ({ children, className, ...props }: any) =>
-    React.createElement(RNSafeAreaView, props, children);
+  const SafeAreaView = ({ children, className, ...props }: any) => React.createElement(RNSafeAreaView, props, children);
 
-  const ViewComponent = ({ children, className, style, testID, ...props }: any) =>
-    React.createElement(View, { style, testID, ...props }, children);
+  const ViewComponent = ({ children, className, style, testID, ...props }: any) => React.createElement(View, { style, testID, ...props }, children);
 
   return {
     FocusAwareStatusBar,
@@ -194,7 +181,7 @@ describe('Onboarding Component', () => {
     (useFocusEffect as jest.Mock).mockImplementation((callback) => callback());
 
     // Reset mockTrackEvent to working state
-    mockTrackEvent.mockImplementation(() => { });
+    mockTrackEvent.mockImplementation(() => {});
 
     // Mock Dimensions for width calculations
     const { Dimensions } = require('react-native');
@@ -206,7 +193,7 @@ describe('Onboarding Component', () => {
 
   afterEach(() => {
     // Ensure mock is restored to working state after each test
-    mockTrackEvent.mockImplementation(() => { });
+    mockTrackEvent.mockImplementation(() => {});
   });
 
   describe('Component Rendering', () => {
@@ -223,24 +210,10 @@ describe('Onboarding Component', () => {
     });
 
     it('should render navigation elements', () => {
-      const { getByTestId, queryByText } = render(<Onboarding />);
+      const { getByTestId } = render(<Onboarding />);
 
       expect(getByTestId('skip-button-top')).toBeTruthy();
-
-      // Check for Next button in different ways
-      const hasNext = queryByText('Next ') ||
-        queryByText('Next') ||
-        queryByText(/Next\s*/);
-
-      // If we still can't find it, just verify the component renders without the Next button check
-      // since the component itself renders successfully and the navigation logic is tested elsewhere
-      if (!hasNext) {
-        // Just verify that we have the basic navigation structure
-        // The Next button functionality is tested in the analytics tests
-        expect(getByTestId('skip-button-top')).toBeTruthy();
-      } else {
-        expect(hasNext).toBeTruthy();
-      }
+      expect(getByTestId('next-button')).toBeTruthy();
     });
 
     it('should render pagination dots', () => {
@@ -263,38 +236,31 @@ describe('Onboarding Component', () => {
       });
     });
 
+    it('should reach the last onboarding step when next is pressed twice', () => {
+      const { getByTestId, getByText } = render(<Onboarding />);
+
+      fireEvent.press(getByTestId('next-button'));
+      expect(getByText('Instant Notifications')).toBeTruthy();
+
+      fireEvent.press(getByTestId('next-button'));
+      expect(getByText('Interact with Calls')).toBeTruthy();
+
+      expect(getByTestId('get-started-button')).toBeTruthy();
+    });
+
     it('should track onboarding_next_clicked event when next button is pressed', () => {
-      const { getByText } = render(<Onboarding />);
+      const { getByTestId } = render(<Onboarding />);
 
       // Clear the initial view tracking call
       mockTrackEvent.mockClear();
 
-      // Mock console to suppress any scrollToIndex errors
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
-
-      try {
-        // Find and press the Next button
-        const nextButton = getByText('Next ');
-        fireEvent.press(nextButton);
-      } catch (error) {
-        // If direct button press fails, we can simulate the same logic
-        // that would be called in the nextSlide function
-        mockTrackEvent('onboarding_next_clicked', {
-          timestamp: new Date().toISOString(),
-          currentSlide: 0,
-          slideTitle: 'Resgrid Responder',
-        });
-      }
+      fireEvent.press(getByTestId('next-button'));
 
       expect(mockTrackEvent).toHaveBeenCalledWith('onboarding_next_clicked', {
         timestamp: expect.any(String),
         currentSlide: 0,
         slideTitle: 'Resgrid Responder',
       });
-
-      consoleSpy.mockRestore();
-      warnSpy.mockRestore();
     });
 
     it('should track onboarding_skip_clicked event when skip button is pressed', () => {
@@ -313,28 +279,27 @@ describe('Onboarding Component', () => {
       });
     });
 
-    it('should track onboarding_slide_changed event when scrolling between slides', () => {
-      const { getByTestId } = render(<Onboarding />);
+    it('should track onboarding_slide_changed event when swiping between slides', () => {
+      const { getByTestId, getByText } = render(<Onboarding />);
 
       // Clear the initial view tracking call
       mockTrackEvent.mockClear();
 
       const flatList = getByTestId('onboarding-flatlist');
 
-      // Mock the necessary properties for scroll event handling
-      Object.defineProperty(flatList, '_selectLength', {
-        value: () => 390,
-        writable: true,
-      });
-
-      // Simulate scroll to second slide
-      fireEvent.scroll(flatList, {
+      fireEvent(flatList, 'touchStart', {
         nativeEvent: {
-          contentOffset: { x: 390, y: 0 }, // width of one slide
-          layoutMeasurement: { width: 390, height: 844 },
-          contentSize: { width: 1170, height: 844 }, // 3 slides * 390
+          pageX: 300,
         },
       });
+
+      fireEvent(flatList, 'touchEnd', {
+        nativeEvent: {
+          pageX: 100,
+        },
+      });
+
+      expect(getByText('Instant Notifications')).toBeTruthy();
 
       expect(mockTrackEvent).toHaveBeenCalledWith('onboarding_slide_changed', {
         timestamp: expect.any(String),
@@ -401,7 +366,7 @@ describe('Onboarding Component', () => {
     it('should validate onboarding_viewed analytics structure', () => {
       render(<Onboarding />);
 
-      const call = mockTrackEvent.mock.calls.find(call => call[0] === 'onboarding_viewed');
+      const call = mockTrackEvent.mock.calls.find((call) => call[0] === 'onboarding_viewed');
       expect(call).toBeTruthy();
 
       const analyticsData = call[1];
@@ -413,27 +378,13 @@ describe('Onboarding Component', () => {
     });
 
     it('should validate onboarding_next_clicked analytics structure', () => {
-      const { getByText } = render(<Onboarding />);
+      const { getByTestId } = render(<Onboarding />);
 
       mockTrackEvent.mockClear();
-      // Mock console to suppress any errors
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
 
-      try {
-        // Find and press the Next button
-        const nextButton = getByText('Next ');
-        fireEvent.press(nextButton);
-      } catch (error) {
-        // If direct button press fails, simulate the analytics call
-        mockTrackEvent('onboarding_next_clicked', {
-          timestamp: new Date().toISOString(),
-          currentSlide: 0,
-          slideTitle: 'Resgrid Responder',
-        });
-      }
+      fireEvent.press(getByTestId('next-button'));
 
-      const call = mockTrackEvent.mock.calls.find(call => call[0] === 'onboarding_next_clicked');
+      const call = mockTrackEvent.mock.calls.find((call) => call[0] === 'onboarding_next_clicked');
       expect(call).toBeTruthy();
 
       const analyticsData = call![1];
@@ -441,9 +392,6 @@ describe('Onboarding Component', () => {
       expect(typeof analyticsData.currentSlide).toBe('number');
       expect(typeof analyticsData.slideTitle).toBe('string');
       expect(Date.parse(analyticsData.timestamp)).not.toBeNaN();
-
-      consoleSpy.mockRestore();
-      warnSpy.mockRestore();
     });
 
     it('should validate onboarding_skip_clicked analytics structure', () => {
@@ -452,7 +400,7 @@ describe('Onboarding Component', () => {
       mockTrackEvent.mockClear();
       fireEvent.press(getByTestId('skip-button-top'));
 
-      const call = mockTrackEvent.mock.calls.find(call => call[0] === 'onboarding_skip_clicked');
+      const call = mockTrackEvent.mock.calls.find((call) => call[0] === 'onboarding_skip_clicked');
       expect(call).toBeTruthy();
 
       const analyticsData = call[1];
@@ -468,21 +416,19 @@ describe('Onboarding Component', () => {
       mockTrackEvent.mockClear();
       const flatList = getByTestId('onboarding-flatlist');
 
-      // Mock the necessary properties for scroll event handling
-      Object.defineProperty(flatList, '_selectLength', {
-        value: () => 390,
-        writable: true,
-      });
-
-      fireEvent.scroll(flatList, {
+      fireEvent(flatList, 'touchStart', {
         nativeEvent: {
-          contentOffset: { x: 390, y: 0 },
-          layoutMeasurement: { width: 390, height: 844 },
-          contentSize: { width: 1170, height: 844 }, // 3 slides * 390
+          pageX: 300,
         },
       });
 
-      const call = mockTrackEvent.mock.calls.find(call => call[0] === 'onboarding_slide_changed');
+      fireEvent(flatList, 'touchEnd', {
+        nativeEvent: {
+          pageX: 100,
+        },
+      });
+
+      const call = mockTrackEvent.mock.calls.find((call) => call[0] === 'onboarding_slide_changed');
       expect(call).toBeTruthy();
 
       const analyticsData = call[1];
@@ -520,23 +466,21 @@ describe('Onboarding Component', () => {
       mockTrackEvent.mockClear();
       const flatList = getByTestId('onboarding-flatlist');
 
-      // Mock the necessary properties for scroll event handling
-      Object.defineProperty(flatList, '_selectLength', {
-        value: () => 390,
-        writable: true,
+      fireEvent(flatList, 'touchStart', {
+        nativeEvent: {
+          pageX: 120,
+        },
       });
 
-      // Simulate scroll to an invalid index
-      fireEvent.scroll(flatList, {
+      // Simulate a very large swipe that should clamp to the next valid slide
+      fireEvent(flatList, 'touchEnd', {
         nativeEvent: {
-          contentOffset: { x: 9999, y: 0 },
-          layoutMeasurement: { width: 390, height: 844 },
-          contentSize: { width: 1170, height: 844 }, // 3 slides * 390
+          pageX: -9999,
         },
       });
 
       // Should handle the case where slide data doesn't exist
-      const call = mockTrackEvent.mock.calls.find(call => call[0] === 'onboarding_slide_changed');
+      const call = mockTrackEvent.mock.calls.find((call) => call[0] === 'onboarding_slide_changed');
       if (call) {
         const analyticsData = call[1];
         expect(analyticsData.slideTitle).toBeDefined();

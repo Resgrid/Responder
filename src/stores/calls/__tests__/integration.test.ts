@@ -19,6 +19,8 @@ describe('Calls Store Integration - Call Types', () => {
       calls: [],
       callPriorities: [],
       callTypes: [],
+      callExtrasById: {},
+      loadingCallExtraIds: {},
       isLoading: false,
       error: null,
     });

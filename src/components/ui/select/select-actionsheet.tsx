@@ -6,28 +6,41 @@ import { PrimitiveIcon, UIIcon } from '@gluestack-ui/icon';
 import type { VariantProps } from '@gluestack-ui/nativewind-utils';
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import { withStyleContext } from '@gluestack-ui/nativewind-utils/withStyleContext';
-import { AnimatePresence, createMotionAnimatedComponent, Motion, type MotionComponentProps } from '@legendapp/motion';
+import { AnimatePresence } from '@legendapp/motion';
 import { FlashList } from '@shopify/flash-list';
 import { cssInterop } from 'nativewind';
 import React from 'react';
-import { Pressable, ScrollView, SectionList, Text, View, type ViewStyle, VirtualizedList } from 'react-native';
+import { Pressable, ScrollView, SectionList, Text, View, VirtualizedList } from 'react-native';
 
-type IAnimatedPressableProps = React.ComponentProps<typeof Pressable> & MotionComponentProps<typeof Pressable, ViewStyle, unknown, unknown, unknown>;
+interface MotionCompatProps {
+  initial?: unknown;
+  animate?: unknown;
+  exit?: unknown;
+  transition?: unknown;
+}
 
-const AnimatedPressable = createMotionAnimatedComponent(Pressable) as React.ComponentType<IAnimatedPressableProps>;
+const MotionCompatPressable = React.forwardRef<React.ComponentRef<typeof Pressable>, React.ComponentProps<typeof Pressable> & MotionCompatProps>(function MotionCompatPressable(
+  { initial: _initial, animate: _animate, exit: _exit, transition: _transition, ...props },
+  ref
+) {
+  return <Pressable {...props} ref={ref} />;
+});
 
-type IMotionViewProps = React.ComponentProps<typeof View> & MotionComponentProps<typeof View, ViewStyle, unknown, unknown, unknown>;
-
-const MotionView = Motion.View as React.ComponentType<IMotionViewProps>;
+const MotionCompatView = React.forwardRef<React.ComponentRef<typeof View>, React.ComponentProps<typeof View> & MotionCompatProps>(function MotionCompatView(
+  { initial: _initial, animate: _animate, exit: _exit, transition: _transition, ...props },
+  ref
+) {
+  return <View {...props} ref={ref} />;
+});
 
 export const UIActionsheet = createActionsheet({
   Root: View,
-  Content: withStyleContext(MotionView),
+  Content: withStyleContext(MotionCompatView),
   Item: withStyleContext(Pressable),
   ItemText: Text,
   DragIndicator: View,
   IndicatorWrapper: View,
-  Backdrop: AnimatedPressable,
+  Backdrop: MotionCompatPressable,
   ScrollView: ScrollView,
   VirtualizedList: VirtualizedList,
   FlatList: FlashList,
@@ -82,7 +95,7 @@ cssInterop(PrimitiveIcon, {
 const actionsheetStyle = tva({ base: 'w-full h-full web:pointer-events-none' });
 
 const actionsheetContentStyle = tva({
-  base: 'items-center rounded-tl-3xl rounded-tr-3xl p-2 bg-background-0 web:pointer-events-auto web:select-none shadow-lg',
+  base: 'absolute bottom-0 left-0 right-0 items-center rounded-tl-3xl rounded-tr-3xl p-2 bg-background-0 web:pointer-events-auto web:select-none shadow-lg',
 });
 
 const actionsheetItemStyle = tva({
@@ -132,7 +145,7 @@ const actionsheetDragIndicatorWrapperStyle = tva({
 });
 
 const actionsheetBackdropStyle = tva({
-  base: 'absolute left-0 top-0 right-0 bottom-0 bg-background-dark web:cursor-default web:pointer-events-auto',
+  base: 'absolute left-0 top-0 right-0 bottom-0 bg-background-dark opacity-40 web:cursor-default web:pointer-events-auto',
 });
 
 const actionsheetScrollViewStyle = tva({
@@ -261,13 +274,14 @@ type IActionsheetIconProps = VariantProps<typeof actionsheetIconStyle> &
     as?: React.ElementType;
   };
 
-const Actionsheet = React.forwardRef<React.ComponentRef<typeof UIActionsheet>, IActionsheetProps>(function Actionsheet({ className, ...props }, ref) {
+const Actionsheet = React.forwardRef<React.ComponentRef<typeof UIActionsheet>, IActionsheetProps>(function Actionsheet({ className, useRNModal = true, ...props }, ref) {
   return (
     <UIActionsheet
       className={actionsheetStyle({
         class: className,
       })}
       ref={ref}
+      useRNModal={useRNModal}
       {...props}
     />
   );
@@ -347,15 +361,6 @@ const ActionsheetDragIndicatorWrapper = React.forwardRef<React.ComponentRef<type
 const ActionsheetBackdrop = React.forwardRef<React.ComponentRef<typeof UIActionsheet.Backdrop>, IActionsheetBackdropProps>(function ActionsheetBackdrop({ className, ...props }, ref) {
   return (
     <UIActionsheet.Backdrop
-      initial={{
-        opacity: 0,
-      }}
-      animate={{
-        opacity: 0.5,
-      }}
-      exit={{
-        opacity: 0,
-      }}
       {...props}
       className={actionsheetBackdropStyle({
         class: className,

@@ -11,8 +11,9 @@
  */
 
 import { logger } from '@/lib/logging';
+import { IS_FIRST_TIME, storage } from '@/lib/storage';
+import { BASE_API_URL_STORAGE_KEY } from '@/lib/storage/app';
 
-import { storage } from './index';
 import { clearPersonnelFilterOptions } from './personnel-filter';
 import { clearSecureKeys } from './secure-storage';
 import { clearUnitsFilterOptions } from './units-filter';
@@ -83,6 +84,30 @@ const clearMMKVStorage = (): void => {
   }
 };
 
+const clearMMKVStorageExcept = (preservedKeys: string[]): void => {
+  try {
+    const preservedEntries = preservedKeys.map((key) => [key, storage.getString(key)] as const).filter(([, value]) => value !== undefined);
+
+    storage.clearAll();
+
+    preservedEntries.forEach(([key, value]) => {
+      if (value !== undefined) {
+        storage.set(key, value);
+      }
+    });
+
+    logger.info({
+      message: 'MMKV storage cleared with preserved keys',
+      context: { preservedKeys },
+    });
+  } catch (error) {
+    logger.error({
+      message: 'Failed to clear MMKV storage with preserved keys',
+      context: { error, preservedKeys },
+    });
+  }
+};
+
 /**
  * Clear filter options from storage
  */
@@ -135,13 +160,14 @@ export const clearAllAppData = async (
     clearStorage?: boolean;
     clearSecure?: boolean;
     clearFilters?: boolean;
+    preserveStorageKeys?: string[];
   } = {}
 ): Promise<void> => {
-  const { resetStores = true, clearStorage = true, clearSecure = false, clearFilters = true } = options;
+  const { resetStores = true, clearStorage = true, clearSecure = false, clearFilters = true, preserveStorageKeys = [] } = options;
 
   logger.info({
     message: 'Starting app data cleanup',
-    context: { options: { resetStores, clearStorage, clearSecure, clearFilters } },
+    context: { options: { resetStores, clearStorage, clearSecure, clearFilters, preserveStorageKeys } },
   });
 
   try {
@@ -157,7 +183,11 @@ export const clearAllAppData = async (
 
     // Clear MMKV storage
     if (clearStorage) {
-      clearMMKVStorage();
+      if (preserveStorageKeys.length > 0) {
+        clearMMKVStorageExcept(preserveStorageKeys);
+      } else {
+        clearMMKVStorage();
+      }
     }
 
     // Clear secure storage (encryption keys) - only if explicitly requested
@@ -176,6 +206,8 @@ export const clearAllAppData = async (
     throw error;
   }
 };
+
+export const LOGOUT_PRESERVED_STORAGE_KEYS = [BASE_API_URL_STORAGE_KEY, IS_FIRST_TIME] as const;
 
 /**
  * Get the count of registered stores

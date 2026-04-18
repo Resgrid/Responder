@@ -45,7 +45,7 @@
     "selection_error_message": "Nie można zapisać preferowanego urządzenia",
     "selection_error_title": "Błąd wyboru",
     "supports_mic_control": "Sterowanie mikrofonem",
-    "tap_scan_to_find_devices": "Naciśnij \u201eSkanuj\u201d, aby znaleźć urządzenia audio Bluetooth",
+    "tap_scan_to_find_devices": "Naciśnij „Skanuj”, aby znaleźć urządzenia audio Bluetooth",
     "unknown_device": "Nieznane urządzenie"
   },
   "calendar": {
@@ -225,7 +225,8 @@
       "dispatched": "Zadysponowane",
       "info": "Info",
       "protocols": "Protokoły",
-      "timeline": "Aktywność"
+      "timeline": "Aktywność",
+      "video": "Wideo"
     },
     "timestamp": "Znacznik czasu",
     "title": "Szczegóły zgłoszenia",
@@ -240,6 +241,7 @@
     "address_not_found": "Nie znaleziono adresu, proszę spróbować innego adresu",
     "address_placeholder": "Wprowadź adres zgłoszenia",
     "address_required": "Proszę wprowadzić adres do wyszukania",
+    "assigned_to_me": "Przypisane do mnie",
     "call_details": "Szczegóły zgłoszenia",
     "call_location": "Lokalizacja zgłoszenia",
     "call_number": "Numer zgłoszenia",
@@ -298,6 +300,7 @@
     "no_open_calls": "Brak otwartych zgłoszeń",
     "note": "Notatka",
     "note_placeholder": "Wprowadź notatkę do zgłoszenia",
+    "only_calls_im_on": "Tylko zgłoszenia, w których biorę udział",
     "personnel": "Osoby",
     "plus_code": "Kod Plus",
     "plus_code_found": "Kod Plus znaleziony i lokalizacja zaktualizowana",
@@ -337,6 +340,37 @@
     "what3words_placeholder": "Wprowadź adres what3words (np. filled.count.soap)",
     "what3words_required": "Proszę wprowadzić adres what3words do wyszukania"
   },
+  "check_in": {
+    "add_note": "Dodaj Notatkę (Opcjonalnie)",
+    "check_in_error": "Nie udało się zapisać meldowania",
+    "check_in_success": "Meldowanie zapisane pomyślnie",
+    "confirm_check_in": "Potwierdź Meldowanie",
+    "duration": "Czas trwania",
+    "elapsed": "Upłynęło",
+    "history": "Historia Meldowań",
+    "last_check_in": "Ostatnie meldowanie",
+    "minutes_ago": "{{count}} min temu",
+    "no_timers": "Brak skonfigurowanych timerów meldowania",
+    "offline_queued": "Meldowanie w kolejce do wysłania online",
+    "perform_check_in": "Zamelduj się",
+    "progress": "{{elapsed}} / {{total}} min",
+    "quick_check_in": "Szybkie Meldowanie",
+    "select_type": "Wybierz Typ Meldowania",
+    "status_ok": "OK",
+    "status_overdue": "Zaległy",
+    "status_warning": "Ostrzeżenie",
+    "tab_title": "Meldowanie",
+    "timer_interval": "Co {{minutes}} min",
+    "timers_disabled": "Timery meldowania wyłączone dla tego wezwania",
+    "type_hazmat": "Ekspozycja Hazmat",
+    "type_ic": "Dowódca Zdarzenia",
+    "type_par": "PAR",
+    "type_personnel": "Personel",
+    "type_rehab": "Rehabilitacja",
+    "type_sector_rotation": "Rotacja Sektora",
+    "type_unit": "Jednostka",
+    "unknown_unit": "Nieznana jednostka"
+  },
   "common": {
     "active": "Aktywny",
     "add": "Dodaj",
@@ -345,6 +379,7 @@
     "cancel": "Anuluj",
     "close": "Zamknij",
     "confirm": "Potwierdź",
+    "confirm_location": "Potwierdź lokalizację",
     "delete": "Usuń",
     "deleting": "Usuwanie...",
     "discard": "Odrzuć",
@@ -472,6 +507,14 @@
     "required": "To pole jest wymagane"
   },
   "home": {
+    "active_call": {
+      "clear_active": "Wyczyść Aktywne Wezwanie",
+      "no_active_call": "Brak wybranego aktywnego wezwania",
+      "select_call": "Wybierz wezwanie do śledzenia",
+      "set_active": "Ustaw jako Aktywne Wezwanie",
+      "title": "Aktywne Wezwanie",
+      "view_details": "Zobacz Szczegóły Wezwania"
+    },
     "error": {
       "no_user_id": "Identyfikator użytkownika niedostępny"
     },
@@ -505,7 +548,14 @@
       "update_failed": "Nie udało się zaktualizować statusu",
       "updated_successfully": "Status zaktualizowany pomyślnie"
     },
+    "summary": {
+      "active_calls": "Aktywne zgłoszenia",
+      "active_severe_weather_alerts": "Aktywne poważne/awaryjne alerty pogodowe",
+      "calls_im_on": "Zgłoszenia, w których biorę udział",
+      "pending_missed_checkins": "Oczekujące/pominięte meldunki"
+    },
     "tabs": {
+      "call": "Wezwanie",
       "dashboard": "Panel",
       "map": "Mapa",
       "staffing": "Obsada",
@@ -808,6 +858,7 @@
     "background_geolocation_warning": "Ta funkcja umożliwia aplikacji śledzenie lokalizacji w tle. Pomaga w koordynacji reagowania kryzysowego, ale może wpływać na żywotność baterii.",
     "background_location": "Lokalizacja w tle",
     "contact_us": "Skontaktuj się z nami",
+    "custom": "Niestandardowy",
     "english": "Angielski",
     "enter_password": "Wprowadź hasło",
     "enter_server_url": "Wprowadź URL API Resgrid (np. https://api.resgrid.com)",
@@ -953,7 +1004,8 @@
     "protocols": "Protokoły",
     "settings": "Ustawienia",
     "shifts": "Zmiany",
-    "units": "Jednostki"
+    "units": "Jednostki",
+    "weatherAlerts": "Alerty Pogodowe"
   },
   "units": {
     "coordinates": "Współrzędne",
@@ -973,6 +1025,116 @@
     "title": "Jednostki",
     "vehicleInfo": "Informacje o pojeździe",
     "vin": "VIN"
+  },
+  "video_feeds": {
+    "add_feed": "Dodaj transmisję wideo",
+    "copy_url": "Kopiuj URL",
+    "delete_confirm": "Czy na pewno chcesz usunąć tę transmisję wideo?",
+    "delete_feed": "Usuń transmisję wideo",
+    "delete_success": "Transmisja wideo została pomyślnie usunięta",
+    "edit_feed": "Edytuj transmisję wideo",
+    "form_description": "Opis",
+    "form_feed_format": "Format transmisji",
+    "form_feed_type": "Typ transmisji",
+    "form_name": "Nazwa",
+    "form_sort_order": "Kolejność sortowania",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_dash": "DASH",
+    "format_embed": "Osadzony",
+    "format_hls": "HLS",
+    "format_mjpeg": "MJPEG",
+    "format_other": "Inny",
+    "format_rtsp": "RTSP",
+    "format_webrtc": "WebRTC",
+    "format_youtube": "YouTube",
+    "no_feeds": "Brak transmisji wideo dla tego zgłoszenia",
+    "save_error": "Nie udało się zapisać transmisji wideo",
+    "save_success": "Transmisja wideo zapisana pomyślnie",
+    "status_active": "Aktywna",
+    "status_error": "Błąd",
+    "status_inactive": "Nieaktywna",
+    "title": "Transmisje wideo",
+    "type_body_cam": "Kamera nasobna",
+    "type_drone": "Dron",
+    "type_fixed_camera": "Kamera stała",
+    "type_other": "Inny",
+    "type_satellite": "Transmisja satelitarna",
+    "type_traffic_cam": "Kamera drogowa",
+    "type_weather_cam": "Kamera pogodowa",
+    "type_webcam": "Kamera internetowa",
+    "unsupported_format": "Ten format nie jest obsługiwany do odtwarzania w aplikacji. Skopiuj URL, aby otworzyć w zewnętrznym odtwarzaczu.",
+    "url_copied": "URL skopiowany do schowka",
+    "watch": "Oglądaj"
+  },
+  "weatherAlerts": {
+    "activeAlerts": "Aktywne Alerty",
+    "banner": {
+      "moreAlerts": "+{{count}} więcej"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Środowiskowy",
+      "Fire": "Pożar",
+      "Geo": "Geologiczny",
+      "Health": "Zdrowie",
+      "Infra": "Infrastruktura",
+      "Met": "Meteorologiczny",
+      "Other": "Inne",
+      "Transport": "Transport"
+    },
+    "certainty": {
+      "Likely": "Prawdopodobne",
+      "Observed": "Zaobserwowane",
+      "Possible": "Możliwe",
+      "Unknown": "Nieznane",
+      "Unlikely": "Mało prawdopodobne",
+      "label": "Pewność"
+    },
+    "detail": {
+      "area": "Obszar Dotknięty",
+      "description": "Opis",
+      "effective": "Obowiązuje od",
+      "expires": "Wygasa",
+      "instructions": "Instrukcje",
+      "metadata": "Szczegóły",
+      "onset": "Początek",
+      "sender": "Nadawca",
+      "status": "Status",
+      "timing": "Czas"
+    },
+    "filter": {
+      "all": "Wszystkie",
+      "extreme": "Ekstremalny",
+      "minor": "Niewielki",
+      "moderate": "Umiarkowany",
+      "severe": "Poważny"
+    },
+    "noActiveAlerts": "Brak aktywnych alertów pogodowych",
+    "search": "Szukaj alertów...",
+    "severity": {
+      "Extreme": "Ekstremalny",
+      "Minor": "Niewielki",
+      "Moderate": "Umiarkowany",
+      "Severe": "Poważny",
+      "Unknown": "Nieznany"
+    },
+    "status": {
+      "Actual": "Rzeczywisty",
+      "Draft": "Szkic",
+      "Exercise": "Ćwiczenie",
+      "System": "System",
+      "Test": "Test"
+    },
+    "title": "Alerty Pogodowe",
+    "urgency": {
+      "Expected": "Oczekiwana",
+      "Future": "Przyszła",
+      "Immediate": "Natychmiastowa",
+      "Past": "Przeszła",
+      "Unknown": "Nieznana",
+      "label": "Pilność"
+    }
   },
   "welcome": "Witamy w aplikacji Resgrid Responder"
 }

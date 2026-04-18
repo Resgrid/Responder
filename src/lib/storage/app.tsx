@@ -8,14 +8,18 @@ const ACTIVE_CALL_ID = 'activeCallId';
 const DEVICE_UUID = 'unitDeviceUuid';
 
 export const removeBaseApiUrl = () => removeItem(BASE_URL);
-export const setBaseApiUrl = (value: string) => setItem<string>(BASE_URL, value);
+export const BASE_API_URL_STORAGE_KEY = BASE_URL;
+
+const normalizeStoredApiUrl = (value: string) => value.trim().replace(/\/+$/, '');
+
+export const setBaseApiUrl = (value: string) => setItem<string>(BASE_URL, normalizeStoredApiUrl(value));
 
 export const getBaseApiUrl = () => {
   const baseUrl = getItem<string>(BASE_URL);
   if (!baseUrl) {
-    return `${Env.BASE_API_URL}/api/${Env.API_VERSION}`;
+    return normalizeStoredApiUrl(`${Env.BASE_API_URL}/api/${Env.API_VERSION}`);
   }
-  return baseUrl;
+  return normalizeStoredApiUrl(baseUrl);
 };
 
 export const removeActiveUnitId = () => removeItem(ACTIVE_UNIT_ID);

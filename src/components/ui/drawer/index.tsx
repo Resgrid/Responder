@@ -3,26 +3,36 @@ import { createModal as createDrawer } from '@gluestack-ui/modal';
 import type { VariantProps } from '@gluestack-ui/nativewind-utils';
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import { useStyleContext, withStyleContext } from '@gluestack-ui/nativewind-utils/withStyleContext';
-import { AnimatePresence, createMotionAnimatedComponent, Motion } from '@legendapp/motion';
+import { AnimatePresence } from '@legendapp/motion';
 import { cssInterop } from 'nativewind';
 import React from 'react';
-import { Dimensions, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
-const AnimatedPressable = createMotionAnimatedComponent(Pressable);
+interface MotionCompatProps {
+  initial?: unknown;
+  animate?: unknown;
+  exit?: unknown;
+  transition?: unknown;
+}
+
 const SCOPE = 'MODAL';
-const screenWidth = Dimensions.get('window').width;
-const screenHeight = Dimensions.get('window').height;
-const sizes: { [key: string]: number } = {
-  sm: 0.25,
-  md: 0.5,
-  lg: 0.75,
-  full: 1,
-};
+
+const MotionCompatPressable = React.forwardRef<React.ElementRef<typeof Pressable>, React.ComponentPropsWithoutRef<typeof Pressable> & MotionCompatProps>(
+  ({ initial: _initial, animate: _animate, exit: _exit, transition: _transition, ...props }, ref) => {
+    return <Pressable {...props} ref={ref} />;
+  }
+);
+
+const MotionCompatView = React.forwardRef<React.ElementRef<typeof View>, React.ComponentPropsWithoutRef<typeof View> & MotionCompatProps>(
+  ({ initial: _initial, animate: _animate, exit: _exit, transition: _transition, ...props }, ref) => {
+    return <View {...props} ref={ref} />;
+  }
+);
 
 const UIDrawer = createDrawer({
   Root: withStyleContext(View, SCOPE),
-  Backdrop: AnimatedPressable,
-  Content: Motion.View,
+  Backdrop: MotionCompatPressable,
+  Content: MotionCompatView,
   Body: ScrollView,
   CloseButton: Pressable,
   Footer: View,
@@ -31,9 +41,8 @@ const UIDrawer = createDrawer({
 });
 
 // @ts-ignore - Motion component type compatibility issue
-cssInterop(AnimatedPressable, { className: 'style' });
-// @ts-ignore - Motion component type compatibility issue
-cssInterop(Motion.View, { className: 'style' });
+cssInterop(MotionCompatPressable, { className: 'style' });
+cssInterop(MotionCompatView, { className: 'style' });
 
 const drawerStyle = tva({
   base: 'w-full h-full web:pointer-events-none relative',
@@ -58,7 +67,7 @@ const drawerBackdropStyle = tva({
 });
 
 const drawerContentStyle = tva({
-  base: 'bg-background-0 overflow-scroll border-outline-100 p-6 absolute',
+  base: 'bg-background-0 overflow-hidden border-outline-100 p-0 absolute',
   parentVariants: {
     size: {
       sm: 'w-1/4',
@@ -126,7 +135,7 @@ const drawerHeaderStyle = tva({
 });
 
 const drawerBodyStyle = tva({
-  base: 'mt-4 mb-6 shrink-0',
+  base: 'flex-1',
 });
 
 const drawerFooterStyle = tva({
@@ -147,32 +156,14 @@ type IDrawerFooterProps = React.ComponentProps<typeof UIDrawer.Footer> & Variant
 
 type IDrawerCloseButtonProps = React.ComponentProps<typeof UIDrawer.CloseButton> & VariantProps<typeof drawerCloseButtonStyle> & { className?: string };
 
-const Drawer = React.forwardRef<React.ElementRef<typeof UIDrawer>, IDrawerProps>(({ className, size = 'sm', anchor = 'left', ...props }, ref) => {
-  return <UIDrawer ref={ref} {...props} pointerEvents="box-none" className={drawerStyle({ size, anchor, class: className })} context={{ size, anchor }} />;
+const Drawer = React.forwardRef<React.ElementRef<typeof UIDrawer>, IDrawerProps>(({ className, size = 'sm', anchor = 'left', useRNModal = true, ...props }, ref) => {
+  return <UIDrawer ref={ref} {...props} useRNModal={useRNModal} animationPreset="slide" pointerEvents="box-none" className={drawerStyle({ size, anchor, class: className })} context={{ size, anchor }} />;
 });
 
 const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdrop>, IDrawerBackdropProps>(({ className, ...props }, ref) => {
   return (
     <UIDrawer.Backdrop
       ref={ref}
-      initial={{
-        opacity: 0,
-      }}
-      animate={{
-        opacity: 0.5,
-      }}
-      exit={{
-        opacity: 0,
-      }}
-      transition={{
-        type: 'spring',
-        damping: 18,
-        stiffness: 250,
-        opacity: {
-          type: 'timing',
-          duration: 250,
-        },
-      }}
       {...props}
       className={drawerBackdropStyle({
         class: className,
@@ -184,36 +175,19 @@ const DrawerBackdrop = React.forwardRef<React.ElementRef<typeof UIDrawer.Backdro
 const DrawerContent = React.forwardRef<React.ElementRef<typeof UIDrawer.Content>, IDrawerContentProps>(({ className, ...props }, ref) => {
   const { size: parentSize, anchor: parentAnchor } = useStyleContext(SCOPE);
 
-  const drawerHeight = screenHeight * (sizes[parentSize] || sizes.md);
-  const drawerWidth = screenWidth * (sizes[parentSize] || sizes.md);
-
   const isHorizontal = parentAnchor === 'left' || parentAnchor === 'right';
-
-  const initialObj = isHorizontal ? { x: parentAnchor === 'left' ? -drawerWidth : drawerWidth } : { y: parentAnchor === 'top' ? -drawerHeight : drawerHeight };
-
-  const animateObj = isHorizontal ? { x: 0 } : { y: 0 };
-
-  const exitObj = isHorizontal ? { x: parentAnchor === 'left' ? -drawerWidth : drawerWidth } : { y: parentAnchor === 'top' ? -drawerHeight : drawerHeight };
-
   const customClass = isHorizontal ? `top-0 ${parentAnchor === 'left' ? 'left-0' : 'right-0'}` : `left-0 ${parentAnchor === 'top' ? 'top-0' : 'bottom-0'}`;
 
   return (
     <UIDrawer.Content
       ref={ref}
-      initial={initialObj}
-      animate={animateObj}
-      exit={exitObj}
-      transition={{
-        type: 'timing',
-        duration: 300,
-      }}
       {...props}
       className={drawerContentStyle({
         parentVariants: {
           size: parentSize,
           anchor: parentAnchor,
         },
-        class: `${className} ${customClass}`,
+        class: `${className ?? ''} ${customClass}`,
       })}
       pointerEvents="auto"
     />

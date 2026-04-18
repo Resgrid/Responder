@@ -70,19 +70,68 @@ jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
 }));
 
 // Mock NativeWind
-jest.mock('nativewind', () => ({
-  cssInterop: jest.fn(),
-  styled: jest.fn(() => (Component: any) => Component),
-  useColorScheme: jest.fn(() => ({ colorScheme: 'light' })),
-}));
+jest.mock('nativewind', () => {
+  const React = require('react');
+
+  const cssInterop = jest.fn((component: any) => component);
+  const styled = jest.fn((component: any) => component);
+
+  return {
+    __esModule: true,
+    createElement: React.createElement,
+    cssInterop,
+    styled,
+    StyleSheet: {
+      create: jest.fn((styles: Record<string, unknown>) => styles),
+    },
+    colorScheme: {
+      get: jest.fn(() => 'light'),
+      set: jest.fn(),
+      toggle: jest.fn(),
+    },
+    rem: jest.fn((value: number) => value),
+    remapProps: jest.fn((component: any) => component),
+    createInteropElement: jest.fn((component: any) => component),
+    useSafeAreaEnv: jest.fn(() => ({})),
+    useUnstableNativeVariable: jest.fn(() => undefined),
+    vars: jest.fn((value: Record<string, unknown>) => value),
+    useColorScheme: jest.fn(() => ({ colorScheme: 'light', setColorScheme: jest.fn(), toggleColorScheme: jest.fn() })),
+    verifyInstallation: jest.fn(),
+  };
+});
 
 // Mock react-native-css-interop
-jest.mock('react-native-css-interop', () => ({
-  getColorScheme: jest.fn(() => 'light'),
-  appearanceObservables: {
+jest.mock('react-native-css-interop', () => {
+  const React = require('react');
+
+  const cssInterop = jest.fn((component: any) => component);
+
+  return {
+    __esModule: true,
+    createElement: React.createElement,
+    wrapJSX: jest.fn((component: any) => component),
+    StyleSheet: {
+      create: jest.fn((styles: Record<string, unknown>) => styles),
+    },
+    colorScheme: {
+      get: jest.fn(() => 'light'),
+      set: jest.fn(),
+      toggle: jest.fn(),
+    },
+    createInteropElement: jest.fn((component: any) => component),
+    cssInterop,
+    rem: jest.fn((value: number) => value),
+    remapProps: jest.fn((component: any) => component),
+    useColorScheme: jest.fn(() => ({ colorScheme: 'light', setColorScheme: jest.fn(), toggleColorScheme: jest.fn() })),
+    useSafeAreaEnv: jest.fn(() => ({})),
+    useUnstableNativeVariable: jest.fn(() => undefined),
+    vars: jest.fn((value: Record<string, unknown>) => value),
     getColorScheme: jest.fn(() => 'light'),
-  },
-}));
+    appearanceObservables: {
+      getColorScheme: jest.fn(() => 'light'),
+    },
+  };
+});
 
 jest.mock('react-native-css-interop/src/runtime/native/appearance-observables', () => ({
   getColorScheme: jest.fn(() => 'light'),
@@ -130,7 +179,25 @@ jest.mock('react-native', () => {
     Button: mockComponent('Button'),
     Switch: mockComponent('Switch'),
     ActivityIndicator: mockComponent('ActivityIndicator'),
-    FlatList: mockComponent('FlatList'),
+    FlatList: React.forwardRef((props: any, ref: any) => {
+      const { data, renderItem, keyExtractor, ListHeaderComponent, ListFooterComponent, ListEmptyComponent, ...rest } = props;
+      const items =
+        data && data.length > 0
+          ? data.map((item: any, index: number) => {
+              const key = keyExtractor ? keyExtractor(item, index) : String(index);
+              return renderItem ? React.createElement(React.Fragment, { key }, renderItem({ item, index, separators: {} as any })) : null;
+            })
+          : ListEmptyComponent
+            ? [React.createElement(ListEmptyComponent, { key: 'empty' })]
+            : [];
+      return React.createElement(
+        'RNFlatList',
+        { ...rest, ref },
+        ListHeaderComponent ? React.createElement(ListHeaderComponent, { key: 'header' }) : null,
+        ...items,
+        ListFooterComponent ? React.createElement(ListFooterComponent, { key: 'footer' }) : null
+      );
+    }),
     SectionList: mockComponent('SectionList'),
     VirtualizedList: mockComponent('VirtualizedList'),
     SafeAreaView: mockComponent('SafeAreaView'),
@@ -651,22 +718,63 @@ jest.mock('react-native-mmkv', () => {
   };
 });
 // Mock expo-modules-core for NativeUnimoduleProxy
-jest.mock('expo-modules-core', () => ({
-  NativeUnimoduleProxy: {},
-  // Mock requireOptionalNativeModule to prevent errors in expo-asset and expo-av
-  requireOptionalNativeModule: jest.fn(() => null),
-  // Provide EventEmitter stub for modules requiring event listeners
-  EventEmitter: jest.fn().mockImplementation(() => ({
+jest.mock('expo-modules-core', () => {
+  class MockCodedError extends Error {
+    code: string;
+
+    constructor(code: string, message: string) {
+      super(message);
+      this.code = code;
+    }
+  }
+
+  class MockUnavailabilityError extends MockCodedError {
+    constructor(moduleName: string, propertyName: string) {
+      super('ERR_UNAVAILABLE', `The method or property ${moduleName}.${propertyName} is not available in tests.`);
+    }
+  }
+
+  class MockEventEmitter {
+    addListener = jest.fn(() => ({ remove: jest.fn() }));
+    removeAllListeners = jest.fn();
+    removeSubscription = jest.fn();
+    emit = jest.fn();
+  }
+
+  const createMockNativeModule = (moduleName?: string) => ({
+    __expo_module_name__: moduleName,
     addListener: jest.fn(),
-    removeAllListeners: jest.fn(),
-    removeSubscription: jest.fn(),
-    emit: jest.fn(),
-  })),
-}));
-// Mock NativeModulesProxy native module in expo-modules-core
-jest.mock('expo-modules-core/src/NativeModulesProxy.native', () => ({
-  NativeUnimoduleProxy: {},
-}));
+    removeListeners: jest.fn(),
+    startObserving: jest.fn(),
+    stopObserving: jest.fn(),
+  });
+
+  return {
+    __esModule: true,
+    NativeUnimoduleProxy: {},
+    NativeModulesProxy: {},
+    EventEmitter: MockEventEmitter,
+    LegacyEventEmitter: MockEventEmitter,
+    CodedError: MockCodedError,
+    UnavailabilityError: MockUnavailabilityError,
+    PermissionStatus: {
+      GRANTED: 'granted',
+      UNDETERMINED: 'undetermined',
+      DENIED: 'denied',
+    },
+    Platform: {
+      OS: 'ios',
+      select: jest.fn((options: Record<string, unknown>) => options?.ios ?? options?.default),
+    },
+    NativeModule: class {},
+    SharedObject: class {},
+    SharedRef: class {},
+    registerWebModule: jest.fn((module: unknown) => module),
+    uuid: jest.fn(() => 'mock-uuid'),
+    requireNativeModule: jest.fn((moduleName: string) => createMockNativeModule(moduleName)),
+    requireOptionalNativeModule: jest.fn(() => null),
+  };
+});
 
 // Mock expo-asset to avoid import issues
 jest.mock('expo-asset', () => ({
@@ -746,6 +854,238 @@ jest.mock('react-native-edge-to-edge', () => {
     SystemBars: (props: any) => {
       return null; // SystemBars is just for system UI styling, can return null in tests
     },
+  };
+});
+
+// Mock @/components/ui/bottom-sheet globally to prevent cssInterop crash via actionsheet
+jest.mock('@/components/ui/bottom-sheet', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const CustomBottomSheet = React.forwardRef(({ children, testID }: any, ref: any) => React.createElement(View, { testID: testID ?? 'custom-bottom-sheet', ref }, children));
+  CustomBottomSheet.displayName = 'CustomBottomSheet';
+
+  return { CustomBottomSheet };
+});
+
+// Mock all gluestack-ui components that call cssInterop at module level
+jest.mock('@/components/ui/heading', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  const Heading = React.forwardRef((props: any, ref: any) => React.createElement(Text, { ...props, ref }));
+  Heading.displayName = 'Heading';
+  return { Heading };
+});
+
+jest.mock('@/components/ui/box', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Box = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  Box.displayName = 'Box';
+  return { Box };
+});
+
+jest.mock('@/components/ui/hstack', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const HStack = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  HStack.displayName = 'HStack';
+  return { HStack };
+});
+
+jest.mock('@/components/ui/vstack', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const VStack = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  VStack.displayName = 'VStack';
+  return { VStack };
+});
+
+jest.mock('@/components/ui/text', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  const MockText = React.forwardRef((props: any, ref: any) => React.createElement(Text, { ...props, ref }));
+  MockText.displayName = 'Text';
+  return { Text: MockText };
+});
+
+jest.mock('@/components/ui/pressable', () => {
+  const React = require('react');
+  const { Pressable } = require('react-native');
+  const MockPressable = React.forwardRef((props: any, ref: any) => React.createElement(Pressable, { ...props, ref }));
+  MockPressable.displayName = 'Pressable';
+  return { Pressable: MockPressable };
+});
+
+jest.mock('@/components/ui/input', () => {
+  const React = require('react');
+  const { TextInput, View } = require('react-native');
+  const Input = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  Input.displayName = 'Input';
+  const InputField = React.forwardRef((props: any, ref: any) => React.createElement(TextInput, { ...props, ref }));
+  InputField.displayName = 'InputField';
+  const InputIcon = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  InputIcon.displayName = 'InputIcon';
+  const InputSlot = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  InputSlot.displayName = 'InputSlot';
+  return { Input, InputField, InputIcon, InputSlot };
+});
+
+jest.mock('@/components/ui/textarea', () => {
+  const React = require('react');
+  const { TextInput, View } = require('react-native');
+  const Textarea = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  Textarea.displayName = 'Textarea';
+  const TextareaInput = React.forwardRef((props: any, ref: any) => React.createElement(TextInput, { ...props, ref, multiline: true }));
+  TextareaInput.displayName = 'TextareaInput';
+  return { Textarea, TextareaInput };
+});
+
+jest.mock('@/components/ui/divider', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Divider = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  Divider.displayName = 'Divider';
+  return { Divider };
+});
+
+jest.mock('@/components/ui/badge', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  const Badge = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  Badge.displayName = 'Badge';
+  const BadgeText = React.forwardRef((props: any, ref: any) => React.createElement(Text, { ...props, ref }));
+  BadgeText.displayName = 'BadgeText';
+  const BadgeIcon = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  BadgeIcon.displayName = 'BadgeIcon';
+  return { Badge, BadgeText, BadgeIcon };
+});
+
+jest.mock('@/components/ui/icon', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Icon = React.forwardRef(({ as: As, ...props }: any, ref: any) => (As ? React.createElement(As, { ...props, ref }) : React.createElement(View, { ...props, ref })));
+  Icon.displayName = 'Icon';
+  return { Icon };
+});
+
+jest.mock('@/components/ui/spinner', () => {
+  const React = require('react');
+  const { ActivityIndicator } = require('react-native');
+  const Spinner = React.forwardRef((props: any, ref: any) => React.createElement(ActivityIndicator, { ...props, ref }));
+  Spinner.displayName = 'Spinner';
+  return { Spinner };
+});
+
+jest.mock('@/components/ui/card', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Card = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  Card.displayName = 'Card';
+  return { Card };
+});
+
+jest.mock('@/components/ui/center', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Center = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  Center.displayName = 'Center';
+  return { Center };
+});
+
+// Mock @/components/ui/bottom-sheet globally to prevent cssInterop crash via actionsheet
+
+// Mock @/components/ui/button globally to prevent cssInterop crash from real gluestack button
+jest.mock('@/components/ui/button', () => {
+  const React = require('react');
+  const { Pressable, Text, View, ActivityIndicator } = require('react-native');
+
+  const Button = React.forwardRef((props: any, ref: any) => React.createElement(Pressable, { ...props, ref }));
+  Button.displayName = 'Button';
+
+  const ButtonText = React.forwardRef((props: any, ref: any) => React.createElement(Text, { ...props, ref }));
+  ButtonText.displayName = 'ButtonText';
+
+  const ButtonIcon = React.forwardRef(({ as: Icon, ...props }: any, ref: any) => (Icon ? React.createElement(Icon, { ...props, ref }) : React.createElement(View, { ...props, ref })));
+  ButtonIcon.displayName = 'ButtonIcon';
+
+  const ButtonGroup = React.forwardRef((props: any, ref: any) => React.createElement(View, { ...props, ref }));
+  ButtonGroup.displayName = 'ButtonGroup';
+
+  const ButtonSpinner = React.forwardRef((props: any, ref: any) => React.createElement(ActivityIndicator, { ...props, ref }));
+  ButtonSpinner.displayName = 'ButtonSpinner';
+
+  return { Button, ButtonText, ButtonIcon, ButtonGroup, ButtonSpinner };
+});
+
+// Mock react-native-reanimated to prevent native worklets crash
+jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const { View, Text, ScrollView, FlatList, Image } = require('react-native');
+
+  const mockSharedValue = (initialValue: any) => ({
+    value: initialValue,
+    get: jest.fn(() => initialValue),
+    set: jest.fn(),
+  });
+
+  return {
+    __esModule: true,
+    default: {
+      View,
+      Text,
+      Image,
+      ScrollView,
+      FlatList,
+      Value: jest.fn(() => ({ setValue: jest.fn() })),
+      createAnimatedComponent: jest.fn((component: any) => component),
+      call: jest.fn(),
+    },
+    useSharedValue: mockSharedValue,
+    useAnimatedStyle: jest.fn(() => ({})),
+    useAnimatedScrollHandler: jest.fn(() => jest.fn()),
+    useAnimatedGestureHandler: jest.fn(() => jest.fn()),
+    useAnimatedRef: jest.fn(() => React.createRef()),
+    useAnimatedReaction: jest.fn(),
+    useDerivedValue: jest.fn((fn: any) => ({ value: fn() })),
+    useScrollViewOffset: jest.fn(() => mockSharedValue(0)),
+    withTiming: jest.fn((toValue: any) => toValue),
+    withSpring: jest.fn((toValue: any) => toValue),
+    withDecay: jest.fn(() => 0),
+    withDelay: jest.fn((_: any, animation: any) => animation),
+    withSequence: jest.fn((...animations: any[]) => animations[animations.length - 1]),
+    withRepeat: jest.fn((animation: any) => animation),
+    cancelAnimation: jest.fn(),
+    interpolate: jest.fn((_v: any, _i: any[], output: any[]) => output[0]),
+    Extrapolate: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
+    Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
+    runOnJS: jest.fn((fn: any) => fn),
+    runOnUI: jest.fn((fn: any) => fn),
+    makeMutable: mockSharedValue,
+    Easing: {
+      linear: jest.fn((t: any) => t),
+      ease: jest.fn((t: any) => t),
+      quad: jest.fn((t: any) => t),
+      cubic: jest.fn((t: any) => t),
+      bezier: jest.fn(() => jest.fn()),
+      in: jest.fn((easing: any) => easing),
+      out: jest.fn((easing: any) => easing),
+      inOut: jest.fn((easing: any) => easing),
+    },
+    createAnimatedComponent: jest.fn((component: any) => component),
+    Animated: {
+      View,
+      Text,
+      ScrollView,
+      FlatList,
+      Image,
+      createAnimatedComponent: jest.fn((component: any) => component),
+    },
+    ScrollView,
+    View,
+    Text,
+    Image,
+    FlatList,
   };
 });
 

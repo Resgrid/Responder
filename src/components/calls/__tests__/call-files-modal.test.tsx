@@ -63,7 +63,7 @@ jest.mock('@/stores/calls/detail-store', () => ({
 }));
 
 // Mock expo modules
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   documentDirectory: '/mock/documents/',
   writeAsStringAsync: jest.fn(),
   EncodingType: {
@@ -78,9 +78,7 @@ jest.mock('expo-sharing', () => ({
 
 // Mock the API call
 jest.mock('@/api/calls/callFiles', () => ({
-  getCallAttachmentFile: jest.fn(() =>
-    Promise.resolve(new Blob(['test content'], { type: 'application/pdf' }))
-  ),
+  getCallAttachmentFile: jest.fn(() => Promise.resolve(new Blob(['test content'], { type: 'application/pdf' }))),
 }));
 
 // Mock Alert
@@ -106,7 +104,7 @@ Object.defineProperty(global, 'FileReader', {
         if (this.onload) this.onload(new Event('load') as any);
       }, 0);
     }
-  }
+  },
 });
 
 // Mock react-i18next
@@ -129,47 +127,15 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-// Mock @gorhom/bottom-sheet
-jest.mock('@gorhom/bottom-sheet', () => {
-  const React = require('react');
+jest.mock('@/components/ui/bottom-sheet', () => {
   const { View } = require('react-native');
 
-  const MockBottomSheet = React.forwardRef(({ children, onChange, index, ...props }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      expand: jest.fn(),
-      close: jest.fn(),
-      snapToIndex: jest.fn(),
-    }));
-
-    // Simulate sheet change when index changes
-    React.useEffect(() => {
-      if (onChange) {
-        onChange(index);
-      }
-    }, [index, onChange]);
-
-    return (
-      <View testID="bottom-sheet" {...props}>
+  return {
+    CustomBottomSheet: ({ children, isOpen, testID, ...props }: any) => (
+      <View testID={testID || 'custom-bottom-sheet'} accessibilityState={{ expanded: isOpen }} {...props}>
         {children}
       </View>
-    );
-  });
-
-  const MockBottomSheetView = ({ children, ...props }: any) => (
-    <View testID="bottom-sheet-view" {...props}>
-      {children}
-    </View>
-  );
-
-  const MockBottomSheetBackdrop = ({ onPress, ...props }: any) => (
-    <View testID="bottom-sheet-backdrop" {...props} />
-  );
-
-  return {
-    __esModule: true,
-    default: MockBottomSheet,
-    BottomSheetView: MockBottomSheetView,
-    BottomSheetBackdrop: MockBottomSheetBackdrop,
+    ),
   };
 });
 
@@ -322,15 +288,13 @@ describe('CallFilesModal', () => {
   it('renders correctly when closed', () => {
     const { getByTestId } = render(<CallFilesModal {...defaultProps} />);
 
-    expect(getByTestId('bottom-sheet')).toBeTruthy();
+    expect(getByTestId('call-files-modal-sheet')).toBeTruthy();
   });
 
   it('renders correctly when open', () => {
-    const { getByTestId, getByText } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} />
-    );
+    const { getByTestId, getByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
-    expect(getByTestId('bottom-sheet')).toBeTruthy();
+    expect(getByTestId('call-files-modal-sheet')).toBeTruthy();
     expect(getByTestId('call-files-modal')).toBeTruthy();
     expect(getByText('Call Files')).toBeTruthy();
   });
@@ -341,17 +305,13 @@ describe('CallFilesModal', () => {
   });
 
   it('displays the correct title using i18n', () => {
-    const { getByText } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} />
-    );
+    const { getByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
     expect(getByText('Call Files')).toBeTruthy();
   });
 
   it('displays file list when files are available', () => {
-    const { getByText, getByTestId } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} />
-    );
+    const { getByText, getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
     expect(getByText('Test Document')).toBeTruthy();
     expect(getByText('Photo Evidence')).toBeTruthy();
@@ -360,9 +320,7 @@ describe('CallFilesModal', () => {
   });
 
   it('displays file details correctly', () => {
-    const { getByText } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} />
-    );
+    const { getByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
     // Check file sizes are displayed correctly
     expect(getByText('1000.56 KB')).toBeTruthy(); // 1024576 bytes
@@ -371,9 +329,7 @@ describe('CallFilesModal', () => {
 
   it('calls onClose when close button is pressed', () => {
     const mockOnClose = jest.fn();
-    const { getByTestId } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} onClose={mockOnClose} />
-    );
+    const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} onClose={mockOnClose} />);
 
     const closeButton = getByTestId('close-button');
     fireEvent.press(closeButton);
@@ -382,9 +338,7 @@ describe('CallFilesModal', () => {
   });
 
   it('has proper accessibility attributes', () => {
-    const { getByTestId } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} />
-    );
+    const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
     const modal = getByTestId('call-files-modal');
     const closeButton = getByTestId('close-button');
@@ -394,17 +348,13 @@ describe('CallFilesModal', () => {
   });
 
   it('renders the scrollable content area', () => {
-    const { getByTestId } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} />
-    );
+    const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
     expect(getByTestId('scroll-view')).toBeTruthy();
   });
 
   it('handles different call IDs correctly', () => {
-    const { rerender } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} callId="call-1" />
-    );
+    const { rerender } = render(<CallFilesModal {...defaultProps} isOpen={true} callId="call-1" />);
 
     expect(mockFetchCallFiles).toHaveBeenCalledWith('call-1');
 
@@ -413,12 +363,10 @@ describe('CallFilesModal', () => {
   });
 
   it('maintains proper component structure', () => {
-    const { getByTestId, getAllByTestId } = render(
-      <CallFilesModal {...defaultProps} isOpen={true} />
-    );
+    const { getByTestId, getAllByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
     // Check that all required components are present
-    expect(getByTestId('bottom-sheet')).toBeTruthy();
+    expect(getByTestId('call-files-modal-sheet')).toBeTruthy();
     expect(getByTestId('call-files-modal')).toBeTruthy(); // This is the BottomSheetView with testID
     expect(getByTestId('heading')).toBeTruthy();
     expect(getByTestId('close-button')).toBeTruthy();
@@ -438,9 +386,7 @@ describe('CallFilesModal', () => {
     });
 
     it('displays loading spinner when fetching files', () => {
-      const { getByTestId, getAllByText } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId, getAllByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       expect(getByTestId('spinner')).toBeTruthy();
       expect(getAllByText('Loading...').length).toBeGreaterThan(0);
@@ -459,18 +405,14 @@ describe('CallFilesModal', () => {
     });
 
     it('displays error message when file fetch fails', () => {
-      const { getByText } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       expect(getByText('Error getting files')).toBeTruthy();
       expect(getByText('Network error occurred')).toBeTruthy();
     });
 
     it('allows retry on error', () => {
-      const { getByText } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       const retryButton = getByText('Retry');
       fireEvent.press(retryButton);
@@ -491,9 +433,7 @@ describe('CallFilesModal', () => {
     });
 
     it('displays empty state when no files available', () => {
-      const { getByText, getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByText, getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       expect(getByText('No files available')).toBeTruthy();
       expect(getByText('No files have been added to this call yet')).toBeTruthy();
@@ -503,7 +443,7 @@ describe('CallFilesModal', () => {
 
   describe('File Download', () => {
     const mockGetCallAttachmentFile = require('@/api/calls/callFiles').getCallAttachmentFile;
-    const mockWriteAsStringAsync = require('expo-file-system').writeAsStringAsync;
+    const mockWriteAsStringAsync = require('expo-file-system/legacy').writeAsStringAsync;
     const mockShareAsync = require('expo-sharing').shareAsync;
 
     beforeEach(() => {
@@ -517,9 +457,7 @@ describe('CallFilesModal', () => {
     });
 
     it('downloads and shares file when clicked', async () => {
-      const { getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       const fileItem = getByTestId('file-item-file-1');
       fireEvent.press(fileItem);
@@ -534,30 +472,31 @@ describe('CallFilesModal', () => {
       });
 
       // Wait for FileReader and file operations to complete
-      await waitFor(() => {
-        expect(mockWriteAsStringAsync).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockWriteAsStringAsync).toHaveBeenCalled();
+        },
+        { timeout: 2000 }
+      );
 
-      await waitFor(() => {
-        expect(mockShareAsync).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockShareAsync).toHaveBeenCalled();
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('handles download errors gracefully', async () => {
       mockGetCallAttachmentFile.mockRejectedValueOnce(new Error('Download failed'));
 
-      const { getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       const fileItem = getByTestId('file-item-file-1');
       fireEvent.press(fileItem);
 
       await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalledWith(
-          'Error opening file',
-          'Download failed'
-        );
+        expect(Alert.alert).toHaveBeenCalledWith('Error opening file', 'Download failed');
       });
     });
 
@@ -568,13 +507,9 @@ describe('CallFilesModal', () => {
       mockShareAsync.mockClear();
 
       // Make the API call take some time
-      mockGetCallAttachmentFile.mockImplementation(() =>
-        new Promise(resolve => setTimeout(() => resolve(new Blob(['test content'], { type: 'application/pdf' })), 100))
-      );
+      mockGetCallAttachmentFile.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(new Blob(['test content'], { type: 'application/pdf' })), 100)));
 
-      const { getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       const fileItem = getByTestId('file-item-file-1');
 
@@ -587,9 +522,12 @@ describe('CallFilesModal', () => {
       });
 
       // Wait for the download to complete
-      await waitFor(() => {
-        expect(mockWriteAsStringAsync).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockWriteAsStringAsync).toHaveBeenCalled();
+        },
+        { timeout: 2000 }
+      );
     });
   });
 
@@ -605,9 +543,7 @@ describe('CallFilesModal', () => {
     });
 
     it('formats file sizes correctly', () => {
-      const { getByText } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       // Test various file size formats
       expect(getByText('1000.56 KB')).toBeTruthy(); // 1024576 bytes
@@ -615,9 +551,7 @@ describe('CallFilesModal', () => {
     });
 
     it('formats timestamps correctly', () => {
-      const { getAllByText } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getAllByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       // Should display formatted dates (exact format may vary by locale)
       const timestampElements = getAllByText(/1\/15\/2023/);
@@ -716,9 +650,7 @@ describe('CallFilesModal', () => {
     });
 
     it('tracks close button analytics', () => {
-      const { getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       // Clear the initial view analytics call
       mockTrackEvent.mockClear();
@@ -741,9 +673,7 @@ describe('CallFilesModal', () => {
         fetchCallFiles: mockFetchCallFiles,
       };
 
-      const { getByText } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByText } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       // Clear the initial view analytics call
       mockTrackEvent.mockClear();
@@ -759,9 +689,7 @@ describe('CallFilesModal', () => {
     });
 
     it('tracks file download start analytics', async () => {
-      const { getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       // Clear the initial view analytics call
       mockTrackEvent.mockClear();
@@ -781,12 +709,10 @@ describe('CallFilesModal', () => {
 
     it('tracks file download completion analytics', async () => {
       const mockGetCallAttachmentFile = require('@/api/calls/callFiles').getCallAttachmentFile;
-      const mockWriteAsStringAsync = require('expo-file-system').writeAsStringAsync;
+      const mockWriteAsStringAsync = require('expo-file-system/legacy').writeAsStringAsync;
       const mockShareAsync = require('expo-sharing').shareAsync;
 
-      const { getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       // Clear the initial view analytics call
       mockTrackEvent.mockClear();
@@ -795,13 +721,19 @@ describe('CallFilesModal', () => {
       fireEvent.press(fileItem);
 
       // Wait for download to complete
-      await waitFor(() => {
-        expect(mockWriteAsStringAsync).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockWriteAsStringAsync).toHaveBeenCalled();
+        },
+        { timeout: 2000 }
+      );
 
-      await waitFor(() => {
-        expect(mockShareAsync).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockShareAsync).toHaveBeenCalled();
+        },
+        { timeout: 2000 }
+      );
 
       // Check for completion analytics
       expect(mockTrackEvent).toHaveBeenCalledWith('call_file_download_completed', {
@@ -819,9 +751,7 @@ describe('CallFilesModal', () => {
       const mockGetCallAttachmentFile = require('@/api/calls/callFiles').getCallAttachmentFile;
       mockGetCallAttachmentFile.mockRejectedValueOnce(new Error('Download failed'));
 
-      const { getByTestId } = render(
-        <CallFilesModal {...defaultProps} isOpen={true} />
-      );
+      const { getByTestId } = render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
       // Clear the initial view analytics call
       mockTrackEvent.mockClear();
@@ -867,9 +797,12 @@ describe('CallFilesModal', () => {
 
       render(<CallFilesModal {...defaultProps} isOpen={true} />);
 
-      expect(mockTrackEvent).toHaveBeenCalledWith('call_files_modal_viewed', expect.objectContaining({
-        timestamp: '2024-01-15T10:00:00.000Z',
-      }));
+      expect(mockTrackEvent).toHaveBeenCalledWith(
+        'call_files_modal_viewed',
+        expect.objectContaining({
+          timestamp: '2024-01-15T10:00:00.000Z',
+        })
+      );
 
       jest.restoreAllMocks();
     });

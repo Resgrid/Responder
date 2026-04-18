@@ -1,0 +1,47 @@
+diff --git a/node_modules/react-native-css-interop/dist/runtime/native/render-component.js b/node_modules/react-native-css-interop/dist/runtime/native/render-component.js
+index a352339..ac18be0 100644
+--- a/node_modules/react-native-css-interop/dist/runtime/native/render-component.js
++++ b/node_modules/react-native-css-interop/dist/runtime/native/render-component.js
+@@ -126,21 +126,30 @@ function printUpgradeWarning(warning, originalProps) {
+ }
+ function stringify(object) {
+     const seen = new WeakSet();
+-    return JSON.stringify(object, function replace(_, value) {
+-        if (!(value !== null && typeof value === "object")) {
+-            return value;
+-        }
+-        if (seen.has(value)) {
+-            return "[Circular]";
+-        }
++    function safeValue(value, depth) {
++        if (value === null || typeof value !== "object") return value;
++        // Depth cap: avoids traversing deeply nested React element / fiber trees
++        if (depth > 2) return "[...]";
++        // Skip Reanimated shared values — reading .value during render is forbidden
++        if ("_isReanimatedSharedValue" in value) return "[AnimatedValue]";
++        // Skip React elements and fibers — _owner chains traverse the entire tree
++        if ("$$typeof" in value) return "[ReactNode]";
++        if (seen.has(value)) return "[Circular]";
+         seen.add(value);
+-        const newValue = Array.isArray(value) ? [] : {};
+-        for (const entry of Object.entries(value)) {
+-            newValue[entry[0]] = replace(entry[0], entry[1]);
++        const out = Array.isArray(value) ? [] : {};
++        for (const key of Object.keys(value)) {
++            try { out[key] = safeValue(value[key], depth + 1); }
++            catch (_e) { out[key] = "[inaccessible]"; }
+         }
+         seen.delete(value);
+-        return newValue;
+-    }, 2);
++        return out;
++    }
++    try {
++        return JSON.stringify(safeValue(object, 0), null, 2);
++    }
++    catch (_e) {
++        return "[unserializable]";
++    }
+ }
+ function getDebugReplacer() {
+     const seen = new WeakSet();

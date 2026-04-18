@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import Settings from '../settings';
 
@@ -125,10 +126,7 @@ jest.mock('@/components/settings/login-info-bottom-sheet', () => ({
             <TouchableOpacity testID="close-login-sheet" onPress={onClose}>
               <Text>Close</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              testID="submit-login"
-              onPress={() => onSubmit({ username: 'testuser', password: 'testpass' })}
-            >
+            <TouchableOpacity testID="submit-login" onPress={() => onSubmit({ username: 'testuser', password: 'testpass' })}>
               <Text>Submit</Text>
             </TouchableOpacity>
           </View>
@@ -139,14 +137,24 @@ jest.mock('@/components/settings/login-info-bottom-sheet', () => ({
 }));
 
 jest.mock('@/components/settings/server-url-bottom-sheet', () => ({
-  ServerUrlBottomSheet: ({ isOpen, onClose }: any) => {
+  ServerUrlBottomSheet: ({ isOpen, onClose, onUrlChanged }: any) => {
     const { View, TouchableOpacity, Text } = require('react-native');
     return (
       <View testID="server-url-bottom-sheet" style={{ display: isOpen ? 'flex' : 'none' }}>
         {isOpen && (
-          <TouchableOpacity testID="close-server-sheet" onPress={onClose}>
-            <Text>Close</Text>
-          </TouchableOpacity>
+          <View>
+            <TouchableOpacity testID="close-server-sheet" onPress={onClose}>
+              <Text>Close</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="submit-server-url-change"
+              onPress={() => {
+                void onUrlChanged?.();
+              }}
+            >
+              <Text>Save Server</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -241,50 +249,8 @@ jest.mock('@/lib/logging', () => ({
 // Mock clear all app data
 const mockClearAllAppData = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/lib/storage/clear-all-data', () => ({
-  clearAllAppData: () => mockClearAllAppData(),
-}));
-
-// Mock AlertDialog components
-jest.mock('@/components/ui/alert-dialog', () => ({
-  AlertDialog: ({ isOpen, onClose, children }: any) => {
-    const { View } = require('react-native');
-    return isOpen ? (
-      <View testID="logout-confirmation-dialog">{children}</View>
-    ) : null;
-  },
-  AlertDialogBackdrop: () => null,
-  AlertDialogContent: ({ children }: any) => {
-    const { View } = require('react-native');
-    return <View testID="alert-dialog-content">{children}</View>;
-  },
-  AlertDialogHeader: ({ children }: any) => {
-    const { View } = require('react-native');
-    return <View testID="alert-dialog-header">{children}</View>;
-  },
-  AlertDialogBody: ({ children }: any) => {
-    const { View } = require('react-native');
-    return <View testID="alert-dialog-body">{children}</View>;
-  },
-  AlertDialogFooter: ({ children }: any) => {
-    const { View } = require('react-native');
-    return <View testID="alert-dialog-footer">{children}</View>;
-  },
-}));
-
-// Mock Button components
-jest.mock('@/components/ui/button', () => ({
-  Button: ({ children, onPress, disabled, testID }: any) => {
-    const { TouchableOpacity } = require('react-native');
-    return (
-      <TouchableOpacity testID={testID} onPress={onPress} disabled={disabled}>
-        {children}
-      </TouchableOpacity>
-    );
-  },
-  ButtonText: ({ children }: any) => {
-    const { Text } = require('react-native');
-    return <Text>{children}</Text>;
-  },
+  clearAllAppData: (options: unknown) => mockClearAllAppData(options),
+  LOGOUT_PRESERVED_STORAGE_KEYS: ['baseUrl', 'IS_FIRST_TIME'],
 }));
 
 // Mock Text component
@@ -316,8 +282,10 @@ describe('Settings Screen', () => {
 
     // Mock useFocusEffect to immediately call the callback
     mockUseFocusEffect.mockImplementation((callback: () => void) => {
-      React.useEffect(callback, []);
+      callback();
     });
+
+    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
   });
 
   it('renders correctly with all sections', () => {
@@ -419,22 +387,29 @@ describe('Settings Screen', () => {
       timestamp: expect.any(String),
     });
 
-    // Confirmation dialog should now be shown
-    expect(screen.getByTestId('logout-confirmation-dialog')).toBeTruthy();
-    expect(screen.getByText('settings.logout_confirm_title')).toBeTruthy();
-    expect(screen.getByText('settings.logout_confirm_message')).toBeTruthy();
+    expect(Alert.alert).toHaveBeenCalledWith('settings.logout_confirm_title', 'settings.logout_confirm_message', [
+      {
+        text: 'settings.logout_confirm_cancel',
+        style: 'cancel',
+        onPress: expect.any(Function),
+      },
+      {
+        text: 'settings.logout_confirm_yes',
+        style: 'destructive',
+        onPress: expect.any(Function),
+      },
+    ]);
   });
 
   it('handles logout confirmation and clears all app data', async () => {
     render(<Settings />);
 
-    // Open logout confirmation dialog
     const logoutItem = screen.getByTestId('item-settings.logout');
     fireEvent.press(logoutItem);
 
-    // Find and press the confirm button (Yes, Logout)
-    const confirmButton = screen.getByText('settings.logout_confirm_yes');
-    fireEvent.press(confirmButton);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as Array<{ text: string; onPress?: () => void }>;
+    const confirmButton = buttons.find((button) => button.text === 'settings.logout_confirm_yes');
+    confirmButton?.onPress?.();
 
     await waitFor(() => {
       expect(mockTrackEvent).toHaveBeenCalledWith('settings_logout_confirmed', {
@@ -446,6 +421,14 @@ describe('Settings Screen', () => {
       expect(mockClearAllAppData).toHaveBeenCalled();
     });
 
+    expect(mockClearAllAppData).toHaveBeenCalledWith({
+      resetStores: true,
+      clearStorage: true,
+      clearFilters: true,
+      clearSecure: false,
+      preserveStorageKeys: ['baseUrl', 'IS_FIRST_TIME'],
+    });
+
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
     });
@@ -454,16 +437,12 @@ describe('Settings Screen', () => {
   it('handles logout cancellation and does not clear data', () => {
     render(<Settings />);
 
-    // Open logout confirmation dialog
     const logoutItem = screen.getByTestId('item-settings.logout');
     fireEvent.press(logoutItem);
 
-    // Dialog should be visible
-    expect(screen.getByTestId('logout-confirmation-dialog')).toBeTruthy();
-
-    // Find and press the cancel button
-    const cancelButton = screen.getByText('settings.logout_confirm_cancel');
-    fireEvent.press(cancelButton);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as Array<{ text: string; onPress?: () => void }>;
+    const cancelButton = buttons.find((button) => button.text === 'settings.logout_confirm_cancel');
+    cancelButton?.onPress?.();
 
     expect(mockTrackEvent).toHaveBeenCalledWith('settings_logout_cancelled', {
       timestamp: expect.any(String),
@@ -472,6 +451,35 @@ describe('Settings Screen', () => {
     // Logout and clear should not be called
     expect(mockClearAllAppData).not.toHaveBeenCalled();
     expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it('logs out after server url changes while authenticated', async () => {
+    render(<Settings />);
+
+    fireEvent.press(screen.getByTestId('item-settings.server'));
+    fireEvent.press(screen.getByTestId('submit-server-url-change'));
+
+    await waitFor(() => {
+      expect(mockTrackEvent).toHaveBeenCalledWith('settings_server_url_changed_logout', {
+        timestamp: expect.any(String),
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockClearAllAppData).toHaveBeenCalled();
+    });
+
+    expect(mockClearAllAppData).toHaveBeenCalledWith({
+      resetStores: true,
+      clearStorage: true,
+      clearFilters: true,
+      clearSecure: false,
+      preserveStorageKeys: ['baseUrl', 'IS_FIRST_TIME'],
+    });
+
+    await waitFor(() => {
+      expect(mockLogout).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('handles support link presses and tracks analytics', () => {

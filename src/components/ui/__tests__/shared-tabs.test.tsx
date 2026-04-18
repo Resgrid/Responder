@@ -74,6 +74,13 @@ describe('SharedTabs', () => {
     expect(getByText('Content 1')).toBeTruthy();
   });
 
+  it('renders compact small segmented tabs', () => {
+    const { getByText } = render(<SharedTabs tabs={mockTabs} variant="segmented" size="sm" />);
+
+    expect(getByText('Tab 1')).toBeTruthy();
+    expect(getByText('Content 1')).toBeTruthy();
+  });
+
   it('handles tab press correctly', () => {
     const mockOnChange = jest.fn();
     const { getByText } = render(<SharedTabs tabs={mockTabs} onChange={mockOnChange} />);

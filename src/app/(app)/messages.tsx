@@ -332,9 +332,9 @@ export default function MessagesScreen() {
         {isLoading && filteredMessages.length === 0 && <Loading />}
 
         {/* Side Menu Drawer */}
-        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} size={isLandscape ? 'lg' : 'md'}>
-          <DrawerBackdrop />
-          <DrawerContent className={isLandscape ? 'w-1/4' : 'w-4/5'}>
+        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} size={isLandscape ? 'md' : 'lg'}>
+          <DrawerBackdrop onPress={() => setIsSideMenuOpen(false)} />
+          <DrawerContent>
             <DrawerBody className="p-0">
               <SideMenu onNavigate={() => setIsSideMenuOpen(false)} />
             </DrawerBody>

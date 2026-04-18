@@ -14,6 +14,11 @@ const authApi = axios.create({
   },
 });
 
+authApi.interceptors.request.use((config) => {
+  config.baseURL = getBaseApiUrl();
+  return config;
+});
+
 export const loginRequest = async (credentials: LoginCredentials): Promise<LoginResponse> => {
   try {
     const data = queryString.stringify({

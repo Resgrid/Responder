@@ -7,6 +7,13 @@ const mockIcon = React.forwardRef((props: any, ref: any) => {
 });
 
 export const AlertCircle = mockIcon;
+export const AlertTriangle = mockIcon;
+export const CloudLightning = mockIcon;
+export const Flame = mockIcon;
+export const Heart = mockIcon;
+export const Leaf = mockIcon;
+export const MapPin = mockIcon;
+export const Mountain = mockIcon;
 export const Bell = mockIcon;
 export const BuildingIcon = mockIcon;
 export const CalendarIcon = mockIcon;

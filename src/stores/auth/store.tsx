@@ -278,7 +278,7 @@ const useAuthStore = create<AuthState>()(
           status: 'signedOut',
           error: null,
           profile: null,
-          isFirstTime: true,
+          isFirstTime: false,
           userId: null,
         });
       },
@@ -432,7 +432,7 @@ const useAuthStore = create<AuthState>()(
                 status: 'signedOut',
                 error: null,
                 profile: null,
-                isFirstTime: true,
+                isFirstTime: false,
                 userId: null,
               });
               return;
@@ -473,7 +473,7 @@ const useAuthStore = create<AuthState>()(
               status: 'signedOut',
               error: null,
               profile: null,
-              isFirstTime: true,
+              isFirstTime: false,
               userId: null,
             });
           }
@@ -490,7 +490,7 @@ const useAuthStore = create<AuthState>()(
             status: 'signedOut',
             error: null,
             profile: null,
-            isFirstTime: true,
+            isFirstTime: false,
             userId: null,
           });
         }

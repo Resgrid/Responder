@@ -4,7 +4,7 @@ import { NovuProvider } from '@novu/react-native';
 import Mapbox from '@rnmapbox/maps';
 import { Redirect, Slot, SplashScreen } from 'expo-router';
 import { size } from 'lodash';
-import { Contact, Home, ListTree, Mail, Map, Megaphone, Menu, Notebook, Truck, Users } from 'lucide-react-native';
+import { Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -15,7 +15,7 @@ import { NotificationInbox } from '@/components/notifications/NotificationInbox'
 import SideMenu from '@/components/sidebar/side-menu';
 import { View } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@/components/ui/drawer/index';
+import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer/index';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
@@ -39,6 +39,7 @@ import { useRolesStore } from '@/stores/roles/store';
 import { securityStore } from '@/stores/security/store';
 import { useShiftsStore } from '@/stores/shifts/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
+import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -99,6 +100,13 @@ export default function TabLayout() {
       //await useShiftsStore.getState().init();
       //await usePersonnelStore.getState().init();
       await securityStore.getState().getRights();
+
+      // Initialize weather alerts
+      await useWeatherAlertsStore.getState().fetchSettings();
+      const weatherSettings = useWeatherAlertsStore.getState().settings;
+      if (weatherSettings?.WeatherAlertsEnabled) {
+        await useWeatherAlertsStore.getState().fetchActiveAlerts();
+      }
 
       //await useSignalRStore.getState().connectUpdateHub();
       //await useSignalRStore.getState().connectGeolocationHub();
@@ -262,13 +270,13 @@ export default function TabLayout() {
             <SideMenu />
           </View>
         ) : (
-          <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
+          <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)} size="lg">
             <DrawerBackdrop onPress={() => setIsOpen(false)} />
-            <DrawerContent className="w-4/5 bg-white p-1 dark:bg-gray-900">
-              <DrawerBody>
+            <DrawerContent className="bg-white dark:bg-gray-900">
+              <DrawerBody className="p-0">
                 <SideMenu onNavigate={handleNavigate} />
               </DrawerBody>
-              <DrawerFooter>
+              <DrawerFooter className="border-t border-gray-200 p-3 dark:border-gray-800">
                 <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
                   <ButtonText>Close</ButtonText>
                 </Button>

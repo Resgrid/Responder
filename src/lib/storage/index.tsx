@@ -13,7 +13,7 @@ if (Platform.OS === 'web') {
     encryptionKey: 'a330fb72-1916-4cc2-99fe-efd4986b254f',
   });
 }
-const IS_FIRST_TIME = 'IS_FIRST_TIME';
+export const IS_FIRST_TIME = 'IS_FIRST_TIME';
 
 export function getItem<T>(key: string): T | null {
   const value = storage.getString(key);

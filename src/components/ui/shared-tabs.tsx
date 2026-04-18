@@ -1,7 +1,7 @@
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { create } from 'zustand';
 
 import { Box } from '@/components/ui/box';
@@ -62,11 +62,21 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   const isLandscape = width > height;
   const { colorScheme } = useColorScheme();
 
+  // Track which tabs have ever been activated so we can keep them mounted
+  const [mountedTabs, setMountedTabs] = useState<Set<number>>(() => new Set([initialIndex]));
+
   // Use local state if no external state management is needed
   const currentIndex = onChange ? activeIndex : localActiveIndex;
 
   const handleTabPress = useCallback(
     (index: number) => {
+      // Ensure this tab's content is kept mounted from now on
+      setMountedTabs((prev) => {
+        if (prev.has(index)) return prev;
+        const next = new Set(prev);
+        next.add(index);
+        return next;
+      });
       if (onChange) {
         setActiveIndex(index);
         onChange(index);
@@ -102,9 +112,9 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   const getTabStyles = (index: number) => {
     const isActive = index === currentIndex;
 
-    const baseStyles = 'flex-1 flex items-center justify-center';
+    const baseStyles = 'flex items-center justify-center';
     const sizeStyles = {
-      sm: isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
+      sm: variant === 'segmented' ? (isLandscape ? 'px-3 py-1' : 'px-2 py-0.5') : isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
       md: isLandscape ? 'px-4 py-2' : 'px-3 py-1.5',
       lg: isLandscape ? 'px-5 py-2.5' : 'px-4 py-2',
     }[size];
@@ -121,7 +131,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
 
   // Container styles based on variant
   const getContainerStyles = () => {
-    const baseStyles = 'flex flex-row flex-1';
+    const baseStyles = 'flex flex-row';
 
     const variantStyles = {
       default: colorScheme === 'dark' ? 'border-b border-gray-700' : 'border-b border-gray-200',
@@ -141,7 +151,6 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     const styles = StyleSheet.create({
       container: {
         flexDirection: 'row',
-        flex: 1,
         ...(variant === 'default' && { borderBottomWidth: 1, borderBottomColor: borderColor }),
         ...(variant === 'pills' && { gap: 8, padding: 4 }),
         ...(variant === 'underlined' && { borderBottomWidth: 1, borderBottomColor: borderColor }),
@@ -184,8 +193,26 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
         </Box>
       )}
 
-      {/* Tab Content */}
-      <Box className={`flex-1 ${contentClassName}`}>{tabs[currentIndex]?.content}</Box>
+      {/* Tab Content — each visited tab stays mounted; inactive tabs are hidden
+          via display:none so NativeWind never has to re-upgrade them on revisit. */}
+      <Box className={`flex-1 ${contentClassName}`}>
+        {tabs.map((tab, index) => {
+          if (!mountedTabs.has(index)) {
+            return null;
+          }
+          return (
+            <View key={tab.key} style={index === currentIndex ? tabContentStyles.active : tabContentStyles.hidden}>
+              {tab.content}
+            </View>
+          );
+        })}
+      </Box>
     </Box>
   );
 };
+
+const tabContentStyles = StyleSheet.create({
+  active: { flex: 1 },
+  // display:'none' hides the view and removes it from layout without unmounting
+  hidden: { display: 'none' },
+});

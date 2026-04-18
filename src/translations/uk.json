@@ -225,7 +225,8 @@
       "dispatched": "Задіяні",
       "info": "Інфо",
       "protocols": "Протоколи",
-      "timeline": "Активність"
+      "timeline": "Активність",
+      "video": "Відео"
     },
     "timestamp": "Мітка часу",
     "title": "Деталі виклику",
@@ -240,6 +241,7 @@
     "address_not_found": "Адресу не знайдено, будь ласка, спробуйте іншу адресу",
     "address_placeholder": "Введіть адресу виклику",
     "address_required": "Будь ласка, введіть адресу для пошуку",
+    "assigned_to_me": "Призначено мені",
     "call_details": "Деталі виклику",
     "call_location": "Місце виклику",
     "call_number": "Номер виклику",
@@ -298,6 +300,7 @@
     "no_open_calls": "Відкриті виклики відсутні",
     "note": "Примітка",
     "note_placeholder": "Введіть примітку до виклику",
+    "only_calls_im_on": "Лише виклики, у яких я беру участь",
     "personnel": "Особи",
     "plus_code": "Код Plus",
     "plus_code_found": "Код Plus знайдено та місцезнаходження оновлено",
@@ -337,6 +340,37 @@
     "what3words_placeholder": "Введіть адресу what3words (напр. filled.count.soap)",
     "what3words_required": "Будь ласка, введіть адресу what3words для пошуку"
   },
+  "check_in": {
+    "add_note": "Додати Примітку (Необов'язково)",
+    "check_in_error": "Не вдалося зберегти реєстрацію",
+    "check_in_success": "Реєстрацію збережено успішно",
+    "confirm_check_in": "Підтвердити Реєстрацію",
+    "duration": "Тривалість",
+    "elapsed": "Минуло",
+    "history": "Історія Реєстрацій",
+    "last_check_in": "Остання реєстрація",
+    "minutes_ago": "{{count}} хв тому",
+    "no_timers": "Таймери реєстрації не налаштовані",
+    "offline_queued": "Реєстрацію поставлено в чергу для онлайн",
+    "perform_check_in": "Зареєструватися",
+    "progress": "{{elapsed}} / {{total}} хв",
+    "quick_check_in": "Швидка Реєстрація",
+    "select_type": "Виберіть Тип Реєстрації",
+    "status_ok": "OK",
+    "status_overdue": "Прострочено",
+    "status_warning": "Попередження",
+    "tab_title": "Реєстрація",
+    "timer_interval": "Кожні {{minutes}} хв",
+    "timers_disabled": "Таймери реєстрації вимкнені для цього виклику",
+    "type_hazmat": "Небезпечні Речовини",
+    "type_ic": "Командир Інциденту",
+    "type_par": "PAR",
+    "type_personnel": "Персонал",
+    "type_rehab": "Реабілітація",
+    "type_sector_rotation": "Ротація Сектору",
+    "type_unit": "Підрозділ",
+    "unknown_unit": "Невідомий підрозділ"
+  },
   "common": {
     "active": "Активний",
     "add": "Додати",
@@ -345,6 +379,7 @@
     "cancel": "Скасувати",
     "close": "Закрити",
     "confirm": "Підтвердити",
+    "confirm_location": "Підтвердити місцезнаходження",
     "delete": "Видалити",
     "deleting": "Видалення...",
     "discard": "Відхилити",
@@ -472,6 +507,14 @@
     "required": "Це поле є обов'язковим"
   },
   "home": {
+    "active_call": {
+      "clear_active": "Очистити Активний Виклик",
+      "no_active_call": "Активний виклик не вибрано",
+      "select_call": "Виберіть виклик для відстеження",
+      "set_active": "Встановити як Активний Виклик",
+      "title": "Активний Виклик",
+      "view_details": "Переглянути Деталі Виклику"
+    },
     "error": {
       "no_user_id": "Ідентифікатор користувача недоступний"
     },
@@ -505,7 +548,14 @@
       "update_failed": "Не вдалося оновити статус",
       "updated_successfully": "Статус успішно оновлено"
     },
+    "summary": {
+      "active_calls": "Активні виклики",
+      "active_severe_weather_alerts": "Активні серйозні/аварійні погодні попередження",
+      "calls_im_on": "Виклики, у яких я беру участь",
+      "pending_missed_checkins": "Очікуючі/пропущені check-in"
+    },
     "tabs": {
+      "call": "Виклик",
       "dashboard": "Панель",
       "map": "Карта",
       "staffing": "Укомплектування",
@@ -808,6 +858,7 @@
     "background_geolocation_warning": "Ця функція дозволяє застосунку відстежувати ваше місцезнаходження у фоновому режимі. Вона допомагає координувати реагування на надзвичайні ситуації, але може впливати на термін служби акумулятора.",
     "background_location": "Місцезнаходження у фоновому режимі",
     "contact_us": "Зв'яжіться з нами",
+    "custom": "Власний",
     "english": "Англійська",
     "enter_password": "Введіть пароль",
     "enter_server_url": "Введіть URL API Resgrid (напр. https://api.resgrid.com)",
@@ -953,7 +1004,8 @@
     "protocols": "Протоколи",
     "settings": "Налаштування",
     "shifts": "Зміни",
-    "units": "Підрозділи"
+    "units": "Підрозділи",
+    "weatherAlerts": "Погодні Сповіщення"
   },
   "units": {
     "coordinates": "Координати",
@@ -973,6 +1025,116 @@
     "title": "Підрозділи",
     "vehicleInfo": "Інформація про транспортний засіб",
     "vin": "VIN"
+  },
+  "video_feeds": {
+    "add_feed": "Додати відеотрансляцію",
+    "copy_url": "Копіювати URL",
+    "delete_confirm": "Ви впевнені, що хочете видалити цю відеотрансляцію?",
+    "delete_feed": "Видалити відеотрансляцію",
+    "delete_success": "Відеотрансляцію успішно видалено",
+    "edit_feed": "Редагувати відеотрансляцію",
+    "form_description": "Опис",
+    "form_feed_format": "Формат трансляції",
+    "form_feed_type": "Тип трансляції",
+    "form_name": "Назва",
+    "form_sort_order": "Порядок сортування",
+    "form_status": "Статус",
+    "form_url": "URL",
+    "format_dash": "DASH",
+    "format_embed": "Вбудований",
+    "format_hls": "HLS",
+    "format_mjpeg": "MJPEG",
+    "format_other": "Інший",
+    "format_rtsp": "RTSP",
+    "format_webrtc": "WebRTC",
+    "format_youtube": "YouTube",
+    "no_feeds": "Немає відеотрансляцій для цього виклику",
+    "save_error": "Не вдалося зберегти відеотрансляцію",
+    "save_success": "Відеотрансляцію успішно збережено",
+    "status_active": "Активна",
+    "status_error": "Помилка",
+    "status_inactive": "Неактивна",
+    "title": "Відеотрансляції",
+    "type_body_cam": "Нагрудна камера",
+    "type_drone": "Дрон",
+    "type_fixed_camera": "Стаціонарна камера",
+    "type_other": "Інший",
+    "type_satellite": "Супутникова трансляція",
+    "type_traffic_cam": "Дорожня камера",
+    "type_weather_cam": "Метеорологічна камера",
+    "type_webcam": "Вебкамера",
+    "unsupported_format": "Цей формат не підтримується для відтворення в додатку. Скопіюйте URL, щоб відкрити у зовнішньому програвачі.",
+    "url_copied": "URL скопійовано до буфера обміну",
+    "watch": "Дивитися"
+  },
+  "weatherAlerts": {
+    "activeAlerts": "Активні Сповіщення",
+    "banner": {
+      "moreAlerts": "+{{count}} ще"
+    },
+    "category": {
+      "CBRNE": "ХБРЯ",
+      "Env": "Екологічний",
+      "Fire": "Пожежа",
+      "Geo": "Геологічний",
+      "Health": "Здоров'я",
+      "Infra": "Інфраструктура",
+      "Met": "Метеорологічний",
+      "Other": "Інше",
+      "Transport": "Транспорт"
+    },
+    "certainty": {
+      "Likely": "Ймовірно",
+      "Observed": "Спостережено",
+      "Possible": "Можливо",
+      "Unknown": "Невідомо",
+      "Unlikely": "Малоймовірно",
+      "label": "Впевненість"
+    },
+    "detail": {
+      "area": "Зачеплена Територія",
+      "description": "Опис",
+      "effective": "Діє з",
+      "expires": "Закінчується",
+      "instructions": "Інструкції",
+      "metadata": "Деталі",
+      "onset": "Початок",
+      "sender": "Відправник",
+      "status": "Статус",
+      "timing": "Час"
+    },
+    "filter": {
+      "all": "Усі",
+      "extreme": "Екстремальний",
+      "minor": "Незначний",
+      "moderate": "Помірний",
+      "severe": "Серйозний"
+    },
+    "noActiveAlerts": "Немає активних погодних сповіщень",
+    "search": "Пошук сповіщень...",
+    "severity": {
+      "Extreme": "Екстремальний",
+      "Minor": "Незначний",
+      "Moderate": "Помірний",
+      "Severe": "Серйозний",
+      "Unknown": "Невідомо"
+    },
+    "status": {
+      "Actual": "Фактичний",
+      "Draft": "Чернетка",
+      "Exercise": "Навчання",
+      "System": "Система",
+      "Test": "Тест"
+    },
+    "title": "Погодні Сповіщення",
+    "urgency": {
+      "Expected": "Очікувана",
+      "Future": "Майбутня",
+      "Immediate": "Негайна",
+      "Past": "Минула",
+      "Unknown": "Невідома",
+      "label": "Терміновість"
+    }
   },
   "welcome": "Ласкаво просимо до Resgrid Responder"
 }

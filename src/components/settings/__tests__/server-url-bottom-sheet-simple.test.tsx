@@ -3,6 +3,12 @@ import React from 'react';
 
 import { ServerUrlBottomSheet } from '../server-url-bottom-sheet';
 
+const mockGetSystemConfig = jest.fn().mockResolvedValue({
+  Data: {
+    Locations: [],
+  },
+});
+
 // Mock all dependencies with minimal implementations
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -10,6 +16,10 @@ jest.mock('react-i18next', () => ({
 
 jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'light' }),
+}));
+
+jest.mock('lucide-react-native', () => ({
+  ChevronDownIcon: 'ChevronDownIcon',
 }));
 
 jest.mock('react-native', () => ({
@@ -33,6 +43,10 @@ jest.mock('@/hooks/use-analytics', () => ({
   }),
 }));
 
+jest.mock('@/api/config', () => ({
+  getSystemConfig: () => mockGetSystemConfig(),
+}));
+
 jest.mock('react-hook-form', () => ({
   useForm: () => ({
     control: {},
@@ -54,15 +68,19 @@ jest.mock('@/lib/env', () => ({ Env: { API_VERSION: 'v4' } }));
 jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), error: jest.fn() } }));
 
 // Create mock UI component factory functions
-const createMockUIComponent = (displayName: string) => ({ children, testID, ...props }: any) => {
-  const React = require('react');
-  return React.createElement('View', { testID: testID || displayName.toLowerCase(), ...props }, children);
-};
+const createMockUIComponent =
+  (displayName: string) =>
+  ({ children, testID, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('View', { testID: testID || displayName.toLowerCase(), ...props }, children);
+  };
 
-const createMockTextComponent = (displayName: string) => ({ children, testID, ...props }: any) => {
-  const React = require('react');
-  return React.createElement('Text', { testID: testID || displayName.toLowerCase(), ...props }, children);
-};
+const createMockTextComponent =
+  (displayName: string) =>
+  ({ children, testID, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('Text', { testID: testID || displayName.toLowerCase(), ...props }, children);
+  };
 
 const createMockInputComponent = ({ testID, ...props }: any) => {
   const React = require('react');
@@ -70,7 +88,7 @@ const createMockInputComponent = ({ testID, ...props }: any) => {
 };
 
 jest.mock('../../ui/actionsheet', () => ({
-  Actionsheet: ({ children, isOpen }: any) => isOpen ? createMockUIComponent('Actionsheet')({ children }) : null,
+  Actionsheet: ({ children, isOpen }: any) => (isOpen ? createMockUIComponent('Actionsheet')({ children }) : null),
   ActionsheetBackdrop: createMockUIComponent('ActionsheetBackdrop'),
   ActionsheetContent: createMockUIComponent('ActionsheetContent'),
   ActionsheetDragIndicator: createMockUIComponent('ActionsheetDragIndicator'),
@@ -100,12 +118,31 @@ jest.mock('../../ui/input', () => ({
 }));
 jest.mock('../../ui/text', () => ({ Text: createMockTextComponent('Text') }));
 jest.mock('../../ui/vstack', () => ({ VStack: createMockUIComponent('VStack') }));
+jest.mock('../../ui/select', () => ({
+  Select: createMockUIComponent('Select'),
+  SelectBackdrop: createMockUIComponent('SelectBackdrop'),
+  SelectContent: createMockUIComponent('SelectContent'),
+  SelectDragIndicator: createMockUIComponent('SelectDragIndicator'),
+  SelectDragIndicatorWrapper: createMockUIComponent('SelectDragIndicatorWrapper'),
+  SelectIcon: createMockUIComponent('SelectIcon'),
+  SelectInput: ({ testID, ...props }: any) => {
+    const React = require('react');
+    return React.createElement('TextInput', { testID: testID || 'select-input-field', ...props });
+  },
+  SelectItem: createMockUIComponent('SelectItem'),
+  SelectPortal: createMockUIComponent('SelectPortal'),
+  SelectTrigger: createMockUIComponent('SelectTrigger'),
+}));
 
 describe('ServerUrlBottomSheet - Simple', () => {
   const defaultProps = {
     isOpen: true,
     onClose: jest.fn(),
   };
+
+  beforeEach(() => {
+    mockGetSystemConfig.mockClear();
+  });
 
   it('renders when open', () => {
     render(<ServerUrlBottomSheet {...defaultProps} />);
@@ -124,5 +161,13 @@ describe('ServerUrlBottomSheet - Simple', () => {
     expect(inputField.props.autoCapitalize).toBe('none');
     expect(inputField.props.autoCorrect).toBe(false);
     expect(inputField.props.keyboardType).toBe('url');
+  });
+
+  it('shows a loading indicator while server options are loading', () => {
+    mockGetSystemConfig.mockImplementation(() => new Promise(() => {}));
+
+    render(<ServerUrlBottomSheet {...defaultProps} />);
+
+    expect(screen.getByTestId('server-options-loading')).toBeTruthy();
   });
 });

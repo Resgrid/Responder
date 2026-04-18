@@ -1,21 +1,20 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import type { GestureResponderEvent } from 'react-native';
 import { Dimensions, Image, ScrollView, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { FocusAwareStatusBar, SafeAreaView, View } from '@/components/ui';
-import { Button, ButtonText } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { useAnalytics } from '@/hooks/use-analytics';
-import { useAuthStore } from '@/lib/auth';
 import { useIsFirstTime } from '@/lib/storage';
 
 const { width } = Dimensions.get('window');
+const SWIPE_THRESHOLD = 60;
 
 // Color constants
 const COLORS = {
@@ -106,11 +105,11 @@ const OnboardingItem: React.FC<OnboardingItemProps> = ({ title, description, ico
   );
 };
 
-const Pagination: React.FC<{ currentIndex: number; length: number }> = ({ currentIndex, length }) => {
+const Pagination: React.FC<{ currentIndex: number; items: OnboardingItemProps[] }> = ({ currentIndex, items }) => {
   return (
     <View className="mt-8 flex-row justify-center">
-      {Array.from({ length }).map((_, index) => (
-        <View key={index} className={`mx-1 h-2.5 rounded-full ${currentIndex === index ? 'w-6 bg-primary-500' : 'w-2.5 bg-primary-300'}`} />
+      {items.map((item, index) => (
+        <View key={item.title} className={`mx-1 h-2.5 rounded-full ${currentIndex === index ? 'w-6 bg-primary-500' : 'w-2.5 bg-primary-300'}`} />
       ))}
     </View>
   );
@@ -122,7 +121,7 @@ export default function Onboarding() {
   const { trackEvent } = useAnalytics();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlashList<OnboardingItemProps>>(null);
+  const swipeStartXRef = useRef<number | null>(null);
   const buttonOpacity = useSharedValue(0);
   const { colorScheme } = useColorScheme();
 
@@ -162,30 +161,34 @@ export default function Onboarding() {
     router.replace('/login');
   }, [trackEvent, setIsFirstTime, router]);
 
-  const handleScroll = (event: { nativeEvent: { contentOffset: { x: number } } }) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / width);
-    const wasLastIndex = currentIndex;
-
-    if (index !== wasLastIndex) {
-      setCurrentIndex(index);
-
-      // Analytics: Track slide changes
+  const trackSlideChange = useCallback(
+    (fromSlide: number, toSlide: number) => {
       trackEvent('onboarding_slide_changed', {
         timestamp: new Date().toISOString(),
-        fromSlide: wasLastIndex,
-        toSlide: index,
-        slideTitle: onboardingData[index]?.title || 'Unknown',
+        fromSlide,
+        toSlide,
+        slideTitle: onboardingData[toSlide]?.title || 'Unknown',
       });
-    }
+    },
+    [trackEvent]
+  );
 
-    // Auto-trigger "Let's Get Started" when swiping past the last slide
-    if (index > onboardingData.length - 1) {
-      handleGetStarted();
-    }
-  };
+  const goToSlide = useCallback(
+    (nextIndex: number) => {
+      if (nextIndex < 0 || nextIndex >= onboardingData.length || nextIndex === currentIndex) {
+        return;
+      }
 
-  const nextSlide = () => {
+      setCurrentIndex(nextIndex);
+      trackSlideChange(currentIndex, nextIndex);
+    },
+    [currentIndex, trackSlideChange]
+  );
+
+  const nextSlide = useCallback(() => {
     if (currentIndex < onboardingData.length - 1) {
+      const nextIndex = currentIndex + 1;
+
       // Analytics: Track next button clicks
       trackEvent('onboarding_next_clicked', {
         timestamp: new Date().toISOString(),
@@ -193,12 +196,41 @@ export default function Onboarding() {
         slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
       });
 
-      flatListRef.current?.scrollToIndex({
-        index: currentIndex + 1,
-        animated: true,
-      });
+      goToSlide(nextIndex);
     }
-  };
+  }, [currentIndex, goToSlide, trackEvent]);
+
+  const handleSlideTouchStart = useCallback((event: GestureResponderEvent) => {
+    swipeStartXRef.current = typeof event.nativeEvent.pageX === 'number' ? event.nativeEvent.pageX : null;
+  }, []);
+
+  const handleSlideTouchEnd = useCallback(
+    (event: GestureResponderEvent) => {
+      const startX = swipeStartXRef.current;
+      const endX = typeof event.nativeEvent.pageX === 'number' ? event.nativeEvent.pageX : null;
+
+      swipeStartXRef.current = null;
+
+      if (startX === null || endX === null) {
+        return;
+      }
+
+      const deltaX = endX - startX;
+
+      if (deltaX <= -SWIPE_THRESHOLD) {
+        if (currentIndex < onboardingData.length - 1) {
+          goToSlide(currentIndex + 1);
+        } else {
+          handleGetStarted();
+        }
+      }
+
+      if (deltaX >= SWIPE_THRESHOLD && currentIndex > 0) {
+        goToSlide(currentIndex - 1);
+      }
+    },
+    [currentIndex, goToSlide, handleGetStarted]
+  );
 
   const buttonAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -220,6 +252,9 @@ export default function Onboarding() {
     router.replace('/login');
   }, [trackEvent, currentIndex, setIsFirstTime, router]);
 
+  const actionTextColor = colorScheme === 'dark' ? '#000000' : '#FFFFFF';
+  const currentSlide = onboardingData[currentIndex];
+
   return (
     <SafeAreaView className="flex-1">
       <FocusAwareStatusBar hidden={true} />
@@ -234,24 +269,12 @@ export default function Onboarding() {
         </View>
 
         <View style={styles.flexContainer}>
-          <FlashList
-            ref={flatListRef}
-            data={onboardingData}
-            renderItem={({ item }: { item: OnboardingItemProps }) => <OnboardingItem {...item} />}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            bounces={false}
-            keyExtractor={(item: OnboardingItemProps) => item.title}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            estimatedItemSize={width}
-            getItemType={() => 'onboarding-item'}
-            testID="onboarding-flatlist"
-          />
+          <View testID="onboarding-flatlist" onTouchStart={handleSlideTouchStart} onTouchEnd={handleSlideTouchEnd}>
+            <OnboardingItem key={currentSlide.title} {...currentSlide} />
+          </View>
         </View>
 
-        <Pagination currentIndex={currentIndex} length={onboardingData.length} />
+        <Pagination currentIndex={currentIndex} items={onboardingData} />
 
         <View className="mb-8 mt-4 px-8">
           {currentIndex < onboardingData.length - 1 ? (
@@ -272,16 +295,20 @@ export default function Onboarding() {
                 <Text className="text-gray-500">Skip</Text>
               </Pressable>
 
-              <Button size="lg" variant="solid" action="primary" className="bg-primary-500 px-6" onPress={nextSlide}>
-                <ButtonText>Next </ButtonText>
+              <Pressable accessibilityRole="button" className="h-11 flex-row items-center justify-center rounded bg-primary-500 px-6" onPress={nextSlide} testID="next-button">
+                <Text style={{ color: actionTextColor }} className="text-base font-semibold">
+                  Next
+                </Text>
                 <ChevronRight size={20} color={colorScheme === 'dark' ? 'black' : 'white'} />
-              </Button>
+              </Pressable>
             </View>
           ) : (
             <Animated.View style={buttonAnimatedStyle}>
-              <Button size="lg" variant="solid" action="primary" className="w-full bg-primary-500" testID="get-started-button" onPress={handleGetStarted}>
-                <ButtonText>Let's Get Started</ButtonText>
-              </Button>
+              <Pressable accessibilityRole="button" className="h-11 w-full flex-row items-center justify-center rounded bg-primary-500" testID="get-started-button" onPress={handleGetStarted}>
+                <Text style={{ color: actionTextColor }} className="text-base font-semibold">
+                  Let's Get Started
+                </Text>
+              </Pressable>
             </Animated.View>
           )}
         </View>

@@ -225,7 +225,8 @@
       "dispatched": "Dirigerade",
       "info": "Info",
       "protocols": "Protokoll",
-      "timeline": "Aktivitet"
+      "timeline": "Aktivitet",
+      "video": "Video"
     },
     "timestamp": "Tidsstämpel",
     "title": "Larmdetaljer",
@@ -240,6 +241,7 @@
     "address_not_found": "Adressen hittades inte, prova en annan adress",
     "address_placeholder": "Ange larmets adress",
     "address_required": "Ange en adress att söka efter",
+    "assigned_to_me": "Tilldelat mig",
     "call_details": "Larmdetaljer",
     "call_location": "Larmplats",
     "call_number": "Larmnummer",
@@ -298,6 +300,7 @@
     "no_open_calls": "Inga öppna larm tillgängliga",
     "note": "Anteckning",
     "note_placeholder": "Ange larmets anteckning",
+    "only_calls_im_on": "Endast larm jag är på",
     "personnel": "Personal",
     "plus_code": "Plus-kod",
     "plus_code_found": "Plus-koden hittades och platsen uppdaterades",
@@ -337,6 +340,37 @@
     "what3words_placeholder": "Ange what3words-adress (t.ex. fylld.antal.tvål)",
     "what3words_required": "Ange en what3words-adress att söka efter"
   },
+  "check_in": {
+    "add_note": "Lägg till anteckning (Valfritt)",
+    "check_in_error": "Incheckning misslyckades",
+    "check_in_success": "Incheckning sparad",
+    "confirm_check_in": "Bekräfta incheckning",
+    "duration": "Varaktighet",
+    "elapsed": "Förfluten",
+    "history": "Incheckningshistorik",
+    "last_check_in": "Senaste incheckning",
+    "minutes_ago": "{{count}} min sedan",
+    "no_timers": "Inga incheckningstimer konfigurerade",
+    "offline_queued": "Incheckning köad för när du är online",
+    "perform_check_in": "Checka in",
+    "progress": "{{elapsed}} / {{total}} min",
+    "quick_check_in": "Snabb incheckning",
+    "select_type": "Välj incheckningstyp",
+    "status_ok": "OK",
+    "status_overdue": "Försenad",
+    "status_warning": "Varning",
+    "tab_title": "Incheckning",
+    "timer_interval": "Var {{minutes}} min",
+    "timers_disabled": "Incheckningstimer inaktiverade för detta larm",
+    "type_hazmat": "Farligt ämne exponering",
+    "type_ic": "Insatsledare",
+    "type_par": "PAR",
+    "type_personnel": "Personal",
+    "type_rehab": "Rehab",
+    "type_sector_rotation": "Sektorrotation",
+    "type_unit": "Enhet",
+    "unknown_unit": "Okänd enhet"
+  },
   "common": {
     "active": "Aktiv",
     "add": "Lägg till",
@@ -345,6 +379,7 @@
     "cancel": "Avbryt",
     "close": "Stäng",
     "confirm": "Bekräfta",
+    "confirm_location": "Bekräfta plats",
     "delete": "Ta bort",
     "deleting": "Tar bort...",
     "discard": "Kassera",
@@ -472,6 +507,14 @@
     "required": "Det här fältet är obligatoriskt"
   },
   "home": {
+    "active_call": {
+      "clear_active": "Rensa aktivt larm",
+      "no_active_call": "Inget aktivt larm valt",
+      "select_call": "Välj ett larm att följa",
+      "set_active": "Ställ in som aktivt larm",
+      "title": "Aktivt larm",
+      "view_details": "Visa larmdetaljer"
+    },
     "error": {
       "no_user_id": "Användar-ID är inte tillgängligt"
     },
@@ -505,7 +548,14 @@
       "update_failed": "Det gick inte att uppdatera statusen",
       "updated_successfully": "Statusen uppdaterades"
     },
+    "summary": {
+      "active_calls": "Aktiva larm",
+      "active_severe_weather_alerts": "Aktiva allvarliga/nödvädervarningar",
+      "calls_im_on": "Larm jag är på",
+      "pending_missed_checkins": "Väntande/missade incheckningar"
+    },
     "tabs": {
+      "call": "Larm",
       "dashboard": "Instrumentpanel",
       "map": "Karta",
       "staffing": "Bemanning",
@@ -808,6 +858,7 @@
     "background_geolocation_warning": "Den här funktionen gör att appen kan spåra din plats i bakgrunden. Det hjälper till med koordinering av räddningsinsatser men kan påverka batteritiden.",
     "background_location": "Bakgrundsplats",
     "contact_us": "Kontakta oss",
+    "custom": "Anpassad",
     "english": "Engelska",
     "enter_password": "Ange ditt lösenord",
     "enter_server_url": "Ange Resgrid API URL (t.ex. https://api.resgrid.com)",
@@ -953,7 +1004,8 @@
     "protocols": "Protokoll",
     "settings": "Inställningar",
     "shifts": "Skift",
-    "units": "Enheter"
+    "units": "Enheter",
+    "weatherAlerts": "Vädervarningar"
   },
   "units": {
     "coordinates": "Koordinater",
@@ -973,6 +1025,116 @@
     "title": "Enheter",
     "vehicleInfo": "Fordonsinformation",
     "vin": "VIN"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "copy_url": "Copy URL",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "delete_success": "Video feed deleted successfully",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_dash": "DASH",
+    "format_embed": "Embed",
+    "format_hls": "HLS",
+    "format_mjpeg": "MJPEG",
+    "format_other": "Other",
+    "format_rtsp": "RTSP",
+    "format_webrtc": "WebRTC",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "save_error": "Failed to save video feed",
+    "save_success": "Video feed saved successfully",
+    "status_active": "Active",
+    "status_error": "Error",
+    "status_inactive": "Inactive",
+    "title": "Video Feeds",
+    "type_body_cam": "Body Cam",
+    "type_drone": "Drone",
+    "type_fixed_camera": "Fixed Camera",
+    "type_other": "Other",
+    "type_satellite": "Satellite Feed",
+    "type_traffic_cam": "Traffic Cam",
+    "type_weather_cam": "Weather Cam",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player.",
+    "url_copied": "URL copied to clipboard",
+    "watch": "Watch"
+  },
+  "weatherAlerts": {
+    "activeAlerts": "Aktiva Varningar",
+    "banner": {
+      "moreAlerts": "+{{count}} fler"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Miljö",
+      "Fire": "Brand",
+      "Geo": "Geologisk",
+      "Health": "Hälsa",
+      "Infra": "Infrastruktur",
+      "Met": "Meteorologisk",
+      "Other": "Övrigt",
+      "Transport": "Transport"
+    },
+    "certainty": {
+      "Likely": "Trolig",
+      "Observed": "Observerad",
+      "Possible": "Möjlig",
+      "Unknown": "Okänd",
+      "Unlikely": "Osannolik",
+      "label": "Säkerhet"
+    },
+    "detail": {
+      "area": "Berört Område",
+      "description": "Beskrivning",
+      "effective": "Gäller från",
+      "expires": "Upphör",
+      "instructions": "Instruktioner",
+      "metadata": "Detaljer",
+      "onset": "Start",
+      "sender": "Avsändare",
+      "status": "Status",
+      "timing": "Tidsram"
+    },
+    "filter": {
+      "all": "Alla",
+      "extreme": "Extrem",
+      "minor": "Lindrig",
+      "moderate": "Måttlig",
+      "severe": "Allvarlig"
+    },
+    "noActiveAlerts": "Inga aktiva vädervarningar",
+    "search": "Sök varningar...",
+    "severity": {
+      "Extreme": "Extrem",
+      "Minor": "Lindrig",
+      "Moderate": "Måttlig",
+      "Severe": "Allvarlig",
+      "Unknown": "Okänd"
+    },
+    "status": {
+      "Actual": "Faktisk",
+      "Draft": "Utkast",
+      "Exercise": "Övning",
+      "System": "System",
+      "Test": "Test"
+    },
+    "title": "Vädervarningar",
+    "urgency": {
+      "Expected": "Förväntad",
+      "Future": "Framtida",
+      "Immediate": "Omedelbar",
+      "Past": "Tidigare",
+      "Unknown": "Okänd",
+      "label": "Brådska"
+    }
   },
   "welcome": "Välkommen till Resgrid Responder"
 }

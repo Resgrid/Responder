@@ -53,6 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       UIBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'],
       ITSAppUsesNonExemptEncryption: false,
       UIViewControllerBasedStatusBarAppearance: false,
+      NSSupportsLiveActivities: true,
       NSBluetoothAlwaysUsageDescription: 'Allow Resgrid Responder to connect to bluetooth devices for PTT.',
       NSMicrophoneUsageDescription: 'Allow Resgrid Responder to access the microphone for voice communication and push-to-talk functionality during emergency response.',
       LSApplicationQueriesSchemes: ['resgrid'],
@@ -288,6 +289,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './customGradle.plugin.js',
     './customManifest.plugin.js',
     './plugins/withInCallAudioModule.js',
+    './plugins/withLiveActivities.js',
     ['app-icon-badge', appIconBadgeConfig],
   ],
   extra: {

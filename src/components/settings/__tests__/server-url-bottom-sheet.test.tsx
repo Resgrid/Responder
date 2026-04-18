@@ -13,9 +13,29 @@ import { useAnalytics } from '@/hooks/use-analytics';
 
 import { ServerUrlBottomSheet } from '../server-url-bottom-sheet';
 
+const mockSetUrl = jest.fn().mockResolvedValue(undefined);
+const mockGetUrl = jest.fn().mockResolvedValue('https://test.com/api/v4');
+const mockGetSystemConfig = jest.fn().mockResolvedValue({
+  Data: {
+    Locations: [
+      { Name: 'US East', ApiUrl: 'https://east.resgrid.com', DisplayName: '', LocationInfo: '', IsDefault: false, AllowsFreeAccounts: true },
+      { Name: 'US West', ApiUrl: 'https://west.resgrid.com/api/v4', DisplayName: '', LocationInfo: '', IsDefault: false, AllowsFreeAccounts: true },
+    ],
+  },
+});
+const mockFormSetValue = jest.fn();
+let mockFormValues: { url: string } = { url: 'https://test.com' };
+let mockSelectOnValueChange: ((value: string) => void) | undefined;
+const mockOnUrlChanged = jest.fn().mockResolvedValue(undefined);
+const mockIsAuthenticated = jest.fn(() => false);
+
 // Mock all dependencies
 jest.mock('@/hooks/use-analytics', () => ({
   useAnalytics: jest.fn(),
+}));
+
+jest.mock('@/api/config', () => ({
+  getSystemConfig: () => mockGetSystemConfig(),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -23,8 +43,11 @@ jest.mock('react-i18next', () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
         'settings.server_url': 'Server URL',
+        'settings.server': 'Server',
+        'settings.custom': 'Custom',
         'settings.enter_server_url': 'Enter Resgrid API URL',
         'settings.server_url_note': 'Note: This is the URL of the Resgrid API',
+        'loading.loadingData': 'Loading data...',
         'form.required': 'This field is required',
         'form.invalid_url': 'Please enter a valid URL',
         'common.cancel': 'Cancel',
@@ -44,26 +67,44 @@ jest.mock('nativewind', () => ({
 // Remove duplicate Platform mock since it's already in the react-native mock above
 
 jest.mock('react-hook-form', () => ({
-  useForm: () => ({
-    control: {},
-    handleSubmit: (fn: Function) => () => fn({ url: 'https://test.com' }),
-    setValue: jest.fn(),
-    formState: { errors: {} },
-  }),
-  Controller: ({ render }: any) =>
+  useForm: () => {
+    const React = require('react');
+    const [, forceRender] = React.useState(0);
+
+    const setValue = (name: 'url', value: string) => {
+      mockFormValues = { ...mockFormValues, [name]: value };
+      mockFormSetValue(name, value);
+      forceRender((current: number) => current + 1);
+    };
+
+    return {
+      control: {},
+      handleSubmit: (fn: Function) => () => fn({ ...mockFormValues }),
+      setValue,
+      formState: { errors: {} },
+    };
+  },
+  Controller: ({ name, render }: any) =>
     render({
       field: {
-        onChange: jest.fn(),
-        value: 'https://test.com',
+        onChange: (value: string) => {
+          mockFormValues = { ...mockFormValues, [name]: value };
+        },
+        value: mockFormValues[name as keyof typeof mockFormValues] ?? '',
       },
     }),
 }));
 
 jest.mock('@/stores/app/server-url-store', () => ({
   useServerUrlStore: () => ({
-    getUrl: jest.fn().mockResolvedValue('https://test.com/api/v4'),
-    setUrl: jest.fn().mockResolvedValue(undefined),
+    getUrl: mockGetUrl,
+    setUrl: mockSetUrl,
   }),
+}));
+
+jest.mock('@/stores/auth/store', () => ({
+  __esModule: true,
+  default: (selector: (state: { isAuthenticated: () => boolean }) => boolean) => selector({ isAuthenticated: mockIsAuthenticated }),
 }));
 
 jest.mock('@/lib/env', () => ({
@@ -82,7 +123,7 @@ jest.mock('../../ui/actionsheet', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    Actionsheet: ({ children, isOpen }: any) => isOpen ? React.createElement(View, { testID: 'actionsheet' }, children) : null,
+    Actionsheet: ({ children, isOpen }: any) => (isOpen ? React.createElement(View, { testID: 'actionsheet' }, children) : null),
     ActionsheetBackdrop: ({ children }: any) => React.createElement(View, { testID: 'actionsheet-backdrop' }, children),
     ActionsheetContent: ({ children }: any) => React.createElement(View, { testID: 'actionsheet-content' }, children),
     ActionsheetDragIndicator: () => React.createElement(View, { testID: 'drag-indicator' }),
@@ -138,6 +179,26 @@ jest.mock('../../ui/input', () => {
   };
 });
 
+jest.mock('../../ui/select', () => {
+  const React = require('react');
+  const { View, Text, TouchableOpacity } = require('react-native');
+  return {
+    Select: ({ children, onValueChange }: any) => {
+      mockSelectOnValueChange = onValueChange;
+      return React.createElement(View, { testID: 'server-select' }, children);
+    },
+    SelectBackdrop: ({ children }: any) => React.createElement(View, {}, children),
+    SelectContent: ({ children }: any) => React.createElement(View, {}, children),
+    SelectDragIndicator: () => React.createElement(View, {}),
+    SelectDragIndicatorWrapper: ({ children }: any) => React.createElement(View, {}, children),
+    SelectIcon: () => React.createElement(View, {}),
+    SelectInput: ({ value, placeholder }: any) => React.createElement(Text, { testID: 'select-input' }, value || placeholder),
+    SelectItem: ({ label, value }: any) => React.createElement(TouchableOpacity, { testID: `select-item-${value}`, onPress: () => mockSelectOnValueChange?.(value) }, React.createElement(Text, {}, label)),
+    SelectPortal: ({ children }: any) => React.createElement(View, {}, children),
+    SelectTrigger: ({ children }: any) => React.createElement(View, {}, children),
+  };
+});
+
 jest.mock('../../ui/text', () => {
   const React = require('react');
   const { Text: RNText } = require('react-native');
@@ -163,15 +224,25 @@ describe('ServerUrlBottomSheet', () => {
   const defaultProps = {
     isOpen: true,
     onClose: mockOnClose,
+    onUrlChanged: mockOnUrlChanged,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSetUrl.mockClear();
+    mockGetUrl.mockClear();
+    mockGetSystemConfig.mockClear();
+    mockFormSetValue.mockClear();
+    mockOnUrlChanged.mockClear();
+    mockIsAuthenticated.mockReset();
+    mockIsAuthenticated.mockReturnValue(false);
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
+    mockFormValues = { url: 'https://test.com' };
+    mockSelectOnValueChange = undefined;
 
     // Default mock for analytics
     mockUseAnalytics.mockReturnValue({
@@ -202,10 +273,33 @@ describe('ServerUrlBottomSheet', () => {
     it('renders form elements', () => {
       render(<ServerUrlBottomSheet {...defaultProps} />);
 
+      expect(screen.getByText('Server')).toBeTruthy();
       expect(screen.getByText('Server URL')).toBeTruthy();
       expect(screen.getByTestId('input-field')).toBeTruthy();
       expect(screen.getByText('Cancel')).toBeTruthy();
-      expect(screen.getByText('Save')).toBeTruthy();
+      expect(screen.getByTestId('button-spinner')).toBeTruthy();
+      expect(screen.getByText('Loading data...')).toBeTruthy();
+    });
+
+    it('loads locations and shows custom when url does not match', async () => {
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockGetSystemConfig).toHaveBeenCalledTimes(1);
+      });
+
+      expect(screen.getByTestId('select-input').props.children).toBe('Custom');
+    });
+
+    it('loads custom urls as domain only without trailing slash or path', async () => {
+      mockGetUrl.mockResolvedValueOnce('https://custom.resgrid.dev/api/v4/');
+
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('select-input').props.children).toBe('Custom');
+        expect(screen.getByTestId('input-field').props.value).toBe('https://custom.resgrid.dev');
+      });
     });
   });
 
@@ -275,10 +369,7 @@ describe('ServerUrlBottomSheet', () => {
       render(<ServerUrlBottomSheet {...defaultProps} />);
 
       // Should log the analytics error
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to track server URL sheet view analytics:',
-        expect.any(Error)
-      );
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to track server URL sheet view analytics:', expect.any(Error));
 
       consoleSpy.mockRestore();
     });
@@ -312,6 +403,82 @@ describe('ServerUrlBottomSheet', () => {
           timestamp: expect.any(String),
           isLandscape: false,
         });
+      });
+    });
+
+    it('saves normalized custom url with api suffix', async () => {
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.press(saveButton);
+
+      await waitFor(() => {
+        expect(mockSetUrl).toHaveBeenCalledWith('https://test.com/api/v4');
+      });
+
+      expect(mockOnUrlChanged).not.toHaveBeenCalled();
+    });
+
+    it('disables text input when current url matches a configured location', async () => {
+      mockGetUrl.mockResolvedValueOnce('https://west.resgrid.com/api/v4');
+
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('select-input').props.children).toBe('US West');
+      });
+
+      expect(screen.getByTestId('input-field').props.editable).toBe(false);
+    });
+
+    it('fills the text box with the selected location ApiUrl', async () => {
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('select-item-US East')).toBeTruthy();
+      });
+
+      fireEvent.press(screen.getByTestId('select-item-US East'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('select-input').props.children).toBe('US East');
+        expect(screen.getByTestId('input-field').props.value).toBe('https://east.resgrid.com');
+      });
+
+      expect(mockFormSetValue).toHaveBeenCalledWith('url', 'https://east.resgrid.com');
+    });
+
+    it('re-enables text input when custom is selected', async () => {
+      mockGetUrl.mockResolvedValueOnce('https://west.resgrid.com/api/v4');
+
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('select-input').props.children).toBe('US West');
+      });
+
+      fireEvent.press(screen.getByTestId('select-item-__custom__'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('select-input').props.children).toBe('Custom');
+      });
+
+      expect(screen.getByTestId('input-field').props.editable).toBe(true);
+    });
+
+    it('logs out through callback after saving when authenticated', async () => {
+      mockIsAuthenticated.mockReturnValue(true);
+
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      fireEvent.press(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockSetUrl).toHaveBeenCalledWith('https://test.com/api/v4');
+      });
+
+      await waitFor(() => {
+        expect(mockOnUrlChanged).toHaveBeenCalledTimes(1);
       });
     });
   });

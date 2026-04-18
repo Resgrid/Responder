@@ -12,10 +12,15 @@ jest.mock('@/lib/logging', () => ({
 
 // Mock storage
 const mockClearAll = jest.fn();
+const mockGetString = jest.fn();
+const mockSet = jest.fn();
 jest.mock('../index', () => ({
   storage: {
     clearAll: () => mockClearAll(),
+    getString: (key: string) => mockGetString(key),
+    set: (key: string, value: string) => mockSet(key, value),
   },
+  IS_FIRST_TIME: 'IS_FIRST_TIME',
 }));
 
 // Mock filter functions
@@ -35,13 +40,7 @@ jest.mock('../secure-storage', () => ({
   clearSecureKeys: () => mockClearSecureKeys(),
 }));
 
-import {
-  clearAllAppData,
-  getRegisteredStoreCount,
-  getRegisteredStoreNames,
-  registerStoreReset,
-  unregisterStoreReset,
-} from '../clear-all-data';
+import { clearAllAppData, getRegisteredStoreCount, getRegisteredStoreNames, registerStoreReset, unregisterStoreReset } from '../clear-all-data';
 
 describe('clearAllAppData', () => {
   beforeEach(() => {
@@ -98,7 +97,7 @@ describe('clearAllAppData', () => {
 
       expect(logger.info).toHaveBeenCalledWith({
         message: 'Starting app data cleanup',
-        context: { options: { resetStores: true, clearStorage: true, clearSecure: false, clearFilters: true } },
+        context: { options: { resetStores: true, clearStorage: true, clearSecure: false, clearFilters: true, preserveStorageKeys: [] } },
       });
 
       expect(mockClearUnitsFilterOptions).toHaveBeenCalled();
@@ -107,6 +106,30 @@ describe('clearAllAppData', () => {
 
       expect(logger.info).toHaveBeenCalledWith({
         message: 'App data cleanup completed successfully',
+      });
+    });
+
+    it('should preserve selected storage keys when requested', async () => {
+      mockGetString.mockImplementation((key: string) => {
+        if (key === 'baseUrl') {
+          return '"https://custom.resgrid.dev/api/v4"';
+        }
+
+        if (key === 'IS_FIRST_TIME') {
+          return 'false';
+        }
+
+        return undefined;
+      });
+
+      await clearAllAppData({ preserveStorageKeys: ['baseUrl', 'IS_FIRST_TIME'] });
+
+      expect(mockClearAll).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalledWith('baseUrl', '"https://custom.resgrid.dev/api/v4"');
+      expect(mockSet).toHaveBeenCalledWith('IS_FIRST_TIME', 'false');
+      expect(logger.info).toHaveBeenCalledWith({
+        message: 'MMKV storage cleared with preserved keys',
+        context: { preservedKeys: ['baseUrl', 'IS_FIRST_TIME'] },
       });
     });
 
