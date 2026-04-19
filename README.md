@@ -56,6 +56,8 @@ To run this project, you will need to add the following environment variables to
 
 `appKey`
 
+For iOS CI builds that generate the `CheckInTimerWidget` target, set `IOS_APPLE_TEAM_ID` (or `EXPO_APPLE_TEAM_ID` / `APPLE_TEAM_ID`) so the widget extension inherits the correct signing team during prebuild.
+
 
 
 ## :toolbox: Getting Started

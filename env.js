@@ -40,6 +40,7 @@ const NAME = 'Resgrid Responder'; // app name
 const EXPO_ACCOUNT_OWNER = 'resgrid'; // expo account owner
 const EAS_PROJECT_ID = '026d4a74-f01d-41db-ae57-67f8c65a5f79'; // eas project id
 const SCHEME = 'ResgridRespond'; // app scheme
+const IOS_APP_GROUP_SHARED = 'group.com.wavetech.resgrid.shared';
 
 /**
  * We declare a function withEnvSuffix that will add a suffix to the variable name based on the APP_ENV
@@ -50,6 +51,10 @@ const SCHEME = 'ResgridRespond'; // app scheme
 
 const withEnvSuffix = (name) => {
   return APP_ENV === 'production' || APP_ENV === 'internal' ? name : `${name}.${APP_ENV}`;
+};
+
+const getIosAppGroup = () => {
+  return APP_ENV === 'production' || APP_ENV === 'internal' ? IOS_APP_GROUP_SHARED : `group.${withEnvSuffix(BUNDLE_ID)}`;
 };
 
 /**
@@ -100,6 +105,8 @@ const client = z.object({
 const buildTime = z.object({
   EXPO_ACCOUNT_OWNER: z.string(),
   EAS_PROJECT_ID: z.string(),
+  IOS_APP_GROUP: z.string(),
+  IOS_APPLE_TEAM_ID: z.string().optional(),
   // ADD YOUR BUILD TIME ENV VARS HERE
 });
 
@@ -139,6 +146,8 @@ const _clientEnv = {
 const _buildTimeEnv = {
   EXPO_ACCOUNT_OWNER,
   EAS_PROJECT_ID,
+  IOS_APP_GROUP: getIosAppGroup(),
+  IOS_APPLE_TEAM_ID: process.env.IOS_APPLE_TEAM_ID || process.env.EXPO_APPLE_TEAM_ID || process.env.APPLE_TEAM_ID,
   // ADD YOUR ENV VARS HERE TOO
 };
 

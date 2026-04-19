@@ -37,6 +37,46 @@ function entitlementsXml(appGroupId) {
 `;
 }
 
+function resolveAppGroupId(cfg, appGroupId) {
+  if (appGroupId) {
+    return appGroupId;
+  }
+
+  const bundleId = cfg.ios?.bundleIdentifier ?? 'com.example.app';
+  return `group.${bundleId}`;
+}
+
+function trimDoubleQuotes(value) {
+  return value.replace(/^"(.*)"$/, '$1');
+}
+
+function ensureDoubleQuotes(value) {
+  return value.startsWith('"') ? value : `"${value}"`;
+}
+
+function getTargetBuildConfigurations(project, target) {
+  const configurationListId = target?.target?.buildConfigurationList ?? target?.pbxNativeTarget?.buildConfigurationList;
+  if (!configurationListId) {
+    return [];
+  }
+
+  return IOSConfig.XcodeUtils.getBuildConfigurationsForListId(project, configurationListId);
+}
+
+function getBuildSettingValue(buildConfigurations, key) {
+  for (const [, buildConfiguration] of buildConfigurations) {
+    const value = buildConfiguration?.buildSettings?.[key];
+    if (typeof value === 'string' || typeof value === 'number') {
+      const normalizedValue = trimDoubleQuotes(String(value));
+      if (normalizedValue) {
+        return normalizedValue;
+      }
+    }
+  }
+
+  return null;
+}
+
 /**
  * Returns the Info.plist XML for the widget extension target.
  */
@@ -92,7 +132,7 @@ const withLiveActivitiesInfoPlist = (config) => {
  * WidgetKit extension sandbox.  CallCheckInAttributes.swift is duplicated
  * so that both the extension and the main app each have the type in scope.
  */
-const withLiveActivitiesFiles = (config) => {
+const withLiveActivitiesFiles = (config, appGroupId) => {
   return withDangerousMod(config, [
     'ios',
     async (cfg) => {
@@ -101,8 +141,7 @@ const withLiveActivitiesFiles = (config) => {
       const widgetDir = path.join(iosRoot, WIDGET_EXTENSION_NAME);
       const appName = IOSConfig.XcodeUtils.getHackyProjectName(projectRoot, cfg) || 'ResgridResponder';
       const appDir = path.join(iosRoot, appName);
-      const bundleId = cfg.ios?.bundleIdentifier ?? 'com.example.app';
-      const appGroupId = `group.${bundleId}`;
+      const resolvedAppGroupId = resolveAppGroupId(cfg, appGroupId);
 
       // ── 1. Widget extension directory ──────────────────────────────────────
       if (!fs.existsSync(widgetDir)) {
@@ -138,7 +177,7 @@ struct CheckInTimerWidgetBundle: WidgetBundle {
       fs.writeFileSync(path.join(widgetDir, 'Info.plist'), widgetInfoPlistXml());
 
       // ── 5. Widget extension entitlements (App Group) ───────────────────────
-      fs.writeFileSync(path.join(widgetDir, `${WIDGET_EXTENSION_NAME}.entitlements`), entitlementsXml(appGroupId));
+      fs.writeFileSync(path.join(widgetDir, `${WIDGET_EXTENSION_NAME}.entitlements`), entitlementsXml(resolvedAppGroupId));
 
       // ── 6. LiveActivityModule.swift → main app dir ─────────────────────────
       //   This file imports React and uses RCTPromiseResolveBlock; it must be
@@ -173,13 +212,12 @@ struct CheckInTimerWidgetBundle: WidgetBundle {
  * This uses the managed withEntitlementsPlist modifier so that the change
  * is written back through Expo's plist serialiser (safe, idempotent).
  */
-const withLiveActivitiesAppEntitlements = (config) => {
+const withLiveActivitiesAppEntitlements = (config, appGroupId) => {
   return withEntitlementsPlist(config, (cfg) => {
-    const bundleId = cfg.ios?.bundleIdentifier ?? 'com.example.app';
-    const appGroupId = `group.${bundleId}`;
+    const resolvedAppGroupId = resolveAppGroupId(cfg, appGroupId);
     const existing = cfg.modResults['com.apple.security.application-groups'];
-    if (!Array.isArray(existing) || !existing.includes(appGroupId)) {
-      cfg.modResults['com.apple.security.application-groups'] = [...(Array.isArray(existing) ? existing : []), appGroupId];
+    if (!Array.isArray(existing) || !existing.includes(resolvedAppGroupId)) {
+      cfg.modResults['com.apple.security.application-groups'] = [...(Array.isArray(existing) ? existing : []), resolvedAppGroupId];
     }
     return cfg;
   });
@@ -205,6 +243,12 @@ const withLiveActivitiesXcodeProject = (config) => {
     const widgetBundleId = `${bundleId}.${WIDGET_EXTENSION_NAME}`;
     const deploymentTarget = '16.2';
     const projectName = IOSConfig.XcodeUtils.getProductName(xcodeProject) || 'ResgridResponder';
+    const appTarget = xcodeProject.getTarget('com.apple.product-type.application');
+    const appBuildConfigurations = appTarget ? getTargetBuildConfigurations(xcodeProject, appTarget) : [];
+    const developmentTeam = cfg.ios?.appleTeamId ?? getBuildSettingValue(appBuildConfigurations, 'DEVELOPMENT_TEAM');
+    const currentProjectVersion = getBuildSettingValue(appBuildConfigurations, 'CURRENT_PROJECT_VERSION') ?? '1';
+    const marketingVersion = getBuildSettingValue(appBuildConfigurations, 'MARKETING_VERSION') ?? '1.0';
+    const targetedDeviceFamily = getBuildSettingValue(appBuildConfigurations, 'TARGETED_DEVICE_FAMILY') ?? '1,2';
 
     // ── Idempotency guard ────────────────────────────────────────────────────
     // addTarget() stores target names with surrounding quotes in the comment
@@ -244,7 +288,6 @@ const withLiveActivitiesXcodeProject = (config) => {
 
     // ── 5. Add LiveActivityModule + shared attributes to the main app target ──
     //   These files have React imports and must be compiled in the app target.
-    const appTarget = xcodeProject.getTarget('com.apple.product-type.application');
     if (appTarget) {
       for (const filename of APP_SWIFT_FILES) {
         IOSConfig.XcodeUtils.addBuildSourceFileToGroup({
@@ -288,11 +331,20 @@ const withLiveActivitiesXcodeProject = (config) => {
         // Minimum deployment target required for Live Activities
         s.IPHONEOS_DEPLOYMENT_TARGET = deploymentTarget;
         // Mirror the main app's device family and versioning
-        s.TARGETED_DEVICE_FAMILY = '"1,2"';
-        s.CURRENT_PROJECT_VERSION = 1;
-        s.MARKETING_VERSION = '1.0';
+        s.TARGETED_DEVICE_FAMILY = ensureDoubleQuotes(targetedDeviceFamily);
+        s.CURRENT_PROJECT_VERSION = currentProjectVersion;
+        s.MARKETING_VERSION = marketingVersion;
         s.SKIP_INSTALL = 'YES';
+        if (developmentTeam) {
+          s.DEVELOPMENT_TEAM = developmentTeam;
+          s.CODE_SIGN_STYLE = 'Automatic';
+        }
       }
+    }
+
+    if (developmentTeam) {
+      xcodeProject.addTargetAttribute('DevelopmentTeam', ensureDoubleQuotes(developmentTeam), target);
+      xcodeProject.addTargetAttribute('ProvisioningStyle', 'Automatic', target);
     }
 
     return cfg;
@@ -306,10 +358,10 @@ const withLiveActivitiesXcodeProject = (config) => {
  *   3. Entitlements for the main app (withEntitlementsPlist)
  *   4. Xcode project registration last (needs the files to already exist)
  */
-module.exports = (config) => {
+module.exports = (config, { appGroupId } = {}) => {
   config = withLiveActivitiesInfoPlist(config);
-  config = withLiveActivitiesFiles(config);
-  config = withLiveActivitiesAppEntitlements(config);
+  config = withLiveActivitiesFiles(config, appGroupId);
+  config = withLiveActivitiesAppEntitlements(config, appGroupId);
   config = withLiveActivitiesXcodeProject(config);
   return config;
 };
