@@ -46,6 +46,37 @@ function resolveAppGroupId(cfg, appGroupId) {
   return `group.${bundleId}`;
 }
 
+function trimDoubleQuotes(value) {
+  return value.replace(/^"(.*)"$/, '$1');
+}
+
+function ensureDoubleQuotes(value) {
+  return value.startsWith('"') ? value : `"${value}"`;
+}
+
+function getTargetBuildConfigurations(project, target) {
+  const configurationListId = target?.target?.buildConfigurationList ?? target?.pbxNativeTarget?.buildConfigurationList;
+  if (!configurationListId) {
+    return [];
+  }
+
+  return IOSConfig.XcodeUtils.getBuildConfigurationsForListId(project, configurationListId);
+}
+
+function getBuildSettingValue(buildConfigurations, key) {
+  for (const [, buildConfiguration] of buildConfigurations) {
+    const value = buildConfiguration?.buildSettings?.[key];
+    if (typeof value === 'string' || typeof value === 'number') {
+      const normalizedValue = trimDoubleQuotes(String(value));
+      if (normalizedValue) {
+        return normalizedValue;
+      }
+    }
+  }
+
+  return null;
+}
+
 /**
  * Returns the Info.plist XML for the widget extension target.
  */
@@ -212,6 +243,12 @@ const withLiveActivitiesXcodeProject = (config) => {
     const widgetBundleId = `${bundleId}.${WIDGET_EXTENSION_NAME}`;
     const deploymentTarget = '16.2';
     const projectName = IOSConfig.XcodeUtils.getProductName(xcodeProject) || 'ResgridResponder';
+    const appTarget = xcodeProject.getTarget('com.apple.product-type.application');
+    const appBuildConfigurations = appTarget ? getTargetBuildConfigurations(xcodeProject, appTarget) : [];
+    const developmentTeam = cfg.ios?.appleTeamId ?? getBuildSettingValue(appBuildConfigurations, 'DEVELOPMENT_TEAM');
+    const currentProjectVersion = getBuildSettingValue(appBuildConfigurations, 'CURRENT_PROJECT_VERSION') ?? '1';
+    const marketingVersion = getBuildSettingValue(appBuildConfigurations, 'MARKETING_VERSION') ?? '1.0';
+    const targetedDeviceFamily = getBuildSettingValue(appBuildConfigurations, 'TARGETED_DEVICE_FAMILY') ?? '1,2';
 
     // ── Idempotency guard ────────────────────────────────────────────────────
     // addTarget() stores target names with surrounding quotes in the comment
@@ -251,7 +288,6 @@ const withLiveActivitiesXcodeProject = (config) => {
 
     // ── 5. Add LiveActivityModule + shared attributes to the main app target ──
     //   These files have React imports and must be compiled in the app target.
-    const appTarget = xcodeProject.getTarget('com.apple.product-type.application');
     if (appTarget) {
       for (const filename of APP_SWIFT_FILES) {
         IOSConfig.XcodeUtils.addBuildSourceFileToGroup({
@@ -295,11 +331,20 @@ const withLiveActivitiesXcodeProject = (config) => {
         // Minimum deployment target required for Live Activities
         s.IPHONEOS_DEPLOYMENT_TARGET = deploymentTarget;
         // Mirror the main app's device family and versioning
-        s.TARGETED_DEVICE_FAMILY = '"1,2"';
-        s.CURRENT_PROJECT_VERSION = 1;
-        s.MARKETING_VERSION = '1.0';
+        s.TARGETED_DEVICE_FAMILY = ensureDoubleQuotes(targetedDeviceFamily);
+        s.CURRENT_PROJECT_VERSION = currentProjectVersion;
+        s.MARKETING_VERSION = marketingVersion;
         s.SKIP_INSTALL = 'YES';
+        if (developmentTeam) {
+          s.DEVELOPMENT_TEAM = developmentTeam;
+          s.CODE_SIGN_STYLE = 'Automatic';
+        }
       }
+    }
+
+    if (developmentTeam) {
+      xcodeProject.addTargetAttribute('DevelopmentTeam', ensureDoubleQuotes(developmentTeam), target);
+      xcodeProject.addTargetAttribute('ProvisioningStyle', 'Automatic', target);
     }
 
     return cfg;

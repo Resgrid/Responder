@@ -48,6 +48,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     buildNumber: packageJSON.version,
     supportsTablet: true,
     bundleIdentifier: Env.BUNDLE_ID,
+    ...(Env.IOS_APPLE_TEAM_ID ? { appleTeamId: Env.IOS_APPLE_TEAM_ID } : {}),
     requireFullScreen: true,
     infoPlist: {
       UIBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'],

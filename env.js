@@ -106,6 +106,7 @@ const buildTime = z.object({
   EXPO_ACCOUNT_OWNER: z.string(),
   EAS_PROJECT_ID: z.string(),
   IOS_APP_GROUP: z.string(),
+  IOS_APPLE_TEAM_ID: z.string().optional(),
   // ADD YOUR BUILD TIME ENV VARS HERE
 });
 
@@ -146,6 +147,7 @@ const _buildTimeEnv = {
   EXPO_ACCOUNT_OWNER,
   EAS_PROJECT_ID,
   IOS_APP_GROUP: getIosAppGroup(),
+  IOS_APPLE_TEAM_ID: process.env.IOS_APPLE_TEAM_ID || process.env.EXPO_APPLE_TEAM_ID || process.env.APPLE_TEAM_ID,
   // ADD YOUR ENV VARS HERE TOO
 };
 
