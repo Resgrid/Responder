@@ -21,6 +21,14 @@ const appIconBadgeConfig: AppIconBadgeConfig = {
   ],
 };
 
+const liveActivityExtension = {
+  targetName: 'CheckInTimerWidget',
+  bundleIdentifier: `${Env.BUNDLE_ID}.CheckInTimerWidget`,
+  entitlements: {
+    'com.apple.security.application-groups': [Env.IOS_APP_GROUP],
+  },
+};
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: Env.NAME,
@@ -302,6 +310,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...ClientEnv,
     eas: {
       projectId: Env.EAS_PROJECT_ID,
+      build: {
+        experimental: {
+          ios: {
+            appExtensions: [liveActivityExtension],
+          },
+        },
+      },
     },
   },
 });
