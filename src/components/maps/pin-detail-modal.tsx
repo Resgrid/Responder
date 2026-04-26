@@ -48,7 +48,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
   // Determine if coordinates should be shown (hide for personnel pins when PII cannot be viewed)
   const shouldShowCoordinates = !isPersonnelPin || canUserViewPII;
 
-  const isCallPin = pin.ImagePath?.toLowerCase() === 'call' || pin.Type === 1;
+  const isCallPin = pin.ImagePath?.toLowerCase() === 'call' || pin.Type === 0 || pin.Type === 1;
 
   const handleRouteToLocation = async () => {
     if (!hasCoordinates) {

@@ -220,3 +220,27 @@ export const MAP_ICONS = {
     uri: require('../../assets/mapping/worksite.png'),
   },
 };
+
+export type MapIconKey = keyof typeof MAP_ICONS;
+
+const MAP_ICON_KEYS = new Set<string>(Object.keys(MAP_ICONS));
+
+const normalizeMapIconToken = (value: string) => {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[^a-z0-9]+/g, '');
+};
+
+export const resolveMapIconKey = ({ imagePath, marker, fallback = 'call' }: { imagePath?: string | null; marker?: string | null; fallback?: MapIconKey }): MapIconKey => {
+  const tokens = [imagePath, marker].filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(normalizeMapIconToken);
+
+  for (const token of tokens) {
+    if (MAP_ICON_KEYS.has(token)) {
+      return token as MapIconKey;
+    }
+  }
+
+  return fallback;
+};

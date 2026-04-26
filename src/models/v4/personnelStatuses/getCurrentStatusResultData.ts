@@ -5,7 +5,10 @@ export class GetCurrentStatusResultData {
   public TimestampUtc: string = '';
   public Timestamp: string = '';
   public Note: string = '';
-  public DestinationId: string = '';
-  public DestinationType: string = '';
+  public DestinationId: number | string | null = null;
+  public DestinationType: number | string | null = null;
+  public DestinationName?: string;
+  public DestinationAddress?: string;
+  public DestinationTypeName?: string;
   public GeoLocationData: string = '';
 }

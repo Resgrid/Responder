@@ -2,6 +2,7 @@ export class SavePersonsStatusesInput {
   public UserIds: string[] = [];
   public Type: string = '';
   public RespondingTo: string = '';
+  public RespondingToType: number | null = null;
   public TimestampUtc: string = '';
   public Timestamp: string = '';
   public Note: string = '';
