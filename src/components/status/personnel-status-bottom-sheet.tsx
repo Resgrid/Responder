@@ -1,11 +1,13 @@
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { useAnalytics } from '@/hooks/use-analytics';
+import { arePoisAllowedForStatus, getCallDestinationDisplay, getPoiDestinationDisplay, getStationDestinationDisplay, type StatusDestinationTab } from '@/lib/status-destinations';
+import { invertColor } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
@@ -14,7 +16,6 @@ import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIn
 import { Button, ButtonText } from '../ui/button';
 import { Heading } from '../ui/heading';
 import { HStack } from '../ui/hstack';
-import { Input, InputField } from '../ui/input';
 import { Spinner } from '../ui/spinner';
 import { Text } from '../ui/text';
 import { Textarea, TextareaInput } from '../ui/textarea';
@@ -25,9 +26,11 @@ export const PersonnelStatusBottomSheet = () => {
   const { trackEvent } = useAnalytics();
   const {
     isOpen,
+    requiresStatusSelection = false,
     currentStep,
     selectedCall,
     selectedGroup,
+    selectedPoi = null,
     selectedStatus,
     responseType,
     selectedTab,
@@ -36,34 +39,111 @@ export const PersonnelStatusBottomSheet = () => {
     isLoading,
     groups,
     isLoadingGroups,
-    setCurrentStep,
+    pois = [],
+    isLoadingPois = false,
     setSelectedCall,
     setSelectedGroup,
+    setSelectedPoi = () => undefined,
+    setSelectedStatus = () => undefined,
     setResponseType,
     setSelectedTab,
     setNote,
-    setRespondingTo,
     fetchGroups,
+    fetchDestinationPois = async () => undefined,
     nextStep,
     previousStep,
     submitStatus,
     reset,
+    isDestinationRequired = () => false,
+    areCallsAllowed = () => true,
+    areStationsAllowed = () => true,
+    arePoisAllowed = () => false,
   } = usePersonnelStatusBottomSheetStore();
 
-  const { activeCall } = useCoreStore();
+  const { activeCall, activeStatuses } = useCoreStore();
   const { calls, isLoading: isLoadingCalls, fetchCalls } = useCallsStore();
   const { colorScheme } = useColorScheme();
 
-  // Fetch calls and groups when bottom sheet opens
-  React.useEffect(() => {
+  const callsAllowed = areCallsAllowed();
+  const stationsAllowed = areStationsAllowed();
+  const poisAllowed = arePoisAllowed();
+  const destinationRequired = isDestinationRequired();
+  const totalSteps = requiresStatusSelection ? 4 : 3;
+
+  const allowedTabs = useMemo<StatusDestinationTab[]>(() => {
+    const tabs: StatusDestinationTab[] = [];
+
+    if (callsAllowed) {
+      tabs.push('calls');
+    }
+
+    if (stationsAllowed) {
+      tabs.push('stations');
+    }
+
+    if (poisAllowed) {
+      tabs.push('pois');
+    }
+
+    return tabs;
+  }, [callsAllowed, poisAllowed, stationsAllowed]);
+
+  const visibleStatuses = useMemo(() => {
+    const nextStatuses = activeStatuses || [];
+    return selectedPoi ? nextStatuses.filter((status) => arePoisAllowedForStatus(status.Detail)) : nextStatuses;
+  }, [activeStatuses, selectedPoi]);
+
+  useEffect(() => {
     if (isOpen) {
       fetchCalls();
-      fetchGroups();
+      void fetchGroups();
+      void fetchDestinationPois();
     }
-  }, [isOpen, fetchCalls, fetchGroups]);
+  }, [fetchCalls, fetchDestinationPois, fetchGroups, isOpen]);
+
+  useEffect(() => {
+    if (activeCall && currentStep === 'select-responding-to' && responseType === 'none' && callsAllowed && !selectedGroup && !selectedPoi) {
+      setSelectedCall(activeCall);
+    }
+  }, [activeCall, callsAllowed, currentStep, responseType, selectedGroup, selectedPoi, setSelectedCall]);
+
+  const trackViewAnalytics = useCallback(() => {
+    try {
+      trackEvent('personnel_status_bottom_sheet_viewed', {
+        timestamp: new Date().toISOString(),
+        currentStep,
+        requiresStatusSelection,
+        selectedStatusId: selectedStatus?.Id ?? 0,
+        selectedStatusText: selectedStatus?.Text ?? '',
+        responseType,
+        selectedTab,
+        hasSelectedCall: !!selectedCall,
+        selectedCallId: selectedCall?.CallId ?? '',
+        hasSelectedGroup: !!selectedGroup,
+        selectedGroupId: selectedGroup?.GroupId ?? '',
+        hasSelectedPoi: !!selectedPoi,
+        selectedPoiId: selectedPoi?.PoiId ?? 0,
+        hasNote: note.length > 0,
+        noteLength: note.length,
+        hasRespondingTo: respondingTo.length > 0,
+        availableCallsCount: calls?.length || 0,
+        availableGroupsCount: groups?.length || 0,
+        availablePoisCount: pois?.length || 0,
+        hasActiveCall: !!activeCall,
+        colorScheme: colorScheme || 'light',
+      });
+    } catch (error) {
+      console.warn('Failed to track personnel status bottom sheet view analytics:', error);
+    }
+  }, [trackEvent, currentStep, requiresStatusSelection, selectedStatus, responseType, selectedTab, selectedCall, selectedGroup, selectedPoi, note, respondingTo, calls, groups, pois, activeCall, colorScheme]);
+
+  useEffect(() => {
+    if (isOpen) {
+      trackViewAnalytics();
+    }
+  }, [isOpen, currentStep, trackViewAnalytics]);
 
   const handleClose = () => {
-    // Track close analytics
     try {
       trackEvent('personnel_status_bottom_sheet_closed', {
         timestamp: new Date().toISOString(),
@@ -72,8 +152,9 @@ export const PersonnelStatusBottomSheet = () => {
         responseType,
         hasSelectedCall: !!selectedCall,
         hasSelectedGroup: !!selectedGroup,
+        hasSelectedPoi: !!selectedPoi,
         hasNote: note.length > 0,
-        completed: false, // User closed without completing
+        completed: false,
       });
     } catch (error) {
       console.warn('Failed to track personnel status bottom sheet close analytics:', error);
@@ -82,50 +163,96 @@ export const PersonnelStatusBottomSheet = () => {
     reset();
   };
 
-  const handleCallSelect = (callId: string) => {
-    const call = calls.find((c) => c.CallId === callId);
-    if (call) {
-      setSelectedCall(call);
+  const handleStatusSelect = (statusId: number) => {
+    const status = visibleStatuses.find((currentStatus) => currentStatus.Id === statusId);
 
-      // Track call selection analytics
-      try {
-        trackEvent('personnel_status_call_selected', {
-          timestamp: new Date().toISOString(),
-          callId: call.CallId,
-          callNumber: call.Number || '',
-          callName: call.Name || '',
-          currentStep,
-        });
-      } catch (error) {
-        console.warn('Failed to track call selection analytics:', error);
-      }
+    if (!status) {
+      return;
+    }
+
+    setSelectedStatus(status);
+
+    try {
+      trackEvent('personnel_status_option_selected', {
+        timestamp: new Date().toISOString(),
+        statusId: status.Id,
+        statusText: status.Text,
+        statusDetail: status.Detail,
+      });
+    } catch (error) {
+      console.warn('Failed to track status option analytics:', error);
+    }
+  };
+
+  const handleCallSelect = (callId: string) => {
+    const call = calls.find((currentCall) => currentCall.CallId === callId);
+
+    if (!call) {
+      return;
+    }
+
+    setSelectedCall(call);
+
+    try {
+      trackEvent('personnel_status_call_selected', {
+        timestamp: new Date().toISOString(),
+        callId: call.CallId,
+        callNumber: call.Number || '',
+        callName: call.Name || '',
+        currentStep,
+      });
+    } catch (error) {
+      console.warn('Failed to track call selection analytics:', error);
     }
   };
 
   const handleGroupSelect = (groupId: string) => {
-    const group = groups.find((g) => g.GroupId === groupId);
-    if (group) {
-      setSelectedGroup(group);
+    const group = groups.find((currentGroup) => currentGroup.GroupId === groupId);
 
-      // Track group selection analytics
-      try {
-        trackEvent('personnel_status_group_selected', {
-          timestamp: new Date().toISOString(),
-          groupId: group.GroupId,
-          groupName: group.Name || '',
-          groupType: group.GroupType || '',
-          currentStep,
-        });
-      } catch (error) {
-        console.warn('Failed to track group selection analytics:', error);
-      }
+    if (!group) {
+      return;
+    }
+
+    setSelectedGroup(group);
+
+    try {
+      trackEvent('personnel_status_group_selected', {
+        timestamp: new Date().toISOString(),
+        groupId: group.GroupId,
+        groupName: group.Name || '',
+        groupType: group.GroupType || '',
+        currentStep,
+      });
+    } catch (error) {
+      console.warn('Failed to track group selection analytics:', error);
+    }
+  };
+
+  const handlePoiSelect = (poiId: number) => {
+    const poi = pois.find((currentPoi) => currentPoi.PoiId === poiId);
+
+    if (!poi) {
+      return;
+    }
+
+    setSelectedPoi(poi);
+
+    try {
+      trackEvent('personnel_status_poi_selected', {
+        timestamp: new Date().toISOString(),
+        poiId: poi.PoiId,
+        poiTypeId: poi.PoiTypeId,
+        poiTypeName: poi.PoiTypeName || '',
+        currentStep,
+      });
+    } catch (error) {
+      console.warn('Failed to track POI selection analytics:', error);
     }
   };
 
   const handleNoDestinationSelect = () => {
     setResponseType('none');
 
-    // Track no destination selection analytics
     try {
       trackEvent('personnel_status_no_destination_selected', {
         timestamp: new Date().toISOString(),
@@ -138,7 +265,6 @@ export const PersonnelStatusBottomSheet = () => {
   };
 
   const handleNext = () => {
-    // Track step progression analytics
     try {
       trackEvent('personnel_status_step_next', {
         timestamp: new Date().toISOString(),
@@ -147,6 +273,7 @@ export const PersonnelStatusBottomSheet = () => {
         responseType,
         hasSelectedCall: !!selectedCall,
         hasSelectedGroup: !!selectedGroup,
+        hasSelectedPoi: !!selectedPoi,
       });
     } catch (error) {
       console.warn('Failed to track step next analytics:', error);
@@ -156,7 +283,6 @@ export const PersonnelStatusBottomSheet = () => {
   };
 
   const handlePrevious = () => {
-    // Track step backward analytics
     try {
       trackEvent('personnel_status_step_previous', {
         timestamp: new Date().toISOString(),
@@ -172,7 +298,6 @@ export const PersonnelStatusBottomSheet = () => {
   };
 
   const handleSubmit = async () => {
-    // Track submission analytics
     try {
       trackEvent('personnel_status_submitted', {
         timestamp: new Date().toISOString(),
@@ -181,10 +306,9 @@ export const PersonnelStatusBottomSheet = () => {
         responseType,
         selectedCallId: selectedCall?.CallId ?? '',
         selectedGroupId: selectedGroup?.GroupId ?? '',
+        selectedPoiId: selectedPoi?.PoiId ?? 0,
         hasNote: note.length > 0,
         noteLength: note.length,
-        hasRespondingTo: respondingTo.length > 0,
-        respondingToLength: respondingTo.length,
       });
     } catch (error) {
       console.warn('Failed to track submission analytics:', error);
@@ -193,11 +317,10 @@ export const PersonnelStatusBottomSheet = () => {
     await submitStatus();
   };
 
-  const handleTabSelect = (tab: 'calls' | 'stations') => {
+  const handleTabSelect = (tab: StatusDestinationTab) => {
     const fromTab = selectedTab;
     setSelectedTab(tab);
 
-    // Track tab selection analytics
     try {
       trackEvent('personnel_status_tab_changed', {
         timestamp: new Date().toISOString(),
@@ -211,50 +334,10 @@ export const PersonnelStatusBottomSheet = () => {
     }
   };
 
-  // Auto-select active call if available and no destination is selected
-  React.useEffect(() => {
-    if (activeCall && currentStep === 'select-responding-to' && responseType === 'none') {
-      setSelectedCall(activeCall);
-    }
-  }, [activeCall, currentStep, responseType, setSelectedCall]);
-
-  // Analytics tracking function
-  const trackViewAnalytics = useCallback(() => {
-    try {
-      trackEvent('personnel_status_bottom_sheet_viewed', {
-        timestamp: new Date().toISOString(),
-        currentStep,
-        selectedStatusId: selectedStatus?.Id ?? 0,
-        selectedStatusText: selectedStatus?.Text ?? '',
-        responseType,
-        selectedTab,
-        hasSelectedCall: !!selectedCall,
-        selectedCallId: selectedCall?.CallId ?? '',
-        hasSelectedGroup: !!selectedGroup,
-        selectedGroupId: selectedGroup?.GroupId ?? '',
-        hasNote: note.length > 0,
-        noteLength: note.length,
-        hasRespondingTo: respondingTo.length > 0,
-        availableCallsCount: calls?.length || 0,
-        availableGroupsCount: groups?.length || 0,
-        hasActiveCall: !!activeCall,
-        colorScheme: colorScheme || 'light',
-      });
-    } catch (error) {
-      // Analytics errors should not break the component
-      console.warn('Failed to track personnel status bottom sheet view analytics:', error);
-    }
-  }, [trackEvent, currentStep, selectedStatus, responseType, selectedTab, selectedCall, selectedGroup, note, respondingTo, calls, groups, activeCall, colorScheme]);
-
-  // Track analytics when sheet becomes visible or step changes
-  useEffect(() => {
-    if (isOpen) {
-      trackViewAnalytics();
-    }
-  }, [isOpen, currentStep, trackViewAnalytics]);
-
   const getStepTitle = () => {
     switch (currentStep) {
+      case 'select-status':
+        return t('personnel.status.set_status');
       case 'select-responding-to':
         return t('personnel.status.select_responding_to', { status: selectedStatus?.Text });
       case 'add-note':
@@ -267,6 +350,21 @@ export const PersonnelStatusBottomSheet = () => {
   };
 
   const getStepNumber = () => {
+    if (requiresStatusSelection) {
+      switch (currentStep) {
+        case 'select-status':
+          return 1;
+        case 'select-responding-to':
+          return 2;
+        case 'add-note':
+          return 3;
+        case 'confirm':
+          return 4;
+        default:
+          return 1;
+      }
+    }
+
     switch (currentStep) {
       case 'select-responding-to':
         return 1;
@@ -281,12 +379,32 @@ export const PersonnelStatusBottomSheet = () => {
 
   const canProceedFromCurrentStep = () => {
     switch (currentStep) {
+      case 'select-status':
+        return selectedStatus !== null;
       case 'select-responding-to':
-        // "No Destination" is always valid regardless of status Detail value
-        // User can always proceed with any selection (call, station, or none)
-        return true;
+        if (!selectedStatus) {
+          return false;
+        }
+
+        if (!destinationRequired) {
+          return true;
+        }
+
+        if (responseType === 'call') {
+          return selectedCall !== null;
+        }
+
+        if (responseType === 'station') {
+          return selectedGroup !== null;
+        }
+
+        if (responseType === 'poi') {
+          return selectedPoi !== null;
+        }
+
+        return false;
       case 'add-note':
-        return true; // Note is optional
+        return true;
       case 'confirm':
         return true;
       default:
@@ -296,13 +414,25 @@ export const PersonnelStatusBottomSheet = () => {
 
   const getSelectedDestinationDisplay = () => {
     if (responseType === 'call' && selectedCall) {
-      return `${selectedCall.Number} - ${selectedCall.Name}`;
-    } else if (responseType === 'station' && selectedGroup) {
-      return selectedGroup.Name;
-    } else {
-      return t('personnel.status.no_destination');
+      return getCallDestinationDisplay(selectedCall);
     }
+
+    if (responseType === 'station' && selectedGroup) {
+      return getStationDestinationDisplay(selectedGroup);
+    }
+
+    if (responseType === 'poi' && selectedPoi) {
+      return getPoiDestinationDisplay(selectedPoi);
+    }
+
+    return t('personnel.status.no_destination');
   };
+
+  const selectedDestinationTabBackgroundColor = colorScheme === 'dark' ? '#2563eb' : '#1d4ed8';
+  const selectedDestinationTabBorderColor = colorScheme === 'dark' ? '#60a5fa' : '#1d4ed8';
+  const unselectedDestinationTabBackgroundColor = colorScheme === 'dark' ? '#171717' : '#f5f5f5';
+  const unselectedDestinationTabBorderColor = colorScheme === 'dark' ? '#262626' : '#e5e5e5';
+  const unselectedDestinationTabTextColor = colorScheme === 'dark' ? '#d4d4d8' : '#525252';
 
   return (
     <Actionsheet isOpen={isOpen} onClose={handleClose}>
@@ -313,11 +443,10 @@ export const PersonnelStatusBottomSheet = () => {
         </ActionsheetDragIndicatorWrapper>
 
         <VStack space="md" className="w-full p-4">
-          {/* Step indicator with close button */}
           <HStack className="mb-2 items-center justify-between">
             <VStack className="flex-1" />
             <Text className="text-sm text-gray-500 dark:text-gray-400">
-              {t('common.step')} {getStepNumber()} {t('common.of')} 3
+              {t('common.step')} {getStepNumber()} {t('common.of')} {totalSteps}
             </Text>
             <VStack className="flex-1 items-end">
               <TouchableOpacity onPress={handleClose} className="p-1">
@@ -330,119 +459,49 @@ export const PersonnelStatusBottomSheet = () => {
             {getStepTitle()}
           </Heading>
 
-          {currentStep === 'select-responding-to' && (
+          {currentStep === 'select-status' ? (
             <VStack space="md" className="w-full">
-              <Text className="mb-2 font-medium">{t('personnel.status.select_destination')}</Text>
+              <Text className="mb-2 font-medium">{t('personnel.status.status')}</Text>
 
-              {/* No Destination Option */}
-              <TouchableOpacity
-                onPress={handleNoDestinationSelect}
-                className={`mb-4 rounded-lg border-2 p-3 ${responseType === 'none' ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
-              >
-                <HStack space="sm" className="items-center">
-                  <VStack
-                    className="flex size-5 items-center justify-center rounded border-2"
-                    style={{
-                      borderColor: responseType === 'none' ? '#3b82f6' : '#9ca3af',
-                      backgroundColor: responseType === 'none' ? '#3b82f6' : 'transparent',
-                    }}
-                  >
-                    {responseType === 'none' && <Check size={12} color="#fff" />}
+              <ScrollView className="max-h-[320px]">
+                {activeStatuses === null ? (
+                  <VStack space="md" className="w-full items-center justify-center py-6">
+                    <Spinner size="large" />
+                    <Text className="text-center text-gray-600 dark:text-gray-400">{t('common.loading')}</Text>
                   </VStack>
-                  <VStack className="flex-1">
-                    <Text className="font-bold">{t('personnel.status.no_destination')}</Text>
-                    <Text className="text-sm text-gray-600 dark:text-gray-400">{t('personnel.status.general_status')}</Text>
-                  </VStack>
-                </HStack>
-              </TouchableOpacity>
+                ) : visibleStatuses.length > 0 ? (
+                  visibleStatuses.map((status) => {
+                    const isSelected = selectedStatus?.Id === status.Id;
+                    const textColor = invertColor(status.BColor, true);
 
-              {/* Tab Headers */}
-              <HStack space="xs" className="mb-4">
-                <TouchableOpacity onPress={() => handleTabSelect('calls')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'calls' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                  <Text className={`text-center font-semibold ${selectedTab === 'calls' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('personnel.status.calls_tab')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleTabSelect('stations')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'stations' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                  <Text className={`text-center font-semibold ${selectedTab === 'stations' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('personnel.status.stations_tab')}</Text>
-                </TouchableOpacity>
-              </HStack>
-
-              {/* Tab Content */}
-              <ScrollView className="max-h-[300px]">
-                {selectedTab === 'calls' && (
-                  <VStack space="sm">
-                    {isLoadingCalls ? (
-                      <VStack space="md" className="w-full items-center justify-center">
-                        <Spinner size="large" />
-                        <Text className="text-center text-gray-600 dark:text-gray-400">{t('calls.loading_calls')}</Text>
-                      </VStack>
-                    ) : calls && calls.length > 0 ? (
-                      calls.map((call) => (
-                        <TouchableOpacity
-                          key={call.CallId}
-                          onPress={() => handleCallSelect(call.CallId)}
-                          className={`mb-3 rounded-lg border-2 p-3 ${selectedCall?.CallId === call.CallId ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
-                        >
-                          <HStack space="sm" className="items-center">
-                            <VStack
-                              className="flex size-5 items-center justify-center rounded border-2"
-                              style={{
-                                borderColor: selectedCall?.CallId === call.CallId ? '#3b82f6' : '#9ca3af',
-                                backgroundColor: selectedCall?.CallId === call.CallId ? '#3b82f6' : 'transparent',
-                              }}
-                            >
-                              {selectedCall?.CallId === call.CallId && <Check size={12} color="#fff" />}
-                            </VStack>
-                            <VStack className="flex-1">
-                              <Text className="font-bold">
-                                {call.Number} - {call.Name}
-                              </Text>
-                              <Text className="text-sm text-gray-600 dark:text-gray-400">{call.Address}</Text>
-                            </VStack>
-                          </HStack>
-                        </TouchableOpacity>
-                      ))
-                    ) : (
-                      <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('calls.no_calls_available')}</Text>
-                    )}
-                  </VStack>
-                )}
-
-                {selectedTab === 'stations' && (
-                  <VStack space="sm">
-                    {isLoadingGroups ? (
-                      <VStack space="md" className="w-full items-center justify-center">
-                        <Spinner size="large" />
-                        <Text className="text-center text-gray-600 dark:text-gray-400">{t('personnel.status.loading_stations')}</Text>
-                      </VStack>
-                    ) : groups && groups.length > 0 ? (
-                      groups.map((group) => (
-                        <TouchableOpacity
-                          key={group.GroupId}
-                          onPress={() => handleGroupSelect(group.GroupId)}
-                          className={`mb-3 rounded-lg border-2 p-3 ${selectedGroup?.GroupId === group.GroupId ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
-                        >
-                          <HStack space="sm" className="items-center">
-                            <VStack
-                              className="flex size-5 items-center justify-center rounded border-2"
-                              style={{
-                                borderColor: selectedGroup?.GroupId === group.GroupId ? '#3b82f6' : '#9ca3af',
-                                backgroundColor: selectedGroup?.GroupId === group.GroupId ? '#3b82f6' : 'transparent',
-                              }}
-                            >
-                              {selectedGroup?.GroupId === group.GroupId && <Check size={12} color="#fff" />}
-                            </VStack>
-                            <VStack className="flex-1">
-                              <Text className="font-bold">{group.Name}</Text>
-                              {group.Address && <Text className="text-sm text-gray-600 dark:text-gray-400">{group.Address}</Text>}
-                              {group.GroupType && <Text className="text-xs text-gray-500 dark:text-gray-500">{group.GroupType}</Text>}
-                            </VStack>
-                          </HStack>
-                        </TouchableOpacity>
-                      ))
-                    ) : (
-                      <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('personnel.status.no_stations_available')}</Text>
-                    )}
-                  </VStack>
+                    return (
+                      <TouchableOpacity
+                        key={status.Id}
+                        onPress={() => handleStatusSelect(status.Id)}
+                        className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 dark:border-primary-400' : 'border-transparent'}`}
+                        style={{ backgroundColor: status.BColor }}
+                      >
+                        <HStack space="sm" className="items-center">
+                          <VStack
+                            className="flex size-5 items-center justify-center rounded border-2"
+                            style={{
+                              borderColor: textColor,
+                              backgroundColor: isSelected ? textColor : 'transparent',
+                            }}
+                          >
+                            {isSelected ? <Check size={12} color={status.BColor} /> : null}
+                          </VStack>
+                          <VStack className="flex-1">
+                            <Text className="font-bold" style={{ color: textColor }}>
+                              {status.Text}
+                            </Text>
+                          </VStack>
+                        </HStack>
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('home.status.no_options_available')}</Text>
                 )}
               </ScrollView>
 
@@ -452,13 +511,211 @@ export const PersonnelStatusBottomSheet = () => {
                 </Button>
                 <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
                   <ButtonText>{t('common.next')}</ButtonText>
-                  <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
+                  <ArrowRight size={16} color="#fff" />
                 </Button>
               </HStack>
             </VStack>
-          )}
+          ) : null}
 
-          {currentStep === 'add-note' && (
+          {currentStep === 'select-responding-to' ? (
+            <VStack space="md" className="w-full">
+              <Text className="mb-2 font-medium">{t('personnel.status.select_destination')}</Text>
+
+              {!destinationRequired ? (
+                <TouchableOpacity
+                  onPress={handleNoDestinationSelect}
+                  className={`mb-4 rounded-lg border-2 p-3 ${responseType === 'none' ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                >
+                  <HStack space="sm" className="items-center">
+                    <VStack
+                      className="flex size-5 items-center justify-center rounded border-2"
+                      style={{
+                        borderColor: responseType === 'none' ? '#3b82f6' : '#9ca3af',
+                        backgroundColor: responseType === 'none' ? '#3b82f6' : 'transparent',
+                      }}
+                    >
+                      {responseType === 'none' ? <Check size={12} color="#fff" /> : null}
+                    </VStack>
+                    <VStack className="flex-1">
+                      <Text className="font-bold">{t('personnel.status.no_destination')}</Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400">{t('personnel.status.general_status')}</Text>
+                    </VStack>
+                  </HStack>
+                </TouchableOpacity>
+              ) : null}
+
+              {allowedTabs.length > 1 ? (
+                <HStack space="xs" className="mb-4 rounded-2xl border border-neutral-200 bg-neutral-100 p-1.5 dark:border-neutral-800 dark:bg-neutral-900">
+                  {allowedTabs.map((tab) => {
+                    const isSelected = selectedTab === tab;
+
+                    return (
+                      <TouchableOpacity
+                        key={tab}
+                        testID={`status-destination-tab-${tab}`}
+                        onPress={() => handleTabSelect(tab)}
+                        className="flex-1 rounded-xl border p-3"
+                        style={{
+                          backgroundColor: isSelected ? selectedDestinationTabBackgroundColor : unselectedDestinationTabBackgroundColor,
+                          borderColor: isSelected ? selectedDestinationTabBorderColor : unselectedDestinationTabBorderColor,
+                        }}
+                      >
+                        <Text className="text-center font-semibold" style={{ color: isSelected ? '#ffffff' : unselectedDestinationTabTextColor }}>
+                          {tab === 'calls' ? t('personnel.status.calls_tab') : tab === 'stations' ? t('personnel.status.stations_tab') : t('personnel.status.pois_tab')}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </HStack>
+              ) : null}
+
+              <ScrollView className="max-h-[300px]">
+                {selectedTab === 'calls' && callsAllowed ? (
+                  <VStack space="sm">
+                    {isLoadingCalls ? (
+                      <VStack space="md" className="w-full items-center justify-center py-6">
+                        <Spinner size="large" />
+                        <Text className="text-center text-gray-600 dark:text-gray-400">{t('calls.loading_calls')}</Text>
+                      </VStack>
+                    ) : calls.length > 0 ? (
+                      calls.map((call) => {
+                        const isSelected = selectedCall?.CallId === call.CallId;
+
+                        return (
+                          <TouchableOpacity
+                            key={call.CallId}
+                            onPress={() => handleCallSelect(call.CallId)}
+                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                          >
+                            <HStack space="sm" className="items-center">
+                              <VStack
+                                className="flex size-5 items-center justify-center rounded border-2"
+                                style={{
+                                  borderColor: isSelected ? '#3b82f6' : '#9ca3af',
+                                  backgroundColor: isSelected ? '#3b82f6' : 'transparent',
+                                }}
+                              >
+                                {isSelected ? <Check size={12} color="#fff" /> : null}
+                              </VStack>
+                              <VStack className="flex-1">
+                                <Text className="font-bold">{getCallDestinationDisplay(call)}</Text>
+                                {call.Address ? <Text className="text-sm text-gray-600 dark:text-gray-400">{call.Address}</Text> : null}
+                              </VStack>
+                            </HStack>
+                          </TouchableOpacity>
+                        );
+                      })
+                    ) : (
+                      <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('calls.no_calls_available')}</Text>
+                    )}
+                  </VStack>
+                ) : null}
+
+                {selectedTab === 'stations' && stationsAllowed ? (
+                  <VStack space="sm">
+                    {isLoadingGroups ? (
+                      <VStack space="md" className="w-full items-center justify-center py-6">
+                        <Spinner size="large" />
+                        <Text className="text-center text-gray-600 dark:text-gray-400">{t('personnel.status.loading_stations')}</Text>
+                      </VStack>
+                    ) : groups.length > 0 ? (
+                      groups.map((group) => {
+                        const isSelected = selectedGroup?.GroupId === group.GroupId;
+
+                        return (
+                          <TouchableOpacity
+                            key={group.GroupId}
+                            onPress={() => handleGroupSelect(group.GroupId)}
+                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                          >
+                            <HStack space="sm" className="items-center">
+                              <VStack
+                                className="flex size-5 items-center justify-center rounded border-2"
+                                style={{
+                                  borderColor: isSelected ? '#3b82f6' : '#9ca3af',
+                                  backgroundColor: isSelected ? '#3b82f6' : 'transparent',
+                                }}
+                              >
+                                {isSelected ? <Check size={12} color="#fff" /> : null}
+                              </VStack>
+                              <VStack className="flex-1">
+                                <Text className="font-bold">{getStationDestinationDisplay(group)}</Text>
+                                {group.Address ? <Text className="text-sm text-gray-600 dark:text-gray-400">{group.Address}</Text> : null}
+                                {group.GroupType ? <Text className="text-xs text-gray-500 dark:text-gray-500">{group.GroupType}</Text> : null}
+                              </VStack>
+                            </HStack>
+                          </TouchableOpacity>
+                        );
+                      })
+                    ) : (
+                      <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('personnel.status.no_stations_available')}</Text>
+                    )}
+                  </VStack>
+                ) : null}
+
+                {selectedTab === 'pois' && poisAllowed ? (
+                  <VStack space="sm">
+                    {isLoadingPois ? (
+                      <VStack space="md" className="w-full items-center justify-center py-6">
+                        <Spinner size="large" />
+                        <Text className="text-center text-gray-600 dark:text-gray-400">{t('personnel.status.loading_pois')}</Text>
+                      </VStack>
+                    ) : pois.length > 0 ? (
+                      pois.map((poi) => {
+                        const isSelected = selectedPoi?.PoiId === poi.PoiId;
+
+                        return (
+                          <TouchableOpacity
+                            key={poi.PoiId}
+                            onPress={() => handlePoiSelect(poi.PoiId)}
+                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                          >
+                            <HStack space="sm" className="items-center">
+                              <VStack
+                                className="flex size-5 items-center justify-center rounded border-2"
+                                style={{
+                                  borderColor: isSelected ? '#3b82f6' : '#9ca3af',
+                                  backgroundColor: isSelected ? '#3b82f6' : 'transparent',
+                                }}
+                              >
+                                {isSelected ? <Check size={12} color="#fff" /> : null}
+                              </VStack>
+                              <VStack className="flex-1">
+                                <Text className="font-bold">{getPoiDestinationDisplay(poi)}</Text>
+                                {poi.Address ? <Text className="text-sm text-gray-600 dark:text-gray-400">{poi.Address}</Text> : null}
+                                {poi.Note ? <Text className="text-xs text-gray-500 dark:text-gray-500">{poi.Note}</Text> : null}
+                              </VStack>
+                            </HStack>
+                          </TouchableOpacity>
+                        );
+                      })
+                    ) : (
+                      <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('poi.empty_title')}</Text>
+                    )}
+                  </VStack>
+                ) : null}
+              </ScrollView>
+
+              <HStack space="sm" className="mt-4 justify-between">
+                {requiresStatusSelection ? (
+                  <Button variant="outline" onPress={handlePrevious} className="flex-1">
+                    <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
+                    <ButtonText>{t('common.previous')}</ButtonText>
+                  </Button>
+                ) : (
+                  <Button variant="outline" onPress={handleClose} className="flex-1">
+                    <ButtonText>{t('common.cancel')}</ButtonText>
+                  </Button>
+                )}
+                <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
+                  <ButtonText>{t('common.next')}</ButtonText>
+                  <ArrowRight size={16} color="#fff" />
+                </Button>
+              </HStack>
+            </VStack>
+          ) : null}
+
+          {currentStep === 'add-note' ? (
             <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} bottomOffset={20} style={{ flexGrow: 0, width: '100%' }}>
               <VStack space="md" className="w-full">
                 <VStack space="sm">
@@ -482,14 +739,14 @@ export const PersonnelStatusBottomSheet = () => {
                   </Button>
                   <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
                     <ButtonText>{t('common.next')}</ButtonText>
-                    <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
+                    <ArrowRight size={16} color="#fff" />
                   </Button>
                 </HStack>
               </VStack>
             </KeyboardAwareScrollView>
-          )}
+          ) : null}
 
-          {currentStep === 'confirm' && (
+          {currentStep === 'confirm' ? (
             <VStack space="md" className="w-full">
               <Text className="mb-4 text-center text-lg font-semibold">{t('personnel.status.review_and_confirm')}</Text>
 
@@ -504,19 +761,19 @@ export const PersonnelStatusBottomSheet = () => {
                   <Text className="text-sm">{getSelectedDestinationDisplay()}</Text>
                 </VStack>
 
-                {respondingTo && (
+                {responseType === 'none' && respondingTo ? (
                   <VStack space="xs">
                     <Text className="font-medium">{t('personnel.status.custom_responding_to')}:</Text>
                     <Text className="text-sm">{respondingTo}</Text>
                   </VStack>
-                )}
+                ) : null}
 
-                {note && (
+                {note ? (
                   <VStack space="xs">
                     <Text className="font-medium">{t('personnel.status.note')}:</Text>
                     <Text className="text-sm">{note}</Text>
                   </VStack>
-                )}
+                ) : null}
               </VStack>
 
               <HStack space="sm" className="mt-4 justify-between">
@@ -529,7 +786,7 @@ export const PersonnelStatusBottomSheet = () => {
                 </Button>
               </HStack>
             </VStack>
-          )}
+          ) : null}
         </VStack>
       </ActionsheetContent>
     </Actionsheet>

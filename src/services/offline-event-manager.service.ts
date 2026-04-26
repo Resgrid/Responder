@@ -117,7 +117,9 @@ class OfflineEventManager {
       altitudeAccuracy?: string;
       speed?: string;
       heading?: string;
-    }
+    },
+    respondingToType?: number | null,
+    eventId?: string
   ): string {
     const date = new Date();
     const data = {
@@ -125,8 +127,10 @@ class OfflineEventManager {
       statusType,
       note,
       respondingTo,
+      respondingToType,
       timestamp: date.toISOString(),
       timestampUtc: date.toUTCString().replace('UTC', 'GMT'),
+      eventId,
       roles,
       latitude: gpsData?.latitude,
       longitude: gpsData?.longitude,
@@ -290,8 +294,10 @@ class OfflineEventManager {
     input.Type = event.data.statusType;
     input.Note = event.data.note || '';
     input.RespondingTo = event.data.respondingTo || '0';
+    input.RespondingToType = event.data.respondingToType ?? null;
     input.Timestamp = event.data.timestamp;
     input.TimestampUtc = event.data.timestampUtc;
+    input.EventId = event.data.eventId || '';
 
     // Always set GPS coordinates (even if empty)
     if (event.data.latitude && event.data.longitude) {

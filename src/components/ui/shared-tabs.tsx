@@ -87,11 +87,6 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     [onChange, setActiveIndex]
   );
 
-  // Get appropriate text color based on theme
-  const getTextColor = () => {
-    return colorScheme === 'dark' ? 'text-gray-200' : 'text-gray-800';
-  };
-
   // Get font size for title text
   const getTitleFontSize = () => {
     if (titleFontSize) {
@@ -114,19 +109,30 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
 
     const baseStyles = 'flex items-center justify-center';
     const sizeStyles = {
-      sm: variant === 'segmented' ? (isLandscape ? 'px-3 py-1' : 'px-2 py-0.5') : isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
-      md: isLandscape ? 'px-4 py-2' : 'px-3 py-1.5',
-      lg: isLandscape ? 'px-5 py-2.5' : 'px-4 py-2',
+      sm: variant === 'segmented' ? (isLandscape ? 'px-3 py-1.5' : 'px-3 py-1') : isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
+      md: variant === 'segmented' ? (isLandscape ? 'px-4 py-2.5' : 'px-4 py-2') : isLandscape ? 'px-4 py-2' : 'px-3 py-1.5',
+      lg: variant === 'segmented' ? (isLandscape ? 'px-5 py-3' : 'px-4 py-2.5') : isLandscape ? 'px-5 py-2.5' : 'px-4 py-2',
     }[size];
 
     const variantStyles = {
       default: isActive ? 'border-b-2 border-primary-500 text-primary-500' : `border-b-2 border-transparent ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`,
       pills: isActive ? 'bg-primary-500 text-white rounded-full' : `bg-transparent ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`,
       underlined: isActive ? 'border-b-2 border-primary-500 text-primary-500' : `border-b-2 border-transparent ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`,
-      segmented: isActive ? 'bg-primary-500 text-white' : `${colorScheme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`,
+      segmented: isActive ? 'bg-primary-600 shadow-sm dark:bg-primary-500' : 'bg-transparent',
     }[variant];
 
     return `${baseStyles} ${sizeStyles} ${variantStyles} ${tabClassName}`;
+  };
+
+  const getTitleClassName = (index: number) => {
+    const isActive = index === currentIndex;
+    const baseStyles = isActive ? 'font-semibold' : 'font-medium';
+
+    if (variant === 'segmented' || variant === 'pills') {
+      return `${baseStyles} ${isActive ? 'text-white' : colorScheme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`;
+    }
+
+    return `${baseStyles} ${isActive ? (colorScheme === 'dark' ? 'text-primary-400' : 'text-primary-600') : colorScheme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`;
   };
 
   // Container styles based on variant
@@ -137,7 +143,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
       default: colorScheme === 'dark' ? 'border-b border-gray-700' : 'border-b border-gray-200',
       pills: 'space-x-2 p-1',
       underlined: colorScheme === 'dark' ? 'border-b border-gray-700' : 'border-b border-gray-200',
-      segmented: colorScheme === 'dark' ? 'bg-gray-800 p-1 rounded-lg' : 'bg-gray-100 p-1 rounded-lg',
+      segmented: colorScheme === 'dark' ? 'rounded-2xl border border-neutral-800 bg-neutral-900 p-1.5' : 'rounded-2xl border border-neutral-200 bg-neutral-100 p-1.5',
     }[variant];
 
     return `${baseStyles} ${variantStyles} ${tabsContainerClassName}`;
@@ -146,7 +152,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   // Convert Tailwind classes to style object
   const getContainerStyle = () => {
     const borderColor = colorScheme === 'dark' ? '#374151' : '#e5e7eb';
-    const backgroundColor = colorScheme === 'dark' ? '#1f2937' : '#f3f4f6';
+    const backgroundColor = colorScheme === 'dark' ? '#171717' : '#f5f5f5';
 
     const styles = StyleSheet.create({
       container: {
@@ -154,7 +160,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
         ...(variant === 'default' && { borderBottomWidth: 1, borderBottomColor: borderColor }),
         ...(variant === 'pills' && { gap: 8, padding: 4 }),
         ...(variant === 'underlined' && { borderBottomWidth: 1, borderBottomColor: borderColor }),
-        ...(variant === 'segmented' && { backgroundColor, padding: 4, borderRadius: 8 }),
+        ...(variant === 'segmented' && { backgroundColor, padding: 6, borderRadius: 16, borderWidth: 1, borderColor }),
       },
     });
     return styles.container;
@@ -168,7 +174,11 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
           {tabs.map((tab, index) => (
             <Pressable key={tab.key} className={getTabStyles(index)} onPress={() => handleTabPress(index)}>
               {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
-              {typeof tab.title === 'string' ? <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{t(tab.title)}</Text> : <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{tab.title}</Text>}
+              {typeof tab.title === 'string' ? (
+                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{t(tab.title)}</Text>
+              ) : (
+                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{tab.title}</Text>
+              )}
               {tab.badge !== undefined && tab.badge > 0 && (
                 <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
                   <Text className="text-xs font-bold text-white">{tab.badge}</Text>
@@ -182,7 +192,11 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
           {tabs.map((tab, index) => (
             <Pressable key={tab.key} className={`flex-1 ${getTabStyles(index)}`} onPress={() => handleTabPress(index)}>
               {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
-              {typeof tab.title === 'string' ? <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{t(tab.title)}</Text> : <Text className={`${getTitleFontSize()} ${getTextColor()}`}>{tab.title}</Text>}
+              {typeof tab.title === 'string' ? (
+                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{t(tab.title)}</Text>
+              ) : (
+                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{tab.title}</Text>
+              )}
               {tab.badge !== undefined && tab.badge > 0 && (
                 <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
                   <Text className="text-xs font-bold text-white">{tab.badge}</Text>

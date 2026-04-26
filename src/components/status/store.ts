@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 
 import { getCalls } from '@/api/calls/calls';
+import { getSetUnitStatusData } from '@/api/dispatch';
 import { getAllGroups } from '@/api/groups/groups';
 import { saveUnitStatus } from '@/api/units/unitStatuses';
 import { logger } from '@/lib/logging';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type CustomStatusResultData } from '@/models/v4/customStatuses/customStatusResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
+import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { type SaveUnitStatusInput, type SaveUnitStatusRoleInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
 import { offlineEventManager } from '@/services/offline-event-manager.service';
@@ -14,7 +17,7 @@ import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 
 type StatusStep = 'select-status' | 'select-destination' | 'add-note';
-type DestinationType = 'none' | 'call' | 'station';
+type DestinationType = 'none' | 'call' | 'station' | 'poi';
 
 // Status type that can accept both custom statuses and regular statuses
 type StatusType = CustomStatusResultData | StatusesResultData;
@@ -24,18 +27,22 @@ interface StatusBottomSheetStore {
   currentStep: StatusStep;
   selectedCall: CallResultData | null;
   selectedStation: GroupResultData | null;
+  selectedPoi: PoiResultData | null;
   selectedDestinationType: DestinationType;
   selectedStatus: StatusType | null;
   cameFromStatusSelection: boolean; // Track whether we came from status selection flow
   note: string;
   availableCalls: CallResultData[];
   availableStations: GroupResultData[];
+  availablePois: PoiResultData[];
+  poiTypes: PoiTypeResultData[];
   isLoading: boolean;
   error: string | null;
   setIsOpen: (isOpen: boolean, status?: StatusType) => void;
   setCurrentStep: (step: StatusStep) => void;
   setSelectedCall: (call: CallResultData | null) => void;
   setSelectedStation: (station: GroupResultData | null) => void;
+  setSelectedPoi: (poi: PoiResultData | null) => void;
   setSelectedDestinationType: (type: DestinationType) => void;
   setSelectedStatus: (status: StatusType | null) => void;
   setNote: (note: string) => void;
@@ -48,12 +55,15 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
   currentStep: 'select-destination',
   selectedCall: null,
   selectedStation: null,
+  selectedPoi: null,
   selectedDestinationType: 'none',
   selectedStatus: null,
   cameFromStatusSelection: false,
   note: '',
   availableCalls: [],
   availableStations: [],
+  availablePois: [],
+  poiTypes: [],
   isLoading: false,
   error: null,
   setIsOpen: (isOpen, status) => {
@@ -66,20 +76,68 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
     }
   },
   setCurrentStep: (step) => set({ currentStep: step }),
-  setSelectedCall: (call) => set({ selectedCall: call }),
-  setSelectedStation: (station) => set({ selectedStation: station }),
-  setSelectedDestinationType: (type) => set({ selectedDestinationType: type }),
+  setSelectedCall: (call) =>
+    set({
+      selectedCall: call,
+      selectedStation: null,
+      selectedPoi: null,
+      selectedDestinationType: call ? 'call' : 'none',
+    }),
+  setSelectedStation: (station) =>
+    set({
+      selectedCall: null,
+      selectedStation: station,
+      selectedPoi: null,
+      selectedDestinationType: station ? 'station' : 'none',
+    }),
+  setSelectedPoi: (poi) =>
+    set({
+      selectedCall: null,
+      selectedStation: null,
+      selectedPoi: poi,
+      selectedDestinationType: poi ? 'poi' : 'none',
+    }),
+  setSelectedDestinationType: (type) =>
+    set((state) =>
+      type === 'none'
+        ? {
+            ...state,
+            selectedCall: null,
+            selectedStation: null,
+            selectedPoi: null,
+            selectedDestinationType: 'none',
+          }
+        : {
+            ...state,
+            selectedDestinationType: type,
+          }
+    ),
   setSelectedStatus: (status) => set({ selectedStatus: status }),
   setNote: (note) => set({ note }),
   fetchDestinationData: async (unitId: string) => {
     set({ isLoading: true, error: null });
     try {
-      // Fetch calls and groups (stations) in parallel
+      const bootstrapResponse = await getSetUnitStatusData(unitId);
+      const unitStatusData = bootstrapResponse.Data;
+
+      if (unitStatusData) {
+        set({
+          availableCalls: unitStatusData.Calls || [],
+          availableStations: unitStatusData.Stations || [],
+          availablePois: unitStatusData.DestinationPois || [],
+          poiTypes: unitStatusData.PoiTypes || [],
+          isLoading: false,
+        });
+        return;
+      }
+
       const [callsResponse, groupsResponse] = await Promise.all([getCalls(), getAllGroups()]);
 
       set({
         availableCalls: callsResponse.Data || [],
         availableStations: groupsResponse.Data || [],
+        availablePois: [],
+        poiTypes: [],
         isLoading: false,
       });
     } catch (error) {
@@ -95,12 +153,15 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
       currentStep: 'select-destination',
       selectedCall: null,
       selectedStation: null,
+      selectedPoi: null,
       selectedDestinationType: 'none',
       selectedStatus: null,
       cameFromStatusSelection: false,
       note: '',
       availableCalls: [],
       availableStations: [],
+      availablePois: [],
+      poiTypes: [],
       isLoading: false,
       error: null,
     }),
@@ -214,7 +275,7 @@ export const useStatusesStore = create<StatusesState>((set) => ({
         }
 
         // Queue the event
-        const eventId = offlineEventManager.queueUnitStatusEvent(payload.Id, payload.Type, payload.Note, payload.RespondingTo, roles, gpsData);
+        const eventId = offlineEventManager.queueUnitStatusEvent(payload.Id, payload.Type, payload.Note, payload.RespondingTo, roles, gpsData, payload.RespondingToType, payload.EventId);
 
         logger.info({
           message: 'Unit status queued for offline processing',

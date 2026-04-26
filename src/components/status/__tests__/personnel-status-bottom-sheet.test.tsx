@@ -212,6 +212,7 @@ describe('PersonnelStatusBottomSheet', () => {
     currentStep: 'select-responding-to' as const,
     selectedCall: null,
     selectedGroup: null,
+    selectedPoi: null,
     selectedStatus: null,
     responseType: 'none' as const,
     selectedTab: 'calls' as const,
@@ -220,16 +221,20 @@ describe('PersonnelStatusBottomSheet', () => {
     isLoading: false,
     groups: [] as any[],
     isLoadingGroups: false,
+    pois: [] as any[],
+    isLoadingPois: false,
     setIsOpen: jest.fn(),
     setCurrentStep: jest.fn(),
     setSelectedCall: jest.fn(),
     setSelectedGroup: jest.fn(),
+    setSelectedPoi: jest.fn(),
     setResponseType: jest.fn(),
     setSelectedTab: jest.fn(),
     setNote: jest.fn(),
     setRespondingTo: jest.fn(),
     setIsLoading: jest.fn(),
     fetchGroups: jest.fn(),
+    fetchDestinationPois: jest.fn(),
     nextStep: jest.fn(),
     previousStep: jest.fn(),
     submitStatus: jest.fn(),
@@ -238,6 +243,7 @@ describe('PersonnelStatusBottomSheet', () => {
     isDestinationRequired: jest.fn(() => true),
     areCallsAllowed: jest.fn(() => true),
     areStationsAllowed: jest.fn(() => true),
+    arePoisAllowed: jest.fn(() => false),
     getRequiredGpsAccuracy: jest.fn(() => false),
     goToNextStep: jest.fn(),
   };
@@ -277,6 +283,25 @@ describe('PersonnelStatusBottomSheet', () => {
       Address: '200 Fire Station Ave',
       GroupType: 'Fire Station',
       TypeId: 1,
+    },
+  ];
+
+  const mockPois = [
+    {
+      PoiId: 101,
+      PoiTypeId: 1,
+      PoiTypeName: 'Hospital',
+      Name: 'Memorial Hospital',
+      Address: '300 Medical Plaza',
+      Note: 'ER Entrance',
+    },
+    {
+      PoiId: 102,
+      PoiTypeId: 2,
+      PoiTypeName: 'Shelter',
+      Name: 'North Shelter',
+      Address: '400 Relief Ave',
+      Note: '',
     },
   ];
 
@@ -345,6 +370,15 @@ describe('PersonnelStatusBottomSheet', () => {
     });
 
     it('should render "no destination" option', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'select-responding-to',
+        isDestinationRequired: jest.fn(() => false),
+        groups: mockGroups,
+      });
+
       render(<PersonnelStatusBottomSheet />);
 
       expect(screen.getByText('personnel.status.no_destination')).toBeTruthy();
@@ -356,6 +390,25 @@ describe('PersonnelStatusBottomSheet', () => {
 
       expect(screen.getByText('personnel.status.calls_tab')).toBeTruthy();
       expect(screen.getByText('personnel.status.stations_tab')).toBeTruthy();
+    });
+
+    it('should render the selected destination tab with readable light mode contrast', () => {
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByTestId('status-destination-tab-calls').props.style).toMatchObject({
+        backgroundColor: '#1d4ed8',
+        borderColor: '#1d4ed8',
+      });
+      expect(screen.getByText('personnel.status.calls_tab').props.style).toMatchObject({
+        color: '#ffffff',
+      });
+      expect(screen.getByTestId('status-destination-tab-stations').props.style).toMatchObject({
+        backgroundColor: '#f5f5f5',
+        borderColor: '#e5e5e5',
+      });
+      expect(screen.getByText('personnel.status.stations_tab').props.style).toMatchObject({
+        color: '#525252',
+      });
     });
 
     it('should render available calls in calls tab', () => {
@@ -404,6 +457,47 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(mockSetSelectedTab).toHaveBeenCalledWith('stations');
     });
 
+    it('should render and handle POI tab selection when POIs are allowed', () => {
+      const mockSetSelectedTab = jest.fn();
+      const mockSetSelectedPoi = jest.fn();
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Detail: 3 },
+        currentStep: 'select-responding-to',
+        arePoisAllowed: jest.fn(() => true),
+        pois: mockPois,
+        setSelectedTab: mockSetSelectedTab,
+        setSelectedPoi: mockSetSelectedPoi,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      fireEvent.press(screen.getByText('personnel.status.pois_tab'));
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('pois');
+    });
+
+    it('should render available POIs when POI tab is selected', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Detail: 3 },
+        currentStep: 'select-responding-to',
+        selectedTab: 'pois',
+        arePoisAllowed: jest.fn(() => true),
+        pois: mockPois,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('Hospital - Memorial Hospital - 300 Medical Plaza')).toBeTruthy();
+      expect(screen.getByText('ER Entrance')).toBeTruthy();
+      expect(screen.getByText('Shelter - North Shelter - 400 Relief Ave')).toBeTruthy();
+    });
+
     it('should handle no destination selection', () => {
       const mockSetResponseType = jest.fn();
 
@@ -412,6 +506,7 @@ describe('PersonnelStatusBottomSheet', () => {
         isOpen: true,
         selectedStatus: mockStatus,
         currentStep: 'select-responding-to',
+        isDestinationRequired: jest.fn(() => false),
         setResponseType: mockSetResponseType,
         groups: mockGroups,
       });
@@ -649,8 +744,6 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(screen.getByText('Available')).toBeTruthy();
       expect(screen.getByText('personnel.status.responding_to:')).toBeTruthy();
       expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
-      expect(screen.getByText('personnel.status.custom_responding_to:')).toBeTruthy();
-      expect(screen.getByText('Test responding to')).toBeTruthy();
       expect(screen.getByText('personnel.status.note:')).toBeTruthy();
       expect(screen.getByText('Test note')).toBeTruthy();
     });
@@ -962,25 +1055,31 @@ describe('PersonnelStatusBottomSheet', () => {
 
       render(<PersonnelStatusBottomSheet />);
 
-      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_status_bottom_sheet_viewed', {
-        timestamp: expect.any(String),
-        currentStep: 'select-responding-to',
-        selectedStatusId: mockStatus.Id,
-        selectedStatusText: mockStatus.Text,
-        responseType: 'none',
-        selectedTab: 'calls',
-        hasSelectedCall: false,
-        selectedCallId: '',
-        hasSelectedGroup: false,
-        selectedGroupId: '',
-        hasNote: false,
-        noteLength: 0,
-        hasRespondingTo: false,
-        availableCallsCount: mockCalls.length,
-        availableGroupsCount: mockGroups.length,
-        hasActiveCall: false,
-        colorScheme: 'light',
-      });
+      expect(mockTrackEvent).toHaveBeenCalledWith(
+        'personnel_status_bottom_sheet_viewed',
+        expect.objectContaining({
+          timestamp: expect.any(String),
+          currentStep: 'select-responding-to',
+          selectedStatusId: mockStatus.Id,
+          selectedStatusText: mockStatus.Text,
+          responseType: 'none',
+          selectedTab: 'calls',
+          hasSelectedCall: false,
+          selectedCallId: '',
+          hasSelectedGroup: false,
+          selectedGroupId: '',
+          hasSelectedPoi: false,
+          selectedPoiId: 0,
+          hasNote: false,
+          noteLength: 0,
+          hasRespondingTo: false,
+          availableCallsCount: mockCalls.length,
+          availableGroupsCount: mockGroups.length,
+          availablePoisCount: 0,
+          hasActiveCall: false,
+          colorScheme: 'light',
+        })
+      );
     });
 
     it('should track analytics when step changes', () => {
@@ -1000,25 +1099,31 @@ describe('PersonnelStatusBottomSheet', () => {
 
       rerender(<PersonnelStatusBottomSheet />);
 
-      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_status_bottom_sheet_viewed', {
-        timestamp: expect.any(String),
-        currentStep: 'add-note',
-        selectedStatusId: mockStatus.Id,
-        selectedStatusText: mockStatus.Text,
-        responseType: 'none',
-        selectedTab: 'calls',
-        hasSelectedCall: false,
-        selectedCallId: '',
-        hasSelectedGroup: false,
-        selectedGroupId: '',
-        hasNote: false,
-        noteLength: 0,
-        hasRespondingTo: false,
-        availableCallsCount: mockCalls.length,
-        availableGroupsCount: mockGroups.length,
-        hasActiveCall: false,
-        colorScheme: 'light',
-      });
+      expect(mockTrackEvent).toHaveBeenCalledWith(
+        'personnel_status_bottom_sheet_viewed',
+        expect.objectContaining({
+          timestamp: expect.any(String),
+          currentStep: 'add-note',
+          selectedStatusId: mockStatus.Id,
+          selectedStatusText: mockStatus.Text,
+          responseType: 'none',
+          selectedTab: 'calls',
+          hasSelectedCall: false,
+          selectedCallId: '',
+          hasSelectedGroup: false,
+          selectedGroupId: '',
+          hasSelectedPoi: false,
+          selectedPoiId: 0,
+          hasNote: false,
+          noteLength: 0,
+          hasRespondingTo: false,
+          availableCallsCount: mockCalls.length,
+          availableGroupsCount: mockGroups.length,
+          availablePoisCount: 0,
+          hasActiveCall: false,
+          colorScheme: 'light',
+        })
+      );
     });
 
     it('should track analytics when call is selected', () => {
@@ -1100,6 +1205,7 @@ describe('PersonnelStatusBottomSheet', () => {
         isOpen: true,
         selectedStatus: mockStatus,
         currentStep: 'select-responding-to',
+        isDestinationRequired: jest.fn(() => false),
         setResponseType: mockSetResponseType,
         groups: mockGroups,
       });
@@ -1168,14 +1274,18 @@ describe('PersonnelStatusBottomSheet', () => {
 
       fireEvent.press(screen.getByText('common.next'));
 
-      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_status_step_next', {
-        timestamp: expect.any(String),
-        fromStep: 'select-responding-to',
-        selectedStatusId: mockStatus.Id,
-        responseType: 'call',
-        hasSelectedCall: true,
-        hasSelectedGroup: false,
-      });
+      expect(mockTrackEvent).toHaveBeenCalledWith(
+        'personnel_status_step_next',
+        expect.objectContaining({
+          timestamp: expect.any(String),
+          fromStep: 'select-responding-to',
+          selectedStatusId: mockStatus.Id,
+          responseType: 'call',
+          hasSelectedCall: true,
+          hasSelectedGroup: false,
+          hasSelectedPoi: false,
+        })
+      );
     });
 
     it('should track analytics when previous button is pressed', () => {
@@ -1230,18 +1340,20 @@ describe('PersonnelStatusBottomSheet', () => {
 
       fireEvent.press(screen.getByText('common.submit'));
 
-      expect(mockTrackEvent).toHaveBeenCalledWith('personnel_status_submitted', {
-        timestamp: expect.any(String),
-        selectedStatusId: mockStatus.Id,
-        selectedStatusText: mockStatus.Text,
-        responseType: 'call',
-        selectedCallId: mockCalls[0]?.CallId,
-        selectedGroupId: '',
-        hasNote: true,
-        noteLength: 9,
-        hasRespondingTo: true,
-        respondingToLength: 18,
-      });
+      expect(mockTrackEvent).toHaveBeenCalledWith(
+        'personnel_status_submitted',
+        expect.objectContaining({
+          timestamp: expect.any(String),
+          selectedStatusId: mockStatus.Id,
+          selectedStatusText: mockStatus.Text,
+          responseType: 'call',
+          selectedCallId: mockCalls[0]?.CallId,
+          selectedGroupId: '',
+          selectedPoiId: 0,
+          hasNote: true,
+          noteLength: 9,
+        })
+      );
     });
 
     it('should track analytics when bottom sheet is closed', () => {

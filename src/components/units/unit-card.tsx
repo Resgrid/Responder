@@ -88,6 +88,7 @@ export const UnitCard: React.FC<UnitCardProps> = ({ unit, unitTypeStatuses, onPr
 
   // Find the status data from unit type statuses (custom statuses)
   const customStatusData = statusId ? findUnitStatus(unitType, statusId, unitTypeStatuses) : null;
+  const destinationText = 'CurrentDestinationName' in unit ? unit.CurrentDestinationName : '';
 
   // Fall back to default status if custom status not found (used for colors only)
   const defaultStatus = statusId && !customStatusData ? getDefaultStatus(statusId) : null;
@@ -121,6 +122,11 @@ export const UnitCard: React.FC<UnitCardProps> = ({ unit, unitTypeStatuses, onPr
           </HStack>
 
           {unit.Type && <Text className="text-sm text-typography-600">{unit.Type}</Text>}
+          {destinationText ? (
+            <Text className="text-xs text-typography-500">
+              {t('call_detail.destination')}: {destinationText}
+            </Text>
+          ) : null}
 
           <HStack className="flex-wrap items-center" space="xs">
             {unit.GroupName ? (

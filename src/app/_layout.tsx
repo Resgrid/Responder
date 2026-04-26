@@ -193,6 +193,7 @@ function RootLayout() {
       <Stack>
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
         <Stack.Screen name="call" options={{ headerShown: false }} />
+        <Stack.Screen name="poi" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="login/index" options={{ headerShown: false }} />
         <Stack.Screen name="login/sso" options={{ headerShown: true }} />

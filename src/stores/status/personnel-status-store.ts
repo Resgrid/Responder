@@ -1,10 +1,27 @@
 import { create } from 'zustand';
 
 import { getAllGroups } from '@/api/groups/groups';
+import { getPois, getPoiTypes } from '@/api/mapping/mapping';
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { useAuthStore } from '@/lib/auth';
+import { translate } from '@/lib/i18n/utils';
+import {
+  areCallsAllowedForDetail,
+  arePoisAllowedForStatus,
+  areStationsAllowedForDetail,
+  getCallDestinationPayload,
+  getDefaultDestinationTabForDetail,
+  getNoneDestinationPayload,
+  getPoiDestinationPayload,
+  getStationDestinationPayload,
+  isDestinationRequiredForDetail,
+  type StatusDestinationTab,
+  type StatusDestinationType,
+} from '@/lib/status-destinations';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
+import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
 import { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { offlineQueueProcessor } from '@/services/offline-queue-processor';
@@ -12,17 +29,30 @@ import { useLocationStore } from '@/stores/app/location-store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useToastStore } from '@/stores/toast/store';
 
-import { useCallsStore } from '../calls/store';
+export type PersonnelStatusStep = 'select-status' | 'select-responding-to' | 'add-note' | 'confirm';
+export type ResponseTab = StatusDestinationTab;
+export type ResponseType = StatusDestinationType;
 
-export type PersonnelStatusStep = 'select-responding-to' | 'add-note' | 'confirm';
-export type ResponseTab = 'calls' | 'stations';
-export type ResponseType = 'none' | 'call' | 'station';
+interface PersonnelStatusOpenOptions {
+  preselectedPoi?: PoiResultData | null;
+}
+
+interface DestinationSelectionState {
+  selectedCall: CallResultData | null;
+  selectedGroup: GroupResultData | null;
+  selectedPoi: PoiResultData | null;
+  responseType: ResponseType;
+  selectedTab: ResponseTab;
+  respondingTo: string;
+}
 
 interface PersonnelStatusBottomSheetStore {
   isOpen: boolean;
+  requiresStatusSelection: boolean;
   currentStep: PersonnelStatusStep;
   selectedCall: CallResultData | null;
   selectedGroup: GroupResultData | null;
+  selectedPoi: PoiResultData | null;
   selectedStatus: StatusesResultData | null;
   responseType: ResponseType;
   selectedTab: ResponseTab;
@@ -31,33 +61,103 @@ interface PersonnelStatusBottomSheetStore {
   isLoading: boolean;
   groups: GroupResultData[];
   isLoadingGroups: boolean;
-  setIsOpen: (isOpen: boolean, status?: StatusesResultData) => void;
+  pois: PoiResultData[];
+  poiTypes: PoiTypeResultData[];
+  isLoadingPois: boolean;
+  setIsOpen: (isOpen: boolean, status?: StatusesResultData, options?: PersonnelStatusOpenOptions) => void;
   setCurrentStep: (step: PersonnelStatusStep) => void;
   setSelectedCall: (call: CallResultData | null) => void;
   setSelectedGroup: (group: GroupResultData | null) => void;
+  setSelectedPoi: (poi: PoiResultData | null) => void;
   setResponseType: (type: ResponseType) => void;
+  setSelectedStatus: (status: StatusesResultData | null) => void;
   setSelectedTab: (tab: ResponseTab) => void;
   setNote: (note: string) => void;
   setRespondingTo: (respondingTo: string) => void;
   setIsLoading: (isLoading: boolean) => void;
   fetchGroups: () => Promise<void>;
+  fetchDestinationPois: () => Promise<void>;
   nextStep: () => void;
   goToNextStep: () => void;
   previousStep: () => void;
   submitStatus: () => Promise<void>;
   reset: () => void;
-  // Helper methods for Detail-based logic
   isDestinationRequired: () => boolean;
   areCallsAllowed: () => boolean;
   areStationsAllowed: () => boolean;
+  arePoisAllowed: () => boolean;
   getRequiredGpsAccuracy: () => boolean;
 }
 
+const getTranslatedMessage = (key: Parameters<typeof translate>[0], fallback: string) => {
+  const message = translate(key);
+  return typeof message === 'string' && message.length > 0 && message !== key ? message : fallback;
+};
+
+const isStationGroup = (group: GroupResultData) => {
+  return `${group.TypeId ?? ''}` === '1';
+};
+
+const getClearedDestinationState = (selectedTab: ResponseTab = 'calls'): DestinationSelectionState => ({
+  selectedCall: null,
+  selectedGroup: null,
+  selectedPoi: null,
+  responseType: 'none',
+  selectedTab,
+  respondingTo: '',
+});
+
+const getDestinationStateForStatus = (selectedStatus: StatusesResultData | null, destinationState: DestinationSelectionState): DestinationSelectionState => {
+  if (!selectedStatus) {
+    return {
+      ...destinationState,
+      selectedTab: destinationState.selectedPoi ? 'pois' : destinationState.selectedTab,
+    };
+  }
+
+  if (destinationState.selectedPoi && arePoisAllowedForStatus(selectedStatus.Detail)) {
+    return {
+      selectedCall: null,
+      selectedGroup: null,
+      selectedPoi: destinationState.selectedPoi,
+      responseType: 'poi',
+      selectedTab: 'pois',
+      respondingTo: destinationState.selectedPoi.PoiId.toString(),
+    };
+  }
+
+  if (destinationState.selectedCall && areCallsAllowedForDetail(selectedStatus.Detail)) {
+    return {
+      selectedCall: destinationState.selectedCall,
+      selectedGroup: null,
+      selectedPoi: null,
+      responseType: 'call',
+      selectedTab: 'calls',
+      respondingTo: destinationState.selectedCall.CallId,
+    };
+  }
+
+  if (destinationState.selectedGroup && areStationsAllowedForDetail(selectedStatus.Detail)) {
+    return {
+      selectedCall: null,
+      selectedGroup: destinationState.selectedGroup,
+      selectedPoi: null,
+      responseType: 'station',
+      selectedTab: 'stations',
+      respondingTo: destinationState.selectedGroup.GroupId,
+    };
+  }
+
+  return getClearedDestinationState(getDefaultDestinationTabForDetail(selectedStatus.Detail));
+};
+
 export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSheetStore>((set, get) => ({
   isOpen: false,
+  requiresStatusSelection: false,
   currentStep: 'select-responding-to',
   selectedCall: null,
   selectedGroup: null,
+  selectedPoi: null,
   selectedStatus: null,
   responseType: 'none',
   selectedTab: 'calls',
@@ -66,11 +166,37 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
   isLoading: false,
   groups: [],
   isLoadingGroups: false,
-  setIsOpen: async (isOpen, status) => {
+  pois: [],
+  poiTypes: [],
+  isLoadingPois: false,
+  setIsOpen: (isOpen, status, options) => {
+    if (!isOpen) {
+      set({ isOpen: false });
+      return;
+    }
+
+    const preselectedPoi = options?.preselectedPoi ?? null;
+    const destinationState = getDestinationStateForStatus(
+      status || null,
+      preselectedPoi
+        ? {
+            selectedCall: null,
+            selectedGroup: null,
+            selectedPoi: preselectedPoi,
+            responseType: 'poi',
+            selectedTab: 'pois',
+            respondingTo: preselectedPoi.PoiId.toString(),
+          }
+        : getClearedDestinationState()
+    );
+
     set({
-      isOpen,
+      isOpen: true,
+      requiresStatusSelection: !status && preselectedPoi != null,
+      currentStep: status || preselectedPoi == null ? 'select-responding-to' : 'select-status',
       selectedStatus: status || null,
-      currentStep: status ? 'select-responding-to' : 'select-responding-to',
+      note: '',
+      ...destinationState,
     });
   },
   setCurrentStep: (step) => set({ currentStep: step }),
@@ -78,7 +204,9 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     set({
       selectedCall: call,
       selectedGroup: null,
+      selectedPoi: null,
       responseType: call ? 'call' : 'none',
+      selectedTab: 'calls',
       respondingTo: call ? call.CallId : '',
     });
   },
@@ -86,43 +214,106 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     set({
       selectedGroup: group,
       selectedCall: null,
+      selectedPoi: null,
       responseType: group ? 'station' : 'none',
+      selectedTab: 'stations',
       respondingTo: group ? group.GroupId : '',
+    });
+  },
+  setSelectedPoi: (poi) => {
+    set({
+      selectedPoi: poi,
+      selectedCall: null,
+      selectedGroup: null,
+      responseType: poi ? 'poi' : 'none',
+      selectedTab: 'pois',
+      respondingTo: poi ? poi.PoiId.toString() : '',
     });
   },
   setResponseType: (type) => {
     if (type === 'none') {
-      set({
-        responseType: type,
-        selectedCall: null,
-        selectedGroup: null,
-        respondingTo: '',
-      });
-    } else {
-      set({ responseType: type });
+      set(getClearedDestinationState(get().selectedTab));
+      return;
     }
+
+    set({
+      responseType: type,
+      selectedTab: type === 'call' ? 'calls' : type === 'station' ? 'stations' : 'pois',
+    });
   },
-  setSelectedTab: (tab) => set({ selectedTab: tab }),
+  setSelectedStatus: (selectedStatus) => {
+    const { selectedCall, selectedGroup, selectedPoi, responseType, selectedTab } = get();
+    const nextDestinationState = getDestinationStateForStatus(selectedStatus, {
+      selectedCall,
+      selectedGroup,
+      selectedPoi,
+      responseType,
+      selectedTab,
+      respondingTo: '',
+    });
+
+    set({
+      selectedStatus,
+      ...nextDestinationState,
+    });
+  },
+  setSelectedTab: (selectedTab) => {
+    const { selectedStatus } = get();
+
+    if (selectedStatus) {
+      const allowedTabs = [
+        ...(areCallsAllowedForDetail(selectedStatus.Detail) ? (['calls'] as ResponseTab[]) : []),
+        ...(areStationsAllowedForDetail(selectedStatus.Detail) ? (['stations'] as ResponseTab[]) : []),
+        ...(arePoisAllowedForStatus(selectedStatus.Detail) ? (['pois'] as ResponseTab[]) : []),
+      ];
+
+      if (allowedTabs.length > 0 && !allowedTabs.includes(selectedTab)) {
+        return;
+      }
+    }
+
+    set({ selectedTab });
+  },
   setNote: (note) => set({ note }),
   setRespondingTo: (respondingTo) => set({ respondingTo }),
   setIsLoading: (isLoading) => set({ isLoading }),
   fetchGroups: async () => {
     set({ isLoadingGroups: true });
+
     try {
       const groupsResult = await getAllGroups();
-      // Filter to only include Station groups (TypeId === 1)
-      const stationGroups = (groupsResult.Data || []).filter((group) => group.TypeId === 1);
+      const stationGroups = (groupsResult.Data || []).filter(isStationGroup);
       set({ groups: stationGroups, isLoadingGroups: false });
     } catch (error) {
       set({ groups: [], isLoadingGroups: false });
     }
   },
+  fetchDestinationPois: async () => {
+    set({ isLoadingPois: true });
+
+    try {
+      const [poiTypesResult, poisResult] = await Promise.all([getPoiTypes(), getPois({ destinationOnly: true })]);
+      set({
+        poiTypes: poiTypesResult.Data || [],
+        pois: poisResult.Data || [],
+        isLoadingPois: false,
+      });
+    } catch (error) {
+      set({
+        poiTypes: [],
+        pois: [],
+        isLoadingPois: false,
+      });
+    }
+  },
   nextStep: () => {
     const { currentStep } = get();
+
     switch (currentStep) {
+      case 'select-status':
+        set({ currentStep: 'select-responding-to' });
+        break;
       case 'select-responding-to':
-        // "No Destination" is always valid regardless of status Detail value
-        // User can always proceed with any selection (call, station, or none)
         set({ currentStep: 'add-note' });
         break;
       case 'add-note':
@@ -134,10 +325,13 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     return get().nextStep();
   },
   previousStep: () => {
-    const { currentStep } = get();
+    const { currentStep, requiresStatusSelection } = get();
+
     switch (currentStep) {
+      case 'select-responding-to':
+        set({ currentStep: requiresStatusSelection ? 'select-status' : 'select-responding-to' });
+        break;
       case 'add-note':
-        // Always go back to select-responding-to step (even if skipped in some cases)
         set({ currentStep: 'select-responding-to' });
         break;
       case 'confirm':
@@ -146,70 +340,74 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     }
   },
   submitStatus: async () => {
-    const { selectedStatus, note, respondingTo, selectedCall, selectedGroup, responseType, getRequiredGpsAccuracy } = get();
+    const { selectedStatus, note, selectedCall, selectedGroup, selectedPoi, responseType, respondingTo, getRequiredGpsAccuracy } = get();
     const showToast = useToastStore.getState().showToast;
     const { userId } = useAuthStore.getState();
     const { fetchCurrentUserInfo } = useHomeStore.getState();
     const locationState = useLocationStore.getState();
 
     if (!userId || !selectedStatus) {
-      showToast('error', 'Missing required information');
+      showToast('error', getTranslatedMessage('personnel.status.missing_required_info', 'Missing required information'));
       return;
     }
 
-    // Check GPS requirements
+    if (isDestinationRequiredForDetail(selectedStatus.Detail)) {
+      const hasDestination = (responseType === 'call' && selectedCall != null) || (responseType === 'station' && selectedGroup != null) || (responseType === 'poi' && selectedPoi != null);
+
+      if (!hasDestination) {
+        showToast('error', getTranslatedMessage('personnel.status.destination_required', 'A destination is required for this status'));
+        return;
+      }
+    }
+
     const requiresGps = getRequiredGpsAccuracy();
-    if (requiresGps && (!locationState.latitude || !locationState.longitude)) {
-      showToast('error', 'GPS location is required for this status but not available');
+    if (requiresGps && (locationState.latitude == null || locationState.longitude == null)) {
+      showToast('error', getTranslatedMessage('personnel.status.gps_required', 'GPS location is required for this status but not available'));
       return;
     }
 
     set({ isLoading: true });
+
     try {
       const status = new SavePersonStatusInput();
       const date = new Date();
+      const destinationPayload =
+        responseType === 'call' && selectedCall
+          ? getCallDestinationPayload(selectedCall)
+          : responseType === 'station' && selectedGroup
+            ? getStationDestinationPayload(selectedGroup)
+            : responseType === 'poi' && selectedPoi
+              ? getPoiDestinationPayload(selectedPoi)
+              : getNoneDestinationPayload();
 
       status.UserId = userId;
       status.Type = selectedStatus.Id.toString();
       status.Timestamp = date.toISOString();
       status.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
       status.Note = note;
-      status.RespondingTo = respondingTo;
-
-      // Always include GPS coordinates if available (regardless of requirement)
-      status.Latitude = locationState.latitude ? locationState.latitude.toString() : '';
-      status.Longitude = locationState.longitude ? locationState.longitude.toString() : '';
-      status.Accuracy = locationState.accuracy ? locationState.accuracy.toString() : '';
-      status.Altitude = locationState.altitude ? locationState.altitude.toString() : '';
+      status.RespondingTo = respondingTo || destinationPayload.respondingTo;
+      status.RespondingToType = destinationPayload.respondingToType;
+      status.EventId = destinationPayload.eventId;
+      status.Latitude = locationState.latitude != null ? locationState.latitude.toString() : '';
+      status.Longitude = locationState.longitude != null ? locationState.longitude.toString() : '';
+      status.Accuracy = locationState.accuracy != null ? locationState.accuracy.toString() : '';
+      status.Altitude = locationState.altitude != null ? locationState.altitude.toString() : '';
       status.AltitudeAccuracy = '';
-      status.Speed = locationState.speed ? locationState.speed.toString() : '';
-      status.Heading = locationState.heading ? locationState.heading.toString() : '';
-
-      // Set EventId based on response type
-      if (responseType === 'call' && selectedCall) {
-        status.EventId = selectedCall.CallId;
-      } else if (responseType === 'station' && selectedGroup) {
-        status.EventId = selectedGroup.GroupId;
-      } else {
-        status.EventId = '';
-      }
+      status.Speed = locationState.speed != null ? locationState.speed.toString() : '';
+      status.Heading = locationState.heading != null ? locationState.heading.toString() : '';
 
       try {
-        // Try to submit directly first
         await savePersonnelStatus(status);
         await fetchCurrentUserInfo();
-        showToast('success', 'Status updated successfully');
+        showToast('success', getTranslatedMessage('home.status.updated_successfully', 'Status updated successfully'));
         get().reset();
       } catch (error) {
-        // If direct submission fails, add to offline queue
-        console.warn('Direct status submission failed, adding to offline queue:', error);
-
         offlineQueueProcessor.addPersonnelStatusToQueue(status);
-        showToast('info', 'Status saved offline and will be submitted when connection is restored');
+        showToast('info', getTranslatedMessage('personnel.status.saved_offline', 'Status saved offline and will be submitted when connection is restored'));
         get().reset();
       }
     } catch (error) {
-      showToast('error', 'Failed to update status');
+      showToast('error', getTranslatedMessage('home.status.update_failed', 'Failed to update status'));
     } finally {
       set({ isLoading: false });
     }
@@ -217,45 +415,31 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
   reset: () =>
     set({
       isOpen: false,
+      requiresStatusSelection: false,
       currentStep: 'select-responding-to',
-      selectedCall: null,
-      selectedGroup: null,
       selectedStatus: null,
-      responseType: 'none',
-      selectedTab: 'calls',
       note: '',
-      respondingTo: '',
       isLoading: false,
       groups: [],
       isLoadingGroups: false,
+      pois: [],
+      poiTypes: [],
+      isLoadingPois: false,
+      ...getClearedDestinationState(),
     }),
-
-  // Helper methods for Detail-based logic
   isDestinationRequired: () => {
-    const { selectedStatus } = get();
-    if (!selectedStatus) return false;
-    // Detail: 0 = No destination needed, 1 = Station only, 2 = Call only, 3 = Both
-    return selectedStatus.Detail > 0;
+    return isDestinationRequiredForDetail(get().selectedStatus?.Detail);
   },
-
   areCallsAllowed: () => {
-    const { selectedStatus } = get();
-    if (!selectedStatus) return false;
-    // Detail: 2 = Call only, 3 = Both
-    return selectedStatus.Detail === 2 || selectedStatus.Detail === 3;
+    return areCallsAllowedForDetail(get().selectedStatus?.Detail);
   },
-
   areStationsAllowed: () => {
-    const { selectedStatus } = get();
-    if (!selectedStatus) return false;
-    // Detail: 1 = Station only, 3 = Both
-    return selectedStatus.Detail === 1 || selectedStatus.Detail === 3;
+    return areStationsAllowedForDetail(get().selectedStatus?.Detail);
   },
-
+  arePoisAllowed: () => {
+    return arePoisAllowedForStatus(get().selectedStatus?.Detail);
+  },
   getRequiredGpsAccuracy: () => {
-    const { selectedStatus } = get();
-    if (!selectedStatus) return false;
-    // Use the Gps field to determine if GPS is required
-    return selectedStatus.Gps;
+    return get().selectedStatus?.Gps ?? false;
   },
 }));

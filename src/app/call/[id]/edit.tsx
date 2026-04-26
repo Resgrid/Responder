@@ -6,12 +6,13 @@ import { SHA256 } from 'crypto-js';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import * as z from 'zod';
 
+import { getNewCallData } from '@/api/dispatch';
 import { DispatchSelectionModal } from '@/components/calls/dispatch-selection-modal';
 import { Loading } from '@/components/common/loading';
 import FullScreenLocationPicker from '@/components/maps/full-screen-location-picker';
@@ -27,6 +28,9 @@ import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { getDestinationPoiIdFromValue, getDestinationPoiSelectOptions, NO_DESTINATION_POI_VALUE } from '@/lib/poi';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
+import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -45,6 +49,7 @@ const formSchema = z.object({
   longitude: z.number().optional(),
   priority: z.string().optional(),
   type: z.string().optional(),
+  destinationPoiId: z.string().optional(),
   contactName: z.string().optional(),
   contactInfo: z.string().optional(),
   dispatchSelection: z.object({
@@ -124,7 +129,10 @@ export default function EditCall() {
   const [isGeocodingPlusCode, setIsGeocodingPlusCode] = useState(false);
   const [isGeocodingCoordinates, setIsGeocodingCoordinates] = useState(false);
   const [isGeocodingWhat3Words, setIsGeocodingWhat3Words] = useState(false);
+  const [isDestinationPoisLoading, setIsDestinationPoisLoading] = useState(false);
   const [addressResults, setAddressResults] = useState<GeocodingResult[]>([]);
+  const [destinationPois, setDestinationPois] = useState<PoiResultData[]>([]);
+  const [destinationPoiTypes, setDestinationPoiTypes] = useState<PoiTypeResultData[]>([]);
   const [dispatchSelection, setDispatchSelection] = useState<DispatchSelection>({
     everyone: false,
     users: [],
@@ -159,6 +167,7 @@ export default function EditCall() {
       longitude: undefined,
       priority: '',
       type: '',
+      destinationPoiId: NO_DESTINATION_POI_VALUE,
       contactName: '',
       contactInfo: '',
       dispatchSelection: {
@@ -171,6 +180,8 @@ export default function EditCall() {
     },
   });
 
+  const destinationPoiOptions = useMemo(() => getDestinationPoiSelectOptions(destinationPois, destinationPoiTypes), [destinationPois, destinationPoiTypes]);
+
   useEffect(() => {
     fetchCallPriorities();
     fetchCallTypes();
@@ -178,6 +189,51 @@ export default function EditCall() {
       fetchCallDetail(callId);
     }
   }, [fetchCallPriorities, fetchCallTypes, fetchCallDetail, callId]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const loadDestinationPois = async () => {
+      setIsDestinationPoisLoading(true);
+
+      try {
+        const response = await getNewCallData(abortController.signal);
+
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        setDestinationPois(response.Data?.DestinationPois || []);
+        setDestinationPoiTypes(response.Data?.PoiTypes || []);
+      } catch (error) {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        console.error('Error loading call destination POIs:', error);
+        toast.show({
+          placement: 'top',
+          render: () => {
+            return (
+              <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
+                <Text className="text-white">{t('calls.destination_load_error')}</Text>
+              </Box>
+            );
+          },
+        });
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsDestinationPoisLoading(false);
+        }
+      }
+    };
+
+    void loadDestinationPois();
+
+    return () => {
+      abortController.abort();
+    };
+  }, [t, toast]);
 
   // Analytics: Track when edit call page is viewed
   useFocusEffect(
@@ -265,6 +321,7 @@ export default function EditCall() {
         longitude: call.Longitude ? parseFloat(call.Longitude) : undefined,
         priority: priority?.Name || '',
         type: type?.Name || '',
+        destinationPoiId: call.DestinationPoiId ? call.DestinationPoiId.toString() : NO_DESTINATION_POI_VALUE,
         contactName: call.ContactName || '',
         contactInfo: call.ContactInfo || '',
         dispatchSelection: initialDispatchSelection,
@@ -292,6 +349,8 @@ export default function EditCall() {
         console.log('onSubmit called');
       }
       try {
+        const destinationPoiId = getDestinationPoiIdFromValue(data.destinationPoiId);
+
         // If we have latitude and longitude, add them to the data
         if (selectedLocation?.latitude != null && selectedLocation?.longitude != null) {
           data.latitude = selectedLocation.latitude;
@@ -330,6 +389,7 @@ export default function EditCall() {
           hasPlusCode: !!data.plusCode,
           hasContactName: !!data.contactName,
           hasContactInfo: !!data.contactInfo,
+          hasDestinationPoi: destinationPoiId != null,
           dispatchEveryone: data.dispatchSelection?.everyone || false,
           dispatchCount: (data.dispatchSelection?.users.length || 0) + (data.dispatchSelection?.groups.length || 0) + (data.dispatchSelection?.roles.length || 0) + (data.dispatchSelection?.units.length || 0),
         });
@@ -343,6 +403,7 @@ export default function EditCall() {
           type: type?.Id || '',
           note: data.note || '',
           address: data.address || '',
+          destinationPoiId: destinationPoiId,
           ...(data.latitude != null && { latitude: data.latitude }),
           ...(data.longitude != null && { longitude: data.longitude }),
           what3words: data.what3words || '',
@@ -369,6 +430,7 @@ export default function EditCall() {
           priority: data.priority || '',
           type: data.type || '',
           hasLocation: !!(data.latitude && data.longitude),
+          hasDestinationPoi: destinationPoiId != null,
           dispatchMethod: data.dispatchSelection?.everyone ? 'everyone' : 'selective',
         });
 
@@ -763,6 +825,39 @@ export default function EditCall() {
                       </SelectPortal>
                     </Select>
                   )}
+                />
+              </FormControl>
+            </Card>
+
+            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText>{t('calls.destination')}</FormControlLabelText>
+                </FormControlLabel>
+                <Controller
+                  control={control}
+                  name="destinationPoiId"
+                  render={({ field: { onChange, value } }) => {
+                    const selectedDestinationLabel = value === NO_DESTINATION_POI_VALUE ? t('common.none') : destinationPoiOptions.find((option) => option.value === value)?.label;
+
+                    return (
+                      <Select selectedValue={value} onValueChange={onChange} isDisabled={isDestinationPoisLoading}>
+                        <SelectTrigger>
+                          <SelectInput placeholder={isDestinationPoisLoading ? t('common.loading') : t('calls.destination_placeholder')} value={selectedDestinationLabel} />
+                          <SelectIcon as={ChevronDownIcon} />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdrop />
+                          <SelectContent className="max-h-[60vh] pb-20">
+                            <SelectItem label={t('common.none')} value={NO_DESTINATION_POI_VALUE} />
+                            {destinationPoiOptions.map((option) => (
+                              <SelectItem key={option.value} label={option.label} value={option.value} />
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                    );
+                  }}
                 />
               </FormControl>
             </Card>

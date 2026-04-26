@@ -250,6 +250,14 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
               <Divider className="my-2" />
 
               {/* Status Information */}
+              {'CurrentDestinationName' in selectedUnit && selectedUnit.CurrentDestinationName ? (
+                <HStack space="sm" className="items-center">
+                  <MapPin size={18} color={isDark ? '#9ca3af' : '#6b7280'} />
+                  <Text className="text-sm text-gray-700 dark:text-gray-300">
+                    {t('call_detail.destination')}: {selectedUnit.CurrentDestinationName}
+                  </Text>
+                </HStack>
+              ) : null}
               {statusTimestamp && (
                 <HStack space="sm" className="items-center">
                   <Calendar size={18} color={isDark ? '#9ca3af' : '#6b7280'} />

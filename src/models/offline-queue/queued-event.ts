@@ -53,8 +53,10 @@ export interface QueuedUnitStatusEvent extends Omit<QueuedEvent, 'data'> {
     statusType: string;
     note?: string;
     respondingTo?: string;
+    respondingToType?: number | null;
     timestamp: string;
     timestampUtc: string;
+    eventId?: string;
     roles?: {
       roleId: string;
       userId: string;

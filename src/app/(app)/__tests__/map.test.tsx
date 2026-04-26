@@ -9,6 +9,11 @@ import HomeMap from '../map';
 // Mock NativeWind and CSS Interop
 jest.mock('nativewind', () => ({
   cssInterop: jest.fn(),
+  useColorScheme: () => ({
+    colorScheme: 'light',
+    setColorScheme: jest.fn(),
+    toggleColorScheme: jest.fn(),
+  }),
 }));
 
 jest.mock('react-native-css-interop', () => ({
@@ -302,11 +307,17 @@ jest.mock('@/stores/toast/store', () => ({
 }));
 
 // Mock expo-router
+const mockRouterPush = jest.fn();
+
 jest.mock('expo-router', () => ({
   useFocusEffect: (callback: () => void) => {
     const mockReact = require('react');
     mockReact.useEffect(callback, []);
   },
+  useLocalSearchParams: () => ({}),
+  useRouter: () => ({
+    push: mockRouterPush,
+  }),
 }));
 
 describe('HomeMap', () => {
@@ -315,6 +326,7 @@ describe('HomeMap', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRouterPush.mockReset();
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
