@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "Failed to set call as current call",
     "loading_markers": "Loading map markers...",
     "no_location_for_routing": "No location data available for routing",
+    "openSideMenu": "Open side menu",
     "pin_color": "Pin Color",
     "recenter_map": "Recenter Map",
     "set_as_current_call": "Set as Current Call",
@@ -672,8 +673,7 @@
       "map": "Map",
       "pois": "POIs"
     },
-    "view_call_details": "View Call Details",
-    "openSideMenu": "Open side menu"
+    "view_call_details": "View Call Details"
   },
   "maps": {
     "contact_administrator": "Please contact your administrator to configure mapping services.",

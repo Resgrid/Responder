@@ -49,3 +49,4 @@ export const UserIcon = mockIcon;
 export const Users = mockIcon;
 export const UsersIcon = mockIcon;
 export const X = mockIcon;
+export const Menu = mockIcon;

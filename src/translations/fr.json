@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "Échec de la définition de l'appel comme appel actuel",
     "loading_markers": "Chargement des marqueurs de carte...",
     "no_location_for_routing": "Aucune donnée de localisation disponible pour l'itinéraire",
+    "openSideMenu": "Ouvrir le menu latéral",
     "pin_color": "Couleur du repère",
     "recenter_map": "Recentrer la carte",
     "set_as_current_call": "Définir comme appel actuel",
@@ -672,8 +673,7 @@
       "map": "Carte",
       "pois": "POI"
     },
-    "view_call_details": "Voir les détails de l'appel",
-    "openSideMenu": "Ouvrir le menu latéral"
+    "view_call_details": "Voir les détails de l'appel"
   },
   "maps": {
     "contact_administrator": "Veuillez contacter votre administrateur pour configurer les services de cartographie.",

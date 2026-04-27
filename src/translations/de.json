@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "Einsatz konnte nicht als aktueller Einsatz festgelegt werden",
     "loading_markers": "Lade Kartenmarkierungen...",
     "no_location_for_routing": "Keine Standortdaten für die Navigation verfügbar",
+    "openSideMenu": "Seitenmenü öffnen",
     "pin_color": "Stecknadel-Farbe",
     "recenter_map": "Karte neu zentrieren",
     "set_as_current_call": "Als aktuellen Einsatz festlegen",
@@ -672,8 +673,7 @@
       "map": "Karte",
       "pois": "POIs"
     },
-    "view_call_details": "Einsatzdetails anzeigen",
-    "openSideMenu": "Seitenmenü öffnen"
+    "view_call_details": "Einsatzdetails anzeigen"
   },
   "maps": {
     "contact_administrator": "Bitte kontaktieren Sie Ihren Administrator, um Kartendienste zu konfigurieren.",

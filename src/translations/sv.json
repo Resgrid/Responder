@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "Det gick inte att ange larmet som aktuellt larm",
     "loading_markers": "Laddar kartmarkörer...",
     "no_location_for_routing": "Ingen platsdata tillgänglig för navigering",
+    "openSideMenu": "Öppna sidomenyn",
     "pin_color": "Nålfärg",
     "recenter_map": "Centrera om kartan",
     "set_as_current_call": "Ange som aktuellt larm",
@@ -672,8 +673,7 @@
       "map": "Karta",
       "pois": "POI"
     },
-    "view_call_details": "Visa larmdetaljer",
-    "openSideMenu": "Öppna sidomenyn"
+    "view_call_details": "Visa larmdetaljer"
   },
   "maps": {
     "contact_administrator": "Kontakta din administratör för att konfigurera karttjänster.",

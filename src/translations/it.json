@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "Impossibile impostare la chiamata come chiamata corrente",
     "loading_markers": "Caricamento indicatori mappa...",
     "no_location_for_routing": "Nessun dato di posizione disponibile per il percorso",
+    "openSideMenu": "Apri menu laterale",
     "pin_color": "Colore del segnaposto",
     "recenter_map": "Ricentra mappa",
     "set_as_current_call": "Imposta come chiamata corrente",
@@ -672,8 +673,7 @@
       "map": "Mappa",
       "pois": "POI"
     },
-    "view_call_details": "Visualizza dettagli chiamata",
-    "openSideMenu": "Apri menu laterale"
+    "view_call_details": "Visualizza dettagli chiamata"
   },
   "maps": {
     "contact_administrator": "Contattare l'amministratore per configurare i servizi di mappatura.",

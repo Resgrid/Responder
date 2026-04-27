@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "فشل في تعيين المكالمة كمكالمة حالية",
     "loading_markers": "جارٍ تحميل علامات الخريطة...",
     "no_location_for_routing": "لا توجد بيانات موقع متاحة للتوجيه",
+    "openSideMenu": "افتح القائمة الجانبية",
     "pin_color": "لون الدبوس",
     "recenter_map": "إعادة توسيط الخريطة",
     "set_as_current_call": "تعيين كمكالمة حالية",
@@ -672,8 +673,7 @@
       "map": "الخريطة",
       "pois": "نقاط الاهتمام"
     },
-    "view_call_details": "عرض تفاصيل المكالمة",
-    "openSideMenu": "افتح القائمة الجانبية"
+    "view_call_details": "عرض تفاصيل المكالمة"
   },
   "maps": {
     "contact_administrator": "يرجى الاتصال بالمسؤول لتكوين خدمات الخرائط.",

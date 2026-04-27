@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "Error al establecer la llamada como llamada actual",
     "loading_markers": "Cargando marcadores del mapa...",
     "no_location_for_routing": "No hay datos de ubicación disponibles para el enrutamiento",
+    "openSideMenu": "Abrir menú lateral",
     "pin_color": "Color del pin",
     "recenter_map": "Recentrar mapa",
     "set_as_current_call": "Establecer como llamada actual",
@@ -672,8 +673,7 @@
       "map": "Mapa",
       "pois": "POI"
     },
-    "view_call_details": "Ver detalles de la llamada",
-    "openSideMenu": "Abrir menú lateral"
+    "view_call_details": "Ver detalles de la llamada"
   },
   "maps": {
     "contact_administrator": "Por favor contacta a tu administrador para configurar los servicios de mapas.",

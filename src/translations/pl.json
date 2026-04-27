@@ -665,6 +665,7 @@
     "failed_to_set_current_call": "Nie udało się ustawić zgłoszenia jako bieżącego",
     "loading_markers": "Ładowanie znaczników mapy...",
     "no_location_for_routing": "Brak danych o lokalizacji do wyznaczenia trasy",
+    "openSideMenu": "Otwórz menu boczne",
     "pin_color": "Kolor pinezki",
     "recenter_map": "Wyśrodkuj mapę",
     "set_as_current_call": "Ustaw jako bieżące zgłoszenie",
@@ -672,8 +673,7 @@
       "map": "Mapa",
       "pois": "POI"
     },
-    "view_call_details": "Wyświetl szczegóły zgłoszenia",
-    "openSideMenu": "Otwórz menu boczne"
+    "view_call_details": "Wyświetl szczegóły zgłoszenia"
   },
   "maps": {
     "contact_administrator": "Proszę skontaktować się z administratorem w celu skonfigurowania usług mapowania.",
