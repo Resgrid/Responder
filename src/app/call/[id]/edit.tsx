@@ -6,7 +6,7 @@ import { SHA256 } from 'crypto-js';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -28,6 +28,7 @@ import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { logger } from '@/lib/logging';
 import { getDestinationPoiIdFromValue, getDestinationPoiSelectOptions, NO_DESTINATION_POI_VALUE } from '@/lib/poi';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
@@ -122,6 +123,8 @@ export default function EditCall() {
     [trackEvent]
   );
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(false);
@@ -210,8 +213,8 @@ export default function EditCall() {
           return;
         }
 
-        console.error('Error loading call destination POIs:', error);
-        toast.show({
+        logger.error({ message: 'Error loading call destination POIs', context: { error } });
+        toastRef.current.show({
           placement: 'top',
           render: () => {
             return (
@@ -233,7 +236,7 @@ export default function EditCall() {
     return () => {
       abortController.abort();
     };
-  }, [t, toast]);
+  }, [t]);
 
   // Analytics: Track when edit call page is viewed
   useFocusEffect(

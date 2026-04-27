@@ -1,5 +1,5 @@
 export class UnitStatusResultData {
-  public UnitId?: string;
+  public UnitId: string = '';
   public Name: string = '';
   public Type: string = '';
   public State: string = '';

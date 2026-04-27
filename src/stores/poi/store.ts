@@ -8,6 +8,7 @@ interface PoiState {
   poiTypes: PoiTypeResultData[];
   pois: PoiResultData[];
   poiDetailsById: Record<number, PoiResultData>;
+  hasFetchedPois: boolean;
   isLoading: boolean;
   isLoadingPoi: boolean;
   error: string | null;
@@ -28,12 +29,13 @@ export const usePoiStore = create<PoiState>((set, get) => ({
   poiTypes: [],
   pois: [],
   poiDetailsById: {},
+  hasFetchedPois: false,
   isLoading: false,
   isLoadingPoi: false,
   error: null,
   fetchPoisData: async (force = false) => {
-    const { poiTypes, pois } = get();
-    if (!force && poiTypes.length > 0 && pois.length > 0) {
+    const { hasFetchedPois } = get();
+    if (!force && hasFetchedPois) {
       return;
     }
 
@@ -48,6 +50,7 @@ export const usePoiStore = create<PoiState>((set, get) => ({
         poiTypes: nextPoiTypes,
         pois: nextPois,
         poiDetailsById: getPoiDetailsMap(nextPois),
+        hasFetchedPois: true,
         isLoading: false,
         error: null,
       });
@@ -108,6 +111,7 @@ export const usePoiStore = create<PoiState>((set, get) => ({
       poiTypes: [],
       pois: [],
       poiDetailsById: {},
+      hasFetchedPois: false,
       isLoading: false,
       isLoadingPoi: false,
       error: null,

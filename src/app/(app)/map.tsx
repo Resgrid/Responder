@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWindowDimensions, View } from 'react-native';
+import { TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 import MapPanel from '@/components/maps/map-panel';
 import PoiListPanel from '@/components/maps/poi-list-panel';
@@ -90,6 +91,17 @@ export default function HomeMap() {
 
           {/* Map Content */}
           <View className="flex-1">
+            {/* Portrait menu button */}
+            {!isLandscape && (
+              <TouchableOpacity
+                accessibilityLabel={t('map.openSideMenu')}
+                accessibilityRole="button"
+                className="mb-3 self-start rounded-xl border border-neutral-200 bg-white p-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+                onPress={() => setIsSideMenuOpen(true)}
+              >
+                <Menu size={22} className="text-neutral-700 dark:text-neutral-300" />
+              </TouchableOpacity>
+            )}
             <SharedTabs
               key={selectedTab || 'map'}
               tabs={tabs}

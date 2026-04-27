@@ -671,7 +671,8 @@
       "map": "Mappa",
       "pois": "POI"
     },
-    "view_call_details": "Visualizza dettagli chiamata"
+    "view_call_details": "Visualizza dettagli chiamata",
+    "openSideMenu": "Apri menu laterale"
   },
   "maps": {
     "contact_administrator": "Contattare l'amministratore per configurare i servizi di mappatura.",
@@ -845,6 +846,7 @@
     "not_found": "POI non trovato",
     "note_label": "Nota",
     "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
     "route_error": "Impossibile aprire l'app di mappe",
     "set_status_destination": "Usa come destinazione dello stato",
     "sort_label": "Ordina",

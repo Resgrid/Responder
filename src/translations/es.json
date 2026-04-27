@@ -671,7 +671,8 @@
       "map": "Mapa",
       "pois": "POI"
     },
-    "view_call_details": "Ver detalles de la llamada"
+    "view_call_details": "Ver detalles de la llamada",
+    "openSideMenu": "Abrir menú lateral"
   },
   "maps": {
     "contact_administrator": "Por favor contacta a tu administrador para configurar los servicios de mapas.",
@@ -845,6 +846,7 @@
     "not_found": "POI no encontrado",
     "note_label": "Nota",
     "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
     "route_error": "No se pudo abrir la aplicación de mapas",
     "set_status_destination": "Usar como destino del estado",
     "sort_label": "Ordenar",

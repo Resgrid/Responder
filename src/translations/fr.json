@@ -671,7 +671,8 @@
       "map": "Carte",
       "pois": "POI"
     },
-    "view_call_details": "Voir les détails de l'appel"
+    "view_call_details": "Voir les détails de l'appel",
+    "openSideMenu": "Ouvrir le menu latéral"
   },
   "maps": {
     "contact_administrator": "Veuillez contacter votre administrateur pour configurer les services de cartographie.",
@@ -845,6 +846,7 @@
     "not_found": "POI introuvable",
     "note_label": "Remarque",
     "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
     "route_error": "Impossible d'ouvrir l'application de cartographie",
     "set_status_destination": "Utiliser comme destination du statut",
     "sort_label": "Trier",

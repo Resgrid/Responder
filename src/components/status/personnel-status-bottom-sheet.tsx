@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -64,6 +64,39 @@ export const PersonnelStatusBottomSheet = () => {
   const { calls, isLoading: isLoadingCalls, fetchCalls } = useCallsStore();
   const { colorScheme } = useColorScheme();
 
+  // Refs for volatile values read inside trackViewAnalytics so the callback
+  // stays stable and does not fire on every unrelated state change.
+  const requiresStatusSelectionRef = useRef(requiresStatusSelection);
+  const selectedStatusRef = useRef(selectedStatus);
+  const responseTypeRef = useRef(responseType);
+  const selectedTabRef = useRef(selectedTab);
+  const selectedCallRef = useRef(selectedCall);
+  const selectedGroupRef = useRef(selectedGroup);
+  const selectedPoiRef = useRef(selectedPoi);
+  const noteRef = useRef(note);
+  const respondingToRef = useRef(respondingTo);
+  const callsRef = useRef(calls);
+  const groupsRef = useRef(groups);
+  const poisRef = useRef(pois);
+  const activeCallRef = useRef(activeCall);
+  const colorSchemeRef = useRef(colorScheme);
+
+  // Keep refs in sync with the latest values on every render.
+  requiresStatusSelectionRef.current = requiresStatusSelection;
+  selectedStatusRef.current = selectedStatus;
+  responseTypeRef.current = responseType;
+  selectedTabRef.current = selectedTab;
+  selectedCallRef.current = selectedCall;
+  selectedGroupRef.current = selectedGroup;
+  selectedPoiRef.current = selectedPoi;
+  noteRef.current = note;
+  respondingToRef.current = respondingTo;
+  callsRef.current = calls;
+  groupsRef.current = groups;
+  poisRef.current = pois;
+  activeCallRef.current = activeCall;
+  colorSchemeRef.current = colorScheme;
+
   const callsAllowed = areCallsAllowed();
   const stationsAllowed = areStationsAllowed();
   const poisAllowed = arePoisAllowed();
@@ -112,36 +145,39 @@ export const PersonnelStatusBottomSheet = () => {
       trackEvent('personnel_status_bottom_sheet_viewed', {
         timestamp: new Date().toISOString(),
         currentStep,
-        requiresStatusSelection,
-        selectedStatusId: selectedStatus?.Id ?? 0,
-        selectedStatusText: selectedStatus?.Text ?? '',
-        responseType,
-        selectedTab,
-        hasSelectedCall: !!selectedCall,
-        selectedCallId: selectedCall?.CallId ?? '',
-        hasSelectedGroup: !!selectedGroup,
-        selectedGroupId: selectedGroup?.GroupId ?? '',
-        hasSelectedPoi: !!selectedPoi,
-        selectedPoiId: selectedPoi?.PoiId ?? 0,
-        hasNote: note.length > 0,
-        noteLength: note.length,
-        hasRespondingTo: respondingTo.length > 0,
-        availableCallsCount: calls?.length || 0,
-        availableGroupsCount: groups?.length || 0,
-        availablePoisCount: pois?.length || 0,
-        hasActiveCall: !!activeCall,
-        colorScheme: colorScheme || 'light',
+        requiresStatusSelection: requiresStatusSelectionRef.current,
+        selectedStatusId: selectedStatusRef.current?.Id ?? 0,
+        selectedStatusText: selectedStatusRef.current?.Text ?? '',
+        responseType: responseTypeRef.current,
+        selectedTab: selectedTabRef.current,
+        hasSelectedCall: !!selectedCallRef.current,
+        selectedCallId: selectedCallRef.current?.CallId ?? '',
+        hasSelectedGroup: !!selectedGroupRef.current,
+        selectedGroupId: selectedGroupRef.current?.GroupId ?? '',
+        hasSelectedPoi: !!selectedPoiRef.current,
+        selectedPoiId: selectedPoiRef.current?.PoiId ?? 0,
+        hasNote: noteRef.current.length > 0,
+        noteLength: noteRef.current.length,
+        hasRespondingTo: respondingToRef.current.length > 0,
+        availableCallsCount: callsRef.current?.length || 0,
+        availableGroupsCount: groupsRef.current?.length || 0,
+        availablePoisCount: poisRef.current?.length || 0,
+        hasActiveCall: !!activeCallRef.current,
+        colorScheme: colorSchemeRef.current || 'light',
       });
     } catch (error) {
       console.warn('Failed to track personnel status bottom sheet view analytics:', error);
     }
-  }, [trackEvent, currentStep, requiresStatusSelection, selectedStatus, responseType, selectedTab, selectedCall, selectedGroup, selectedPoi, note, respondingTo, calls, groups, pois, activeCall, colorScheme]);
+  }, [trackEvent, currentStep]);
+
+  const trackViewAnalyticsRef = useRef(trackViewAnalytics);
+  trackViewAnalyticsRef.current = trackViewAnalytics;
 
   useEffect(() => {
     if (isOpen) {
-      trackViewAnalytics();
+      trackViewAnalyticsRef.current();
     }
-  }, [isOpen, currentStep, trackViewAnalytics]);
+  }, [isOpen, currentStep]);
 
   const handleClose = () => {
     try {

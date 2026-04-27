@@ -671,7 +671,8 @@
       "map": "Karta",
       "pois": "POI"
     },
-    "view_call_details": "Visa larmdetaljer"
+    "view_call_details": "Visa larmdetaljer",
+    "openSideMenu": "Öppna sidomenyn"
   },
   "maps": {
     "contact_administrator": "Kontakta din administratör för att konfigurera karttjänster.",
@@ -845,6 +846,7 @@
     "not_found": "POI hittades inte",
     "note_label": "Anteckning",
     "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
     "route_error": "Det gick inte att öppna kartappen",
     "set_status_destination": "Använd som statusdestination",
     "sort_label": "Sortera",

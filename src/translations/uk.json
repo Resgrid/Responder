@@ -671,7 +671,8 @@
       "map": "Карта",
       "pois": "POI"
     },
-    "view_call_details": "Переглянути деталі виклику"
+    "view_call_details": "Переглянути деталі виклику",
+    "openSideMenu": "Відкрити бічне меню"
   },
   "maps": {
     "contact_administrator": "Будь ласка, зверніться до адміністратора для налаштування картографічних служб.",
@@ -845,6 +846,7 @@
     "not_found": "POI не знайдено",
     "note_label": "Примітка",
     "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
     "route_error": "Не вдалося відкрити програму карт",
     "set_status_destination": "Використати як пункт призначення статусу",
     "sort_label": "Сортувати",

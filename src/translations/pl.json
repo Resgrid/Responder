@@ -671,7 +671,8 @@
       "map": "Mapa",
       "pois": "POI"
     },
-    "view_call_details": "Wyświetl szczegóły zgłoszenia"
+    "view_call_details": "Wyświetl szczegóły zgłoszenia",
+    "openSideMenu": "Otwórz menu boczne"
   },
   "maps": {
     "contact_administrator": "Proszę skontaktować się z administratorem w celu skonfigurowania usług mapowania.",
@@ -845,6 +846,7 @@
     "not_found": "Nie znaleziono POI",
     "note_label": "Notatka",
     "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
     "route_error": "Nie udało się otworzyć aplikacji map",
     "set_status_destination": "Użyj jako celu statusu",
     "sort_label": "Sortuj",

@@ -26,7 +26,7 @@ import { useToastStore } from '@/stores/toast/store';
 const parsePoiId = (id: string | string[] | undefined) => {
   const rawValue = Array.isArray(id) ? id[0] : id;
   const nextPoiId = Number(rawValue);
-  return Number.isFinite(nextPoiId) ? nextPoiId : null;
+  return Number.isInteger(nextPoiId) && nextPoiId > 0 ? nextPoiId : null;
 };
 
 export default function PoiDetail() {

@@ -671,7 +671,8 @@
       "map": "الخريطة",
       "pois": "نقاط الاهتمام"
     },
-    "view_call_details": "عرض تفاصيل المكالمة"
+    "view_call_details": "عرض تفاصيل المكالمة",
+    "openSideMenu": "افتح القائمة الجانبية"
   },
   "maps": {
     "contact_administrator": "يرجى الاتصال بالمسؤول لتكوين خدمات الخرائط.",
@@ -845,6 +846,7 @@
     "not_found": "تعذر العثور على نقطة الاهتمام",
     "note_label": "ملاحظة",
     "results_count": "{{count}} نقطة اهتمام",
+    "results_count_plural": "{{count}} نقاط اهتمام",
     "route_error": "تعذر فتح تطبيق الخرائط",
     "set_status_destination": "استخدامها كوجهة للحالة",
     "sort_label": "ترتيب",

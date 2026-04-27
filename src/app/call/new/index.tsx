@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import { router, Stack } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, View } from 'react-native';
@@ -18,6 +18,7 @@ import { getNewCallData } from '@/api/dispatch';
 import { DispatchSelectionModal } from '@/components/calls/dispatch-selection-modal';
 import { Loading } from '@/components/common/loading';
 import FullScreenLocationPicker from '@/components/maps/full-screen-location-picker';
+import { logger } from '@/lib/logging';
 import LocationPicker from '@/components/maps/location-picker';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Box } from '@/components/ui/box';
@@ -127,6 +128,8 @@ export default function NewCall() {
   const { config } = useCoreStore();
   const { trackEvent } = useAnalytics();
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const insets = useSafeAreaInsets();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -211,8 +214,8 @@ export default function NewCall() {
           return;
         }
 
-        console.error('Error loading call destination POIs:', error);
-        toast.error(t('calls.destination_load_error'));
+        logger.error({ message: 'Error loading call destination POIs', context: { error } });
+        toastRef.current.error(t('calls.destination_load_error'));
       } finally {
         if (!abortController.signal.aborted) {
           setIsDestinationPoisLoading(false);
@@ -225,7 +228,7 @@ export default function NewCall() {
     return () => {
       abortController.abort();
     };
-  }, [t, toast]);
+  }, [t]);
 
   // Analytics: Track when the new call page is viewed
   useFocusEffect(

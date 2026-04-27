@@ -14,8 +14,17 @@ export interface StatusDestinationPayload {
   eventId: string;
 }
 
-const toDetailType = (detail?: number | null) => {
-  return (detail ?? CustomStateDetailTypes.None) as CustomStateDetailTypes;
+// Pre-computed set of valid CustomStateDetailTypes numeric values used to
+// guard against unknown future enum members arriving from the server.
+const KNOWN_DETAIL_TYPES = new Set<number>(
+  (Object.values(CustomStateDetailTypes) as Array<string | number>).filter((v): v is number => typeof v === 'number')
+);
+
+const toDetailType = (detail?: number | null): CustomStateDetailTypes => {
+  if (detail == null) {
+    return CustomStateDetailTypes.None;
+  }
+  return KNOWN_DETAIL_TYPES.has(detail) ? (detail as CustomStateDetailTypes) : CustomStateDetailTypes.None;
 };
 
 export const isDestinationRequiredForDetail = (detail?: number | null) => {

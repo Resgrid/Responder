@@ -671,7 +671,8 @@
       "map": "Karte",
       "pois": "POIs"
     },
-    "view_call_details": "Einsatzdetails anzeigen"
+    "view_call_details": "Einsatzdetails anzeigen",
+    "openSideMenu": "Seitenmenü öffnen"
   },
   "maps": {
     "contact_administrator": "Bitte kontaktieren Sie Ihren Administrator, um Kartendienste zu konfigurieren.",
@@ -838,13 +839,14 @@
     "filter_label": "Filter",
     "invalid_description": "Zum Anzeigen der POI-Details ist eine POI-ID erforderlich.",
     "invalid_title": "Ungültiger POI",
-    "list_description": "Durchsuche die Abteilungs-POIs, filtere nach Typ und springe zurück zur Karte.",
+    "list_description": "Durchsuchen Sie die Abteilungs-POIs, filtern Sie nach Typ und kehren Sie zur Karte zurück.",
     "load_error_title": "POI konnte nicht geladen werden",
     "loading": "Lade POIs...",
     "loading_detail": "Lade POI-Details...",
     "not_found": "POI nicht gefunden",
     "note_label": "Hinweis",
-    "results_count": "{{count}} POIs",
+    "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
     "route_error": "Karten-App konnte nicht geöffnet werden",
     "set_status_destination": "Als Statusziel verwenden",
     "sort_label": "Sortieren",
@@ -854,7 +856,7 @@
     "type_label": "Typ",
     "view_details": "Details anzeigen",
     "view_on_map": "Auf Karte anzeigen",
-    "view_on_map_hint": "Lass die Karte geöffnet, um deinen Standort und den ausgewählten POI zusammen zu sehen."
+    "view_on_map_hint": "Lassen Sie die Karte geöffnet, um Ihren Standort und den ausgewählten POI zusammen zu sehen."
   },
   "protocols": {
     "details": {
