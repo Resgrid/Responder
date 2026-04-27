@@ -65,6 +65,7 @@ interface PersonnelStatusBottomSheetStore {
   pois: PoiResultData[];
   poiTypes: PoiTypeResultData[];
   isLoadingPois: boolean;
+  poisError: string | null;
   setIsOpen: (isOpen: boolean, status?: StatusesResultData, options?: PersonnelStatusOpenOptions) => void;
   setCurrentStep: (step: PersonnelStatusStep) => void;
   setSelectedCall: (call: CallResultData | null) => void;
@@ -170,6 +171,7 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
   pois: [],
   poiTypes: [],
   isLoadingPois: false,
+  poisError: null,
   setIsOpen: (isOpen, status, options) => {
     if (!isOpen) {
       set({ isOpen: false });
@@ -298,12 +300,12 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
         poiTypes: poiTypesResult.Data || [],
         pois: poisResult.Data || [],
         isLoadingPois: false,
+        poisError: null,
       });
     } catch (error) {
       set({
-        poiTypes: [],
-        pois: [],
         isLoadingPois: false,
+        poisError: error instanceof Error ? error.message : 'Failed to fetch destination POIs',
       });
     }
   },
@@ -426,6 +428,7 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
       pois: [],
       poiTypes: [],
       isLoadingPois: false,
+      poisError: null,
       ...getClearedDestinationState(),
     }),
   isDestinationRequired: () => {
