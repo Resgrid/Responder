@@ -444,10 +444,10 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 	describe('fetchGroups', () => {
 		it('should fetch groups successfully and filter to only station groups', async () => {
 			const mockGroups = [
-				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 },
-				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: 1 },
-				{ GroupId: '3', Name: 'Response Group', Address: '', GroupType: 'Response', TypeId: 2 },
-				{ GroupId: '4', Name: 'Admin Group', Address: '', GroupType: 'Admin', TypeId: 3 },
+				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: '1' },
+				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: '1' },
+				{ GroupId: '3', Name: 'Response Group', Address: '', GroupType: 'Response', TypeId: '2' },
+				{ GroupId: '4', Name: 'Admin Group', Address: '', GroupType: 'Admin', TypeId: '3' },
 			];
 			mockGetAllGroups.mockResolvedValue({ Data: mockGroups } as any);
 
@@ -458,11 +458,11 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			});
 
 			expect(mockGetAllGroups).toHaveBeenCalled();
-			// Should only contain station groups (TypeId: 1)
+			// Should only contain station groups (TypeId: "1" from the v4 API)
 			expect(result.current.groups).toHaveLength(2);
 			expect(result.current.groups).toEqual([
-				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 },
-				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: 1 },
+				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: '1' },
+				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: '1' },
 			]);
 			expect(result.current.isLoadingGroups).toBe(false);
 		});
@@ -1048,6 +1048,56 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			});
 
 			expect(result.current.areStationsAllowed()).toBe(true);
+		});
+
+		it('should correctly determine if POIs are allowed for destination-capable statuses', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			const statusDetail0 = {
+				Id: 1,
+				Text: 'Available',
+				BColor: '#00FF00',
+				Type: 1,
+				StateId: 1,
+				Color: '#00FF00',
+				Gps: false,
+				Note: 0,
+				Detail: 0
+			};
+
+			act(() => {
+				result.current.setIsOpen(true, statusDetail0 as any);
+			});
+
+			expect(result.current.arePoisAllowed()).toBe(false);
+
+			const statusDetail1 = { ...statusDetail0, Detail: 1 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail1 as any);
+			});
+
+			expect(result.current.arePoisAllowed()).toBe(true);
+
+			const statusDetail2 = { ...statusDetail0, Detail: 2 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail2 as any);
+			});
+
+			expect(result.current.arePoisAllowed()).toBe(true);
+
+			const statusDetail3 = { ...statusDetail0, Detail: 3 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail3 as any);
+			});
+
+			expect(result.current.arePoisAllowed()).toBe(true);
+
+			const statusDetail4 = { ...statusDetail0, Detail: 4 };
+			act(() => {
+				result.current.setIsOpen(true, statusDetail4 as any);
+			});
+
+			expect(result.current.arePoisAllowed()).toBe(true);
 		});
 
 		it('should correctly determine GPS requirements based on Gps field', () => {

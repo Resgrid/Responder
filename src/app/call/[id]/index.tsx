@@ -63,6 +63,12 @@ export default function CallDetail() {
 
   const { colorScheme } = useColorScheme();
   const textColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const destinationName = call?.DestinationName?.trim() ?? '';
+  const destinationAddress = call?.DestinationAddress?.trim() ?? '';
+  const destinationTypeName = call?.DestinationTypeName?.trim() ?? '';
+  const destinationDisplayName = destinationName || destinationAddress || destinationTypeName;
+  const hasDestination = destinationDisplayName.length > 0;
+  const hasDestinationCoordinates = isValidCoordinates(call?.DestinationLatitude ?? undefined, call?.DestinationLongitude ?? undefined);
 
   // Get current user location from the location store
   const userLocation = useLocationStore((state) => ({
@@ -210,7 +216,7 @@ export default function CallDetail() {
   /**
    * Validates if coordinates are valid for routing
    */
-  const isValidCoordinates = (lat: number | null | undefined, lng: number | null | undefined): boolean => {
+  function isValidCoordinates(lat: number | null | undefined, lng: number | null | undefined): boolean {
     // Check if coordinates exist and are valid numbers
     if (lat === null || lat === undefined || lng === null || lng === undefined) {
       return false;
@@ -227,7 +233,7 @@ export default function CallDetail() {
     }
 
     return true;
-  };
+  }
 
   /**
    * Opens the device's native maps application with directions to the call location
@@ -292,6 +298,45 @@ export default function CallDetail() {
         reason: 'exception',
         error: error instanceof Error ? error.message : 'unknown_error',
       });
+    }
+  };
+
+  const handleDestinationRoute = async () => {
+    if (!call || !hasDestinationCoordinates || call.DestinationLatitude == null || call.DestinationLongitude == null) {
+      showToast('error', t('call_detail.no_location_for_routing'));
+      return;
+    }
+
+    try {
+      trackEvent('call_destination_route_opened', {
+        timestamp: new Date().toISOString(),
+        callId: call.CallId,
+        destinationTypeName: destinationTypeName || 'POI',
+        hasUserLocation: !!(userLocation.latitude && userLocation.longitude),
+      });
+
+      const success = await openMapsWithDirections(
+        call.DestinationLatitude,
+        call.DestinationLongitude,
+        destinationDisplayName || t('call_detail.destination'),
+        userLocation.latitude ?? undefined,
+        userLocation.longitude ?? undefined
+      );
+
+      if (!success) {
+        showToast('error', t('call_detail.failed_to_open_maps'));
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Failed to open maps for call destination routing',
+        context: {
+          error,
+          callId,
+          destinationLatitude: call.DestinationLatitude,
+          destinationLongitude: call.DestinationLongitude,
+        },
+      });
+      showToast('error', t('call_detail.failed_to_open_maps'));
     }
   };
 
@@ -398,6 +443,22 @@ export default function CallDetail() {
                 <Text className="text-sm text-gray-500">{t('call_detail.address')}</Text>
                 <Text className="font-medium">{call.Address}</Text>
               </Box>
+              {hasDestination ? (
+                <Box className="border-b border-outline-100 pb-2">
+                  <Text className="text-sm text-gray-500">{t('call_detail.destination')}</Text>
+                  <VStack className="space-y-2">
+                    <Text className="font-medium">{destinationDisplayName}</Text>
+                    {destinationAddress && destinationAddress !== destinationDisplayName ? <Text className="text-sm text-gray-500">{destinationAddress}</Text> : null}
+                    {destinationTypeName ? <Text className="text-sm text-gray-500">{destinationTypeName}</Text> : null}
+                    {hasDestinationCoordinates ? (
+                      <Button action="secondary" className="self-start" onPress={handleDestinationRoute} size="sm" variant="outline">
+                        <ButtonIcon as={RouteIcon} />
+                        <ButtonText>{t('call_detail.route_to_destination')}</ButtonText>
+                      </Button>
+                    ) : null}
+                  </VStack>
+                </Box>
+              ) : null}
               <Box className="border-b border-outline-100 pb-2">
                 <Text className="text-sm text-gray-500">{t('call_detail.note')}</Text>
                 <Box>

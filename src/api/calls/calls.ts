@@ -36,6 +36,7 @@ export interface CreateCallRequest {
   nature: string;
   note?: string;
   address?: string;
+  destinationPoiId?: number | null;
   latitude?: number;
   longitude?: number;
   priority: number;
@@ -57,6 +58,7 @@ export interface UpdateCallRequest {
   nature: string;
   note?: string;
   address?: string;
+  destinationPoiId?: number | null;
   latitude?: number;
   longitude?: number;
   priority: number;
@@ -111,6 +113,7 @@ export const createCall = async (callData: CreateCallRequest) => {
     Nature: callData.nature,
     Note: callData.note || '',
     Address: callData.address || '',
+    DestinationPoiId: callData.destinationPoiId ?? null,
     Geolocation: `${callData.latitude?.toString() || ''},${callData.longitude?.toString() || ''}`,
     Priority: callData.priority,
     Type: callData.type || '',
@@ -155,6 +158,7 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     Nature: callData.nature,
     Note: callData.note || '',
     Address: callData.address || '',
+    DestinationPoiId: callData.destinationPoiId ?? null,
     Geolocation: `${callData.latitude?.toString() || ''},${callData.longitude?.toString() || ''}`,
     Priority: callData.priority,
     Type: callData.type || '',

@@ -11,7 +11,7 @@ import { useHomeStore } from '@/stores/home/home-store';
 
 export const UserStatusCard: React.FC = () => {
   const { t } = useTranslation();
-  const { currentUser, isLoadingUser } = useHomeStore();
+  const { currentUser, currentUserStatus, isLoadingUser } = useHomeStore();
 
   if (isLoadingUser) {
     return (
@@ -22,6 +22,7 @@ export const UserStatusCard: React.FC = () => {
   }
 
   const displayStatus = currentUser?.Status || t('home.user.status_unknown');
+  const destinationText = currentUserStatus?.DestinationName || currentUserStatus?.DestinationAddress || currentUser?.StatusDestinationName || '';
   let displayColor = currentUser?.StatusColor || '#6B7280'; // Default gray
 
   // Fix up the color values to match the design system
@@ -59,6 +60,11 @@ export const UserStatusCard: React.FC = () => {
         <Text className="text-lg font-bold" style={{ color: displayColor }} testID="user-status-text">
           {displayStatus}
         </Text>
+        {destinationText ? (
+          <Text className="text-xs text-gray-500">
+            {t('call_detail.destination')}: {destinationText}
+          </Text>
+        ) : null}
         {currentUser?.StatusTimestamp && (
           <Text className="text-xs text-gray-500">
             {t('home.user.updated')}: {new Date(currentUser.StatusTimestamp).toLocaleTimeString()}

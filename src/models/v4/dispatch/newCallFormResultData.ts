@@ -2,6 +2,8 @@ import { type CallPriorityResultData } from '../callPriorities/callPriorityResul
 import { type CallTypeResultData } from '../callTypes/callTypeResultData';
 import { type CustomStatusResultData } from '../customStatuses/customStatusResultData';
 import { type GroupResultData } from '../groups/groupsResultData';
+import { type PoiResultData } from '../mapping/poiResultData';
+import { type PoiTypeResultData } from '../mapping/poiTypeResultData';
 import { type PersonnelInfoResultData } from '../personnel/personnelInfoResultData';
 import { type RoleResultData } from '../roles/roleResultData';
 import { type UnitRoleResultData } from '../unitRoles/unitRoleResultData';
@@ -18,4 +20,6 @@ export class NewCallFormResultData {
   public UnitRoles: UnitRoleResultData[] = [];
   public Priorities: CallPriorityResultData[] = [];
   public CallTypes: CallTypeResultData[] = [];
+  public PoiTypes: PoiTypeResultData[] = [];
+  public DestinationPois: PoiResultData[] = [];
 }
