@@ -55,21 +55,33 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: false,
 });
 
+// Validate DSN is configured — warn early if missing
+if (!Env.SENTRY_DSN) {
+  console.warn('[Sentry] DSN is empty — errors and profiles will NOT be sent. Set RESPOND_SENTRY_DSN in your environment.');
+}
+
 Sentry.init({
   dsn: Env.SENTRY_DSN,
   debug: __DEV__, // Only debug in development, not production
-  tracesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
-  profilesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
+  // tracesSampleRate: percentage of transactions sent (1.0 = 100%, 0.2 = 20%)
+  tracesSampleRate: __DEV__ ? 1.0 : 0.2,
+  // profilesSampleRate: relative to tracesSampleRate!
+  // Effective profile rate = tracesSampleRate * profilesSampleRate.
+  // In production: 0.2 * 1.0 = 20% of all transactions get profiles.
+  // Set to 1.0 to profile ALL sampled transactions, or lower to further sub-sample.
+  profilesSampleRate: __DEV__ ? 1.0 : 1.0,
   sendDefaultPii: false,
+  enableAppHangTracking: true, // v8: Tracks app freeze/hang events
+  enableWatchdogTerminationTracking: true, // v8: Tracks iOS watchdog terminations
   integrations: [
     // Pass integration
     navigationIntegration,
   ],
-  enableNativeFramesTracking: true, //!isRunningInExpoGo(), // Tracks slow and frozen frames in the application
+  enableNativeFramesTracking: true, // Tracks slow and frozen frames
   // Add additional options to prevent timing issues
-  beforeSendTransaction(event: any) {
+  beforeSend(event) {
     // Filter out problematic navigation transactions that might cause timestamp errors
-    if (event.contexts?.trace?.op === 'navigation' && !event.contexts?.trace?.data?.route) {
+    if (event.type === 'transaction' && event.contexts?.trace?.op === 'navigation' && !event.contexts?.trace?.data?.route) {
       return null;
     }
     return event;

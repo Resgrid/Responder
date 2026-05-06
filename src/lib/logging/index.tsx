@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { consoleTransport, logger as rnLogger } from 'react-native-logs';
 
 import type { LogEntry, Logger, LogLevel } from './types';
@@ -49,6 +50,22 @@ class LogService {
       ...context,
       timestamp: new Date().toISOString(),
     });
+
+    // Add log breadcrumb to Sentry for error/warn levels
+    // Provides rich debugging context when errors occur
+    if (level === 'error' || level === 'warn') {
+      try {
+        Sentry.addBreadcrumb({
+          category: 'log',
+          level: level === 'error' ? 'error' : 'warning',
+          message: String(message),
+          data: { ...this.globalContext, ...context },
+          timestamp: Date.now() / 1000, // Unix timestamp in seconds
+        });
+      } catch {
+        // Sentry may not be initialized yet — silently ignore
+      }
+    }
   }
 
   public setGlobalContext(context: Record<string, unknown>): void {

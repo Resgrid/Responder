@@ -197,10 +197,15 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
               ) : (
                 <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{tab.title}</Text>
               )}
+              {/*
+               * Badge is absolutely positioned so it does NOT participate in the
+               * flex column layout (icon → text). Previously it was an inline
+               * third item that stacked below the label — the "2nd row" bug.
+               */}
               {tab.badge !== undefined && tab.badge > 0 && (
-                <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
-                  <Text className="text-xs font-bold text-white">{tab.badge}</Text>
-                </Box>
+                <View style={tabContentStyles.badge}>
+                  <Text style={tabContentStyles.badgeText}>{tab.badge > 99 ? '99+' : tab.badge}</Text>
+                </View>
               )}
             </Pressable>
           ))}
@@ -229,4 +234,24 @@ const tabContentStyles = StyleSheet.create({
   active: { flex: 1 },
   // display:'none' hides the view and removes it from layout without unmounting
   hidden: { display: 'none' },
+  // Badge overlay for the non-scrollable tab bar. Absolutely positioned so it
+  // sits in the top-right corner of the tab without pushing text to a 2nd row.
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#ffffff',
+    lineHeight: 11,
+  },
 });

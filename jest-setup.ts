@@ -788,6 +788,32 @@ jest.mock('expo-asset', () => ({
   },
 }));
 
+// Mock @sentry/react-native to prevent native module errors in tests
+jest.mock('@sentry/react-native', () => {
+  const breadcrumbs: any[] = [];
+
+  return {
+    __esModule: true,
+    init: jest.fn().mockResolvedValue(undefined),
+    wrap: jest.fn((component: any) => component),
+    captureException: jest.fn(),
+    captureMessage: jest.fn(),
+    addBreadcrumb: jest.fn().mockImplementation((breadcrumb: any) => {
+      breadcrumbs.push(breadcrumb);
+    }),
+    reactNavigationIntegration: jest.fn(() => ({
+      registerNavigationContainer: jest.fn(),
+    })),
+    ErrorBoundary: ({ children }: any) => children,
+    setUser: jest.fn(),
+    setTag: jest.fn(),
+    setExtra: jest.fn(),
+    isInitialized: jest.fn().mockReturnValue(true),
+    // Re-export breadcrumbs for test assertions
+    _breadcrumbs: breadcrumbs,
+  };
+});
+
 // Mock expo-av to avoid import issues
 jest.mock('expo-av', () => ({
   Audio: {

@@ -10,6 +10,7 @@ import { Loading } from '@/components/common/loading';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { logger } from '@/lib/logging';
+import { isPoiMarker } from '@/lib/poi';
 import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
@@ -19,8 +20,6 @@ import { useToastStore } from '@/stores/toast/store';
 
 import MapPins from './map-pins';
 import PinDetailModal from './pin-detail-modal';
-
-const POI_MARKER_TYPE = 4;
 
 interface MapPanelProps {
   focusedPoi: PoiResultData | null;
@@ -266,9 +265,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
         pinType: pin.Type,
       });
 
-      const isPoiPin = pin.Type === POI_MARKER_TYPE || pin.PoiTypeId != null;
-
-      if (isPoiPin) {
+      if (isPoiMarker(pin)) {
         router.push(`/poi/${pin.Id}`);
         return;
       }

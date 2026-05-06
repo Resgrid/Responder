@@ -7,6 +7,7 @@ import { MAP_ICONS, type MapIconKey, resolveMapIconKey } from '@/constants/map-i
 
 interface PinMarkerProps {
   imagePath?: string | null;
+  poiImage?: string | null;
   marker?: string | null;
   title: string;
   size?: number;
@@ -15,10 +16,10 @@ interface PinMarkerProps {
   fallbackIconKey?: MapIconKey;
 }
 
-const PinMarker: React.FC<PinMarkerProps> = ({ imagePath, marker, title, size = 32, onPress, fallbackIconKey = 'call' }) => {
+const PinMarker: React.FC<PinMarkerProps> = ({ imagePath, poiImage, marker, title, size = 32, onPress, fallbackIconKey = 'call' }) => {
   const { colorScheme } = useColorScheme();
 
-  const icon = MAP_ICONS[resolveMapIconKey({ imagePath, marker, fallback: fallbackIconKey })];
+  const icon = MAP_ICONS[resolveMapIconKey({ poiImage, imagePath, marker, fallback: fallbackIconKey })];
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>

@@ -3,6 +3,7 @@ export class PoiTypeResultData {
   public Name: string = '';
   public Color: string = '';
   public ImagePath: string = '';
+  public PoiImage: string = '';
   public Marker: string = '';
   public IsDestination: boolean = false;
 }

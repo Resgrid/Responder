@@ -1,14 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Menu } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
 import MapPanel from '@/components/maps/map-panel';
 import PoiListPanel from '@/components/maps/poi-list-panel';
-import { SideMenu } from '@/components/sidebar/side-menu';
-import { Button, ButtonText } from '@/components/ui/button';
-import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer/index';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
@@ -20,7 +16,6 @@ export default function HomeMap() {
   const { tab, poiId } = useLocalSearchParams<{ tab?: string | string[]; poiId?: string | string[] }>();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
-  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const fetchPoisData = usePoiStore((state) => state.fetchPoisData);
 
   useEffect(() => {
@@ -80,59 +75,21 @@ export default function HomeMap() {
       <View className="size-full flex-1 bg-neutral-100 dark:bg-neutral-950" testID="home-map-container">
         <FocusAwareStatusBar />
 
-        {/* Content Area with Side Menu */}
-        <View className="flex-1 flex-row p-4">
-          {/* Permanent Side Menu in Landscape */}
-          {isLandscape && (
-            <View className="mr-4 w-[280px] overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-              <SideMenu />
-            </View>
-          )}
-
-          {/* Map Content */}
-          <View className="flex-1">
-            {/* Portrait menu button */}
-            {!isLandscape && (
-              <TouchableOpacity
-                accessibilityLabel={t('map.openSideMenu')}
-                accessibilityRole="button"
-                className="mb-3 self-start rounded-xl border border-neutral-200 bg-white p-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
-                onPress={() => setIsSideMenuOpen(true)}
-              >
-                <Menu size={22} className="text-neutral-700 dark:text-neutral-300" />
-              </TouchableOpacity>
-            )}
-            <SharedTabs
-              key={selectedTab || 'map'}
-              tabs={tabs}
-              initialIndex={initialTabIndex}
-              variant="segmented"
-              size={isLandscape ? 'lg' : 'md'}
-              scrollable={false}
-              tabsContainerClassName="rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
-              tabClassName="rounded-xl"
-              contentClassName="pt-4"
-            />
-          </View>
+        {/* Map Content */}
+        <View className="flex-1 p-4">
+          <SharedTabs
+            key={selectedTab || 'map'}
+            tabs={tabs}
+            initialIndex={initialTabIndex}
+            variant="segmented"
+            size={isLandscape ? 'lg' : 'md'}
+            scrollable={false}
+            tabsContainerClassName="rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+            tabClassName="rounded-xl"
+            contentClassName="pt-4"
+          />
         </View>
       </View>
-
-      {/* Drawer for Portrait Mode */}
-      {!isLandscape && (
-        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} size="lg">
-          <DrawerBackdrop onPress={() => setIsSideMenuOpen(false)} />
-          <DrawerContent className="bg-white dark:bg-gray-900">
-            <DrawerBody className="p-0">
-              <SideMenu onNavigate={() => setIsSideMenuOpen(false)} />
-            </DrawerBody>
-            <DrawerFooter className="border-t border-gray-200 p-3 dark:border-gray-800">
-              <Button onPress={() => setIsSideMenuOpen(false)} className="w-full bg-primary-600">
-                <ButtonText>{t('common.close')}</ButtonText>
-              </Button>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-      )}
     </>
   );
 }
