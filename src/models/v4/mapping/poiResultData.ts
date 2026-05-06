@@ -9,6 +9,7 @@ export class PoiResultData {
   public Longitude: number = 0;
   public Color: string = '';
   public ImagePath: string = '';
+  public PoiImage: string = '';
   public Marker: string = '';
   public IsDestination: boolean = false;
 }

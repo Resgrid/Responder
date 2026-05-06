@@ -1,5 +1,51 @@
+import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
+
+//region POI Marker Detection
+
+export const POI_MARKER_TYPE = 4;
+
+/**
+ * Determines whether a map marker represents a Point of Interest (POI).
+ *
+ * Matches the web application's `isPoiMarker()` logic:
+ *   1. marker.Type === 4 (explicit POI type)
+ *   2. marker.PoiTypeId is a number greater than 0
+ *   3. marker.LayerId starts with the string "poi-type-"
+ *   4. marker.PoiImage (or ImagePath) starts with "map-icon-" (case-insensitive)
+ *
+ * @param marker - A map marker from the API response.
+ * @returns true if the marker is a POI, false otherwise.
+ */
+export const isPoiMarker = (marker: Pick<MapMakerInfoData, 'Type' | 'PoiTypeId' | 'LayerId' | 'PoiImage' | 'ImagePath'>): boolean => {
+  // 1. Explicit POI type
+  if (marker.Type === POI_MARKER_TYPE) {
+    return true;
+  }
+
+  // 2. Has a POI type ID greater than 0
+  if (marker.PoiTypeId != null && marker.PoiTypeId > 0) {
+    return true;
+  }
+
+  // 3. Layer ID starts with "poi-type-"
+  if (marker.LayerId != null && marker.LayerId.toLowerCase().startsWith('poi-type-')) {
+    return true;
+  }
+
+  // 4. PoiImage or ImagePath starts with "map-icon-" (case-insensitive)
+  const iconField = marker.PoiImage ?? marker.ImagePath;
+  if (iconField != null && iconField.toLowerCase().startsWith('map-icon-')) {
+    return true;
+  }
+
+  return false;
+};
+
+//endregion
+
+//region POI Display & Grouping
 
 export interface PoiDisplayable {
   Name?: string | null;
@@ -61,7 +107,7 @@ export const groupPoisByType = (pois: PoiResultData[], poiTypes: PoiTypeResultDa
       poiTypeName: poi.PoiTypeName || poiType?.Name || '',
       isDestination: poi.IsDestination || poiType?.IsDestination || false,
       color: poi.Color || poiType?.Color || '',
-      imagePath: poi.ImagePath || poiType?.ImagePath || '',
+      imagePath: poi.PoiImage || poi.ImagePath || poiType?.PoiImage || poiType?.ImagePath || '',
       marker: poi.Marker || poiType?.Marker || '',
       pois: [poi],
     });

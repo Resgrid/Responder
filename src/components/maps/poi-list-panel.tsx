@@ -1,16 +1,16 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
-import { ChevronDownIcon, MapIcon } from 'lucide-react-native';
+import { FilterIcon, MapIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import { PoiFilterBottomSheet } from '@/components/maps/poi-filter-bottom-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
-import { Pressable } from '@/components/ui/pressable';
-import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
+import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { getPoiDisplayName } from '@/lib/poi';
@@ -88,9 +88,23 @@ export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOn
   }));
   const [selectedPoiType, setSelectedPoiType] = useState(ALL_POI_TYPES_VALUE);
   const [sortBy, setSortBy] = useState<PoiSortOption>('name');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+
+  const openFilterSheet = useCallback(() => setIsFilterSheetOpen(true), []);
+  const closeFilterSheet = useCallback(() => setIsFilterSheetOpen(false), []);
+
+  const hasActiveFilters = selectedPoiType !== ALL_POI_TYPES_VALUE || sortBy !== 'name';
 
   const filteredPois = useMemo(() => {
-    const nextPois = selectedPoiType === ALL_POI_TYPES_VALUE ? [...pois] : pois.filter((poi) => poi.PoiTypeId.toString() === selectedPoiType);
+    let nextPois = selectedPoiType === ALL_POI_TYPES_VALUE ? [...pois] : pois.filter((poi) => poi.PoiTypeId.toString() === selectedPoiType);
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      nextPois = nextPois.filter(
+        (poi) => poi.Name?.toLowerCase().includes(query) || poi.Address?.toLowerCase().includes(query) || poi.Note?.toLowerCase().includes(query) || poi.PoiTypeName?.toLowerCase().includes(query)
+      );
+    }
 
     nextPois.sort((left, right) => {
       if (sortBy === 'type') {
@@ -102,19 +116,7 @@ export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOn
     });
 
     return nextPois;
-  }, [pois, selectedPoiType, sortBy]);
-
-  const selectedPoiTypeLabel = useMemo(() => {
-    if (selectedPoiType === ALL_POI_TYPES_VALUE) {
-      return t('poi.filter_all_types');
-    }
-
-    return poiTypes.find((poiType) => poiType.PoiTypeId.toString() === selectedPoiType)?.Name || t('poi.filter_all_types');
-  }, [poiTypes, selectedPoiType, t]);
-
-  const selectedSortLabel = useMemo(() => {
-    return sortBy === 'name' ? t('poi.sort_name') : t('poi.sort_type');
-  }, [sortBy, t]);
+  }, [pois, selectedPoiType, sortBy, searchQuery]);
 
   const renderPoiItem = useCallback<ListRenderItem<PoiResultData>>(({ item }) => <PoiListItem poi={item} onPoiPress={onPoiPress} onViewOnMap={onViewOnMap} />, [onPoiPress, onViewOnMap]);
 
@@ -130,61 +132,39 @@ export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOn
 
   return (
     <VStack className="flex-1 bg-transparent p-4">
-      <Box className="mb-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950/60">
-        <VStack space="md">
-          <Text className="text-sm leading-5 text-gray-600 dark:text-gray-300">{t('poi.list_description')}</Text>
+      <Text className="mb-3 text-sm leading-5 text-gray-600 dark:text-gray-300">{t('poi.list_description')}</Text>
 
-          <VStack space="sm">
-            <VStack space="xs">
-              <Text className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('poi.filter_label')}</Text>
-              <Select selectedValue={selectedPoiType} onValueChange={setSelectedPoiType}>
-                <SelectTrigger variant="outline" className="border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-900">
-                  <SelectInput placeholder={t('poi.filter_all_types')} value={selectedPoiTypeLabel} />
-                  <SelectIcon as={ChevronDownIcon} className="mr-3 text-gray-500 dark:text-gray-400" />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="pb-20">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    <SelectItem label={t('poi.filter_all_types')} value={ALL_POI_TYPES_VALUE} />
-                    {poiTypes.map((poiType) => (
-                      <SelectItem key={poiType.PoiTypeId} label={poiType.Name} value={poiType.PoiTypeId.toString()} />
-                    ))}
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-            </VStack>
-
-            <VStack space="xs">
-              <Text className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('poi.sort_label')}</Text>
-              <Select selectedValue={sortBy} onValueChange={(value) => setSortBy(value as PoiSortOption)}>
-                <SelectTrigger variant="outline" className="border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-900">
-                  <SelectInput placeholder={t('poi.sort_name')} value={selectedSortLabel} />
-                  <SelectIcon as={ChevronDownIcon} className="mr-3 text-gray-500 dark:text-gray-400" />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="pb-20">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    <SelectItem label={t('poi.sort_name')} value="name" />
-                    <SelectItem label={t('poi.sort_type')} value="type" />
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-            </VStack>
-          </VStack>
-        </VStack>
-      </Box>
+      <HStack className="mb-3" space="sm">
+        <Input className="flex-1 rounded-lg bg-white dark:bg-neutral-800" size="md" variant="outline">
+          <InputSlot className="pl-3">
+            <InputIcon as={SearchIcon} />
+          </InputSlot>
+          <InputField placeholder={t('poi.search_placeholder', 'Search POIs...')} value={searchQuery} onChangeText={setSearchQuery} />
+          {searchQuery ? (
+            <InputSlot className="pr-3" onPress={() => setSearchQuery('')}>
+              <InputIcon as={XIcon} />
+            </InputSlot>
+          ) : null}
+        </Input>
+        <Button onPress={openFilterSheet} className="h-10 rounded-lg bg-white dark:bg-neutral-800" variant="outline">
+          <HStack className="items-center" space="xs">
+            <FilterIcon size={18} className="text-gray-600 dark:text-gray-400" />
+            {hasActiveFilters ? (
+              <Badge size="sm" variant="solid" className="bg-primary-500">
+                <Text className="text-xs text-white">!</Text>
+              </Badge>
+            ) : null}
+          </HStack>
+        </Button>
+      </HStack>
 
       <HStack className="mb-3 items-center justify-between rounded-xl bg-neutral-100 px-3 py-2 dark:bg-neutral-950/70">
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('poi.results_count', { count: filteredPois.length })}</Text>
-        <HStack space="xs" className="items-center">
+        <HStack space="xs" className="ml-2 flex-1 items-center">
           <MapIcon size={14} className="text-primary-600 dark:text-primary-400" />
-          <Text className="text-xs text-primary-600 dark:text-primary-400">{t('poi.view_on_map_hint')}</Text>
+          <Text className="flex-1 text-xs text-primary-600 dark:text-primary-400" numberOfLines={2}>
+            {t('poi.view_on_map_hint')}
+          </Text>
         </HStack>
       </HStack>
 
@@ -193,6 +173,8 @@ export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOn
       ) : (
         <ZeroState heading={t('poi.empty_title')} description={t('poi.empty_description')} />
       )}
+
+      <PoiFilterBottomSheet isOpen={isFilterSheetOpen} onClose={closeFilterSheet} selectedPoiType={selectedPoiType} onPoiTypeChange={setSelectedPoiType} sortBy={sortBy} onSortByChange={setSortBy} poiTypes={poiTypes} />
     </VStack>
   );
 };

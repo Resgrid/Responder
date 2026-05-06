@@ -225,16 +225,27 @@ export type MapIconKey = keyof typeof MAP_ICONS;
 
 const MAP_ICON_KEYS = new Set<string>(Object.keys(MAP_ICONS));
 
+const stripMapIconPrefix = (value: string): string => {
+  if (value.toLowerCase().startsWith('map-icon-')) {
+    return value.slice(9);
+  }
+  return value;
+};
+
 const normalizeMapIconToken = (value: string) => {
-  return value
+  // First strip "map-icon-" prefix if present, so "map-icon-hospital"
+  // normalizes to "hospital" instead of "mapiconhospital".
+  const stripped = stripMapIconPrefix(value);
+
+  return stripped
     .trim()
     .toLowerCase()
     .replace(/\.[a-z0-9]+$/i, '')
     .replace(/[^a-z0-9]+/g, '');
 };
 
-export const resolveMapIconKey = ({ imagePath, marker, fallback = 'call' }: { imagePath?: string | null; marker?: string | null; fallback?: MapIconKey }): MapIconKey => {
-  const tokens = [imagePath, marker].filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(normalizeMapIconToken);
+export const resolveMapIconKey = ({ poiImage, imagePath, marker, fallback = 'call' }: { poiImage?: string | null; imagePath?: string | null; marker?: string | null; fallback?: MapIconKey }): MapIconKey => {
+  const tokens = [poiImage, imagePath, marker].filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(normalizeMapIconToken);
 
   for (const token of tokens) {
     if (MAP_ICON_KEYS.has(token)) {

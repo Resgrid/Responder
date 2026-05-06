@@ -1,22 +1,20 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router, Stack } from 'expo-router';
-import { ChevronDown, Mail, MailOpen, Menu, MessageSquarePlus, MoreVertical, Search, Trash2, X } from 'lucide-react-native';
+import { ChevronDown, Mail, MailOpen, MessageSquarePlus, MoreVertical, Search, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, useWindowDimensions } from 'react-native';
+import { Alert } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import { ComposeMessageSheet } from '@/components/messages/compose-message-sheet';
 import { MessageCard } from '@/components/messages/message-card';
 import { MessageDetailsSheet } from '@/components/messages/message-details-sheet';
-import { SideMenu } from '@/components/sidebar/side-menu';
 import { FocusAwareStatusBar, View } from '@/components/ui';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetItem, ActionsheetItemText } from '@/components/ui/actionsheet';
 import { Badge } from '@/components/ui/badge';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer/index';
 import { Fab, FabIcon } from '@/components/ui/fab';
 import { FlatList } from '@/components/ui/flat-list';
 import { HStack } from '@/components/ui/hstack';
@@ -32,11 +30,8 @@ import { useSecurityStore } from '@/stores/security/store';
 
 export default function MessagesScreen() {
   const { t } = useTranslation();
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
 
   const { canUserCreateMessages } = useSecurityStore();
   const { trackEvent } = useAnalytics();
@@ -211,13 +206,6 @@ export default function MessagesScreen() {
       <Stack.Screen
         options={{
           title: t('messages.title'),
-          headerLeft: () =>
-            !isLandscape ? (
-              <Pressable className="p-2" onPress={() => setIsSideMenuOpen(true)} testID="messages-menu-button">
-                <Menu size={24} className="text-gray-700 dark:text-gray-300" />
-              </Pressable>
-            ) : null,
-          headerRight: () => null,
         }}
       />
       <FocusAwareStatusBar />
@@ -330,16 +318,6 @@ export default function MessagesScreen() {
         )}
 
         {isLoading && filteredMessages.length === 0 && <Loading />}
-
-        {/* Side Menu Drawer */}
-        <Drawer isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} size={isLandscape ? 'md' : 'lg'}>
-          <DrawerBackdrop onPress={() => setIsSideMenuOpen(false)} />
-          <DrawerContent>
-            <DrawerBody className="p-0">
-              <SideMenu onNavigate={() => setIsSideMenuOpen(false)} />
-            </DrawerBody>
-          </DrawerContent>
-        </Drawer>
 
         {/* Filter Action Sheet */}
         <Actionsheet isOpen={isFilterMenuOpen} onClose={() => setIsFilterMenuOpen(false)}>

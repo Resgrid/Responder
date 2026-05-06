@@ -353,7 +353,7 @@ describe('HomeMap', () => {
     expect(screen.getByTestId('map-camera')).toBeTruthy();
   });
 
-  it('shows side menu in landscape mode', async () => {
+  it('renders in landscape mode', async () => {
     // Mock landscape dimensions
     const mockUseWindowDimensions = (jest.requireMock('react-native') as any).useWindowDimensions;
     mockUseWindowDimensions.mockReturnValue({
@@ -368,11 +368,12 @@ describe('HomeMap', () => {
       expect(screen.getByTestId('map-pins')).toBeTruthy();
     });
 
-    // In landscape mode, side menu should be permanently visible
-    expect(screen.getByTestId('side-menu')).toBeTruthy();
+    // In landscape mode, the map container should still render correctly
+    // (the side menu is now handled by the parent _layout.tsx, not the map page itself)
+    expect(screen.getByTestId('home-map-container')).toBeTruthy();
   });
 
-  it('shows drawer in portrait mode when opened', async () => {
+  it('does not render its own drawer in portrait mode', async () => {
     render(<HomeMap />);
 
     // Wait for async map data to load
@@ -380,11 +381,8 @@ describe('HomeMap', () => {
       expect(screen.getByTestId('map-pins')).toBeTruthy();
     });
 
-    // Initially drawer should not be visible
+    // The drawer is now handled by the parent _layout.tsx, not the map page itself
     expect(screen.queryByTestId('drawer')).toBeNull();
-
-    // Since there's no header menu button, we can't test opening the drawer
-    // This test would need to be modified based on how the drawer is actually opened
   });
 
   it('shows recenter button when user has moved map and location is available', async () => {
@@ -548,8 +546,9 @@ describe('HomeMap', () => {
       expect(screen.getByTestId('map-pins')).toBeTruthy();
     });
 
-    // In landscape mode, side menu should be permanently visible
-    expect(screen.getByTestId('side-menu')).toBeTruthy();
+    // In landscape mode, the map container should still render correctly
+    // (side menu is handled by the parent _layout.tsx)
+    expect(screen.getByTestId('home-map-container')).toBeTruthy();
   });
 
   describe('Analytics Tracking', () => {
