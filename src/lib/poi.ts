@@ -35,7 +35,7 @@ export const isPoiMarker = (marker: Pick<MapMakerInfoData, 'Type' | 'PoiTypeId' 
   }
 
   // 4. PoiImage or ImagePath starts with "map-icon-" (case-insensitive)
-  const iconField = marker.PoiImage ?? marker.ImagePath;
+  const iconField = marker.PoiImage?.trim() || marker.ImagePath;
   if (iconField != null && iconField.toLowerCase().startsWith('map-icon-')) {
     return true;
   }

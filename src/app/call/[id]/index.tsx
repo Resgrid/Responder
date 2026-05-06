@@ -774,7 +774,7 @@ export default function CallDetail() {
 
         {/* Tabs */}
         <Box className={`mt-4 flex-1 pb-8 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
-          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} scrollable={false} />
+          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} scrollable={!isLandscape} />
         </Box>
       </ScrollView>
       <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId || ''} />
