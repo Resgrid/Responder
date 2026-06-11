@@ -40,3 +40,5 @@ expo-env.d.ts
 .env.production
 .env.staging
 .dual-graph/
+.mcp.json
+/.dual-graph-pro
