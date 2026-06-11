@@ -33,6 +33,11 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const cameraRef = useRef<Mapbox.Camera>(null);
   const lastFocusedPoiId = useRef<number | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  // Tracks navigation focus so we can quiesce the camera when leaving the map screen.
+  // rnmapbox (Fabric/New Arch) can dispatch a cameraChanged event into a freed native
+  // event emitter during teardown, causing an EXC_BAD_ACCESS crash. Keeping the camera
+  // idle while blurred shrinks that race window.
+  const [isScreenFocused, setIsScreenFocused] = useState(true);
   const [hasUserMovedMap, setHasUserMovedMap] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
@@ -56,11 +61,20 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
 
   const styleURL = mapOptions[0]?.data;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const isFollowingUser = location.isMapLocked && focusedPoi == null;
+  const isFollowingUser = isScreenFocused && location.isMapLocked && focusedPoi == null;
   const isInteractionLocked = location.isMapLocked && focusedPoi == null;
   const showRecenterButton = !isFollowingUser && hasUserMovedMap && location.latitude != null && location.longitude != null;
 
   useMapSignalRUpdates(setMapPins);
+
+  // Keep isScreenFocused in sync with navigation focus. Stable callback so it only
+  // fires on real focus/blur transitions, not on every dependency change.
+  useFocusEffect(
+    useCallback(() => {
+      setIsScreenFocused(true);
+      return () => setIsScreenFocused(false);
+    }, [])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -120,7 +134,9 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   }, [focusedPoi, isMapReady, trackEvent]);
 
   useEffect(() => {
-    if (focusedPoi != null) {
+    // Skip while blurred so background location updates don't animate the camera
+    // (and emit cameraChanged events) after navigating off the map screen.
+    if (!isScreenFocused || focusedPoi != null) {
       return;
     }
 
@@ -146,7 +162,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
         cameraRef.current?.setCamera(cameraConfig);
       }
     }
-  }, [focusedPoi, hasUserMovedMap, isFollowingUser, isMapReady, location.heading, location.isMapLocked, location.latitude, location.longitude]);
+  }, [focusedPoi, hasUserMovedMap, isFollowingUser, isMapReady, isScreenFocused, location.heading, location.isMapLocked, location.latitude, location.longitude]);
 
   useEffect(() => {
     if (focusedPoi != null) {
@@ -160,7 +176,8 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
 
     setHasUserMovedMap(false);
 
-    if (isMapReady && location.latitude != null && location.longitude != null) {
+    // Only drive the camera while focused — see isScreenFocused note above.
+    if (isScreenFocused && isMapReady && location.latitude != null && location.longitude != null) {
       cameraRef.current?.setCamera({
         centerCoordinate: [location.longitude, location.latitude],
         zoomLevel: 12,
@@ -169,7 +186,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
         animationDuration: 1000,
       });
     }
-  }, [focusedPoi, isMapReady, location.isMapLocked, location.latitude, location.longitude]);
+  }, [focusedPoi, isMapReady, isScreenFocused, location.isMapLocked, location.latitude, location.longitude]);
 
   useEffect(() => {
     let isMounted = true;
