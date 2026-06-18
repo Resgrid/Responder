@@ -125,6 +125,18 @@ jobs:
       - name: 🏗 Checkout repository
         uses: actions/checkout@v4
 
+      - name: 🧹 Free up disk space (Android/Linux runners)
+        if: matrix.platform == 'android'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false # keep the Node/JS toolchain EAS needs
+          android: false # keep the Android SDK the build uses
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: 🏗 Setup Node.js
         uses: actions/setup-node@v4
         with:
