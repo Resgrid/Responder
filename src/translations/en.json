@@ -932,6 +932,8 @@
     "logout_confirm_message": "Are you sure you want to log out? All local data, cached values, and saved settings will be cleared from the app.",
     "logout_confirm_title": "Confirm Logout",
     "logout_confirm_yes": "Yes, Logout",
+    "modern_notification_sounds": "Modern Notification Sounds",
+    "modern_notification_sounds_description": "Use the new modern notification sounds for push notifications. Turn this off to use the classic sounds.",
     "more": "More",
     "no_units_available": "No units available",
     "none_selected": "None Selected",

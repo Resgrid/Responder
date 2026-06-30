@@ -12,6 +12,7 @@ import { Item } from '@/components/settings/item';
 import { KeepAliveItem } from '@/components/settings/keep-alive-item';
 import { LanguageItem } from '@/components/settings/language-item';
 import { LoginInfoBottomSheet } from '@/components/settings/login-info-bottom-sheet';
+import { ModernNotificationSoundsItem } from '@/components/settings/modern-notification-sounds-item';
 import { RealtimeGeolocationItem } from '@/components/settings/realtime-geolocation-item';
 import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { ThemeItem } from '@/components/settings/theme-item';
@@ -217,6 +218,7 @@ export default function Settings() {
               <ThemeItem />
               <LanguageItem />
               <KeepAliveItem />
+              <ModernNotificationSoundsItem />
               <RealtimeGeolocationItem />
               <BackgroundGeolocationItem />
               <BluetoothDeviceItem />
