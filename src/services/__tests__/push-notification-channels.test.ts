@@ -3,8 +3,12 @@ import { Platform } from 'react-native';
 
 // Control the persisted "modern notification sounds" preference per test.
 const mockGetModernSoundsEnabled = jest.fn();
+const mockHasMigrated = jest.fn();
+const mockMarkMigrated = jest.fn();
 jest.mock('@/lib/hooks/use-modern-notification-sounds', () => ({
   getModernNotificationSoundsEnabled: () => mockGetModernSoundsEnabled(),
+  hasMigratedNotificationChannelSounds: () => mockHasMigrated(),
+  markNotificationChannelSoundsMigrated: () => mockMarkMigrated(),
 }));
 
 jest.mock('expo-notifications', () => ({
@@ -44,15 +48,28 @@ const configFor = (channelId: string): Record<string, unknown> | undefined => {
 describe('Android notification channel sounds', () => {
   let pushNotificationService: { refreshNotificationChannelSounds: () => Promise<void> };
 
+  // Snapshot of the channel work performed by the singleton's one-time init(),
+  // captured before beforeEach() clears the mocks.
+  let initDeletedChannelIds: string[];
+  let initChannelSounds: Record<string, unknown>;
+  let initMarkMigratedCalls: number;
+
   beforeAll(async () => {
     (Platform as { OS: string }).OS = 'android';
     mockGetModernSoundsEnabled.mockReturnValue(true);
+    mockHasMigrated.mockReturnValue(false); // emulate an upgraded install that has not migrated yet
     pushNotificationService = require('../push-notification').pushNotificationService;
     // Flush the singleton's fire-and-forget initialize(), which is a chain of
     // awaited (mocked) channel calls, so it can't leak into later assertions.
     for (let i = 0; i < 100; i++) {
       await Promise.resolve();
     }
+    initDeletedChannelIds = deleteChannelMock.mock.calls.map((c) => c[0]);
+    initChannelSounds = {};
+    setChannelMock.mock.calls.forEach((c) => {
+      initChannelSounds[c[0]] = c[1]?.sound;
+    });
+    initMarkMigratedCalls = mockMarkMigrated.mock.calls.length;
   });
 
   afterAll(() => {
@@ -107,6 +124,24 @@ describe('Android notification channel sounds', () => {
       expect(configFor('calls')?.sound).toBeUndefined();
       expect(configFor('notif')?.sound).toBeUndefined();
       expect(configFor('message')?.sound).toBeUndefined();
+    });
+  });
+
+  // Upgraded installs already have the standard channels created with their old
+  // sounds; Android locks a channel's sound at creation, so a plain
+  // setNotificationChannelAsync would be ignored. init() must delete and
+  // recreate them once so the modern sounds actually take effect.
+  describe('first-launch migration for upgraded installs', () => {
+    it('deletes the standard channels so their locked sounds can be replaced', () => {
+      ['calls', '0', '1', '2', '3', 'notif', 'message'].forEach((id) => {
+        expect(initDeletedChannelIds).toContain(id);
+      });
+    });
+
+    it('recreates them with modern sounds and records that the migration ran', () => {
+      expect(initChannelSounds['0']).toBe('moderncallemergency');
+      expect(initChannelSounds['calls']).toBe('modernnotification');
+      expect(initMarkMigratedCalls).toBe(1);
     });
   });
 });

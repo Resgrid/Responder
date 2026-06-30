@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { useAuthStore } from '@/lib/auth';
-import { getModernNotificationSoundsEnabled } from '@/lib/hooks/use-modern-notification-sounds';
+import { getModernNotificationSoundsEnabled, hasMigratedNotificationChannelSounds, markNotificationChannelSoundsMigrated } from '@/lib/hooks/use-modern-notification-sounds';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
@@ -106,6 +106,17 @@ class PushNotificationService {
 
     try {
       const useModernSounds = getModernNotificationSoundsEnabled();
+
+      // One-time migration for upgraded installs: Android locks a channel's
+      // sound at creation time, so standard channels created by a previous
+      // version would ignore the (modern) sound configuration below. Delete
+      // them once so the loop recreates them with the current sounds.
+      if (!hasMigratedNotificationChannelSounds()) {
+        for (const channel of NOTIFICATION_CHANNELS) {
+          await Notifications.deleteNotificationChannelAsync(channel.id);
+        }
+        markNotificationChannelSoundsMigrated();
+      }
 
       // Standard call/notification/message channels
       for (const channel of NOTIFICATION_CHANNELS) {

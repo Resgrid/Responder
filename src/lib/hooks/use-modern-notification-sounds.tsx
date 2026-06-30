@@ -18,6 +18,23 @@ export const getModernNotificationSoundsEnabled = (): boolean => {
   return storage.getBoolean(MODERN_NOTIFICATION_SOUNDS_ENABLED) ?? true;
 };
 
+const NOTIFICATION_CHANNEL_SOUND_MIGRATION = 'NOTIFICATION_CHANNEL_SOUND_MIGRATION_V1';
+
+/**
+ * One-time guard for upgraded installs. Android locks a notification channel's
+ * sound at creation time, so the standard channels created by a previous app
+ * version keep their old (classic/silent) sounds even though modern sounds now
+ * default on. The push notification service reads this flag to delete and
+ * recreate those channels exactly once so the new sound configuration applies.
+ */
+export const hasMigratedNotificationChannelSounds = (): boolean => {
+  return storage.getBoolean(NOTIFICATION_CHANNEL_SOUND_MIGRATION) ?? false;
+};
+
+export const markNotificationChannelSoundsMigrated = (): void => {
+  storage.set(NOTIFICATION_CHANNEL_SOUND_MIGRATION, true);
+};
+
 /**
  * Hook for the Android-only "modern notification sounds" preference. When
  * enabled (the default) push notification channels use the modern sound set;

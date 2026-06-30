@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import { storage } from '@/lib/storage';
 
-import { getModernNotificationSoundsEnabled, useModernNotificationSounds } from '../use-modern-notification-sounds';
+import { getModernNotificationSoundsEnabled, hasMigratedNotificationChannelSounds, markNotificationChannelSoundsMigrated, useModernNotificationSounds } from '../use-modern-notification-sounds';
 
 // Faithful MMKV mock: unset keys read back as `undefined` (matching the real
 // library) so the default-on behaviour can be verified.
@@ -62,6 +62,17 @@ describe('modern notification sounds preference', () => {
       });
 
       expect(getModernNotificationSoundsEnabled()).toBe(false);
+    });
+  });
+
+  describe('notification channel sound migration flag', () => {
+    it('reports not yet migrated by default', () => {
+      expect(hasMigratedNotificationChannelSounds()).toBe(false);
+    });
+
+    it('reports migrated once recorded, so the one-time channel migration runs only once', () => {
+      markNotificationChannelSoundsMigrated();
+      expect(hasMigratedNotificationChannelSounds()).toBe(true);
     });
   });
 });
