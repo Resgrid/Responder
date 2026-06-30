@@ -932,6 +932,8 @@
     "logout_confirm_message": "È sicuro/a di voler disconnettersi? Tutti i dati locali, i valori memorizzati nella cache e le impostazioni salvate verranno cancellati dall'app.",
     "logout_confirm_title": "Conferma disconnessione",
     "logout_confirm_yes": "Sì, disconnetti",
+    "modern_notification_sounds": "Suoni di notifica moderni",
+    "modern_notification_sounds_description": "Usa i nuovi suoni di notifica moderni per le notifiche push. Disattiva questa opzione per usare i suoni classici.",
     "more": "Altro",
     "no_units_available": "Nessuna unità disponibile",
     "none_selected": "Nessuno selezionato",

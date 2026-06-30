@@ -109,6 +109,13 @@ jest.mock('@/components/settings/keep-alive-item', () => ({
   },
 }));
 
+jest.mock('@/components/settings/modern-notification-sounds-item', () => ({
+  ModernNotificationSoundsItem: () => {
+    const { View } = require('react-native');
+    return <View testID="modern-notification-sounds-item" />;
+  },
+}));
+
 jest.mock('@/components/settings/language-item', () => ({
   LanguageItem: () => {
     const { View } = require('react-native');

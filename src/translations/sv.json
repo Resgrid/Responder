@@ -932,6 +932,8 @@
     "logout_confirm_message": "Är du säker på att du vill logga ut? Alla lokala data, cachade värden och sparade inställningar rensas från appen.",
     "logout_confirm_title": "Bekräfta utloggning",
     "logout_confirm_yes": "Ja, logga ut",
+    "modern_notification_sounds": "Moderna aviseringsljud",
+    "modern_notification_sounds_description": "Använd de nya moderna aviseringsljuden för push-aviseringar. Stäng av detta för att använda de klassiska ljuden.",
     "more": "Mer",
     "no_units_available": "Inga enheter tillgängliga",
     "none_selected": "Inget valt",

@@ -932,6 +932,8 @@
     "logout_confirm_message": "Czy na pewno chcą się Państwo wylogować? Wszystkie lokalne dane, wartości z pamięci podręcznej i zapisane ustawienia zostaną wyczyszczone z aplikacji.",
     "logout_confirm_title": "Potwierdź wylogowanie",
     "logout_confirm_yes": "Tak, wyloguj się",
+    "modern_notification_sounds": "Nowoczesne dźwięki powiadomień",
+    "modern_notification_sounds_description": "Używaj nowych nowoczesnych dźwięków powiadomień dla powiadomień push. Wyłącz tę opcję, aby używać klasycznych dźwięków.",
     "more": "Więcej",
     "no_units_available": "Brak dostępnych jednostek",
     "none_selected": "Nie wybrano",

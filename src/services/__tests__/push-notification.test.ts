@@ -24,6 +24,7 @@ jest.mock('expo-notifications', () => ({
   removeNotificationSubscription: jest.fn(),
   setNotificationHandler: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
+  deleteNotificationChannelAsync: jest.fn(),
   getExpoPushTokenAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
 }));

@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { useAuthStore } from '@/lib/auth';
+import { getModernNotificationSoundsEnabled } from '@/lib/hooks/use-modern-notification-sounds';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
@@ -27,6 +28,39 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+interface NotificationChannelConfig {
+  id: string;
+  name: string;
+  description: string;
+  // Sound used when the modern notification sounds preference is enabled (the
+  // default). Every non-custom channel has one so it plays audio, even if the
+  // channel was silent before.
+  modernSound: string;
+  // Sound used when the preference is disabled. `undefined` restores the
+  // channel's original behaviour (silent for channels that never had a sound).
+  classicSound?: string;
+  // Defaults to true when omitted.
+  vibration?: boolean;
+}
+
+/**
+ * Android notification channels, excluding the c1–c25 custom call tones which
+ * always use their own dedicated sounds. The channel id is what the Resgrid
+ * backend targets, and on Android the channel (not the push payload) owns the
+ * sound. When the modern sounds preference is enabled (the default) every
+ * channel here plays its modern sound; when disabled they fall back to the
+ * classic sound, or to silence for channels that had no sound originally.
+ */
+const NOTIFICATION_CHANNELS: NotificationChannelConfig[] = [
+  { id: 'calls', name: 'Generic Call', description: 'Generic Call', modernSound: 'modernnotification' },
+  { id: '0', name: 'Emergency Call', description: 'Emergency Call', modernSound: 'moderncallemergency', classicSound: 'callemergency' },
+  { id: '1', name: 'High Call', description: 'High Call', modernSound: 'moderncallhigh', classicSound: 'callhigh' },
+  { id: '2', name: 'Medium Call', description: 'Medium Call', modernSound: 'moderncallmedium', classicSound: 'callmedium' },
+  { id: '3', name: 'Low Call', description: 'Low Call', modernSound: 'moderncalllow', classicSound: 'calllow' },
+  { id: 'notif', name: 'Notification', description: 'Notifications', modernSound: 'modernnotification', vibration: false },
+  { id: 'message', name: 'Message', description: 'Messages', modernSound: 'modernmessage', vibration: false },
+];
 
 class PushNotificationService {
   private static instance: PushNotificationService;
@@ -66,34 +100,66 @@ class PushNotificationService {
   }
 
   private async setupAndroidNotificationChannels(): Promise<void> {
-    if (Platform.OS === 'android') {
-      try {
-        // Standard call channels
-        await this.createNotificationChannel('calls', 'Generic Call', 'Generic Call');
-        await this.createNotificationChannel('0', 'Emergency Call', 'Emergency Call', 'callemergency');
-        await this.createNotificationChannel('1', 'High Call', 'High Call', 'callhigh');
-        await this.createNotificationChannel('2', 'Medium Call', 'Medium Call', 'callmedium');
-        await this.createNotificationChannel('3', 'Low Call', 'Low Call', 'calllow');
+    if (Platform.OS !== 'android') {
+      return;
+    }
 
-        // Message and notification channels
-        await this.createNotificationChannel('notif', 'Notification', 'Notifications', undefined, false);
-        await this.createNotificationChannel('message', 'Message', 'Messages', undefined, false);
+    try {
+      const useModernSounds = getModernNotificationSoundsEnabled();
 
-        // Custom call channels (c1-c25)
-        for (let i = 1; i <= 25; i++) {
-          const channelId = `c${i}`;
-          await this.createNotificationChannel(channelId, `Custom Call ${i}`, `Custom Call Tone ${i}`, channelId);
-        }
-
-        logger.info({
-          message: 'Android notification channels setup completed',
-        });
-      } catch (error) {
-        logger.error({
-          message: 'Error setting up Android notification channels',
-          context: { error },
-        });
+      // Standard call/notification/message channels
+      for (const channel of NOTIFICATION_CHANNELS) {
+        const sound = useModernSounds ? channel.modernSound : channel.classicSound;
+        await this.createNotificationChannel(channel.id, channel.name, channel.description, sound, channel.vibration ?? true);
       }
+
+      // Custom call channels (c1-c25) keep their own dedicated tones.
+      for (let i = 1; i <= 25; i++) {
+        const channelId = `c${i}`;
+        await this.createNotificationChannel(channelId, `Custom Call ${i}`, `Custom Call Tone ${i}`, channelId);
+      }
+
+      logger.info({
+        message: 'Android notification channels setup completed',
+        context: { useModernSounds },
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Error setting up Android notification channels',
+        context: { error },
+      });
+    }
+  }
+
+  /**
+   * Re-applies the channel sounds after the user toggles the "modern
+   * notification sounds" preference. Android locks a channel's sound at creation
+   * time, so each channel must be deleted and recreated for the new sound to
+   * take effect.
+   */
+  public async refreshNotificationChannelSounds(): Promise<void> {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    try {
+      const useModernSounds = getModernNotificationSoundsEnabled();
+
+      for (const channel of NOTIFICATION_CHANNELS) {
+        await Notifications.deleteNotificationChannelAsync(channel.id);
+        const sound = useModernSounds ? channel.modernSound : channel.classicSound;
+        await this.createNotificationChannel(channel.id, channel.name, channel.description, sound, channel.vibration ?? true);
+      }
+
+      logger.info({
+        message: 'Android notification channel sounds refreshed',
+        context: { useModernSounds },
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Error refreshing Android notification channel sounds',
+        context: { error },
+      });
     }
   }
 
