@@ -875,6 +875,22 @@
     "search": "البحث في البروتوكولات...",
     "title": "البروتوكولات"
   },
+  "push_notifications": {
+    "message": "الرسالة",
+    "new_notification": "إشعار جديد",
+    "title": "العنوان",
+    "types": {
+      "call": "مكالمة",
+      "chat": "دردشة",
+      "group_chat": "دردشة جماعية",
+      "message": "رسالة",
+      "notification": "إشعار",
+      "weather": "تنبيه الطقس"
+    },
+    "unknown_type_warning": "نوع الإشعار هذا غير معروف.",
+    "view_alert": "عرض التنبيه",
+    "view_call": "عرض المكالمة"
+  },
   "roles": {
     "modal": {
       "title": "تعيينات أدوار الوحدة"

@@ -264,6 +264,19 @@ describe('usePushNotificationModalStore', () => {
       expect(parsed.eventCode).toBe('G:1121');
     });
 
+    it('should parse weather alert event code correctly', () => {
+      const store = usePushNotificationModalStore.getState();
+      const parsed = store.parseNotification({
+        eventCode: 'W:9012',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+      });
+
+      expect(parsed.type).toBe('weather');
+      expect(parsed.id).toBe('9012');
+      expect(parsed.eventCode).toBe('W:9012');
+    });
+
     it('should handle lowercase event codes', () => {
       const store = usePushNotificationModalStore.getState();
       const parsed = store.parseNotification({

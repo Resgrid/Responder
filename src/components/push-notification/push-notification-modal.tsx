@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { AlertCircle, Bell, MailIcon, MessageCircle, Phone, Users } from 'lucide-react-native';
+import { AlertCircle, Bell, CloudLightning, MailIcon, MessageCircle, Phone, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { type NotificationType, usePushNotificationModalStore } from '@/stores/push-notification/store';
+import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
 interface NotificationIconProps {
   type: NotificationType;
@@ -33,6 +34,8 @@ const NotificationIcon = ({ type }: { type: NotificationType }) => {
       return <MessageCircle {...iconProps} />;
     case 'group-chat':
       return <Users {...iconProps} />;
+    case 'weather':
+      return <CloudLightning {...iconProps} />;
     default:
       return <Bell {...iconProps} />;
   }
@@ -95,6 +98,26 @@ export const PushNotificationModal: React.FC = () => {
     }
   };
 
+  const handleViewWeatherAlert = async () => {
+    if (notification?.type !== 'weather' || !notification.id) {
+      return;
+    }
+
+    const alertId = notification.id;
+
+    trackEvent('push_notification_view_weather_alert_pressed', {
+      id: alertId,
+      eventCode: notification.eventCode,
+    });
+
+    hideNotificationModal();
+
+    // Ensure the alert is loaded into the store first so the detail screen can resolve it by
+    // identity (the store keys alerts as `alert:<AlertId>`); handleAlertReceived logs its own errors.
+    await useWeatherAlertsStore.getState().handleAlertReceived(alertId);
+    router.push(`/(app)/weather-alerts/${encodeURIComponent(`alert:${alertId}`)}`);
+  };
+
   const getNotificationTypeText = (type: NotificationType): string => {
     switch (type) {
       case 'call':
@@ -105,6 +128,8 @@ export const PushNotificationModal: React.FC = () => {
         return t('push_notifications.types.chat');
       case 'group-chat':
         return t('push_notifications.types.group_chat');
+      case 'weather':
+        return t('push_notifications.types.weather');
       default:
         return t('push_notifications.types.notification');
     }
@@ -120,6 +145,8 @@ export const PushNotificationModal: React.FC = () => {
         return '#10B981'; // Green for chat
       case 'group-chat':
         return '#8B5CF6'; // Purple for group chat
+      case 'weather':
+        return '#F59E0B'; // Amber for weather alerts
       default:
         return '#6B7280'; // Gray for unknown
     }
@@ -180,6 +207,12 @@ export const PushNotificationModal: React.FC = () => {
             {notification.type === 'call' && notification.id ? (
               <Button className="flex-1" onPress={handleViewCall}>
                 <ButtonText>{t('push_notifications.view_call')}</ButtonText>
+              </Button>
+            ) : null}
+
+            {notification.type === 'weather' && notification.id ? (
+              <Button className="flex-1" onPress={handleViewWeatherAlert}>
+                <ButtonText>{t('push_notifications.view_alert')}</ButtonText>
               </Button>
             ) : null}
           </HStack>

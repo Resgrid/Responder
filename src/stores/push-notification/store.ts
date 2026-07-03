@@ -9,7 +9,7 @@ export interface PushNotificationData {
   data?: Record<string, unknown>;
 }
 
-export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'unknown';
+export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'weather' | 'unknown';
 
 export interface ParsedNotification {
   type: NotificationType;
@@ -37,7 +37,7 @@ export const usePushNotificationModalStore = create<PushNotificationModalState>(
     let type: NotificationType = 'unknown';
     let id = '';
 
-    // Parse event code format like "C:1234", "M:5678", "T:9012", "G:3456"
+    // Parse event code format like "C:1234", "M:5678", "T:9012", "G:3456", "W:9012"
     if (eventCode && eventCode.includes(':')) {
       const [prefix, notificationId] = eventCode.split(':');
       const lowerPrefix = prefix?.toLowerCase() ?? '';
@@ -50,6 +50,8 @@ export const usePushNotificationModalStore = create<PushNotificationModalState>(
         type = 'chat';
       } else if (lowerPrefix.startsWith('g')) {
         type = 'group-chat';
+      } else if (lowerPrefix.startsWith('w')) {
+        type = 'weather';
       }
 
       id = notificationId || '';

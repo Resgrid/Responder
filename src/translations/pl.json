@@ -875,6 +875,22 @@
     "search": "Szukaj protokołów...",
     "title": "Protokoły"
   },
+  "push_notifications": {
+    "message": "Wiadomość",
+    "new_notification": "Nowe powiadomienie",
+    "title": "Tytuł",
+    "types": {
+      "call": "Zgłoszenie",
+      "chat": "Czat",
+      "group_chat": "Czat grupowy",
+      "message": "Wiadomość",
+      "notification": "Powiadomienie",
+      "weather": "Alert pogodowy"
+    },
+    "unknown_type_warning": "Ten typ powiadomienia nie jest rozpoznawany.",
+    "view_alert": "Wyświetl alert",
+    "view_call": "Wyświetl zgłoszenie"
+  },
   "roles": {
     "modal": {
       "title": "Przypisania ról jednostki"

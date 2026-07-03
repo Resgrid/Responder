@@ -27,6 +27,7 @@ jest.mock('expo-notifications', () => ({
   deleteNotificationChannelAsync: jest.fn(),
   getExpoPushTokenAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
+  getLastNotificationResponseAsync: jest.fn(() => Promise.resolve(null)),
 }));
 
 // Mock other dependencies
@@ -63,6 +64,7 @@ describe('Push Notification Service Integration', () => {
   const mockShowNotificationModal = jest.fn();
   const mockGetState = usePushNotificationModalStore.getState as jest.Mock;
   let notificationReceivedHandler: (notification: Notifications.Notification) => void;
+  let notificationResponseHandler: (response: Notifications.NotificationResponse) => void;
 
   beforeAll(() => {
     // Setup mocks first
@@ -74,6 +76,13 @@ describe('Push Notification Service Integration', () => {
     (Notifications.addNotificationReceivedListener as jest.Mock).mockImplementation(
       (handler) => {
         notificationReceivedHandler = handler;
+        return { remove: jest.fn() };
+      }
+    );
+
+    (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
+      (handler) => {
+        notificationResponseHandler = handler;
         return { remove: jest.fn() };
       }
     );
@@ -330,6 +339,143 @@ describe('Push Notification Service Integration', () => {
 
     it('should register notification listener on initialization', () => {
       expect(Notifications.addNotificationReceivedListener).toHaveBeenCalled();
+    });
+  });
+
+  describe('notification response handler (tap to open)', () => {
+    let responseCounter = 0;
+    const createMockResponse = (data: any): Notifications.NotificationResponse => {
+      responseCounter += 1;
+      const notification = createMockNotification(data);
+      // Give each response a distinct identifier so the dedup guard treats them as separate taps.
+      (notification.request as any).identifier = `response-${responseCounter}`;
+      return {
+        actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+        notification,
+      } as Notifications.NotificationResponse;
+    };
+
+    it('should show modal for weather alert notification when tapped', () => {
+      const response = createMockResponse({
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+        data: {
+          eventCode: 'W:9012',
+          alertId: '9012',
+        },
+      });
+
+      notificationResponseHandler(response);
+
+      expect(mockShowNotificationModal).toHaveBeenCalledWith({
+        eventCode: 'W:9012',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+        data: {
+          eventCode: 'W:9012',
+          alertId: '9012',
+        },
+      });
+    });
+
+    it('should show modal for call notification when tapped', () => {
+      const response = createMockResponse({
+        title: 'Emergency Call',
+        body: 'Structure fire at Main St',
+        data: {
+          eventCode: 'C:1234',
+        },
+      });
+
+      notificationResponseHandler(response);
+
+      expect(mockShowNotificationModal).toHaveBeenCalledWith({
+        eventCode: 'C:1234',
+        title: 'Emergency Call',
+        body: 'Structure fire at Main St',
+        data: {
+          eventCode: 'C:1234',
+        },
+      });
+    });
+
+    it('should not show modal when the tapped notification has no eventCode', () => {
+      const response = createMockResponse({
+        title: 'Regular Notification',
+        body: 'No eventCode here',
+        data: {
+          someOtherData: 'value',
+        },
+      });
+
+      notificationResponseHandler(response);
+
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
+    });
+
+    it('should not surface the same response twice (dedup guard)', () => {
+      const response = createMockResponse({
+        title: 'Emergency Call',
+        body: 'Structure fire at Main St',
+        data: {
+          eventCode: 'C:1234',
+        },
+      });
+
+      notificationResponseHandler(response);
+      notificationResponseHandler(response);
+
+      expect(mockShowNotificationModal).toHaveBeenCalledTimes(1);
+    });
+
+    it('should register response listener on initialization', () => {
+      expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled();
+    });
+  });
+
+  describe('cold start (app launched from a killed state by tapping a notification)', () => {
+    it('replays the launch notification response so the modal is shown', async () => {
+      // Require the already-initialized singleton (cached from beforeAll) to reach its launch handler.
+      const { pushNotificationService } = require('../push-notification');
+
+      const launchResponse = {
+        actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+        notification: createMockNotification({
+          title: 'Severe Weather',
+          body: 'Tornado warning in your area',
+          data: {
+            eventCode: 'W:9012',
+            alertId: '9012',
+          },
+        }),
+      } as Notifications.NotificationResponse;
+      (launchResponse.notification.request as any).identifier = 'launch-response';
+
+      (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValueOnce(launchResponse);
+      mockShowNotificationModal.mockClear();
+
+      await (pushNotificationService as any).presentLaunchNotificationResponse();
+
+      expect(mockShowNotificationModal).toHaveBeenCalledWith({
+        eventCode: 'W:9012',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+        data: {
+          eventCode: 'W:9012',
+          alertId: '9012',
+        },
+      });
+    });
+
+    it('does not present anything when the app was not launched from a notification', async () => {
+      const { pushNotificationService } = require('../push-notification');
+
+      (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValueOnce(null);
+      mockShowNotificationModal.mockClear();
+
+      await (pushNotificationService as any).presentLaunchNotificationResponse();
+
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
   });
 });

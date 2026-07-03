@@ -875,6 +875,22 @@
     "search": "Search protocols...",
     "title": "Protocols"
   },
+  "push_notifications": {
+    "message": "Message",
+    "new_notification": "New Notification",
+    "title": "Title",
+    "types": {
+      "call": "Call",
+      "chat": "Chat",
+      "group_chat": "Group Chat",
+      "message": "Message",
+      "notification": "Notification",
+      "weather": "Weather Alert"
+    },
+    "unknown_type_warning": "This notification type is not recognized.",
+    "view_alert": "View Alert",
+    "view_call": "View Call"
+  },
   "roles": {
     "modal": {
       "title": "Unit Role Assignments"
