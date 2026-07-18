@@ -1,9 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeftIcon, MapIcon, RouteIcon } from 'lucide-react-native';
+import { MapIcon, RouteIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { HeaderBackButton } from '@/components/common/header-back-button';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import StaticMap from '@/components/maps/static-map';
@@ -104,11 +105,7 @@ export default function PoiDetail() {
           options={{
             title: t('poi.title'),
             headerShown: true,
-            headerLeft: () => (
-              <Pressable onPress={handleBack} className="p-2" testID="back-button">
-                <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
-              </Pressable>
-            ),
+            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
           }}
         />
         <SafeAreaView className="size-full flex-1">
@@ -126,11 +123,7 @@ export default function PoiDetail() {
           options={{
             title: t('poi.title'),
             headerShown: true,
-            headerLeft: () => (
-              <Pressable onPress={handleBack} className="p-2" testID="back-button">
-                <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
-              </Pressable>
-            ),
+            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
           }}
         />
         <SafeAreaView className="size-full flex-1">
@@ -148,11 +141,7 @@ export default function PoiDetail() {
           options={{
             title: t('poi.title'),
             headerShown: true,
-            headerLeft: () => (
-              <Pressable onPress={handleBack} className="p-2" testID="back-button">
-                <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
-              </Pressable>
-            ),
+            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
           }}
         />
         <SafeAreaView className="size-full flex-1">
@@ -169,11 +158,7 @@ export default function PoiDetail() {
         options={{
           title,
           headerShown: true,
-          headerLeft: () => (
-            <Pressable onPress={handleBack} className="p-2" testID="back-button">
-              <ArrowLeftIcon size={24} className="text-gray-700 dark:text-gray-300" />
-            </Pressable>
-          ),
+          headerLeft: () => <HeaderBackButton onPress={handleBack} />,
         }}
       />
       <SafeAreaView className="size-full flex-1">

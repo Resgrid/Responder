@@ -106,29 +106,32 @@ export default function Login() {
       {isServerUrlSheetVisible ? <ServerUrlBottomSheet isOpen={isServerUrlSheetVisible} onClose={() => setIsServerUrlSheetVisible(false)} /> : null}
 
       {/* Error modal */}
-      <Modal isOpen={isErrorModalVisible} onClose={() => setIsErrorModalVisible(false)} size="full">
-        <ModalBackdrop />
-        <ModalContent className="m-4 w-full max-w-3xl rounded-2xl">
-          <ModalHeader>
-            <Text className="text-xl font-semibold">{t('login.errorModal.title')}</Text>
-          </ModalHeader>
-          <ModalBody>
-            <Text>{t('login.errorModal.message')}</Text>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              variant="solid"
-              size="sm"
-              action="primary"
-              onPress={() => {
-                setIsErrorModalVisible(false);
-              }}
-            >
-              <ButtonText>{t('login.errorModal.confirmButton')}</ButtonText>
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      {isErrorModalVisible ? (
+        <Modal isOpen={isErrorModalVisible} onClose={() => setIsErrorModalVisible(false)} size="full">
+          <ModalBackdrop />
+          <ModalContent className="m-4 w-full max-w-3xl rounded-2xl">
+            <ModalHeader>
+              <Text className="text-xl font-semibold">{t('login.errorModal.title')}</Text>
+            </ModalHeader>
+            <ModalBody>
+              <Text>{t('login.errorModal.message')}</Text>
+              {error ? <Text className="mt-2 text-sm text-gray-500">{error}</Text> : null}
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="solid"
+                size="sm"
+                action="primary"
+                onPress={() => {
+                  setIsErrorModalVisible(false);
+                }}
+              >
+                <ButtonText>{t('login.errorModal.confirmButton')}</ButtonText>
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      ) : null}
     </>
   );
 }
