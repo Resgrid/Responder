@@ -119,6 +119,8 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
     setSelectedNotificationIds(new Set());
   };
 
+  const allNotificationsSelected = !!notifications?.length && selectedNotificationIds.size === notifications.length;
+
   const handleBulkDelete = () => {
     if (selectedNotificationIds.size > 0) {
       setShowDeleteConfirmModal(true);
@@ -264,15 +266,15 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                     </Text>
                     <View style={styles.selectionActions}>
                       <Pressable
-                        onPress={selectedNotificationIds.size === notifications?.length ? deselectAllNotifications : selectAllNotifications}
+                        onPress={allNotificationsSelected ? deselectAllNotifications : selectAllNotifications}
                         style={styles.actionButton}
                         accessibilityRole="button"
-                        accessibilityLabel={selectedNotificationIds.size === notifications?.length ? t('notifications.deselectAll') : t('notifications.selectAll')}
+                        accessibilityLabel={allNotificationsSelected ? t('notifications.deselectAll') : t('notifications.selectAll')}
                       >
-                        {selectedNotificationIds.size === notifications?.length ? (
-                          <Circle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
-                        ) : (
+                        {allNotificationsSelected ? (
                           <CheckCircle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                        ) : (
+                          <Circle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
                         )}
                       </Pressable>
                       <Pressable
