@@ -67,6 +67,9 @@ class PushNotificationService {
   private pushToken: string | null = null;
   private notificationListener: { remove: () => void } | null = null;
   private responseListener: { remove: () => void } | null = null;
+  // Identifier of the last notification response we surfaced, used to avoid presenting the launch
+  // response twice (once from getLastNotificationResponseAsync and once from the response listener).
+  private lastHandledResponseId: string | null = null;
 
   private constructor() {
     this.initialize();
@@ -182,37 +185,47 @@ class PushNotificationService {
     // Set up Android notification channels
     await this.setupAndroidNotificationChannels();
 
+    // Handle a cold start: when the app is launched from a killed state by tapping a notification,
+    // the response listener above misses that initial tap, so replay it from the last response.
+    await this.presentLaunchNotificationResponse();
+
     logger.info({
       message: 'Push notification service initialized',
     });
   }
 
-  private handleNotificationReceived = (notification: Notifications.Notification): void => {
-    const data = notification.request.content.data;
+  private presentLaunchNotificationResponse = async (): Promise<void> => {
+    try {
+      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastResponse) {
+        this.handleNotificationResponse(lastResponse);
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Error handling launch notification response',
+        context: { error },
+      });
+    }
+  };
 
-    logger.info({
-      message: 'Notification received',
-      context: {
-        data,
-      },
-    });
+  // Surface a notification in the in-app modal when it carries a string eventCode
+  // (e.g. "C:1234" call, "W:9012" weather alert). Shared by the foreground-received and
+  // tap-response handlers so a tapped notification stays visible after the app opens.
+  private presentNotificationModal = (content: Notifications.NotificationContent): void => {
+    const data = content.data;
 
-    // Check if the notification has an eventCode and show modal
-    // eventCode must be a string to be valid
     if (data && data.eventCode && typeof data.eventCode === 'string') {
       const notificationData: PushNotificationData & { eventCode: string } = {
         eventCode: data.eventCode as string,
         data,
       };
 
-      const title = notification.request.content.title;
-      if (title) {
-        notificationData.title = title;
+      if (content.title) {
+        notificationData.title = content.title;
       }
 
-      const body = notification.request.content.body;
-      if (body) {
-        notificationData.body = body;
+      if (content.body) {
+        notificationData.body = content.body;
       }
 
       // Show the notification modal using the store
@@ -220,19 +233,38 @@ class PushNotificationService {
     }
   };
 
+  private handleNotificationReceived = (notification: Notifications.Notification): void => {
+    logger.info({
+      message: 'Notification received',
+      context: {
+        data: notification.request.content.data,
+      },
+    });
+
+    this.presentNotificationModal(notification.request.content);
+  };
+
   private handleNotificationResponse = (response: Notifications.NotificationResponse): void => {
-    const data = response.notification.request.content.data;
+    const identifier = response.notification.request.identifier;
+
+    // Skip if we already surfaced this exact response — guards against the cold-start replay and
+    // the response listener both firing for the notification that launched the app.
+    if (identifier && identifier === this.lastHandledResponseId) {
+      return;
+    }
+    this.lastHandledResponseId = identifier ?? this.lastHandledResponseId;
 
     logger.info({
       message: 'Notification response received',
       context: {
-        data,
+        data: response.notification.request.content.data,
       },
     });
 
-    // Here you can handle navigation or other actions based on notification data
-    // For example, if the notification contains a callId, you could navigate to that call
-    // This would typically involve using a navigation service or dispatching an action
+    // Mirror the foreground behaviour when the user taps a notification to open the app so the
+    // (weather-alert or other) notification stays visible via the persistent modal instead of
+    // the app opening to nothing.
+    this.presentNotificationModal(response.notification.request.content);
   };
 
   public async registerForPushNotifications(userId: string, departmentCode: string): Promise<string | null> {

@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { PushNotificationModal } from '../push-notification-modal';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
 // Mock UI components to render as simple React Native components
 jest.mock('@/components/ui/modal', () => {
@@ -74,6 +75,12 @@ jest.mock('@/stores/push-notification/store', () => ({
   usePushNotificationModalStore: jest.fn(),
 }));
 
+jest.mock('@/stores/weather-alerts/weather-alerts-store', () => ({
+  useWeatherAlertsStore: {
+    getState: jest.fn(),
+  },
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -87,8 +94,10 @@ jest.mock('react-i18next', () => ({
         'push_notifications.types.message': 'Message',
         'push_notifications.types.chat': 'Chat',
         'push_notifications.types.group_chat': 'Group Chat',
+        'push_notifications.types.weather': 'Weather Alert',
         'push_notifications.types.notification': 'Notification',
         'push_notifications.unknown_type_warning': 'Unknown notification type',
+        'push_notifications.view_alert': 'View Alert',
         'common.dismiss': 'Close',
       };
       return translations[key] || key;
@@ -111,6 +120,9 @@ describe('PushNotificationModal', () => {
     jest.clearAllMocks();
     (useAnalytics as jest.Mock).mockReturnValue(mockAnalytics);
     (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue(mockStore);
+    (useWeatherAlertsStore.getState as jest.Mock).mockReturnValue({
+      handleAlertReceived: jest.fn(() => Promise.resolve()),
+    });
   });
 
   describe('Push Notification Modal', () => {
@@ -280,6 +292,68 @@ describe('PushNotificationModal', () => {
       expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_view_call_pressed', {
         id: '1234',
         eventCode: 'C:1234',
+      });
+    });
+  });
+
+  it('should render weather alert notification with a view button', () => {
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: {
+        type: 'weather' as const,
+        id: '9012',
+        eventCode: 'W:9012',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+      },
+    });
+
+    render(<PushNotificationModal />);
+
+    expect(screen.queryByText('New notification')).toBeTruthy();
+    expect(screen.queryByText('Weather Alert')).toBeTruthy();
+    expect(screen.queryByText('Tornado warning in your area')).toBeTruthy();
+    expect(screen.queryByText('View Alert')).toBeTruthy();
+    expect(screen.queryByText('Close')).toBeTruthy();
+    // Weather alerts are a known type, so no unknown-type warning and no call button
+    expect(screen.queryByText('Unknown notification type')).toBeNull();
+    expect(screen.queryByText('View call')).toBeNull();
+  });
+
+  it('should handle view weather alert button press', async () => {
+    const hideNotificationModalMock = jest.fn();
+    const mockHandleAlertReceived = jest.fn(() => Promise.resolve());
+    (useWeatherAlertsStore.getState as jest.Mock).mockReturnValue({
+      handleAlertReceived: mockHandleAlertReceived,
+    });
+
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: {
+        type: 'weather' as const,
+        id: '9012',
+        eventCode: 'W:9012',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+      },
+      hideNotificationModal: hideNotificationModalMock,
+    });
+
+    render(<PushNotificationModal />);
+
+    const viewAlertButton = screen.queryByText('View Alert');
+    expect(viewAlertButton).toBeTruthy();
+    fireEvent.press(viewAlertButton!);
+
+    await waitFor(() => {
+      expect(mockHandleAlertReceived).toHaveBeenCalledWith('9012');
+      expect(router.push).toHaveBeenCalledWith('/(app)/weather-alerts/alert%3A9012');
+      expect(hideNotificationModalMock).toHaveBeenCalled();
+      expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_view_weather_alert_pressed', {
+        id: '9012',
+        eventCode: 'W:9012',
       });
     });
   });

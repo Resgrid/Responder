@@ -875,6 +875,22 @@
     "search": "Sök protokoll...",
     "title": "Protokoll"
   },
+  "push_notifications": {
+    "message": "Meddelande",
+    "new_notification": "Ny avisering",
+    "title": "Titel",
+    "types": {
+      "call": "Larm",
+      "chat": "Chatt",
+      "group_chat": "Gruppchatt",
+      "message": "Meddelande",
+      "notification": "Avisering",
+      "weather": "Vädervarning"
+    },
+    "unknown_type_warning": "Den här aviseringstypen känns inte igen.",
+    "view_alert": "Visa varning",
+    "view_call": "Visa larm"
+  },
   "roles": {
     "modal": {
       "title": "Rolltilldelningar för enhet"

@@ -875,6 +875,22 @@
     "search": "Buscar protocolos...",
     "title": "Protocolos"
   },
+  "push_notifications": {
+    "message": "Mensaje",
+    "new_notification": "Nueva notificación",
+    "title": "Título",
+    "types": {
+      "call": "Llamada",
+      "chat": "Chat",
+      "group_chat": "Chat grupal",
+      "message": "Mensaje",
+      "notification": "Notificación",
+      "weather": "Alerta meteorológica"
+    },
+    "unknown_type_warning": "Este tipo de notificación no se reconoce.",
+    "view_alert": "Ver alerta",
+    "view_call": "Ver llamada"
+  },
   "roles": {
     "modal": {
       "title": "Asignaciones de roles de unidad"

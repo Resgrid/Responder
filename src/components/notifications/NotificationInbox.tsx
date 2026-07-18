@@ -119,6 +119,8 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
     setSelectedNotificationIds(new Set());
   };
 
+  const allNotificationsSelected = !!notifications?.length && selectedNotificationIds.size === notifications.length;
+
   const handleBulkDelete = () => {
     if (selectedNotificationIds.size > 0) {
       setShowDeleteConfirmModal(true);
@@ -254,67 +256,87 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       {/* Sidebar container */}
       <Animated.View style={[styles.sidebarContainer, { transform: [{ translateX: slideAnim }] }]}>
         <SafeAreaView style={styles.safeArea}>
-          {selectedNotification ? (
-            <NotificationDetail notification={selectedNotification} onClose={() => setSelectedNotification(null)} onDelete={handleDeleteNotification} onNavigateToReference={handleNavigateToReference} />
-          ) : (
-            <>
-              <View style={styles.header}>
-                {isSelectionMode ? (
-                  <>
-                    <View style={styles.selectionHeader}>
-                      <Text style={styles.selectionCount}>{t('notifications.selectedCount', { count: selectedNotificationIds.size })}</Text>
-                      <View style={styles.selectionActions}>
-                        <Button onPress={selectedNotificationIds.size === notifications?.length ? deselectAllNotifications : selectAllNotifications} variant="outline" className="mr-2">
-                          <Text>{selectedNotificationIds.size === notifications?.length ? t('notifications.deselectAll') : t('notifications.selectAll')}</Text>
-                        </Button>
-                        <Button onPress={handleBulkDelete} variant="outline" className="mr-2" disabled={selectedNotificationIds.size === 0 || isDeletingSelected}>
-                          {isDeletingSelected ? <ActivityIndicator size="small" color="#ef4444" /> : <Trash2 size={16} className="text-red-500" strokeWidth={2} />}
-                        </Button>
-                        <Button onPress={exitSelectionMode} variant="outline">
-                          <Text>{t('common.cancel')}</Text>
-                        </Button>
-                      </View>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
-                    <View style={styles.headerActions}>
-                      <Pressable onPress={enterSelectionMode} style={styles.actionButton}>
-                        <MoreVertical size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+          <>
+            <View style={styles.header}>
+              {isSelectionMode ? (
+                <>
+                  <View style={styles.selectionHeader}>
+                    <Text style={styles.selectionCount} numberOfLines={1}>
+                      {t('notifications.selectedCount', { count: selectedNotificationIds.size })}
+                    </Text>
+                    <View style={styles.selectionActions}>
+                      <Pressable
+                        onPress={allNotificationsSelected ? deselectAllNotifications : selectAllNotifications}
+                        style={styles.actionButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={allNotificationsSelected ? t('notifications.deselectAll') : t('notifications.selectAll')}
+                      >
+                        {allNotificationsSelected ? (
+                          <CheckCircle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                        ) : (
+                          <Circle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                        )}
                       </Pressable>
-                      <Pressable onPress={onClose} style={styles.closeButton}>
+                      <Pressable
+                        onPress={handleBulkDelete}
+                        disabled={selectedNotificationIds.size === 0 || isDeletingSelected}
+                        style={[styles.actionButton, selectedNotificationIds.size === 0 || isDeletingSelected ? styles.actionButtonDisabled : null]}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('common.delete')}
+                      >
+                        {isDeletingSelected ? <ActivityIndicator size="small" color="#ef4444" /> : <Trash2 size={24} className="text-red-500" strokeWidth={2} />}
+                      </Pressable>
+                      <Pressable onPress={exitSelectionMode} style={styles.closeButton} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
                         <X size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
                       </Pressable>
                     </View>
-                  </>
-                )}
-              </View>
-
-              {isLoading && !notifications ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#2196F3" />
-                </View>
-              ) : !userId || !config ? (
-                <View style={styles.loadingContainer}>
-                  <Text>{t('notifications.loadError')}</Text>
-                </View>
+                  </View>
+                </>
               ) : (
-                <FlashList
-                  data={notifications}
-                  renderItem={renderItem}
-                  keyExtractor={(item: any) => item.id}
-                  onEndReached={fetchMore}
-                  onEndReachedThreshold={0.5}
-                  ListFooterComponent={renderFooter}
-                  ListEmptyComponent={renderEmpty}
-                  refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#2196F3']} />}
-                />
+                <>
+                  <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
+                  <View style={styles.headerActions}>
+                    <Pressable onPress={enterSelectionMode} style={styles.actionButton}>
+                      <MoreVertical size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                    </Pressable>
+                    <Pressable onPress={onClose} style={styles.closeButton}>
+                      <X size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                    </Pressable>
+                  </View>
+                </>
               )}
-            </>
-          )}
+            </View>
+
+            {isLoading && !notifications ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2196F3" />
+              </View>
+            ) : !userId || !config ? (
+              <View style={styles.loadingContainer}>
+                <Text>{t('notifications.loadError')}</Text>
+              </View>
+            ) : (
+              <FlashList
+                data={notifications}
+                renderItem={renderItem}
+                keyExtractor={(item: any) => item.id}
+                onEndReached={fetchMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={renderFooter}
+                ListEmptyComponent={renderEmpty}
+                refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#2196F3']} />}
+              />
+            )}
+          </>
         </SafeAreaView>
       </Animated.View>
+
+      {/* Notification detail overlay — rendered as a full-screen sibling so its own backdrop and
+          slide-in panel lay out over the whole screen. Nesting it inside the sidebar clipped its
+          absolute-fill backdrop over the panel and produced a black screen. */}
+      {selectedNotification ? (
+        <NotificationDetail notification={selectedNotification} onClose={() => setSelectedNotification(null)} onDelete={handleDeleteNotification} onNavigateToReference={handleNavigateToReference} />
+      ) : null}
 
       {/* Delete Confirmation Modal */}
       <Modal isOpen={showDeleteConfirmModal} onClose={() => setShowDeleteConfirmModal(false)}>
@@ -407,6 +429,10 @@ const styles = StyleSheet.create({
   selectionActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  actionButtonDisabled: {
+    opacity: 0.4,
   },
   notificationItem: {
     flexDirection: 'row',

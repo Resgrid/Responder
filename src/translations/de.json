@@ -875,6 +875,22 @@
     "search": "Protokolle suchen...",
     "title": "Protokolle"
   },
+  "push_notifications": {
+    "message": "Nachricht",
+    "new_notification": "Neue Benachrichtigung",
+    "title": "Titel",
+    "types": {
+      "call": "Einsatz",
+      "chat": "Chat",
+      "group_chat": "Gruppenchat",
+      "message": "Nachricht",
+      "notification": "Benachrichtigung",
+      "weather": "Wetterwarnung"
+    },
+    "unknown_type_warning": "Dieser Benachrichtigungstyp wird nicht erkannt.",
+    "view_alert": "Warnung anzeigen",
+    "view_call": "Einsatz anzeigen"
+  },
   "roles": {
     "modal": {
       "title": "Rollenzuweisungen der Einheit"

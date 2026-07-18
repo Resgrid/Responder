@@ -164,6 +164,13 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
             </FormControlError>
           </FormControl>
 
+          {error ? (
+            <View accessibilityLiveRegion="polite" accessibilityRole="alert" className="mt-4 w-full flex-row items-center rounded-md bg-red-50 p-3 dark:bg-red-950" testID="login-error-message">
+              <AlertTriangle size={16} color="#EF4444" />
+              <Text className="ml-2 flex-1 text-sm text-red-600 dark:text-red-400">{error}</Text>
+            </View>
+          ) : null}
+
           {isLoading ? (
             <Button className="mt-8 w-full">
               <ButtonSpinner color={colors.light.neutral[400]} />
