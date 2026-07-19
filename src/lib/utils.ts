@@ -152,6 +152,15 @@ export function getMinutesBetweenDates(startDate: Date, endDate: Date): number {
 }
 
 export function parseDateISOString(s: string): Date {
+  // Timestamps carrying an explicit timezone (Z or ±hh[:mm]) must go through the
+  // native parser — digit-splitting below drops the offset and shifts the time.
+  // Date-only strings stay on the manual path so they parse as LOCAL midnight.
+  if (/\d[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i.test(s)) {
+    const native = new Date(s);
+    if (!Number.isNaN(native.getTime())) {
+      return native;
+    }
+  }
   const b = s.split(/\D/);
   // Ensure we have all required parts
   const [year, month, day, hour = '0', minute = '0', second = '0'] = b;
@@ -186,13 +195,30 @@ export function formatDateForDisplay(date: Date, format: string): string {
   const month = date.getMonth() + 1;
   const year = date.getFullYear();
 
-  let hours = date.getHours();
-  if (format.indexOf('t') > -1) {
-    if (hours > 11) {
-      format = format.replace('t', 'pm');
-    } else {
-      format = format.replace('t', 'am');
-    }
+  const hours = date.getHours();
+  const meridiem = hours > 11 ? 'pm' : 'am';
+  // 'tt' first — a single .replace('t', ...) would only hit the first 't' and leave "amt"/"pmt"
+  if (format.indexOf('tt') > -1) {
+    format = format.replace('tt', meridiem);
+  } else if (format.indexOf('t') > -1) {
+    format = format.replace('t', meridiem);
+  }
+
+  // Hour tokens must be replaced before month names are inserted — "March" contains an 'h'
+  if (format.indexOf('HH') > -1) {
+    format = format.replace('HH', padLeadingZero(hours).toString());
+  } else if (format.indexOf('H') > -1) {
+    format = format.replace('H', hours.toString());
+  }
+
+  let hours12 = hours % 12;
+  if (hours12 === 0) {
+    hours12 = 12;
+  }
+  if (format.indexOf('hh') > -1) {
+    format = format.replace('hh', padLeadingZero(hours12).toString());
+  } else if (format.indexOf('h') > -1) {
+    format = format.replace('h', hours12.toString());
   }
 
   if (format.indexOf('MMMM') > -1) {
@@ -217,20 +243,6 @@ export function formatDateForDisplay(date: Date, format: string): string {
 
   format = format.replace('dd', padLeadingZero(date.getDate()).toString());
 
-  if (format.indexOf('HH') > -1) {
-    format = format.replace('HH', padLeadingZero(hours).toString());
-  }
-
-  if (format.indexOf('hh') > -1) {
-    if (hours > 12) {
-      hours = hours - 12;
-    }
-
-    if (hours === 0) {
-      hours = hours = 12;
-    }
-    format = format.replace('hh', padLeadingZero(hours).toString());
-  }
   if (format.indexOf('mm') > -1) {
     format = format.replace('mm', padLeadingZero(date.getMinutes()).toString());
   }

@@ -221,13 +221,18 @@ export const ContactDetailsSheet: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const { trackEvent } = useAnalytics();
-  const { contacts, selectedContactId, isDetailsOpen, closeDetails } = useContactsStore();
+  const { contacts, selectedContactId, isDetailsOpen, closeDetails, selectedContactDetails } = useContactsStore();
   const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details');
 
   const selectedContact = React.useMemo(() => {
     if (!selectedContactId) return null;
+    // Prefer the full GetContactById record — the list payload is slim and leaves
+    // most detail fields empty. Fall back to the list row while details load.
+    if (selectedContactDetails?.ContactId === selectedContactId) {
+      return selectedContactDetails;
+    }
     return contacts.find((contact) => contact.ContactId === selectedContactId);
-  }, [contacts, selectedContactId]);
+  }, [contacts, selectedContactId, selectedContactDetails]);
 
   // Track analytics when sheet becomes visible
   const trackViewAnalytics = useCallback(() => {

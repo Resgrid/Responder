@@ -1,7 +1,7 @@
 import Mapbox from '@rnmapbox/maps';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
@@ -13,9 +13,10 @@ interface StaticMapProps {
   zoom?: number;
   height?: number;
   showUserLocation?: boolean;
+  onPress?: () => void;
 }
 
-const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoom = 15, height = 200, showUserLocation = false }) => {
+const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoom = 15, height = 200, showUserLocation = false, onPress }) => {
   const { t } = useTranslation();
   if (!latitude || !longitude) {
     return (
@@ -27,23 +28,28 @@ const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoo
 
   return (
     <Box style={[styles.container, { height }]}>
-      <Mapbox.MapView style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={true} zoomEnabled={true} rotateEnabled={true}>
-        <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationMode="flyTo" animationDuration={1000} />
-        {/* Marker for the location */}
+      {/* Locked preview: all gestures disabled — the map must not fight the parent
+          ScrollView. Interaction happens in the full-screen modal opened via onPress. */}
+      <Mapbox.MapView style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={false} zoomEnabled={false} scrollEnabled={false} rotateEnabled={false} pitchEnabled={false}>
+        <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />
+        {/* Marker for the location — an empty child renders an invisible annotation */}
         <Mapbox.PointAnnotation id="destinationPoint" coordinate={[longitude, latitude]} title={address || 'Location'}>
-          <Box />
+          <Box style={styles.marker} />
         </Mapbox.PointAnnotation>
 
         {/* Show user location if requested */}
-        {showUserLocation && <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} />}
+        {showUserLocation ? <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} /> : null}
       </Mapbox.MapView>
 
+      {/* Transparent tap overlay above the map so taps always reach us, never the map */}
+      {onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={address || t('call_detail.title')} testID="static-map-press-overlay" style={StyleSheet.absoluteFill} /> : null}
+
       {/* Address overlay */}
-      {address && (
+      {address ? (
         <Box style={styles.addressContainer}>
           <Text style={styles.addressText}>{address}</Text>
         </Box>
-      )}
+      ) : null}
     </Box>
   );
 };
@@ -56,6 +62,14 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  marker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ef4444',
+    borderWidth: 3,
+    borderColor: '#ffffff',
   },
   addressContainer: {
     position: 'absolute',

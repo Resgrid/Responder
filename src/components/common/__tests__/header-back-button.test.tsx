@@ -23,10 +23,10 @@ describe('HeaderBackButton', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('has a fixed 40x40 size so iOS 26 liquid glass headers cannot stretch it', () => {
+  it('has a fixed 40x40 wrapper so iOS 26 liquid glass headers cannot stretch it', () => {
     render(<HeaderBackButton onPress={jest.fn()} />);
 
-    const button = screen.getByTestId('back-button');
+    const button = screen.getByTestId('back-button-container');
     const flatStyle = Array.isArray(button.props.style) ? Object.assign({}, ...button.props.style.flat().filter(Boolean)) : button.props.style;
 
     expect(flatStyle).toEqual(

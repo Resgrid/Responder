@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, PaperclipIcon, RouteIcon, TimerIcon, UserIcon, UsersIcon, VideoIcon } from 'lucide-react-native';
+import { FileTextIcon, ImageIcon, PaperclipIcon, RouteIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ import { CheckInTabPanel } from '@/components/check-in/check-in-tab-panel';
 import { HeaderBackButton } from '@/components/common/header-back-button';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import FullScreenMapModal from '@/components/maps/full-screen-map-modal';
 // Import a static map component instead of react-native-maps
 import StaticMap from '@/components/maps/static-map';
 import { FocusAwareStatusBar, SafeAreaView } from '@/components/ui';
@@ -60,6 +61,7 @@ export default function CallDetail() {
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
   const [isCloseCallModalOpen, setIsCloseCallModalOpen] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const showToast = useToastStore((state) => state.showToast);
 
   const { colorScheme } = useColorScheme();
@@ -406,7 +408,6 @@ export default function CallDetail() {
       {
         key: 'info',
         title: t('call_detail.tabs.info'),
-        icon: <InfoIcon size={16} />,
         content: (
           <Box className={`p-4 shadow-sm ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
             <VStack className="space-y-3">
@@ -451,8 +452,9 @@ export default function CallDetail() {
                     style={[styles.container, { height: 200 }]}
                     originWhitelist={['*']}
                     javaScriptEnabled={false}
-                    scrollEnabled={false}
-                    showsVerticalScrollIndicator={false}
+                    scrollEnabled={true}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
                     source={{
                       html: `
                                 <!DOCTYPE html>
@@ -488,7 +490,6 @@ export default function CallDetail() {
       {
         key: 'contact',
         title: t('call_detail.tabs.contact'),
-        icon: <UserIcon size={16} />,
         content: (
           <Box className="p-4">
             <VStack className="space-y-3">
@@ -515,7 +516,6 @@ export default function CallDetail() {
       {
         key: 'protocols',
         title: t('call_detail.tabs.protocols'),
-        icon: <FileTextIcon size={16} />,
         content: (
           <Box className="p-4">
             {callExtraData?.Protocols && callExtraData.Protocols.length > 0 ? (
@@ -570,7 +570,6 @@ export default function CallDetail() {
       {
         key: 'dispatched',
         title: t('call_detail.tabs.dispatched'),
-        icon: <UsersIcon size={16} />,
         content: (
           <Box className="p-4">
             {callExtraData?.Dispatches && callExtraData.Dispatches.length > 0 ? (
@@ -598,7 +597,6 @@ export default function CallDetail() {
       {
         key: 'timeline',
         title: t('call_detail.tabs.timeline'),
-        icon: <ClockIcon size={16} />,
         badge: callExtraData?.Activity?.length || 0,
         content: (
           <Box className="p-4">
@@ -628,7 +626,6 @@ export default function CallDetail() {
     tabs.push({
       key: 'video',
       title: t('call_detail.tabs.video'),
-      icon: <VideoIcon size={16} />,
       content: <VideoFeedTabPanel callId={parseInt(call.CallId)} canEdit={canUserCreateCalls ?? false} />,
     });
 
@@ -637,7 +634,6 @@ export default function CallDetail() {
       tabs.push({
         key: 'checkin',
         title: t('check_in.tab_title'),
-        icon: <TimerIcon size={16} />,
         badge: overdueCount > 0 ? overdueCount : undefined,
         content: <CheckInTabPanel callId={parseInt(call.CallId)} checkInTimersEnabled={true} />,
       });
@@ -706,7 +702,7 @@ export default function CallDetail() {
         {/* Map */}
         <Box className="w-full">
           {coordinates.latitude != null && coordinates.longitude != null ? (
-            <StaticMap latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} height={200} showUserLocation={true} />
+            <StaticMap latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} height={200} showUserLocation={true} onPress={() => setIsMapModalOpen(true)} />
           ) : null}
         </Box>
 
@@ -755,9 +751,12 @@ export default function CallDetail() {
 
         {/* Tabs */}
         <Box className={`mt-4 flex-1 pb-8 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
-          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} scrollable={!isLandscape} />
+          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} scrollable={false} />
         </Box>
       </ScrollView>
+      {isMapModalOpen && coordinates.latitude != null && coordinates.longitude != null ? (
+        <FullScreenMapModal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)} latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} showUserLocation={true} />
+      ) : null}
       <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId || ''} />
       <CallImagesModal isOpen={isImagesModalOpen} onClose={() => setIsImagesModalOpen(false)} callId={callId || ''} />
       <CallFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} callId={callId || ''} />

@@ -219,11 +219,12 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority, callExtraDat
       {call.Nature ? (
         <Box className="mt-4 rounded-lg bg-white/50 p-3">
           <WebView
-            style={[styles.container, { height: 80 }]}
+            style={[styles.container, { height: 120 }]}
             originWhitelist={['*']}
             javaScriptEnabled={false}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
+            scrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
             source={{
               html: `
                 <!DOCTYPE html>

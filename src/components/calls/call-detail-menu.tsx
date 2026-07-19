@@ -1,7 +1,7 @@
 import { EditIcon, MoreVerticalIcon, TimerIcon, XIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/ui/';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper, ActionsheetItem, ActionsheetItemText } from '@/components/ui/actionsheet';
@@ -22,12 +22,16 @@ export const HeaderRightMenuButton: React.FC<HeaderRightMenuButtonProps> = ({ ca
   }
 
   return (
-    // Fixed 40x40 size: iOS 26 liquid glass headers stretch flexible-width headerRight
-    // subviews across the screen (react-native-screens 4.16), so the button must have
-    // an intrinsic width.
-    <Pressable onPressIn={onPress} testID="kebab-menu-button" className="size-10 items-center justify-center rounded" style={styles.headerButton}>
-      <MoreVerticalIcon size={24} className="text-gray-700 dark:text-gray-300" />
-    </Pressable>
+    // Fixed 40x40 plain View wrapper: iOS 26 liquid glass headers stretch flexible-width
+    // headerRight subviews (react-native-screens 4.16). Gluestack/NativeWind styles can
+    // land a frame after the first native commit, so the glass capsule caches a stretched
+    // constraint on re-entry — the wrapper guarantees a fixed frame from the first commit.
+    // collapsable={false} keeps the native view (and its frame) from being optimized away.
+    <View style={styles.headerButton} collapsable={false}>
+      <Pressable onPressIn={onPress} testID="kebab-menu-button" className="size-10 items-center justify-center rounded">
+        <MoreVerticalIcon size={24} className="text-gray-700 dark:text-gray-300" />
+      </Pressable>
+    </View>
   );
 };
 
