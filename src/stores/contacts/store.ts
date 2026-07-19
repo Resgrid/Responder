@@ -80,8 +80,14 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
     set({ isDetailsLoading: true, selectedContactDetails: null });
     try {
       const response = await getContact(contactId);
+      if (get().selectedContactId !== contactId) {
+        return; // stale response — a newer contact was selected meanwhile
+      }
       set({ selectedContactDetails: response.Data || null, isDetailsLoading: false });
     } catch {
+      if (get().selectedContactId !== contactId) {
+        return;
+      }
       // The sheet falls back to the slim list record already in the store
       set({ isDetailsLoading: false, selectedContactDetails: null });
     }

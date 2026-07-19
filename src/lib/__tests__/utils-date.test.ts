@@ -11,6 +11,11 @@ describe('parseDateISOString', () => {
     expect(parsed.getTime()).toBe(new Date('2026-07-19T04:13:22-04:00').getTime());
   });
 
+  it('respects hour-only and colon-less offsets', () => {
+    expect(parseDateISOString('2026-07-19T04:13:22-04').getTime()).toBe(new Date('2026-07-19T04:13:22-04:00').getTime());
+    expect(parseDateISOString('2026-07-19T04:13:22+0400').getTime()).toBe(new Date('2026-07-19T04:13:22+04:00').getTime());
+  });
+
   it('parses date-only strings as local midnight (no UTC shift)', () => {
     const parsed = parseDateISOString('2026-07-19');
     expect(parsed.getFullYear()).toBe(2026);

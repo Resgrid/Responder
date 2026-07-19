@@ -126,6 +126,10 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
     }
   };
 
+  const handleCloseConfirmModal = React.useCallback(() => {
+    setShowDeleteConfirmModal(false);
+  }, []);
+
   const confirmBulkDelete = React.useCallback(async () => {
     setIsDeletingSelected(true);
     setShowDeleteConfirmModal(false);
@@ -342,13 +346,13 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
           Modal renders inline inside this overlay and could sit invisible over the whole
           screen, eating touches (dead delete/cancel/close, double-tap on items). */}
       {showDeleteConfirmModal ? (
-        <RNModal transparent visible animationType="fade" onRequestClose={() => setShowDeleteConfirmModal(false)}>
+        <RNModal transparent visible animationType="fade" onRequestClose={handleCloseConfirmModal}>
           <View style={styles.confirmBackdrop}>
             <View style={styles.confirmCard}>
               <Text className="text-lg font-semibold">{t('notifications.confirmDelete.title')}</Text>
               <Text className="mt-2">{t('notifications.confirmDelete.message', { count: selectedNotificationIds.size })}</Text>
               <View style={styles.confirmActions}>
-                <Button variant="outline" onPress={() => setShowDeleteConfirmModal(false)} className="mr-2">
+                <Button variant="outline" onPress={handleCloseConfirmModal} className="mr-2">
                   <Text>{t('common.cancel')}</Text>
                 </Button>
                 <Button variant="solid" onPress={confirmBulkDelete} className="bg-red-500">

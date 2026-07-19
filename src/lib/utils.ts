@@ -155,8 +155,10 @@ export function parseDateISOString(s: string): Date {
   // Timestamps carrying an explicit timezone (Z or ±hh[:mm]) must go through the
   // native parser — digit-splitting below drops the offset and shifts the time.
   // Date-only strings stay on the manual path so they parse as LOCAL midnight.
-  if (/\d[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i.test(s)) {
-    const native = new Date(s);
+  if (/\d[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}(:?\d{2})?)$/i.test(s)) {
+    // JS engines only reliably parse ±HH:MM offsets — normalize ±HHMM and bare ±HH first
+    const normalized = s.replace(/([+-]\d{2})(\d{2})$/, '$1:$2').replace(/([+-]\d{2})$/, '$1:00');
+    const native = new Date(normalized);
     if (!Number.isNaN(native.getTime())) {
       return native;
     }
