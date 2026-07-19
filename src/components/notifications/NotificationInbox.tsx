@@ -4,12 +4,11 @@ import { CheckCircle, ChevronRight, Circle, ExternalLink, MoreVertical, Trash2, 
 import { colorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Animated, Dimensions, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Modal as RNModal, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { deleteMessage } from '@/api/novu/inbox';
 import { NotificationDetail } from '@/components/notifications/NotificationDetail';
 import { Button } from '@/components/ui/button';
-import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/lib/auth';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -126,6 +125,10 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       setShowDeleteConfirmModal(true);
     }
   };
+
+  const handleCloseConfirmModal = React.useCallback(() => {
+    setShowDeleteConfirmModal(false);
+  }, []);
 
   const confirmBulkDelete = React.useCallback(async () => {
     setIsDeletingSelected(true);
@@ -319,6 +322,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
               <FlashList
                 data={notifications}
                 renderItem={renderItem}
+                extraData={{ isSelectionMode, selectedNotificationIds }}
                 keyExtractor={(item: any) => item.id}
                 onEndReached={fetchMore}
                 onEndReachedThreshold={0.5}
@@ -338,26 +342,27 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
         <NotificationDetail notification={selectedNotification} onClose={() => setSelectedNotification(null)} onDelete={handleDeleteNotification} onNavigateToReference={handleNavigateToReference} />
       ) : null}
 
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={showDeleteConfirmModal} onClose={() => setShowDeleteConfirmModal(false)}>
-        <ModalBackdrop />
-        <ModalContent>
-          <ModalHeader>
-            <Text className="text-lg font-semibold">{t('notifications.confirmDelete.title')}</Text>
-          </ModalHeader>
-          <ModalBody>
-            <Text>{t('notifications.confirmDelete.message', { count: selectedNotificationIds.size })}</Text>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="outline" onPress={() => setShowDeleteConfirmModal(false)} className="mr-2">
-              <Text>{t('common.cancel')}</Text>
-            </Button>
-            <Button variant="solid" onPress={confirmBulkDelete} className="bg-red-500">
-              <Text className="text-white">{t('common.delete')}</Text>
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      {/* Delete Confirmation Modal — RN core Modal, conditionally mounted. The gluestack
+          Modal renders inline inside this overlay and could sit invisible over the whole
+          screen, eating touches (dead delete/cancel/close, double-tap on items). */}
+      {showDeleteConfirmModal ? (
+        <RNModal transparent visible animationType="fade" onRequestClose={handleCloseConfirmModal}>
+          <View style={styles.confirmBackdrop}>
+            <View style={styles.confirmCard}>
+              <Text className="text-lg font-semibold">{t('notifications.confirmDelete.title')}</Text>
+              <Text className="mt-2">{t('notifications.confirmDelete.message', { count: selectedNotificationIds.size })}</Text>
+              <View style={styles.confirmActions}>
+                <Button variant="outline" onPress={handleCloseConfirmModal} className="mr-2">
+                  <Text>{t('common.cancel')}</Text>
+                </Button>
+                <Button variant="solid" onPress={confirmBulkDelete} className="bg-red-500">
+                  <Text className="text-white">{t('common.delete')}</Text>
+                </Button>
+              </View>
+            </View>
+          </View>
+        </RNModal>
+      ) : null}
     </View>
   );
 };
@@ -430,6 +435,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: colorScheme.get() === 'dark' ? '#171717' : '#fff',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
   },
   actionButtonDisabled: {
     opacity: 0.4,

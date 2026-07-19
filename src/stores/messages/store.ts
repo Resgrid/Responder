@@ -3,6 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 
 import { deleteMessage, getInboxMessages, getMessage, getRecipients, getSentMessages, respondToMessage, type RespondToMessageRequest, sendMessage, type SendMessageRequest } from '@/api/messaging/messages';
 import { logger } from '@/lib/logging';
+import { getItem, setItem } from '@/lib/storage';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
 import type { ApiResponse } from '@/types/api';
@@ -26,6 +27,8 @@ interface MessagesState {
   currentFilter: MessageFilter;
   selectedForDeletion: Set<string>;
   lastFetchTime: number | null;
+  // Locally-tracked read state (the messages API has no read flag) — persisted in MMKV
+  readMessageIds: Set<string>;
 
   // Actions
   fetchInboxMessages: () => Promise<void>;
@@ -40,6 +43,7 @@ interface MessagesState {
   setSearchQuery: (query: string) => void;
   setCurrentFilter: (filter: MessageFilter) => void;
   selectMessage: (messageId: string) => void;
+  markMessageRead: (messageId: string) => void;
   closeDetails: () => void;
   openCompose: () => void;
   closeCompose: () => void;
@@ -61,6 +65,7 @@ export const useMessagesStore = create<MessagesState>()(
     recipients: [],
     selectedMessageId: null,
     selectedMessage: null,
+    readMessageIds: new Set<string>(getItem<string[]>('messages_read_ids') || []),
     isDetailsOpen: false,
     isComposeOpen: false,
     isLoading: false,
@@ -217,6 +222,18 @@ export const useMessagesStore = create<MessagesState>()(
         selectedMessage: message || null,
         isDetailsOpen: true,
       });
+      get().markMessageRead(messageId);
+    },
+
+    markMessageRead: (messageId: string) => {
+      const { readMessageIds } = get();
+      if (readMessageIds.has(messageId)) {
+        return;
+      }
+      const next = new Set(readMessageIds);
+      next.add(messageId);
+      set({ readMessageIds: next });
+      setItem<string[]>('messages_read_ids', Array.from(next));
     },
 
     closeDetails: () =>

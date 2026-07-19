@@ -91,6 +91,9 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [isAddingImage, setIsAddingImage] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [fullScreenImage, setFullScreenImage] = useState<{ source: ImageSourcePropType; name?: string } | null>(null);
+  // Measured gallery viewport width. The modal is a pageSheet, which is narrower than
+  // the window on iPad — items sized off Dimensions window width break paging/snapping.
+  const [listWidth, setListWidth] = useState(width);
   const flatListRef = useRef<FlashListRef<CallFileResultData>>(null);
 
   const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage, clearCallImages } = useCallDetailStore();
@@ -437,7 +440,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     // Show error state if there's an error or no valid image source
     if (!imageSource || hasError) {
       return (
-        <Box className="w-full items-center justify-center px-4" style={{ width }}>
+        <Box className="w-full items-center justify-center px-4" style={{ width: listWidth }}>
           <Box className="h-64 w-full items-center justify-center rounded-lg bg-gray-200">
             <ImageIcon size={48} color="#999" />
             <Text className="mt-2 text-gray-500">{t('callImages.failed_to_load')}</Text>
@@ -455,7 +458,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
 
     // At this point, imageSource is guaranteed to be non-null
     return (
-      <Box className="w-full items-center justify-center px-4" style={{ width }}>
+      <Box className="w-full items-center justify-center px-4" style={{ width: listWidth }}>
         <TouchableOpacity onPress={() => handleImagePress(imageSource, item.Name)} testID={`image-${item.Id}-touchable`} activeOpacity={0.7} style={{ width: '100%' }} delayPressIn={0} delayPressOut={0}>
           <Image
             key={`${item.Id}-${index}`}
@@ -482,29 +485,36 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     }
   }).current;
 
-  const handlePrevious = () => {
-    const newIndex = Math.max(0, activeIndex - 1);
+  // Scroll by offset, not index: scrollToIndex relies on FlashList's internal item
+  // measurement, which is unreliable for a horizontal list nested in a vertical
+  // ScrollView — it can silently no-op, leaving the counter out of sync with the
+  // visible image. Every item is exactly listWidth wide, so the offset is exact.
+  const scrollToImage = (newIndex: number) => {
     setActiveIndex(newIndex);
     try {
-      flatListRef.current?.scrollToIndex({
-        index: newIndex,
+      flatListRef.current?.scrollToOffset({
+        offset: newIndex * listWidth,
         animated: true,
       });
     } catch (error) {
-      console.warn('Error scrolling to previous image:', error);
+      console.warn('Error scrolling to image:', error);
     }
   };
 
+  const handlePrevious = () => {
+    scrollToImage(Math.max(0, activeIndex - 1));
+  };
+
   const handleNext = () => {
-    const newIndex = Math.min(validImages.length - 1, activeIndex + 1);
-    setActiveIndex(newIndex);
-    try {
-      flatListRef.current?.scrollToIndex({
-        index: newIndex,
-        animated: true,
-      });
-    } catch (error) {
-      console.warn('Error scrolling to next image:', error);
+    scrollToImage(Math.min(validImages.length - 1, activeIndex + 1));
+  };
+
+  // Keep the counter truthful after manual swipes even when viewability events
+  // are missed (Android fires them inconsistently for nested horizontal lists).
+  const handleMomentumScrollEnd = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+    if (listWidth > 0) {
+      const idx = Math.round(e.nativeEvent.contentOffset.x / listWidth);
+      setActiveIndex(Math.max(0, Math.min(validImages.length - 1, idx)));
     }
   };
 
@@ -594,7 +604,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
     return (
       <ScrollView className="flex-1" contentContainerStyle={{ paddingVertical: 16 }} showsVerticalScrollIndicator={true}>
         <VStack className="space-y-4">
-          <Box className="relative">
+          <Box className="relative" onLayout={(e) => setListWidth(e.nativeEvent.layout.width)}>
             <FlashList
               ref={flatListRef}
               data={validImages}
@@ -608,11 +618,10 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
                 itemVisiblePercentThreshold: 50,
                 minimumViewTime: 100,
               }}
-              snapToInterval={width}
-              snapToAlignment="start"
+              onMomentumScrollEnd={handleMomentumScrollEnd}
               decelerationRate="fast"
               // Memory optimization: only render visible items plus a small buffer
-              drawDistance={width}
+              drawDistance={listWidth}
               className="w-full"
               contentContainerStyle={{ paddingHorizontal: 0 }}
               ListEmptyComponent={() => (

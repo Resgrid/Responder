@@ -5,6 +5,7 @@ import { Pressable } from 'react-native';
 
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { type MessageResultData } from '@/models/v4/messages/messageResultData';
+import { useMessagesStore } from '@/stores/messages/store';
 
 import { Badge } from '../ui/badge';
 import { Box } from '../ui/box';
@@ -66,7 +67,9 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
   };
 
   const isExpired = message.ExpiredOn && new Date(message.ExpiredOn) < new Date();
-  const isRead = message.Responded;
+  // Read state is tracked locally (the messages API has no read flag) — a message is
+  // read once its detail sheet has been opened. `Responded` only means poll response.
+  const isRead = useMessagesStore((state) => state.readMessageIds.has(message.MessageId));
 
   return (
     <Pressable
@@ -93,8 +96,11 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
               />
             )}
 
-            {/* Message Status Icon */}
-            <Box className="p-1">{isRead ? <MailOpen size={16} color="#6366F1" /> : <Mail size={16} color="#6366F1" />}</Box>
+            {/* Message Status Icon — unread gets a filled envelope plus a blue dot */}
+            <Box className="relative p-1" testID={isRead ? 'message-read-icon' : 'message-unread-icon'}>
+              {isRead ? <MailOpen size={16} color="#9CA3AF" /> : <Mail size={16} color="#3B82F6" />}
+              {!isRead ? <Box className="absolute right-0 top-0 size-2.5 rounded-full border border-white bg-blue-500 dark:border-gray-800" /> : null}
+            </Box>
 
             {/* Sender Info */}
             <VStack className="flex-1">

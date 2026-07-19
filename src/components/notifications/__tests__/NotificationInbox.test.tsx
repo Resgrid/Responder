@@ -517,12 +517,14 @@ describe('NotificationInbox', () => {
       expect(getByText('Notifications')).toBeTruthy();
     });
 
-    it('calls translation keys for delete confirmation', () => {
+    it('does not render delete confirmation until requested', () => {
       render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
 
-      // These are called during component initialization
-      expect(mockT).toHaveBeenCalledWith('notifications.confirmDelete.title');
-      expect(mockT).toHaveBeenCalledWith('notifications.confirmDelete.message', { count: 0 });
+      // The confirmation modal is conditionally mounted — its translation keys
+      // must NOT be resolved at initial render (it used to sit invisible over
+      // the inbox, blocking touches).
+      expect(mockT).not.toHaveBeenCalledWith('notifications.confirmDelete.title');
+      expect(mockT).not.toHaveBeenCalledWith('notifications.confirmDelete.message', { count: 0 });
     });
 
     it('uses translation keys for selection mode buttons', () => {
@@ -539,12 +541,13 @@ describe('NotificationInbox', () => {
       expect(mockT).toHaveBeenCalledWith('notifications.title');
     });
 
-    it('includes translation keys for common UI elements', () => {
+    it('does not resolve delete-modal button labels until the modal is shown', () => {
       render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
 
-      // These common keys are used in the delete confirmation modal
-      expect(mockT).toHaveBeenCalledWith('common.cancel');
-      expect(mockT).toHaveBeenCalledWith('common.delete');
+      // common.delete belongs to the conditionally-mounted confirmation modal.
+      // common.cancel is still used by the selection-mode header close button
+      // accessibility label paths, so only assert the modal-only key.
+      expect(mockT).not.toHaveBeenCalledWith('common.delete');
     });
 
     it('formats pluralized messages correctly', () => {
