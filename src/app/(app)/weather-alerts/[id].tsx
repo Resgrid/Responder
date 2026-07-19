@@ -99,35 +99,49 @@ export default function WeatherAlertDetail() {
     };
   }, [polygonCoords]);
 
+  const polygonExtrema = useMemo(() => {
+    if (!polygonCoords || polygonCoords.length === 0) {
+      return null;
+    }
+    let minLng = polygonCoords[0]![0];
+    let maxLng = polygonCoords[0]![0];
+    let minLat = polygonCoords[0]![1];
+    let maxLat = polygonCoords[0]![1];
+    for (const [lng, lat] of polygonCoords) {
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+    return { minLng, maxLng, minLat, maxLat };
+  }, [polygonCoords]);
+
   const mapCenter = useMemo((): [number, number] | null => {
-    if (polygonCoords && polygonCoords.length > 0) {
-      const lngs = polygonCoords.map((c) => c[0]);
-      const lats = polygonCoords.map((c) => c[1]);
-      return [(Math.min(...lngs) + Math.max(...lngs)) / 2, (Math.min(...lats) + Math.max(...lats)) / 2];
+    if (polygonExtrema) {
+      return [(polygonExtrema.minLng + polygonExtrema.maxLng) / 2, (polygonExtrema.minLat + polygonExtrema.maxLat) / 2];
     }
     if (selectedAlert?.Latitude && selectedAlert?.Longitude) {
       return [parseFloat(selectedAlert.Longitude), parseFloat(selectedAlert.Latitude)];
     }
     return null;
-  }, [polygonCoords, selectedAlert?.Latitude, selectedAlert?.Longitude]);
+  }, [polygonExtrema, selectedAlert?.Latitude, selectedAlert?.Longitude]);
 
   // Fit the camera to the polygon so the whole impacted area is visible —
   // a fixed zoom clips large warnings and shrinks small ones to a dot.
+  // >= 3 points required, matching the geometry actually drawn.
   const mapBounds = useMemo(() => {
-    if (!polygonCoords || polygonCoords.length === 0) {
+    if (!polygonExtrema || !polygonCoords || polygonCoords.length < 3) {
       return null;
     }
-    const lngs = polygonCoords.map((c) => c[0]);
-    const lats = polygonCoords.map((c) => c[1]);
     return {
-      ne: [Math.max(...lngs), Math.max(...lats)] as [number, number],
-      sw: [Math.min(...lngs), Math.min(...lats)] as [number, number],
+      ne: [polygonExtrema.maxLng, polygonExtrema.maxLat] as [number, number],
+      sw: [polygonExtrema.minLng, polygonExtrema.minLat] as [number, number],
       paddingTop: 24,
       paddingBottom: 24,
       paddingLeft: 24,
       paddingRight: 24,
     };
-  }, [polygonCoords]);
+  }, [polygonExtrema, polygonCoords]);
 
   if (isLoadingDetail || !selectedAlert) {
     return (

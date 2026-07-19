@@ -52,14 +52,23 @@ const FullScreenMapModal: React.FC<FullScreenMapModalProps> = ({ isOpen, onClose
   }, [polygon]);
 
   const polygonBounds = React.useMemo(() => {
-    if (!polygon || polygon.length === 0) {
+    // Same >= 3 guard as polygonShape — never bounds-fit a polygon that isn't drawn
+    if (!polygon || polygon.length < 3) {
       return null;
     }
-    const lngs = polygon.map((c) => c[0]);
-    const lats = polygon.map((c) => c[1]);
+    let minLng = polygon[0]![0];
+    let maxLng = polygon[0]![0];
+    let minLat = polygon[0]![1];
+    let maxLat = polygon[0]![1];
+    for (const [lng, lat] of polygon) {
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
     return {
-      ne: [Math.max(...lngs), Math.max(...lats)] as [number, number],
-      sw: [Math.min(...lngs), Math.min(...lats)] as [number, number],
+      ne: [maxLng, maxLat] as [number, number],
+      sw: [minLng, minLat] as [number, number],
       paddingTop: 48,
       paddingBottom: 48,
       paddingLeft: 48,
