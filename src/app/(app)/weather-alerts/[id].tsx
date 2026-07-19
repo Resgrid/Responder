@@ -1,10 +1,12 @@
 import Mapbox from '@rnmapbox/maps';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Clock, Info, MapPin, Shield } from 'lucide-react-native';
-import React, { useEffect, useMemo } from 'react';
+import { Clock, Info, MapPin, Shield } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { ScreenHeader } from '@/components/common/screen-header';
+import FullScreenMapModal from '@/components/maps/full-screen-map-modal';
 import { Box } from '@/components/ui/box';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
@@ -55,6 +57,18 @@ export default function WeatherAlertDetail() {
   const { selectedAlert, isLoadingDetail, fetchAlertDetail, selectAlertByIdentity } = useWeatherAlertsStore();
   const alertIdentity = typeof id === 'string' ? decodeURIComponent(id).trim() : '';
 
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const handleOpenMapModal = useCallback(() => {
+    setIsMapModalOpen(true);
+  }, []);
+  const handleCloseMapModal = useCallback(() => {
+    setIsMapModalOpen(false);
+  }, []);
+
   useEffect(() => {
     if (alertIdentity.length === 0) {
       return;
@@ -85,17 +99,49 @@ export default function WeatherAlertDetail() {
     };
   }, [polygonCoords]);
 
+  const polygonExtrema = useMemo(() => {
+    if (!polygonCoords || polygonCoords.length === 0) {
+      return null;
+    }
+    let minLng = polygonCoords[0]![0];
+    let maxLng = polygonCoords[0]![0];
+    let minLat = polygonCoords[0]![1];
+    let maxLat = polygonCoords[0]![1];
+    for (const [lng, lat] of polygonCoords) {
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+    return { minLng, maxLng, minLat, maxLat };
+  }, [polygonCoords]);
+
   const mapCenter = useMemo((): [number, number] | null => {
-    if (polygonCoords && polygonCoords.length > 0) {
-      const lngs = polygonCoords.map((c) => c[0]);
-      const lats = polygonCoords.map((c) => c[1]);
-      return [(Math.min(...lngs) + Math.max(...lngs)) / 2, (Math.min(...lats) + Math.max(...lats)) / 2];
+    if (polygonExtrema) {
+      return [(polygonExtrema.minLng + polygonExtrema.maxLng) / 2, (polygonExtrema.minLat + polygonExtrema.maxLat) / 2];
     }
     if (selectedAlert?.Latitude && selectedAlert?.Longitude) {
       return [parseFloat(selectedAlert.Longitude), parseFloat(selectedAlert.Latitude)];
     }
     return null;
-  }, [polygonCoords, selectedAlert?.Latitude, selectedAlert?.Longitude]);
+  }, [polygonExtrema, selectedAlert?.Latitude, selectedAlert?.Longitude]);
+
+  // Fit the camera to the polygon so the whole impacted area is visible —
+  // a fixed zoom clips large warnings and shrinks small ones to a dot.
+  // >= 3 points required, matching the geometry actually drawn.
+  const mapBounds = useMemo(() => {
+    if (!polygonExtrema || !polygonCoords || polygonCoords.length < 3) {
+      return null;
+    }
+    return {
+      ne: [polygonExtrema.maxLng, polygonExtrema.maxLat] as [number, number],
+      sw: [polygonExtrema.minLng, polygonExtrema.minLat] as [number, number],
+      paddingTop: 24,
+      paddingBottom: 24,
+      paddingLeft: 24,
+      paddingRight: 24,
+    };
+  }, [polygonExtrema, polygonCoords]);
 
   if (isLoadingDetail || !selectedAlert) {
     return (
@@ -113,14 +159,7 @@ export default function WeatherAlertDetail() {
       <FocusAwareStatusBar />
 
       {/* Header */}
-      <HStack className="items-center bg-white px-4 pb-3 pt-2 dark:bg-gray-900" space="md">
-        <Pressable onPress={() => router.back()} testID="weather-alert-back">
-          <ArrowLeft size={24} color="#374151" />
-        </Pressable>
-        <Text className="flex-1 text-lg font-bold text-gray-900 dark:text-white" numberOfLines={1}>
-          {selectedAlert.Event}
-        </Text>
-      </HStack>
+      <ScreenHeader title={selectedAlert.Event} onBack={handleBack} />
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Severity + Category Header */}
@@ -180,8 +219,8 @@ export default function WeatherAlertDetail() {
         {/* Map */}
         {mapCenter ? (
           <Box className="mx-4 mt-3 overflow-hidden rounded-xl" style={styles.mapContainer}>
-            <Mapbox.MapView style={styles.map} styleURL={Mapbox.StyleURL.Street}>
-              <Mapbox.Camera centerCoordinate={mapCenter} zoomLevel={7} animationMode="none" />
+            <Mapbox.MapView style={styles.map} styleURL={Mapbox.StyleURL.Street} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} compassEnabled={false}>
+              {mapBounds ? <Mapbox.Camera bounds={mapBounds} animationMode="none" /> : <Mapbox.Camera centerCoordinate={mapCenter} zoomLevel={7} animationMode="none" />}
               {geoJsonShape ? (
                 <Mapbox.ShapeSource id="alertPolygon" shape={geoJsonShape as GeoJSON.Feature}>
                   <Mapbox.FillLayer
@@ -205,6 +244,8 @@ export default function WeatherAlertDetail() {
                 </Mapbox.PointAnnotation>
               )}
             </Mapbox.MapView>
+            {/* Transparent tap overlay — gestures are disabled on the inline map; tapping opens the interactive full-screen map */}
+            <Pressable onPress={handleOpenMapModal} accessibilityRole="button" accessibilityLabel={t('weatherAlerts.detail.area')} testID="weather-alert-map-press" style={StyleSheet.absoluteFill} />
           </Box>
         ) : null}
 
@@ -263,6 +304,20 @@ export default function WeatherAlertDetail() {
           </VStack>
         </Box>
       </ScrollView>
+
+      {/* Full-screen interactive map of the impacted area */}
+      {isMapModalOpen && mapCenter ? (
+        <FullScreenMapModal
+          isOpen={isMapModalOpen}
+          onClose={handleCloseMapModal}
+          latitude={mapCenter[1]}
+          longitude={mapCenter[0]}
+          address={selectedAlert.AreaDescription || selectedAlert.Event}
+          zoom={8}
+          polygon={polygonCoords ?? undefined}
+          accentColor={accentColor}
+        />
+      ) : null}
     </VStack>
   );
 }
