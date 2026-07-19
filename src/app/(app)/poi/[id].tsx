@@ -4,8 +4,8 @@ import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
-import { HeaderBackButton } from '@/components/common/header-back-button';
 import { Loading } from '@/components/common/loading';
+import { ScreenHeader } from '@/components/common/screen-header';
 import ZeroState from '@/components/common/zero-state';
 import StaticMap from '@/components/maps/static-map';
 import { FocusAwareStatusBar } from '@/components/ui';
@@ -29,17 +29,6 @@ const parsePoiId = (id: string | string[] | undefined) => {
   const nextPoiId = Number(rawValue);
   return Number.isInteger(nextPoiId) && nextPoiId > 0 ? nextPoiId : null;
 };
-
-// In-content header row — this screen lives inside the (app) layout, which owns the
-// application top bar. A native Stack header here would replace that chrome.
-const PoiDetailHeader: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
-  <HStack className="items-center bg-white px-2 pb-2 pt-1 dark:bg-gray-900" space="sm">
-    <HeaderBackButton onPress={onBack} />
-    <Text className="flex-1 text-lg font-bold text-gray-900 dark:text-white" numberOfLines={1}>
-      {title}
-    </Text>
-  </HStack>
-);
 
 export default function PoiDetail() {
   const { t } = useTranslation();
@@ -113,7 +102,7 @@ export default function PoiDetail() {
     return (
       <VStack className="size-full flex-1">
         <FocusAwareStatusBar />
-        <PoiDetailHeader title={t('poi.title')} onBack={handleBack} />
+        <ScreenHeader title={t('poi.title')} onBack={handleBack} />
         <ZeroState heading={t('poi.invalid_title')} description={t('poi.invalid_description')} isError={true} />
       </VStack>
     );
@@ -123,7 +112,7 @@ export default function PoiDetail() {
     return (
       <VStack className="size-full flex-1">
         <FocusAwareStatusBar />
-        <PoiDetailHeader title={t('poi.title')} onBack={handleBack} />
+        <ScreenHeader title={t('poi.title')} onBack={handleBack} />
         <Loading text={t('poi.loading_detail')} />
       </VStack>
     );
@@ -133,7 +122,7 @@ export default function PoiDetail() {
     return (
       <VStack className="size-full flex-1">
         <FocusAwareStatusBar />
-        <PoiDetailHeader title={t('poi.title')} onBack={handleBack} />
+        <ScreenHeader title={t('poi.title')} onBack={handleBack} />
         <ZeroState heading={t('poi.load_error_title')} description={error || t('poi.not_found')} isError={true} />
       </VStack>
     );
@@ -142,7 +131,7 @@ export default function PoiDetail() {
   return (
     <VStack className="size-full flex-1">
       <FocusAwareStatusBar />
-      <PoiDetailHeader title={title} onBack={handleBack} />
+      <ScreenHeader title={title} onBack={handleBack} />
       <ScrollView className="flex-1 bg-neutral-50 dark:bg-neutral-950">
         <Box className="p-4">
           <VStack space="md">

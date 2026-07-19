@@ -17,27 +17,72 @@ interface FullScreenMapModalProps {
   address?: string;
   zoom?: number;
   showUserLocation?: boolean;
+  // Optional impacted-area polygon ([lng, lat] ring); drawn filled + outlined in accentColor
+  polygon?: [number, number][];
+  accentColor?: string;
 }
 
 /**
- * Full-screen interactive map for a single location (e.g. a call). Opened from the
- * locked StaticMap preview so the user can pan/zoom freely around the point.
+ * Full-screen interactive map for a single location (e.g. a call) or an area
+ * polygon (e.g. a weather alert). Opened from a locked inline map preview so
+ * the user can pan/zoom freely.
  */
-const FullScreenMapModal: React.FC<FullScreenMapModalProps> = ({ isOpen, onClose, latitude, longitude, address, zoom = 15, showUserLocation = false }) => {
+const FullScreenMapModal: React.FC<FullScreenMapModalProps> = ({ isOpen, onClose, latitude, longitude, address, zoom = 15, showUserLocation = false, polygon, accentColor = '#ef4444' }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   const isMapboxConfigured = Boolean(Env.RESPOND_MAPBOX_PUBKEY && Env.RESPOND_MAPBOX_PUBKEY.trim() !== '');
+
+  const polygonShape = React.useMemo(() => {
+    if (!polygon || polygon.length < 3) {
+      return null;
+    }
+    // GeoJSON polygons must be closed rings
+    const ring = [...polygon];
+    const first = ring[0]!;
+    const last = ring[ring.length - 1]!;
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      ring.push(first);
+    }
+    return {
+      type: 'Feature' as const,
+      geometry: { type: 'Polygon' as const, coordinates: [ring] },
+      properties: {},
+    };
+  }, [polygon]);
+
+  const polygonBounds = React.useMemo(() => {
+    if (!polygon || polygon.length === 0) {
+      return null;
+    }
+    const lngs = polygon.map((c) => c[0]);
+    const lats = polygon.map((c) => c[1]);
+    return {
+      ne: [Math.max(...lngs), Math.max(...lats)] as [number, number],
+      sw: [Math.min(...lngs), Math.min(...lats)] as [number, number],
+      paddingTop: 48,
+      paddingBottom: 48,
+      paddingLeft: 48,
+      paddingRight: 48,
+    };
+  }, [polygon]);
 
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <View style={styles.container} testID="full-screen-map-modal">
         {isMapboxConfigured ? (
           <Mapbox.MapView style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={true} zoomEnabled={true} scrollEnabled={true} rotateEnabled={true} pitchEnabled={true}>
-            <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />
-            <Mapbox.PointAnnotation id="callLocation" coordinate={[longitude, latitude]} title={address || 'Location'}>
-              <View style={styles.marker} />
-            </Mapbox.PointAnnotation>
+            {polygonBounds ? <Mapbox.Camera bounds={polygonBounds} animationDuration={0} /> : <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />}
+            {polygonShape ? (
+              <Mapbox.ShapeSource id="fullScreenAreaPolygon" shape={polygonShape as GeoJSON.Feature}>
+                <Mapbox.FillLayer id="fullScreenAreaPolygonFill" style={{ fillColor: accentColor, fillOpacity: 0.2 }} />
+                <Mapbox.LineLayer id="fullScreenAreaPolygonLine" style={{ lineColor: accentColor, lineWidth: 2 }} />
+              </Mapbox.ShapeSource>
+            ) : (
+              <Mapbox.PointAnnotation id="callLocation" coordinate={[longitude, latitude]} title={address || 'Location'}>
+                <View style={[styles.marker, { backgroundColor: accentColor }]} />
+              </Mapbox.PointAnnotation>
+            )}
             {showUserLocation ? <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} /> : null}
           </Mapbox.MapView>
         ) : (

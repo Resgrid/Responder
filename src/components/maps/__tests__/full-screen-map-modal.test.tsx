@@ -8,8 +8,11 @@ jest.mock('@rnmapbox/maps', () => {
     default: {
       MapView: ({ children }: { children?: React.ReactNode }) => <View testID="mapbox-map-view">{children}</View>,
       Camera: () => null,
-      PointAnnotation: ({ children }: { children?: React.ReactNode }) => <View>{children}</View>,
+      PointAnnotation: ({ children }: { children?: React.ReactNode }) => <View testID="mapbox-point-annotation">{children}</View>,
       UserLocation: () => null,
+      ShapeSource: ({ children }: { children?: React.ReactNode }) => <View testID="mapbox-shape-source">{children}</View>,
+      FillLayer: () => null,
+      LineLayer: () => null,
     },
   };
 });
@@ -63,5 +66,24 @@ describe('FullScreenMapModal', () => {
     render(<FullScreenMapModal {...baseProps} address="123 Main St" />);
 
     expect(screen.getByText('123 Main St')).toBeTruthy();
+  });
+
+  it('renders the area polygon instead of the point marker when a polygon is provided', () => {
+    const polygon: [number, number][] = [
+      [-104.9, 39.7],
+      [-104.8, 39.7],
+      [-104.8, 39.8],
+    ];
+    render(<FullScreenMapModal {...baseProps} polygon={polygon} />);
+
+    expect(screen.getByTestId('mapbox-shape-source')).toBeTruthy();
+    expect(screen.queryByTestId('mapbox-point-annotation')).toBeNull();
+  });
+
+  it('renders the point marker when no polygon is provided', () => {
+    render(<FullScreenMapModal {...baseProps} />);
+
+    expect(screen.getByTestId('mapbox-point-annotation')).toBeTruthy();
+    expect(screen.queryByTestId('mapbox-shape-source')).toBeNull();
   });
 });
