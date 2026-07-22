@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { MailIcon, PhoneIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking } from 'react-native';
 
@@ -103,12 +103,24 @@ const ContactCard: React.FC<{ label: string; contact: IncidentContactInfo; testI
   const phone = contact.Phone;
   const email = contact.Email;
 
+  const handlePhonePress = useCallback(() => {
+    if (phone) {
+      openPhone(phone);
+    }
+  }, [phone]);
+
+  const handleEmailPress = useCallback(() => {
+    if (email) {
+      openEmail(email);
+    }
+  }, [email]);
+
   return (
     <Box testID={testID} className="py-1">
       <Text className="text-xs text-gray-500">{label}</Text>
       <Text className="font-medium">{contact.Name}</Text>
       {phone ? (
-        <Pressable onPress={() => openPhone(phone)} testID={`${testID}-phone`}>
+        <Pressable onPress={handlePhonePress} testID={`${testID}-phone`}>
           <HStack className="mt-1 items-center">
             <PhoneIcon size={14} color={LINK_COLOR} />
             <Text className="ml-1 text-sm text-blue-500">{phone}</Text>
@@ -116,7 +128,7 @@ const ContactCard: React.FC<{ label: string; contact: IncidentContactInfo; testI
         </Pressable>
       ) : null}
       {email ? (
-        <Pressable onPress={() => openEmail(email)} testID={`${testID}-email`}>
+        <Pressable onPress={handleEmailPress} testID={`${testID}-email`}>
           <HStack className="mt-1 items-center">
             <MailIcon size={14} color={LINK_COLOR} />
             <Text className="ml-1 text-sm text-blue-500">{email}</Text>

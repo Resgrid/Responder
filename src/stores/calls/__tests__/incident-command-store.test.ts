@@ -190,6 +190,21 @@ describe('useIncidentCommandStore', () => {
       unmount();
     });
 
+    it('should clear the previous view on fetch start so another call never paints stale data', async () => {
+      useIncidentCommandStore.setState({ view: mockView });
+      mockGetResourceIncidentView.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)) as any);
+
+      const { result, unmount } = renderHook(() => useIncidentCommandStore());
+
+      act(() => {
+        result.current.fetchIncidentView(456);
+      });
+
+      expect(result.current.view).toBeNull();
+      expect(result.current.isLoading).toBe(true);
+      unmount();
+    });
+
     it('should clear a previous error when fetching again', async () => {
       useIncidentCommandStore.setState({ error: 'Previous error' });
       mockGetResourceIncidentView.mockResolvedValue({

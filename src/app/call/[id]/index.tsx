@@ -636,7 +636,7 @@ export default function CallDetail() {
       content: <IncidentCommandTabPanel callId={parseInt(call.CallId)} />,
     });
 
-    if (call?.CheckInTimersEnabled) {
+    if (call.CheckInTimersEnabled) {
       const overdueCount = useCheckInStore.getState().timerStatuses.filter((s) => s.Status === 'Overdue').length;
       tabs.push({
         key: 'checkin',

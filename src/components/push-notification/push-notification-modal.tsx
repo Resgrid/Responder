@@ -10,6 +10,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { logger } from '@/lib/logging';
 import { type NotificationType, usePushNotificationModalStore } from '@/stores/push-notification/store';
 
 interface NotificationIconProps {
@@ -112,7 +113,14 @@ export const PushNotificationModal: React.FC = () => {
 
     hideNotificationModal();
 
-    await openWeatherAlertDetail(alertId);
+    try {
+      await openWeatherAlertDetail(alertId);
+    } catch (error) {
+      logger.error({
+        message: 'Failed to open weather alert detail from notification modal',
+        context: { error, alertId },
+      });
+    }
   };
 
   const getNotificationTypeText = (type: NotificationType): string => {

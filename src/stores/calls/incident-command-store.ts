@@ -16,7 +16,9 @@ export const useIncidentCommandStore = create<IncidentCommandState>((set) => ({
   isLoading: false,
   error: null,
   fetchIncidentView: async (callId: string | number) => {
-    set({ isLoading: true, error: null });
+    // Clear any previous call's view so navigating between calls never paints stale
+    // incident command data while the new fetch is in flight.
+    set({ isLoading: true, error: null, view: null });
     try {
       const result = await getResourceIncidentView(callId);
 
