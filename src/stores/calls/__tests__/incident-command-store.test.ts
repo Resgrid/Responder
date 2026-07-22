@@ -228,6 +228,64 @@ describe('useIncidentCommandStore', () => {
     });
   });
 
+  describe('request ordering', () => {
+    it('should ignore a stale completion when a newer fetch has started', async () => {
+      let resolveFirst: (value: unknown) => void = () => {};
+      const firstResponse = new Promise((resolve) => {
+        resolveFirst = resolve;
+      });
+      const secondView = { ...mockView, IncidentCommandId: 'ic-2', CallId: 456 };
+
+      mockGetResourceIncidentView.mockReturnValueOnce(firstResponse as any).mockResolvedValueOnce({ Data: secondView, Status: 'Success' } as any);
+
+      const { result, unmount } = renderHook(() => useIncidentCommandStore());
+
+      let firstFetch: Promise<void>;
+      await act(async () => {
+        firstFetch = result.current.fetchIncidentView(123);
+        await result.current.fetchIncidentView(456);
+      });
+
+      expect(result.current.view).toEqual(secondView);
+
+      // The older request resolves last — it must not clobber the newer call's view.
+      await act(async () => {
+        resolveFirst({ Data: mockView, Status: 'Success' });
+        await firstFetch!;
+      });
+
+      expect(result.current.view).toEqual(secondView);
+      expect(result.current.isLoading).toBe(false);
+      unmount();
+    });
+
+    it('should ignore a completion that lands after reset', async () => {
+      let resolvePending: (value: unknown) => void = () => {};
+      const pendingResponse = new Promise((resolve) => {
+        resolvePending = resolve;
+      });
+      mockGetResourceIncidentView.mockReturnValueOnce(pendingResponse as any);
+
+      const { result, unmount } = renderHook(() => useIncidentCommandStore());
+
+      let pendingFetch: Promise<void>;
+      act(() => {
+        pendingFetch = result.current.fetchIncidentView(123);
+        result.current.reset();
+      });
+
+      await act(async () => {
+        resolvePending({ Data: mockView, Status: 'Success' });
+        await pendingFetch!;
+      });
+
+      expect(result.current.view).toBeNull();
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error).toBeNull();
+      unmount();
+    });
+  });
+
   describe('reset', () => {
     it('should reset the store to its initial state', () => {
       useIncidentCommandStore.setState({
