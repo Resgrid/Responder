@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 
 // Mock expo-device so tests don't attempt to load native modules
@@ -10,11 +11,17 @@ jest.mock('expo-device', () => ({
 jest.mock('@/lib/auth', () => ({
   useAuthStore: jest.fn(),
 }));
-// Mock the store
+// Mock the store, keeping the real parseNotificationData so eventCode routing stays realistic
 jest.mock('@/stores/push-notification/store', () => ({
+  ...jest.requireActual('@/stores/push-notification/store'),
   usePushNotificationModalStore: {
     getState: jest.fn(),
   },
+}));
+
+// Mock the weather alert navigation helper used for weather push deep links
+jest.mock('@/components/weather-alerts/weather-alert-navigation', () => ({
+  openWeatherAlertDetail: jest.fn(() => Promise.resolve()),
 }));
 
 // Mock expo-notifications
@@ -94,6 +101,7 @@ describe('Push Notification Service Integration', () => {
   beforeEach(() => {
     // Only clear the showNotificationModal mock between tests, not the addNotificationReceivedListener mock
     mockShowNotificationModal.mockClear();
+    (openWeatherAlertDetail as jest.Mock).mockClear();
     mockGetState.mockReturnValue({
       showNotificationModal: mockShowNotificationModal,
     });
@@ -337,6 +345,30 @@ describe('Push Notification Service Integration', () => {
       expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
+    it('should show modal (not navigate) for weather alert received in the foreground', () => {
+      const notification = createMockNotification({
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+        data: {
+          eventCode: 'W:9012',
+          alertId: '9012',
+        },
+      });
+
+      notificationReceivedHandler(notification);
+
+      expect(mockShowNotificationModal).toHaveBeenCalledWith({
+        eventCode: 'W:9012',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+        data: {
+          eventCode: 'W:9012',
+          alertId: '9012',
+        },
+      });
+      expect(openWeatherAlertDetail).not.toHaveBeenCalled();
+    });
+
     it('should register notification listener on initialization', () => {
       expect(Notifications.addNotificationReceivedListener).toHaveBeenCalled();
     });
@@ -355,7 +387,7 @@ describe('Push Notification Service Integration', () => {
       } as Notifications.NotificationResponse;
     };
 
-    it('should show modal for weather alert notification when tapped', () => {
+    it('should navigate straight to the weather alert detail when a weather notification is tapped', () => {
       const response = createMockResponse({
         title: 'Severe Weather',
         body: 'Tornado warning in your area',
@@ -367,13 +399,28 @@ describe('Push Notification Service Integration', () => {
 
       notificationResponseHandler(response);
 
-      expect(mockShowNotificationModal).toHaveBeenCalledWith({
-        eventCode: 'W:9012',
+      expect(openWeatherAlertDetail).toHaveBeenCalledWith('9012', { maxAttempts: 20, retryDelayMs: 250 });
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to the modal when a weather notification has no alert id', () => {
+      const response = createMockResponse({
         title: 'Severe Weather',
         body: 'Tornado warning in your area',
         data: {
-          eventCode: 'W:9012',
-          alertId: '9012',
+          eventCode: 'W:',
+        },
+      });
+
+      notificationResponseHandler(response);
+
+      expect(openWeatherAlertDetail).not.toHaveBeenCalled();
+      expect(mockShowNotificationModal).toHaveBeenCalledWith({
+        eventCode: 'W:',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+        data: {
+          eventCode: 'W:',
         },
       });
     });
@@ -434,7 +481,7 @@ describe('Push Notification Service Integration', () => {
   });
 
   describe('cold start (app launched from a killed state by tapping a notification)', () => {
-    it('replays the launch notification response so the modal is shown', async () => {
+    it('replays a weather launch notification and navigates to the alert detail', async () => {
       // Require the already-initialized singleton (cached from beforeAll) to reach its launch handler.
       const { pushNotificationService } = require('../push-notification');
 
@@ -456,13 +503,36 @@ describe('Push Notification Service Integration', () => {
 
       await (pushNotificationService as any).presentLaunchNotificationResponse();
 
+      expect(openWeatherAlertDetail).toHaveBeenCalledWith('9012', { maxAttempts: 20, retryDelayMs: 250 });
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
+    });
+
+    it('replays a non-weather launch notification response so the modal is shown', async () => {
+      const { pushNotificationService } = require('../push-notification');
+
+      const launchResponse = {
+        actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+        notification: createMockNotification({
+          title: 'Emergency Call',
+          body: 'Structure fire at Main St',
+          data: {
+            eventCode: 'C:1234',
+          },
+        }),
+      } as Notifications.NotificationResponse;
+      (launchResponse.notification.request as any).identifier = 'launch-response-call';
+
+      (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValueOnce(launchResponse);
+      mockShowNotificationModal.mockClear();
+
+      await (pushNotificationService as any).presentLaunchNotificationResponse();
+
       expect(mockShowNotificationModal).toHaveBeenCalledWith({
-        eventCode: 'W:9012',
-        title: 'Severe Weather',
-        body: 'Tornado warning in your area',
+        eventCode: 'C:1234',
+        title: 'Emergency Call',
+        body: 'Structure fire at Main St',
         data: {
-          eventCode: 'W:9012',
-          alertId: '9012',
+          eventCode: 'C:1234',
         },
       });
     });

@@ -17,6 +17,7 @@ import { CheckInTabPanel } from '@/components/check-in/check-in-tab-panel';
 import { HeaderBackButton } from '@/components/common/header-back-button';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import { IncidentCommandTabPanel } from '@/components/incident-command/incident-command-tab-panel';
 import FullScreenMapModal from '@/components/maps/full-screen-map-modal';
 // Import a static map component instead of react-native-maps
 import StaticMap from '@/components/maps/static-map';
@@ -629,7 +630,13 @@ export default function CallDetail() {
       content: <VideoFeedTabPanel callId={parseInt(call.CallId)} canEdit={canUserCreateCalls ?? false} />,
     });
 
-    if (call?.CheckInTimersEnabled) {
+    tabs.push({
+      key: 'command',
+      title: t('call_detail.tabs.command'),
+      content: <IncidentCommandTabPanel callId={parseInt(call.CallId)} />,
+    });
+
+    if (call.CheckInTimersEnabled) {
       const overdueCount = useCheckInStore.getState().timerStatuses.filter((s) => s.Status === 'Overdue').length;
       tabs.push({
         key: 'checkin',

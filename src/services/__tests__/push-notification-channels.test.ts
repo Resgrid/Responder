@@ -34,8 +34,10 @@ jest.mock('@/lib/storage/app', () => ({ getDeviceUuid: jest.fn() }));
 jest.mock('@/api/devices/push', () => ({ registerDevice: jest.fn(), registerUnitDevice: jest.fn() }));
 jest.mock('@/stores/push-notification/store', () => ({
   usePushNotificationModalStore: { getState: jest.fn(() => ({ showNotificationModal: jest.fn() })) },
+  parseNotificationData: jest.fn(() => ({ type: 'unknown', id: '', eventCode: '' })),
 }));
 jest.mock('@/stores/security/store', () => ({ securityStore: { getState: jest.fn(() => ({})) } }));
+jest.mock('@/components/weather-alerts/weather-alert-navigation', () => ({ openWeatherAlertDetail: jest.fn() }));
 
 const setChannelMock = Notifications.setNotificationChannelAsync as jest.Mock;
 const deleteChannelMock = Notifications.deleteNotificationChannelAsync as jest.Mock;

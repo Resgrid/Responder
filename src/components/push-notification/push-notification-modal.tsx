@@ -8,9 +8,10 @@ import { HStack } from '@/components/ui/hstack';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { logger } from '@/lib/logging';
 import { type NotificationType, usePushNotificationModalStore } from '@/stores/push-notification/store';
-import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
 interface NotificationIconProps {
   type: NotificationType;
@@ -112,10 +113,14 @@ export const PushNotificationModal: React.FC = () => {
 
     hideNotificationModal();
 
-    // Ensure the alert is loaded into the store first so the detail screen can resolve it by
-    // identity (the store keys alerts as `alert:<AlertId>`); handleAlertReceived logs its own errors.
-    await useWeatherAlertsStore.getState().handleAlertReceived(alertId);
-    router.push(`/(app)/weather-alerts/${encodeURIComponent(`alert:${alertId}`)}`);
+    try {
+      await openWeatherAlertDetail(alertId);
+    } catch (error) {
+      logger.error({
+        message: 'Failed to open weather alert detail from notification modal',
+        context: { error, alertId },
+      });
+    }
   };
 
   const getNotificationTypeText = (type: NotificationType): string => {

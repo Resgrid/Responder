@@ -71,6 +71,15 @@ jest.mock('@/hooks/use-analytics', () => ({
   useAnalytics: jest.fn(),
 }));
 
+jest.mock('@/lib/logging', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
 jest.mock('@/stores/push-notification/store', () => ({
   usePushNotificationModalStore: jest.fn(),
 }));
@@ -354,6 +363,38 @@ describe('PushNotificationModal', () => {
       expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_view_weather_alert_pressed', {
         id: '9012',
         eventCode: 'W:9012',
+      });
+    });
+  });
+
+  it('should log instead of throwing when opening the weather alert detail fails', async () => {
+    const { logger } = require('@/lib/logging');
+    const navigationError = new Error('router not mounted');
+    (router.push as jest.Mock).mockImplementationOnce(() => {
+      throw navigationError;
+    });
+
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: {
+        type: 'weather' as const,
+        id: '9012',
+        eventCode: 'W:9012',
+        title: 'Severe Weather',
+        body: 'Tornado warning in your area',
+      },
+      hideNotificationModal: jest.fn(),
+    });
+
+    render(<PushNotificationModal />);
+
+    fireEvent.press(screen.queryByText('View Alert')!);
+
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith({
+        message: 'Failed to open weather alert detail from notification modal',
+        context: { error: navigationError, alertId: '9012' },
       });
     });
   });
