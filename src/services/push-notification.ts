@@ -4,11 +4,12 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import { registerDevice, registerUnitDevice } from '@/api/devices/push';
+import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAuthStore } from '@/lib/auth';
 import { getModernNotificationSoundsEnabled, hasMigratedNotificationChannelSounds, markNotificationChannelSoundsMigrated } from '@/lib/hooks/use-modern-notification-sounds';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
-import { usePushNotificationModalStore } from '@/stores/push-notification/store';
+import { parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
 
 // Define notification response types
@@ -261,10 +262,35 @@ class PushNotificationService {
       },
     });
 
-    // Mirror the foreground behaviour when the user taps a notification to open the app so the
-    // (weather-alert or other) notification stays visible via the persistent modal instead of
-    // the app opening to nothing.
-    this.presentNotificationModal(response.notification.request.content);
+    // Tapping a weather-alert push deep-links straight to that alert's detail screen. Every
+    // other type mirrors the foreground behaviour so the notification stays visible via the
+    // persistent modal instead of the app opening to nothing.
+    const content = response.notification.request.content;
+    const data = content.data;
+
+    if (data && typeof data.eventCode === 'string') {
+      const parsed = parseNotificationData({ eventCode: data.eventCode, data });
+
+      if (parsed.type === 'weather' && parsed.id) {
+        void this.navigateToWeatherAlert(parsed.id);
+        return;
+      }
+    }
+
+    this.presentNotificationModal(content);
+  };
+
+  // On a cold start the launch notification tap is replayed before the root layout has mounted,
+  // where router.push throws — keep retrying until the router is ready.
+  private navigateToWeatherAlert = async (alertId: string): Promise<void> => {
+    try {
+      await openWeatherAlertDetail(alertId, { maxAttempts: 20, retryDelayMs: 250 });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to navigate to weather alert from push notification',
+        context: { error, alertId },
+      });
+    }
   };
 
   public async registerForPushNotifications(userId: string, departmentCode: string): Promise<string | null> {

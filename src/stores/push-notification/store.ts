@@ -28,44 +28,46 @@ interface PushNotificationModalState {
   parseNotification: (notificationData: PushNotificationData) => ParsedNotification;
 }
 
+export const parseNotificationData = (notificationData: PushNotificationData): ParsedNotification => {
+  const eventCode = notificationData.eventCode || '';
+  let type: NotificationType = 'unknown';
+  let id = '';
+
+  // Parse event code format like "C:1234", "M:5678", "T:9012", "G:3456", "W:9012"
+  if (eventCode && eventCode.includes(':')) {
+    const [prefix, notificationId] = eventCode.split(':');
+    const lowerPrefix = prefix?.toLowerCase() ?? '';
+
+    if (lowerPrefix.startsWith('c')) {
+      type = 'call';
+    } else if (lowerPrefix.startsWith('m')) {
+      type = 'message';
+    } else if (lowerPrefix.startsWith('t')) {
+      type = 'chat';
+    } else if (lowerPrefix.startsWith('g')) {
+      type = 'group-chat';
+    } else if (lowerPrefix.startsWith('w')) {
+      type = 'weather';
+    }
+
+    id = notificationId || '';
+  }
+
+  return {
+    type,
+    id,
+    eventCode,
+    title: notificationData.title,
+    body: notificationData.body,
+    data: notificationData.data,
+  };
+};
+
 export const usePushNotificationModalStore = create<PushNotificationModalState>((set, get) => ({
   isOpen: false,
   notification: null,
 
-  parseNotification: (notificationData: PushNotificationData): ParsedNotification => {
-    const eventCode = notificationData.eventCode || '';
-    let type: NotificationType = 'unknown';
-    let id = '';
-
-    // Parse event code format like "C:1234", "M:5678", "T:9012", "G:3456", "W:9012"
-    if (eventCode && eventCode.includes(':')) {
-      const [prefix, notificationId] = eventCode.split(':');
-      const lowerPrefix = prefix?.toLowerCase() ?? '';
-
-      if (lowerPrefix.startsWith('c')) {
-        type = 'call';
-      } else if (lowerPrefix.startsWith('m')) {
-        type = 'message';
-      } else if (lowerPrefix.startsWith('t')) {
-        type = 'chat';
-      } else if (lowerPrefix.startsWith('g')) {
-        type = 'group-chat';
-      } else if (lowerPrefix.startsWith('w')) {
-        type = 'weather';
-      }
-
-      id = notificationId || '';
-    }
-
-    return {
-      type,
-      id,
-      eventCode,
-      title: notificationData.title,
-      body: notificationData.body,
-      data: notificationData.data,
-    };
-  },
+  parseNotification: (notificationData: PushNotificationData): ParsedNotification => parseNotificationData(notificationData),
 
   showNotificationModal: (notificationData: PushNotificationData) => {
     const parsedNotification = get().parseNotification(notificationData);
