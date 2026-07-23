@@ -23,7 +23,7 @@ jest.mock('@/components/ui/card', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    Card: ({ children, className, ...props }: any) => React.createElement(View, { ...props, testID: 'card' }, children),
+    Card: ({ children, className, ...props }: any) => React.createElement(View, { ...props, className, testID: 'card' }, children),
     CardContent: ({ children, className, ...props }: any) => React.createElement(View, { ...props, testID: 'card-content' }, children),
   };
 });
@@ -128,13 +128,14 @@ describe('CompactCalendarItem', () => {
 
   it('renders basic event information correctly', () => {
     const item = createMockItem();
-    const { getByText } = render(
+    const { getByText, getByTestId } = render(
       <CompactCalendarItem item={item} onPress={mockOnPress} />
     );
 
     expect(getByText('Test Event')).toBeTruthy();
     expect(getByText('Meeting')).toBeTruthy();
     expect(getByText('Test Location')).toBeTruthy();
+    expect(getByTestId('card').props.className).toContain('bg-white shadow-sm dark:bg-gray-800');
   });
 
   it('displays all day event correctly', () => {

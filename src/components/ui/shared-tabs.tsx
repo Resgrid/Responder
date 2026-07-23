@@ -1,7 +1,8 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { create } from 'zustand';
 
 import { Box } from '@/components/ui/box';
@@ -64,6 +65,42 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
 
   // Track which tabs have ever been activated so we can keep them mounted
   const [mountedTabs, setMountedTabs] = useState<Set<number>>(() => new Set([initialIndex]));
+
+  // Overflow indicators for the scrollable tab bar
+  const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+  const [showRightIndicator, setShowRightIndicator] = useState(false);
+  const scrollMetricsRef = useRef({ offsetX: 0, contentWidth: 0, containerWidth: 0 });
+
+  const updateScrollIndicators = useCallback(() => {
+    const { offsetX, contentWidth, containerWidth } = scrollMetricsRef.current;
+    const canScroll = contentWidth > containerWidth + 1;
+    setShowLeftIndicator(canScroll && offsetX > 2);
+    setShowRightIndicator(canScroll && offsetX + containerWidth < contentWidth - 2);
+  }, []);
+
+  const handleTabBarScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollMetricsRef.current.offsetX = event.nativeEvent.contentOffset.x;
+      updateScrollIndicators();
+    },
+    [updateScrollIndicators]
+  );
+
+  const handleTabBarContentSizeChange = useCallback(
+    (contentWidth: number) => {
+      scrollMetricsRef.current.contentWidth = contentWidth;
+      updateScrollIndicators();
+    },
+    [updateScrollIndicators]
+  );
+
+  const handleTabBarLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      scrollMetricsRef.current.containerWidth = event.nativeEvent.layout.width;
+      updateScrollIndicators();
+    },
+    [updateScrollIndicators]
+  );
 
   // Use local state if no external state management is needed
   const currentIndex = onChange ? activeIndex : localActiveIndex;
@@ -170,32 +207,68 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     <Box className={`flex-1 ${className}`}>
       {/* Tab Headers */}
       {scrollable ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={getContainerStyle()}>
-          {tabs.map((tab, index) => (
-            <Pressable key={tab.key} className={getTabStyles(index)} onPress={() => handleTabPress(index)}>
-              {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
-              {typeof tab.title === 'string' ? (
-                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{t(tab.title)}</Text>
-              ) : (
-                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{tab.title}</Text>
-              )}
-              {tab.badge !== undefined && tab.badge > 0 && (
-                <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
-                  <Text className="text-xs font-bold text-white">{tab.badge}</Text>
-                </Box>
-              )}
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={tabContentStyles.scrollWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[getContainerStyle(), tabContentStyles.scrollContent]}
+            onScroll={handleTabBarScroll}
+            scrollEventThrottle={16}
+            onContentSizeChange={handleTabBarContentSizeChange}
+            onLayout={handleTabBarLayout}
+          >
+            {tabs.map((tab, index) => (
+              <Pressable key={tab.key} className={getTabStyles(index)} onPress={() => handleTabPress(index)}>
+                {tab.icon ? <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box> : null}
+                {typeof tab.title === 'string' ? (
+                  <Text numberOfLines={1} className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>
+                    {t(tab.title)}
+                  </Text>
+                ) : (
+                  <Text numberOfLines={1} className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>
+                    {tab.title}
+                  </Text>
+                )}
+                {tab.badge !== undefined && tab.badge > 0 ? (
+                  <Box className={`${isLandscape ? 'ml-1.5' : 'ml-1'} min-w-[20px] items-center rounded-full bg-red-500 px-1.5 py-0.5`}>
+                    <Text className="text-xs font-bold text-white">{tab.badge}</Text>
+                  </Box>
+                ) : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+          {showLeftIndicator ? (
+            <View
+              testID="tabs-scroll-indicator-left"
+              pointerEvents="none"
+              style={[tabContentStyles.scrollIndicator, tabContentStyles.scrollIndicatorLeft, { backgroundColor: colorScheme === 'dark' ? 'rgba(23, 23, 23, 0.9)' : 'rgba(245, 245, 245, 0.9)' }]}
+            >
+              <ChevronLeft size={16} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+            </View>
+          ) : null}
+          {showRightIndicator ? (
+            <View
+              testID="tabs-scroll-indicator-right"
+              pointerEvents="none"
+              style={[tabContentStyles.scrollIndicator, tabContentStyles.scrollIndicatorRight, { backgroundColor: colorScheme === 'dark' ? 'rgba(23, 23, 23, 0.9)' : 'rgba(245, 245, 245, 0.9)' }]}
+            >
+              <ChevronRight size={16} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+            </View>
+          ) : null}
+        </View>
       ) : (
         <Box className={getContainerStyles()}>
           {tabs.map((tab, index) => (
             <Pressable key={tab.key} className={`flex-1 ${getTabStyles(index)}`} onPress={() => handleTabPress(index)}>
-              {tab.icon && <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box>}
+              {tab.icon ? <Box className={isLandscape ? 'mr-1.5' : 'mr-1'}>{tab.icon}</Box> : null}
               {typeof tab.title === 'string' ? (
-                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{t(tab.title)}</Text>
+                <Text numberOfLines={1} className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>
+                  {t(tab.title)}
+                </Text>
               ) : (
-                <Text className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>{tab.title}</Text>
+                <Text numberOfLines={1} className={`${getTitleFontSize()} ${getTitleClassName(index)}`}>
+                  {tab.title}
+                </Text>
               )}
               {/*
                * Badge is absolutely positioned so it does NOT participate in the
@@ -234,6 +307,22 @@ const tabContentStyles = StyleSheet.create({
   active: { flex: 1 },
   // display:'none' hides the view and removes it from layout without unmounting
   hidden: { display: 'none' },
+  scrollWrapper: { position: 'relative' },
+  // Let the tab row (and its bottom border) stretch to at least the full bar width
+  scrollContent: { flexGrow: 1 },
+  // Edge overlays hinting that more tabs exist off-screen. pointerEvents is
+  // disabled on them so taps and swipes reach the tabs underneath.
+  scrollIndicator: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  scrollIndicatorLeft: { left: 0 },
+  scrollIndicatorRight: { right: 0 },
   // Badge overlay for the non-scrollable tab bar. Absolutely positioned so it
   // sits in the top-right corner of the tab without pushing text to a 2nd row.
   badge: {

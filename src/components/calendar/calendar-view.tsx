@@ -127,7 +127,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onMonthChange }) => 
   };
 
   return (
-    <VStack className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+    <VStack className="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
       {/* Month Navigation */}
       <HStack className="items-center justify-between px-4 py-3">
         <Button variant="outline" size="sm" onPress={() => navigateMonth('prev')} className="border-none p-2">

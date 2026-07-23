@@ -244,6 +244,16 @@ describe('CustomBottomSheet', () => {
       content = screen.getByTestId('actionsheet-content');
       expect(content.props.className).toContain('bg-neutral-900');
     });
+
+    it('should apply a custom surface class instead of the default theme surface', () => {
+      useColorScheme.mockReturnValue({ colorScheme: 'dark' });
+
+      render(<CustomBottomSheet {...defaultProps} surfaceClassName="bg-white dark:bg-gray-800" />);
+
+      const content = screen.getByTestId('actionsheet-content');
+      expect(content.props.className).toContain('bg-white dark:bg-gray-800');
+      expect(content.props.className).not.toContain('bg-neutral-900');
+    });
   });
 
   describe('Children Rendering', () => {
@@ -464,4 +474,4 @@ describe('CustomBottomSheet', () => {
       expect(text).toBeTruthy();
     });
   });
-}); 
+});

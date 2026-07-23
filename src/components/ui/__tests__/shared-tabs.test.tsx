@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { ScrollView } from 'react-native';
 import { SharedTabs, TabItem } from '../shared-tabs';
 import { Text } from '../text';
 import { Box } from '../box';
@@ -149,5 +150,63 @@ describe('SharedTabs', () => {
 
     expect(getByText('🔥')).toBeTruthy();
     expect(getByText('Tab 1')).toBeTruthy();
+  });
+
+  it('renders tab titles on a single line', () => {
+    const { getByText } = render(<SharedTabs tabs={mockTabs} />);
+
+    expect(getByText('Tab 1').props.numberOfLines).toBe(1);
+  });
+
+  it('renders single-line titles for non-scrollable tabs', () => {
+    const { getByText } = render(<SharedTabs tabs={mockTabs} scrollable={false} />);
+
+    expect(getByText('Tab 1').props.numberOfLines).toBe(1);
+  });
+
+  it('shows no overflow indicators when tabs fit the container', () => {
+    const { UNSAFE_getByType, queryByTestId } = render(<SharedTabs tabs={mockTabs} scrollable={true} />);
+
+    const scrollView = UNSAFE_getByType(ScrollView);
+    fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 400, height: 40, x: 0, y: 0 } } });
+    fireEvent(scrollView, 'contentSizeChange', 300, 40);
+
+    expect(queryByTestId('tabs-scroll-indicator-left')).toBeNull();
+    expect(queryByTestId('tabs-scroll-indicator-right')).toBeNull();
+  });
+
+  it('shows the right overflow indicator when tabs extend past the container', () => {
+    const { UNSAFE_getByType, queryByTestId } = render(<SharedTabs tabs={mockTabs} scrollable={true} />);
+
+    const scrollView = UNSAFE_getByType(ScrollView);
+    fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200, height: 40, x: 0, y: 0 } } });
+    fireEvent(scrollView, 'contentSizeChange', 500, 40);
+
+    expect(queryByTestId('tabs-scroll-indicator-left')).toBeNull();
+    expect(queryByTestId('tabs-scroll-indicator-right')).toBeTruthy();
+  });
+
+  it('shows the left overflow indicator after scrolling to the end', () => {
+    const { UNSAFE_getByType, queryByTestId } = render(<SharedTabs tabs={mockTabs} scrollable={true} />);
+
+    const scrollView = UNSAFE_getByType(ScrollView);
+    fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200, height: 40, x: 0, y: 0 } } });
+    fireEvent(scrollView, 'contentSizeChange', 500, 40);
+    fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 300 }, contentSize: { width: 500, height: 40 }, layoutMeasurement: { width: 200, height: 40 } } });
+
+    expect(queryByTestId('tabs-scroll-indicator-left')).toBeTruthy();
+    expect(queryByTestId('tabs-scroll-indicator-right')).toBeNull();
+  });
+
+  it('shows both overflow indicators when scrolled to the middle', () => {
+    const { UNSAFE_getByType, queryByTestId } = render(<SharedTabs tabs={mockTabs} scrollable={true} />);
+
+    const scrollView = UNSAFE_getByType(ScrollView);
+    fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200, height: 40, x: 0, y: 0 } } });
+    fireEvent(scrollView, 'contentSizeChange', 500, 40);
+    fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 150 }, contentSize: { width: 500, height: 40 }, layoutMeasurement: { width: 200, height: 40 } } });
+
+    expect(queryByTestId('tabs-scroll-indicator-left')).toBeTruthy();
+    expect(queryByTestId('tabs-scroll-indicator-right')).toBeTruthy();
   });
 });

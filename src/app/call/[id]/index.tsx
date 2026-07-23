@@ -758,7 +758,7 @@ export default function CallDetail() {
 
         {/* Tabs */}
         <Box className={`mt-4 flex-1 pb-8 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
-          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} scrollable={false} />
+          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} scrollable={true} />
         </Box>
       </ScrollView>
       {isMapModalOpen && coordinates.latitude != null && coordinates.longitude != null ? (

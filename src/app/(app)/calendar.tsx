@@ -2,7 +2,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CalendarCard } from '@/components/calendar/calendar-card';
 import { CalendarItemDetailsSheet } from '@/components/calendar/calendar-item-details-sheet';
@@ -249,7 +248,7 @@ export default function CalendarScreen() {
           headerShown: true,
         }}
       />
-      <VStack className="flex-1">
+      <VStack className="flex-1 bg-gray-50 dark:bg-gray-900" testID="calendar-screen">
         {/* Tab Navigation */}
         <HStack className="space-x-2 p-4">
           {renderTabButton('today', t('calendar.tabs.today'))}

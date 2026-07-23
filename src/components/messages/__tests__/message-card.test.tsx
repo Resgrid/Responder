@@ -30,12 +30,14 @@ jest.mock('react-i18next', () => ({
         'messages.types.message': 'Message',
         'messages.types.poll': 'Poll',
         'messages.types.alert': 'Alert',
+        'messages.types.calendar_rsvp': 'Calendar RSVP',
         'messages.no_subject': 'No Subject',
         'messages.responded': 'Responded',
         'messages.expired': 'Expired',
         'messages.recipients_count': '{{count}} recipients',
         'messages.select_message': 'Select message',
         'common.unknown_user': 'Unknown User',
+        'common.system': 'System',
       };
 
       let result = translations[key] || key;
@@ -521,4 +523,4 @@ describe('MessageCard', () => {
     // Should fall back to the original string
     expect(getByText('invalid-date')).toBeTruthy();
   });
-}); 
+});

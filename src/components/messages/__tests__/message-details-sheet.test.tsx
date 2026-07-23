@@ -24,6 +24,10 @@ jest.mock('react-i18next', () => ({
         'messages.types.message': 'Message',
         'messages.types.poll': 'Poll',
         'messages.types.alert': 'Alert',
+        'messages.types.calendar_rsvp': 'Calendar RSVP',
+        'messages.calendar_rsvp': 'Calendar RSVP',
+        'messages.attending': 'Attending',
+        'messages.not_attending': 'Not attending',
         'messages.no_subject': 'No Subject',
         'messages.no_content': 'No content',
         'messages.from': 'From',
@@ -46,6 +50,7 @@ jest.mock('react-i18next', () => ({
         'messages.delete_confirmation_title': 'Delete Message',
         'messages.delete_single_confirmation_message': 'Are you sure you want to delete this message?',
         'common.unknown_user': 'Unknown User',
+        'common.system': 'System',
         'common.cancel': 'Cancel',
         'common.confirm': 'Confirm',
       };
@@ -981,8 +986,41 @@ describe('MessageDetailsSheet', () => {
       render(<MessageDetailsSheet />);
 
       expect(screen.getByText('No Subject')).toBeTruthy();
-      expect(screen.getByText('From: Unknown User')).toBeTruthy();
+      expect(screen.getByText('From: System')).toBeTruthy();
       expect(screen.getByText('No content')).toBeTruthy();
+    });
+
+    it('shows calendar RSVP buttons and records attendance from a system message', async () => {
+      const currentStore = mockUseMessagesStore();
+      mockUseMessagesStore.mockReturnValue({
+        ...currentStore,
+        selectedMessage: {
+          ...mockMessage,
+          MessageId: '852',
+          Type: 4,
+          CalendarItemId: '8521',
+          IsSystem: true,
+          SendingName: 'Original User',
+          Responded: false,
+          ResponseType: '',
+        },
+      });
+
+      render(<MessageDetailsSheet />);
+
+      expect(screen.getByText('From: System')).toBeTruthy();
+      expect(screen.getByTestId('calendar-rsvp-attending')).toBeTruthy();
+      expect(screen.getByTestId('calendar-rsvp-not-attending')).toBeTruthy();
+
+      fireEvent.press(screen.getByTestId('calendar-rsvp-attending'));
+
+      await waitFor(() => {
+        expect(mockRespondToMessage).toHaveBeenCalledWith({
+          messageId: '852',
+          response: 'Yes',
+          type: 1,
+        });
+      });
     });
 
     it('should not show reply button for expired messages', () => {

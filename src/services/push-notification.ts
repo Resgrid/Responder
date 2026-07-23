@@ -6,7 +6,6 @@ import { Platform } from 'react-native';
 import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAuthStore } from '@/lib/auth';
-import { getModernNotificationSoundsEnabled, hasMigratedNotificationChannelSounds, markNotificationChannelSoundsMigrated } from '@/lib/hooks/use-modern-notification-sounds';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
@@ -34,33 +33,24 @@ interface NotificationChannelConfig {
   id: string;
   name: string;
   description: string;
-  // Sound used when the modern notification sounds preference is enabled (the
-  // default). Every non-custom channel has one so it plays audio, even if the
-  // channel was silent before.
-  modernSound: string;
-  // Sound used when the preference is disabled. `undefined` restores the
-  // channel's original behaviour (silent for channels that never had a sound).
-  classicSound?: string;
+  sound?: string;
   // Defaults to true when omitted.
   vibration?: boolean;
 }
 
 /**
- * Android notification channels, excluding the c1–c25 custom call tones which
- * always use their own dedicated sounds. The channel id is what the Resgrid
- * backend targets, and on Android the channel (not the push payload) owns the
- * sound. When the modern sounds preference is enabled (the default) every
- * channel here plays its modern sound; when disabled they fall back to the
- * classic sound, or to silence for channels that had no sound originally.
+ * Android notification channels targeted by Core. Sound selection is controlled
+ * by the channel id in the Core notification payload; the client does not expose
+ * or persist a separate modern/classic preference.
  */
 const NOTIFICATION_CHANNELS: NotificationChannelConfig[] = [
-  { id: 'calls', name: 'Generic Call', description: 'Generic Call', modernSound: 'modernnotification' },
-  { id: '0', name: 'Emergency Call', description: 'Emergency Call', modernSound: 'moderncallemergency', classicSound: 'callemergency' },
-  { id: '1', name: 'High Call', description: 'High Call', modernSound: 'moderncallhigh', classicSound: 'callhigh' },
-  { id: '2', name: 'Medium Call', description: 'Medium Call', modernSound: 'moderncallmedium', classicSound: 'callmedium' },
-  { id: '3', name: 'Low Call', description: 'Low Call', modernSound: 'moderncalllow', classicSound: 'calllow' },
-  { id: 'notif', name: 'Notification', description: 'Notifications', modernSound: 'modernnotification', vibration: false },
-  { id: 'message', name: 'Message', description: 'Messages', modernSound: 'modernmessage', vibration: false },
+  { id: 'calls', name: 'Generic Call', description: 'Generic Call' },
+  { id: '0', name: 'Emergency Call', description: 'Emergency Call', sound: 'callemergency' },
+  { id: '1', name: 'High Call', description: 'High Call', sound: 'callhigh' },
+  { id: '2', name: 'Medium Call', description: 'Medium Call', sound: 'callmedium' },
+  { id: '3', name: 'Low Call', description: 'Low Call', sound: 'calllow' },
+  { id: 'notif', name: 'Notification', description: 'Notifications', vibration: false },
+  { id: 'message', name: 'Message', description: 'Messages', vibration: false },
 ];
 
 class PushNotificationService {
@@ -109,23 +99,9 @@ class PushNotificationService {
     }
 
     try {
-      const useModernSounds = getModernNotificationSoundsEnabled();
-
-      // One-time migration for upgraded installs: Android locks a channel's
-      // sound at creation time, so standard channels created by a previous
-      // version would ignore the (modern) sound configuration below. Delete
-      // them once so the loop recreates them with the current sounds.
-      if (!hasMigratedNotificationChannelSounds()) {
-        for (const channel of NOTIFICATION_CHANNELS) {
-          await Notifications.deleteNotificationChannelAsync(channel.id);
-        }
-        markNotificationChannelSoundsMigrated();
-      }
-
       // Standard call/notification/message channels
       for (const channel of NOTIFICATION_CHANNELS) {
-        const sound = useModernSounds ? channel.modernSound : channel.classicSound;
-        await this.createNotificationChannel(channel.id, channel.name, channel.description, sound, channel.vibration ?? true);
+        await this.createNotificationChannel(channel.id, channel.name, channel.description, channel.sound, channel.vibration ?? true);
       }
 
       // Custom call channels (c1-c25) keep their own dedicated tones.
@@ -136,43 +112,10 @@ class PushNotificationService {
 
       logger.info({
         message: 'Android notification channels setup completed',
-        context: { useModernSounds },
       });
     } catch (error) {
       logger.error({
         message: 'Error setting up Android notification channels',
-        context: { error },
-      });
-    }
-  }
-
-  /**
-   * Re-applies the channel sounds after the user toggles the "modern
-   * notification sounds" preference. Android locks a channel's sound at creation
-   * time, so each channel must be deleted and recreated for the new sound to
-   * take effect.
-   */
-  public async refreshNotificationChannelSounds(): Promise<void> {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    try {
-      const useModernSounds = getModernNotificationSoundsEnabled();
-
-      for (const channel of NOTIFICATION_CHANNELS) {
-        await Notifications.deleteNotificationChannelAsync(channel.id);
-        const sound = useModernSounds ? channel.modernSound : channel.classicSound;
-        await this.createNotificationChannel(channel.id, channel.name, channel.description, sound, channel.vibration ?? true);
-      }
-
-      logger.info({
-        message: 'Android notification channel sounds refreshed',
-        context: { useModernSounds },
-      });
-    } catch (error) {
-      logger.error({
-        message: 'Error refreshing Android notification channel sounds',
         context: { error },
       });
     }

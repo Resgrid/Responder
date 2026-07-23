@@ -13,8 +13,10 @@ import { Heading } from '@/components/ui/heading';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { CHECK_IN_TARGET_TYPE, getEligibleCheckInTypeValues, getPreferredQuickCheckInType, isCheckInTargetEligible } from '@/lib/check-in-eligibility';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
 import { type ResolvedCheckInTimerResultData } from '@/models/v4/checkIn/resolvedCheckInTimerResultData';
+import { useCoreStore } from '@/stores/app/core-store';
 import { useCheckInStore } from '@/stores/calls/check-in-store';
 import { useDispatchStore } from '@/stores/dispatch/store';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -27,18 +29,18 @@ interface CheckInTabPanelProps {
   checkInTimersEnabled: boolean;
 }
 
-const PERSONNEL_CHECK_IN_TYPE = 0;
-
 export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkInTimersEnabled }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const showToast = useToastStore((state) => state.showToast);
   const currentUser = useHomeStore((state) => state.currentUser);
+  const activeUnitId = useCoreStore((state) => state.activeUnitId);
   const dispatchUnits = useDispatchStore((state) => state.data.units);
   const fetchDispatchData = useDispatchStore((state) => state.fetchDispatchData);
   const units = useUnitsStore((state) => state.units);
   const fetchUnits = useUnitsStore((state) => state.fetchUnits);
   const users = useRolesStore((state) => state.users);
+  const roles = useRolesStore((state) => state.roles);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
   const [selectedCheckInType, setSelectedCheckInType] = useState(0);
@@ -83,19 +85,41 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
     }
   }, [units.length, fetchUnits]);
 
+  const assignedUnitId = roles.find((role) => role.UserId === currentUser?.UserId)?.UnitId;
+  const activeUnit = units.find((unit) => unit.UnitId === activeUnitId);
+  const assignedUnit = units.find((unit) => unit.UnitId === assignedUnitId);
+  const currentUnit = activeUnit ?? assignedUnit;
+  const currentUnitId = currentUnit?.UnitId;
+  const eligibilityContext = {
+    currentUnitTypeId: currentUnit?.TypeId,
+    hasCurrentUser: currentUser !== null,
+  };
+  const eligibleTimerStatuses = timerStatuses.filter((status) => isCheckInTargetEligible(status, eligibilityContext));
+  const availableCheckInTypes = getEligibleCheckInTypeValues(eligibleTimerStatuses, eligibilityContext);
+  const quickCheckInType = getPreferredQuickCheckInType(eligibleTimerStatuses, eligibilityContext, false);
+  const currentUnitNumericId = currentUnitId ? Number.parseInt(currentUnitId, 10) : undefined;
+  const checkInUnitId = currentUnitNumericId !== undefined && !Number.isNaN(currentUnitNumericId) ? currentUnitNumericId : undefined;
+
   const handleQuickCheckIn = useCallback(() => {
-    setSelectedCheckInType(0);
-    setSelectedUnitId(undefined);
+    if (quickCheckInType === null) {
+      return;
+    }
+
+    setSelectedCheckInType(quickCheckInType);
+    setSelectedUnitId(quickCheckInType === CHECK_IN_TARGET_TYPE.UNIT_TYPE ? checkInUnitId : undefined);
     setSelectedTargetName(undefined);
     setIsBottomSheetOpen(true);
-  }, []);
+  }, [checkInUnitId, quickCheckInType]);
 
-  const handleCheckIn = useCallback((targetType: number, unitId?: number, targetName?: string) => {
-    setSelectedCheckInType(targetType);
-    setSelectedUnitId(unitId);
-    setSelectedTargetName(targetName);
-    setIsBottomSheetOpen(true);
-  }, []);
+  const handleCheckIn = useCallback(
+    (targetType: number, unitId?: number, targetName?: string) => {
+      setSelectedCheckInType(targetType);
+      setSelectedUnitId(targetType === CHECK_IN_TARGET_TYPE.UNIT_TYPE ? checkInUnitId : unitId);
+      setSelectedTargetName(targetName);
+      setIsBottomSheetOpen(true);
+    },
+    [checkInUnitId]
+  );
 
   const handleSubmitCheckIn = useCallback(
     async (input: PerformCheckInInput) => {
@@ -164,8 +188,6 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
     [currentUser, dispatchUnits, resolvedTimers, units, users]
   );
 
-  const canQuickCheckIn = timerStatuses.some((status) => status.TargetType === PERSONNEL_CHECK_IN_TYPE) || resolvedTimers.some((timer) => timer.TargetType === PERSONNEL_CHECK_IN_TYPE);
-
   const renderTimerItem = useCallback(
     (status: CheckInTimerStatusResultData) => (
       <CheckInTimerCard key={`${status.TargetEntityId}-${status.TargetType}`} status={status} resolvedTargetName={getResolvedTargetName(status)} onCheckIn={handleCheckIn} isCurrentUser={true} />
@@ -183,7 +205,7 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
 
   return (
     <VStack space="md" className="p-4">
-      {canQuickCheckIn ? (
+      {quickCheckInType !== null ? (
         <Button size="lg" onPress={handleQuickCheckIn} testID="quick-check-in-button">
           <ButtonText>{t('check_in.quick_check_in')}</ButtonText>
         </Button>
@@ -194,8 +216,8 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
         <Box className="items-center py-4">
           <Text className="text-sm text-gray-500">{t('common.loading')}</Text>
         </Box>
-      ) : timerStatuses.length > 0 ? (
-        <VStack>{timerStatuses.map(renderTimerItem)}</VStack>
+      ) : eligibleTimerStatuses.length > 0 ? (
+        <VStack>{eligibleTimerStatuses.map(renderTimerItem)}</VStack>
       ) : (
         <Box className="items-center py-4">
           <Text className="text-sm text-gray-500">{t('check_in.no_timers')}</Text>
@@ -221,6 +243,7 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
         defaultCheckInType={selectedCheckInType}
         defaultUnitId={selectedUnitId}
         targetName={selectedTargetName}
+        availableCheckInTypes={availableCheckInTypes}
       />
     </VStack>
   );

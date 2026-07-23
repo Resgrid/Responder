@@ -137,9 +137,10 @@ describe('EnhancedCalendarView', () => {
     });
 
     it('renders today button correctly', () => {
-      const { getByText } = render(<EnhancedCalendarView />);
+      const { getByText, getByTestId } = render(<EnhancedCalendarView />);
 
       expect(getByText('Today')).toBeTruthy();
+      expect(getByTestId('enhanced-calendar-view').props.className).toContain('bg-gray-50 dark:bg-gray-900');
     });
 
     it('sets correct date when today button is pressed', () => {

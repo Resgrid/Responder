@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { getCheckInHistory, getTimersForCall, getTimerStatuses, performCheckIn, type PerformCheckInInput } from '@/api/calls/check-in-timers';
+import { isClientCheckInTypeAllowed } from '@/lib/check-in-eligibility';
 import { logger } from '@/lib/logging';
 import { QueuedEventType } from '@/models/offline-queue/queued-event';
 import { type CheckInRecordResultData } from '@/models/v4/checkIn/checkInRecordResultData';
@@ -98,6 +99,12 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   },
 
   performCheckIn: async (input: PerformCheckInInput) => {
+    if (!isClientCheckInTypeAllowed(input.CheckInType)) {
+      logger.warn({ message: 'Blocked unsupported IC check-in from Responder app', context: { callId: input.CallId } });
+      set({ checkInError: 'IC check-ins are not supported in the Responder app', isCheckingIn: false });
+      return false;
+    }
+
     set({ isCheckingIn: true, checkInError: null });
 
     const locationState = useLocationStore.getState();

@@ -75,7 +75,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
 
   return (
     <Pressable onPress={onPress} testID={testID} className="mb-3">
-      <Card variant="elevated" className="shadow-sm">
+      <Card variant="elevated" className="bg-white shadow-sm dark:bg-gray-800">
         <VStack space="sm">
           {/* Header with type and attendance status */}
           <HStack className="items-start justify-between">

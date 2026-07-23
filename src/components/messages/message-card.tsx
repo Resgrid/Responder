@@ -48,6 +48,8 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
         return t('messages.types.poll');
       case 2:
         return t('messages.types.alert');
+      case 4:
+        return t('messages.types.calendar_rsvp');
       default:
         return t('messages.types.message');
     }
@@ -61,12 +63,15 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
         return 'bg-green-500';
       case 2:
         return 'bg-red-500';
+      case 4:
+        return 'bg-purple-500';
       default:
         return 'bg-gray-500';
     }
   };
 
   const isExpired = message.ExpiredOn && new Date(message.ExpiredOn) < new Date();
+  const senderName = message.IsSystem ? t('common.system') : message.SendingName || t('common.unknown_user');
   // Read state is tracked locally (the messages API has no read flag) — a message is
   // read once its detail sheet has been opened. `Responded` only means poll response.
   const isRead = useMessagesStore((state) => state.readMessageIds.has(message.MessageId));
@@ -104,7 +109,7 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
 
             {/* Sender Info */}
             <VStack className="flex-1">
-              <Text className={`font-medium ${!isRead ? 'font-bold' : ''}`}>{message.SendingName || t('common.unknown_user')}</Text>
+              <Text className={`font-medium ${!isRead ? 'font-bold' : ''}`}>{senderName}</Text>
               <HStack space="xs" className="items-center">
                 <Clock size={12} color="#6B7280" />
                 <Text className="text-xs text-gray-500">{formatMessageDate(message.SentOnUtc || message.SentOn)}</Text>

@@ -1,5 +1,5 @@
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type PerformCheckInInput } from '@/api/calls/check-in-timers';
@@ -24,6 +24,7 @@ interface CheckInBottomSheetProps {
   defaultCheckInType?: number;
   defaultUnitId?: number;
   targetName?: string;
+  availableCheckInTypes?: number[];
 }
 
 interface CheckInTypeOption {
@@ -34,16 +35,15 @@ interface CheckInTypeOption {
 const CHECK_IN_TYPES: CheckInTypeOption[] = [
   { value: 0, labelKey: 'check_in.type_personnel' },
   { value: 1, labelKey: 'check_in.type_unit' },
-  { value: 2, labelKey: 'check_in.type_ic' },
   { value: 3, labelKey: 'check_in.type_par' },
   { value: 4, labelKey: 'check_in.type_hazmat' },
   { value: 5, labelKey: 'check_in.type_sector_rotation' },
   { value: 6, labelKey: 'check_in.type_rehab' },
 ];
 
-const CARD_ONLY_CHECK_IN_TYPES = new Set([1, 2]);
+const CARD_ONLY_CHECK_IN_TYPES = new Set([1]);
 
-export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, onClose, callId, onSubmit, isLoading, defaultCheckInType = 0, defaultUnitId, targetName }) => {
+export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, onClose, callId, onSubmit, isLoading, defaultCheckInType = 0, defaultUnitId, targetName, availableCheckInTypes }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const [selectedType, setSelectedType] = useState(defaultCheckInType);
@@ -53,9 +53,16 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
   const isCardDrivenCheckIn = defaultUnitId !== undefined || resolvedTargetName.length > 0;
   const shouldShowTargetName = shouldUseNamedCheckInTarget(defaultCheckInType) && resolvedTargetName.length > 0;
   const titleText = shouldShowTargetName ? `${t('check_in.select_type')}: ${resolvedTargetName}` : t('check_in.select_type');
-  const availableCheckInTypes = isCardDrivenCheckIn
-    ? CHECK_IN_TYPES.filter((type) => !CARD_ONLY_CHECK_IN_TYPES.has(type.value) || type.value === defaultCheckInType)
-    : CHECK_IN_TYPES.filter((type) => !CARD_ONLY_CHECK_IN_TYPES.has(type.value));
+  const eligibleCheckInTypes = CHECK_IN_TYPES.filter((type) => availableCheckInTypes === undefined || availableCheckInTypes.includes(type.value));
+  const selectableCheckInTypes = isCardDrivenCheckIn
+    ? eligibleCheckInTypes.filter((type) => !CARD_ONLY_CHECK_IN_TYPES.has(type.value) || type.value === defaultCheckInType)
+    : eligibleCheckInTypes.filter((type) => !CARD_ONLY_CHECK_IN_TYPES.has(type.value));
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedType(defaultCheckInType);
+    }
+  }, [defaultCheckInType, isOpen]);
 
   const handleSubmit = useCallback(async () => {
     await onSubmit({
@@ -79,7 +86,7 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
         <Heading size="md">{titleText}</Heading>
 
         <VStack space="sm">
-          {availableCheckInTypes.map((type) => (
+          {selectableCheckInTypes.map((type) => (
             <Pressable key={type.value} onPress={() => setSelectedType(type.value)} className={`rounded-lg p-3 ${selectedType === type.value ? activeBg : inactiveBg}`}>
               <HStack className="items-center" space="sm">
                 <Box className={`size-5 items-center justify-center rounded-full border-2 ${selectedType === type.value ? 'border-primary-500 bg-primary-500' : 'border-gray-400'}`}>

@@ -64,7 +64,7 @@ export const CompactCalendarItem: React.FC<CompactCalendarItemProps> = ({ item, 
 
   return (
     <Pressable onPress={onPress} testID={testID} className="mb-2">
-      <Card variant="elevated" className="shadow-sm">
+      <Card variant="elevated" className="bg-white shadow-sm dark:bg-gray-800">
         <VStack space="xs">
           {/* Header row with title, type badge, and status */}
           <HStack className="items-center justify-between">

@@ -51,6 +51,8 @@ export const MessageDetailsSheet: React.FC = () => {
           return t('messages.types.poll');
         case 2:
           return t('messages.types.alert');
+        case 4:
+          return t('messages.types.calendar_rsvp');
         default:
           return t('messages.types.message');
       }
@@ -66,6 +68,8 @@ export const MessageDetailsSheet: React.FC = () => {
         return 'bg-green-500';
       case 2:
         return 'bg-red-500';
+      case 4:
+        return 'bg-purple-500';
       default:
         return 'bg-gray-500';
     }
@@ -186,7 +190,28 @@ export const MessageDetailsSheet: React.FC = () => {
   };
 
   const isExpired = selectedMessage.ExpiredOn && new Date(selectedMessage.ExpiredOn) < new Date();
-  const canRespond = !selectedMessage.Responded && !isExpired && selectedMessage.Type !== 0; // Can respond to polls and alerts
+  const isCalendarRsvp = selectedMessage.Type === 4 && !!selectedMessage.CalendarItemId;
+  const canRespond = !selectedMessage.Responded && !isExpired && selectedMessage.Type !== 0 && !isCalendarRsvp;
+  const senderName = selectedMessage.IsSystem ? t('common.system') : selectedMessage.SendingName || t('common.unknown_user');
+
+  const handleCalendarRsvp = async (attending: boolean) => {
+    try {
+      trackEvent('calendar_rsvp_message_responded', {
+        timestamp: new Date().toISOString(),
+        messageId: selectedMessage.MessageId,
+        calendarItemId: selectedMessage.CalendarItemId || '',
+        attending,
+      });
+    } catch (error) {
+      console.warn('Failed to track calendar RSVP analytics:', error);
+    }
+
+    await respondToMessage({
+      messageId: selectedMessage.MessageId,
+      response: attending ? 'Yes' : 'No',
+      type: attending ? 1 : 3,
+    });
+  };
 
   return (
     <Actionsheet isOpen={isDetailsOpen} onClose={closeDetails} snapPoints={[85]}>
@@ -205,7 +230,7 @@ export const MessageDetailsSheet: React.FC = () => {
               <VStack space="xs" className="flex-1">
                 <Text className="text-lg font-bold leading-tight">{selectedMessage.Subject || t('messages.no_subject')}</Text>
                 <Text className="text-sm text-gray-600 dark:text-gray-300">
-                  {t('messages.from')}: {selectedMessage.SendingName || t('common.unknown_user')}
+                  {t('messages.from')}: {senderName}
                 </Text>
               </VStack>
             </HStack>
@@ -288,6 +313,32 @@ export const MessageDetailsSheet: React.FC = () => {
                 <VStack space="sm" className="w-full">
                   <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('messages.expires_on')}</Text>
                   <Text className="text-gray-600 dark:text-gray-300">{formatMessageDate(selectedMessage.ExpiredOn)}</Text>
+                </VStack>
+              )}
+
+              {isCalendarRsvp && !isExpired && (
+                <VStack space="sm" className="w-full">
+                  <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('messages.calendar_rsvp')}</Text>
+                  <HStack space="sm" className="w-full">
+                    <Button
+                      testID="calendar-rsvp-attending"
+                      variant="solid"
+                      className={selectedMessage.ResponseType === 'Yes' ? 'flex-1 bg-green-700' : 'flex-1 bg-green-600'}
+                      onPress={() => handleCalendarRsvp(true)}
+                      disabled={isLoading}
+                    >
+                      <ButtonText>{t('messages.attending')}</ButtonText>
+                    </Button>
+                    <Button
+                      testID="calendar-rsvp-not-attending"
+                      variant="solid"
+                      className={selectedMessage.ResponseType === 'No' ? 'flex-1 bg-red-700' : 'flex-1 bg-red-600'}
+                      onPress={() => handleCalendarRsvp(false)}
+                      disabled={isLoading}
+                    >
+                      <ButtonText>{t('messages.not_attending')}</ButtonText>
+                    </Button>
+                  </HStack>
                 </VStack>
               )}
 

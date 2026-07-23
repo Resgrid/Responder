@@ -421,6 +421,7 @@
     "submit": "Skicka in",
     "submitting": "Skickar in...",
     "success": "Lyckades",
+    "system": "System",
     "unknown_department": "Okänd avdelning",
     "unknown_user": "Okänd användare",
     "uploading": "Laddar upp..."
@@ -726,6 +727,8 @@
   },
   "messages": {
     "all_messages": "Alla meddelanden",
+    "attending": "Deltar",
+    "calendar_rsvp": "Kalender-O.S.A.",
     "compose": "Skriv",
     "compose_new_message": "Nytt meddelande",
     "date_unknown": "Datum okänt",
@@ -751,6 +754,7 @@
     "no_messages": "Inga meddelanden hittades",
     "no_messages_description": "Skicka ditt första meddelande för att komma igång",
     "no_subject": "Inget ämne",
+    "not_attending": "Deltar inte",
     "note_optional": "Anteckning (valfritt)",
     "people": "Personer",
     "recipients": "Mottagare",
@@ -779,6 +783,7 @@
     "title": "Meddelanden",
     "types": {
       "alert": "Avisering",
+      "calendar_rsvp": "Kalender-O.S.A.",
       "message": "Meddelande",
       "poll": "Omröstning"
     },
@@ -992,8 +997,6 @@
     "logout_confirm_message": "Är du säker på att du vill logga ut? Alla lokala data, cachade värden och sparade inställningar rensas från appen.",
     "logout_confirm_title": "Bekräfta utloggning",
     "logout_confirm_yes": "Ja, logga ut",
-    "modern_notification_sounds": "Moderna aviseringsljud",
-    "modern_notification_sounds_description": "Använd de nya moderna aviseringsljuden för push-aviseringar. Stäng av detta för att använda de klassiska ljuden.",
     "more": "Mer",
     "no_units_available": "Inga enheter tillgängliga",
     "none_selected": "Inget valt",

@@ -20,6 +20,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Keyboard, Platform } from 'react-native';
 
 import { CloseCallBottomSheet } from '../close-call-bottom-sheet';
 import { useAnalytics } from '@/hooks/use-analytics';
@@ -732,6 +733,50 @@ describe('CloseCallBottomSheet', () => {
       }));
 
       jest.restoreAllMocks();
+    });
+  });
+
+  describe('Android keyboard handling', () => {
+    const originalOS = Platform.OS;
+    let keyboardListeners: Record<string, (event?: unknown) => void>;
+    let addListenerSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      keyboardListeners = {};
+      addListenerSpy = jest.spyOn(Keyboard, 'addListener').mockImplementation(((eventName: string, handler: (event?: unknown) => void) => {
+        keyboardListeners[eventName] = handler;
+        return { remove: jest.fn() };
+      }) as unknown as typeof Keyboard.addListener);
+    });
+
+    afterEach(() => {
+      addListenerSpy.mockRestore();
+      Platform.OS = originalOS;
+    });
+
+    it('pads the scroll content by the keyboard height while the keyboard is shown', () => {
+      Platform.OS = 'android';
+      render(<CloseCallBottomSheet isOpen={true} onClose={jest.fn()} callId="test-call-1" />);
+
+      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 0 });
+
+      act(() => {
+        keyboardListeners.keyboardDidShow({ endCoordinates: { height: 300 } });
+      });
+      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 300 });
+
+      act(() => {
+        keyboardListeners.keyboardDidHide();
+      });
+      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 0 });
+    });
+
+    it('does not subscribe to keyboard events on iOS', () => {
+      Platform.OS = 'ios';
+      render(<CloseCallBottomSheet isOpen={true} onClose={jest.fn()} callId="test-call-1" />);
+
+      expect(keyboardListeners.keyboardDidShow).toBeUndefined();
+      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 0 });
     });
   });
 }); 

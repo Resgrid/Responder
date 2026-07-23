@@ -1,8 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, useWindowDimensions } from 'react-native';
+import { Keyboard, Platform, type ScrollView, useWindowDimensions } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
@@ -40,6 +40,31 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
 
   // Track if modal was actually opened to avoid false close events
   const wasModalOpenRef = useRef(false);
+
+  // The actionsheet renders inside a native Modal window, which the Android
+  // soft keyboard overlays without resizing (softwareKeyboardLayoutMode 'pan'
+  // does not apply to dialog windows), so keyboard-controller's inset
+  // animations never reach it. Pad the scroll content by the keyboard height
+  // and scroll the note input back into view manually.
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      setKeyboardPadding(event.endCoordinates.height);
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardPadding(0);
+    });
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   // Track analytics when modal becomes visible
   useFocusEffect(
@@ -181,11 +206,14 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={handleClose} isLoading={isButtonDisabled}>
       <KeyboardAwareScrollView
+        ref={scrollViewRef}
         keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'}
         showsVerticalScrollIndicator={false}
         bottomOffset={120}
         extraKeyboardSpace={40}
         style={{ flexGrow: 0, width: '100%' }}
+        contentContainerStyle={{ paddingBottom: keyboardPadding }}
+        testID="close-call-scroll-view"
       >
         <VStack space="md" className="w-full p-4">
           <Text className="mb-4 text-center text-lg font-semibold text-gray-900 dark:text-white">{t('call_detail.close_call')}</Text>

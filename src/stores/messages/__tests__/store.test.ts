@@ -66,7 +66,7 @@ const mockMessages: MessageResultData[] = [
 		SentOn: '2023-12-02T15:30:00Z',
 		SentOnUtc: '2023-12-02T15:30:00Z',
 		Type: 2,
-		ExpiredOn: '2023-12-03T15:30:00Z',
+		ExpiredOn: '2030-12-03T15:30:00Z',
 		Responded: true,
 		Note: 'Acknowledged',
 		RespondedOn: '2023-12-02T16:00:00Z',
@@ -151,6 +151,34 @@ describe('MessagesStore', () => {
       expect(result.current.inboxMessages).toEqual([]);
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBe(errorMessage);
+    });
+
+    it('should exclude expired messages from the inbox', async () => {
+      mockedApi.getInboxMessages.mockResolvedValue({
+        Data: [
+          mockMessages[0]!,
+          {
+            ...mockMessages[1]!,
+            MessageId: 'expired',
+            ExpiredOn: '2020-01-01T00:00:00Z',
+          },
+        ],
+        PageSize: 0,
+        Timestamp: '2023-12-01T10:00:00Z',
+        Version: '1.0',
+        Node: 'test-node',
+        RequestId: 'test-request',
+        Status: 'success',
+        Environment: 'test',
+      });
+
+      const { result } = renderHook(() => useMessagesStore());
+
+      await act(async () => {
+        await result.current.fetchInboxMessages();
+      });
+
+      expect(result.current.inboxMessages.map((message) => message.MessageId)).toEqual(['1']);
     });
   });
 
