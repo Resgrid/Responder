@@ -46,7 +46,15 @@ export const isCheckInTargetEligible = (target: CheckInTarget, context: CheckInE
 };
 
 export const getEligibleCheckInTypeValues = (targets: CheckInTarget[], context: CheckInEligibilityContext): number[] => {
-  return [...new Set(targets.filter((target) => isCheckInTargetEligible(target, context)).map((target) => target.TargetType))];
+  const eligibleTargetTypes = targets.reduce<Set<number>>((targetTypes, target) => {
+    if (isCheckInTargetEligible(target, context)) {
+      targetTypes.add(target.TargetType);
+    }
+
+    return targetTypes;
+  }, new Set<number>());
+
+  return [...eligibleTargetTypes];
 };
 
 export const getPreferredQuickCheckInType = (targets: CheckInTarget[], context: CheckInEligibilityContext, preferUnitType: boolean): number | null => {

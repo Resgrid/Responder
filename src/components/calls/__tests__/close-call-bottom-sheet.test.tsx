@@ -752,6 +752,7 @@ describe('CloseCallBottomSheet', () => {
     afterEach(() => {
       addListenerSpy.mockRestore();
       Platform.OS = originalOS;
+      jest.useRealTimers();
     });
 
     it('pads the scroll content by the keyboard height while the keyboard is shown', () => {
@@ -778,5 +779,25 @@ describe('CloseCallBottomSheet', () => {
       expect(keyboardListeners.keyboardDidShow).toBeUndefined();
       expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 0 });
     });
+
+    it('clears the pending scroll timer when the component unmounts', () => {
+      Platform.OS = 'android';
+      jest.useFakeTimers();
+      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+      const { unmount } = render(<CloseCallBottomSheet isOpen={true} onClose={jest.fn()} callId="test-call-1" />);
+
+      act(() => {
+        keyboardListeners.keyboardDidShow({ endCoordinates: { height: 300 } });
+      });
+      const timerId = setTimeoutSpy.mock.results[setTimeoutSpy.mock.results.length - 1]?.value;
+
+      unmount();
+
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 100);
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(timerId);
+      setTimeoutSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+    });
   });
-}); 
+});

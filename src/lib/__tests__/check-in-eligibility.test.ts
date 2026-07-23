@@ -30,6 +30,7 @@ describe('check-in eligibility', () => {
       { TargetType: CHECK_IN_TARGET_TYPE.UNIT_TYPE, TargetEntityId: '11' },
       { TargetType: CHECK_IN_TARGET_TYPE.IC },
       { TargetType: 3 },
+      { TargetType: 3 },
     ];
 
     expect(getEligibleCheckInTypeValues(targets, context)).toEqual([CHECK_IN_TARGET_TYPE.PERSONNEL, CHECK_IN_TARGET_TYPE.UNIT_TYPE, 3]);

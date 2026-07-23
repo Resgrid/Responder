@@ -47,20 +47,35 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   // animations never reach it. Pad the scroll content by the keyboard height
   // and scroll the note input back into view manually.
   const scrollViewRef = useRef<ScrollView>(null);
+  const scrollToEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [keyboardPadding, setKeyboardPadding] = useState(0);
 
   useEffect(() => {
     if (Platform.OS !== 'android') {
       return;
     }
+
+    const clearScrollToEndTimer = () => {
+      if (scrollToEndTimerRef.current !== null) {
+        clearTimeout(scrollToEndTimerRef.current);
+        scrollToEndTimerRef.current = null;
+      }
+    };
+
     const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
       setKeyboardPadding(event.endCoordinates.height);
-      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      clearScrollToEndTimer();
+      scrollToEndTimerRef.current = setTimeout(() => {
+        scrollToEndTimerRef.current = null;
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     });
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      clearScrollToEndTimer();
       setKeyboardPadding(0);
     });
     return () => {
+      clearScrollToEndTimer();
       showSubscription.remove();
       hideSubscription.remove();
     };
