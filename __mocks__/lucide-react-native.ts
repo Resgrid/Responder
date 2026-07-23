@@ -21,6 +21,7 @@ export const CheckCircle = mockIcon;
 export const ChevronDownIcon = mockIcon;
 export const ChevronRightIcon = mockIcon;
 export const ChevronRight = mockIcon;
+export const ChevronLeft = mockIcon;
 export const Circle = mockIcon;
 export const ClockIcon = mockIcon;
 export const Edit2Icon = mockIcon;

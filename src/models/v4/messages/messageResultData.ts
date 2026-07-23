@@ -13,6 +13,7 @@ export class MessageResultData {
   public RespondedOn: string = '';
   public ResponseType: string = '';
   public IsSystem: boolean = false;
+  public CalendarItemId?: string = '';
 
   public Recipients: MessageRecipientResultData[] = [];
 }

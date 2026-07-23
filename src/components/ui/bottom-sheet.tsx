@@ -15,16 +15,18 @@ interface CustomBottomSheetProps {
   loadingText?: string;
   snapPoints?: number[];
   minHeight?: string;
+  surfaceClassName?: string;
   testID?: string;
 }
 
-export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false, loadingText, snapPoints = [67], minHeight = 'min-h-[400px]', testID }: CustomBottomSheetProps) {
+export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false, loadingText, snapPoints = [67], minHeight = 'min-h-[400px]', surfaceClassName, testID }: CustomBottomSheetProps) {
   const { colorScheme } = useColorScheme();
+  const resolvedSurfaceClassName = surfaceClassName ?? (colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-white');
 
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose} snapPoints={snapPoints} testID={testID}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className={`rounded-t-3xl px-4 pb-6 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-white'}`}>
+      <ActionsheetContent className={`rounded-t-3xl px-4 pb-6 ${resolvedSurfaceClassName}`}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>

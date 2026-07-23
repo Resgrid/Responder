@@ -233,7 +233,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
   const startDateTime = formatDateTime(item.Start);
 
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={onClose}>
+    <CustomBottomSheet isOpen={isOpen} onClose={onClose} surfaceClassName="bg-white dark:bg-gray-800">
       <VStack style={{ flex: 1 }}>
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: 24, paddingBottom: 16 }}>
           {/* Header */}

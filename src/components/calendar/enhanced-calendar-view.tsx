@@ -133,8 +133,8 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
   }, [loadCalendarItemsForDateRange]);
 
   const calendarTheme: CalendarProps['theme'] = {
-    backgroundColor: isDark ? '#111827' : '#ffffff',
-    calendarBackground: isDark ? '#111827' : '#ffffff',
+    backgroundColor: isDark ? '#111827' : '#F9FAFB',
+    calendarBackground: isDark ? '#111827' : '#F9FAFB',
     textSectionTitleColor: isDark ? '#9CA3AF' : '#6B7280',
     textSectionTitleDisabledColor: isDark ? '#4B5563' : '#D1D5DB',
     selectedDayBackgroundColor: '#3B82F6',
@@ -160,7 +160,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
   };
 
   return (
-    <VStack className="bg-white dark:bg-gray-900" testID={testID}>
+    <VStack className="bg-gray-50 dark:bg-gray-900" testID={testID}>
       {/* Calendar Header with Today Button */}
       <HStack className="items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <Heading size="md" className="text-gray-900 dark:text-white">

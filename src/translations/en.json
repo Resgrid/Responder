@@ -421,6 +421,7 @@
     "submit": "Submit",
     "submitting": "Submitting...",
     "success": "Success",
+    "system": "System",
     "unknown_department": "Unknown Department",
     "unknown_user": "Unknown User",
     "uploading": "Uploading..."
@@ -726,6 +727,8 @@
   },
   "messages": {
     "all_messages": "All Messages",
+    "attending": "Attending",
+    "calendar_rsvp": "Calendar RSVP",
     "compose": "Compose",
     "compose_new_message": "New Message",
     "date_unknown": "Date unknown",
@@ -751,6 +754,7 @@
     "no_messages": "No messages found",
     "no_messages_description": "Send your first message to get started",
     "no_subject": "No Subject",
+    "not_attending": "Not attending",
     "note_optional": "Note (Optional)",
     "people": "People",
     "recipients": "Recipients",
@@ -779,6 +783,7 @@
     "title": "Messages",
     "types": {
       "alert": "Alert",
+      "calendar_rsvp": "Calendar RSVP",
       "message": "Message",
       "poll": "Poll"
     },
@@ -992,8 +997,6 @@
     "logout_confirm_message": "Are you sure you want to log out? All local data, cached values, and saved settings will be cleared from the app.",
     "logout_confirm_title": "Confirm Logout",
     "logout_confirm_yes": "Yes, Logout",
-    "modern_notification_sounds": "Modern Notification Sounds",
-    "modern_notification_sounds_description": "Use the new modern notification sounds for push notifications. Turn this off to use the classic sounds.",
     "more": "More",
     "no_units_available": "No units available",
     "none_selected": "None Selected",

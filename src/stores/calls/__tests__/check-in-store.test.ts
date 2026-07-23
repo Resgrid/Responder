@@ -73,6 +73,22 @@ describe('useCheckInStore', () => {
   });
 
   describe('performCheckIn', () => {
+    it('should block IC check-ins without calling or queueing the API request', async () => {
+      const { result } = renderHook(() => useCheckInStore());
+
+      let success = true;
+      await act(async () => {
+        success = await result.current.performCheckIn({
+          CallId: 1,
+          CheckInType: 2,
+        });
+      });
+
+      expect(success).toBe(false);
+      expect(mockPerformCheckIn).not.toHaveBeenCalled();
+      expect(result.current.checkInError).toBe('IC check-ins are not supported in the Responder app');
+    });
+
     it('should call API and re-fetch statuses on success', async () => {
       mockPerformCheckIn.mockResolvedValue({ Data: 'ok' } as any);
       mockGetTimerStatuses.mockResolvedValue({ Data: [] } as any);

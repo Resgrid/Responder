@@ -421,6 +421,7 @@
     "submit": "Invia",
     "submitting": "Invio in corso...",
     "success": "Successo",
+    "system": "Sistema",
     "unknown_department": "Dipartimento sconosciuto",
     "unknown_user": "Utente sconosciuto",
     "uploading": "Caricamento..."
@@ -726,6 +727,8 @@
   },
   "messages": {
     "all_messages": "Tutti i messaggi",
+    "attending": "Parteciperò",
+    "calendar_rsvp": "RSVP calendario",
     "compose": "Componi",
     "compose_new_message": "Nuovo messaggio",
     "date_unknown": "Data sconosciuta",
@@ -751,6 +754,7 @@
     "no_messages": "Nessun messaggio trovato",
     "no_messages_description": "Inviare il primo messaggio per iniziare",
     "no_subject": "Senza oggetto",
+    "not_attending": "Non parteciperò",
     "note_optional": "Nota (facoltativo)",
     "people": "Persone",
     "recipients": "Destinatari",
@@ -779,6 +783,7 @@
     "title": "Messaggi",
     "types": {
       "alert": "Avviso",
+      "calendar_rsvp": "RSVP calendario",
       "message": "Messaggio",
       "poll": "Sondaggio"
     },
@@ -992,8 +997,6 @@
     "logout_confirm_message": "È sicuro/a di voler disconnettersi? Tutti i dati locali, i valori memorizzati nella cache e le impostazioni salvate verranno cancellati dall'app.",
     "logout_confirm_title": "Conferma disconnessione",
     "logout_confirm_yes": "Sì, disconnetti",
-    "modern_notification_sounds": "Suoni di notifica moderni",
-    "modern_notification_sounds_description": "Usa i nuovi suoni di notifica moderni per le notifiche push. Disattiva questa opzione per usare i suoni classici.",
     "more": "Altro",
     "no_units_available": "Nessuna unità disponibile",
     "none_selected": "Nessuno selezionato",

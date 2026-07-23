@@ -421,6 +421,7 @@
     "submit": "Absenden",
     "submitting": "Wird abgesendet...",
     "success": "Erfolgreich",
+    "system": "System",
     "unknown_department": "Unbekannte Abteilung",
     "unknown_user": "Unbekannter Benutzer",
     "uploading": "Wird hochgeladen..."
@@ -726,6 +727,8 @@
   },
   "messages": {
     "all_messages": "Alle Nachrichten",
+    "attending": "Ich nehme teil",
+    "calendar_rsvp": "Kalender-RSVP",
     "compose": "Verfassen",
     "compose_new_message": "Neue Nachricht",
     "date_unknown": "Datum unbekannt",
@@ -751,6 +754,7 @@
     "no_messages": "Keine Nachrichten gefunden",
     "no_messages_description": "Senden Sie Ihre erste Nachricht, um zu beginnen",
     "no_subject": "Kein Betreff",
+    "not_attending": "Ich nehme nicht teil",
     "note_optional": "Notiz (optional)",
     "people": "Personen",
     "recipients": "Empfänger",
@@ -779,6 +783,7 @@
     "title": "Nachrichten",
     "types": {
       "alert": "Benachrichtigung",
+      "calendar_rsvp": "Kalender-RSVP",
       "message": "Nachricht",
       "poll": "Umfrage"
     },
@@ -992,8 +997,6 @@
     "logout_confirm_message": "Sind Sie sicher, dass Sie sich abmelden möchten? Alle lokalen Daten, zwischengespeicherten Werte und gespeicherten Einstellungen werden aus der App gelöscht.",
     "logout_confirm_title": "Abmeldung bestätigen",
     "logout_confirm_yes": "Ja, abmelden",
-    "modern_notification_sounds": "Moderne Benachrichtigungstöne",
-    "modern_notification_sounds_description": "Verwenden Sie die neuen modernen Benachrichtigungstöne für Push-Benachrichtigungen. Deaktivieren Sie diese Option, um die klassischen Töne zu verwenden.",
     "more": "Mehr",
     "no_units_available": "Keine Einheiten verfügbar",
     "none_selected": "Nichts ausgewählt",

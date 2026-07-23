@@ -10,6 +10,13 @@ import type { ApiResponse } from '@/types/api';
 
 export type MessageFilter = 'all' | 'inbox' | 'sent';
 
+const isActiveInboxMessage = (message: MessageResultData) => {
+  if (!message.ExpiredOn) return true;
+
+  const expiresOn = new Date(message.ExpiredOn).getTime();
+  return Number.isNaN(expiresOn) || expiresOn > Date.now();
+};
+
 interface MessagesState {
   inboxMessages: MessageResultData[];
   sentMessages: MessageResultData[];
@@ -83,7 +90,7 @@ export const useMessagesStore = create<MessagesState>()(
       try {
         const response = (await getInboxMessages()) as ApiResponse<MessageResultData[]>;
         set({
-          inboxMessages: response.Data || [],
+          inboxMessages: (response.Data || []).filter(isActiveInboxMessage),
           isLoading: false,
           lastFetchTime: Date.now(),
         });
@@ -276,12 +283,12 @@ export const useMessagesStore = create<MessagesState>()(
 
       // Apply filter
       if (currentFilter === 'inbox') {
-        filtered = [...inboxMessages];
+        filtered = inboxMessages.filter(isActiveInboxMessage);
       } else if (currentFilter === 'sent') {
         filtered = [...sentMessages];
       } else {
         // 'all' - combine both and deduplicate by MessageId
-        const combinedMessages = [...inboxMessages, ...sentMessages];
+        const combinedMessages = [...inboxMessages.filter(isActiveInboxMessage), ...sentMessages];
         const uniqueMessages = new Map<string, MessageResultData>();
 
         combinedMessages.forEach((msg) => {

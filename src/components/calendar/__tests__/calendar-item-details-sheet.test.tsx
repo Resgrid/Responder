@@ -84,8 +84,12 @@ jest.mock('@/components/ui/bottom-sheet', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    CustomBottomSheet: ({ children, isOpen, onClose }: any) =>
-      isOpen ? <View testID="bottom-sheet">{children}</View> : null,
+    CustomBottomSheet: ({ children, isOpen, surfaceClassName }: any) =>
+      isOpen ? (
+        <View testID="bottom-sheet" className={surfaceClassName}>
+          {children}
+        </View>
+      ) : null,
   };
 });
 
@@ -298,7 +302,7 @@ describe('CalendarItemDetailsSheet', () => {
       <CalendarItemDetailsSheet item={mockCalendarItem} isOpen={true} onClose={mockOnClose} />
     );
 
-    expect(getByTestId('bottom-sheet')).toBeTruthy();
+    expect(getByTestId('bottom-sheet').props.className).toBe('bg-white dark:bg-gray-800');
   });
 
   it('does not render bottom sheet when isOpen is false', () => {

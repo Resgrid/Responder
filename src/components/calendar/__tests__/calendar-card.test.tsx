@@ -53,7 +53,7 @@ jest.mock('@/components/ui/card', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    Card: ({ children, className, ...props }: any) => React.createElement(View, { ...props, testID: 'card' }, children),
+    Card: ({ children, className, ...props }: any) => React.createElement(View, { ...props, className, testID: 'card' }, children),
     CardContent: ({ children, className, ...props }: any) => React.createElement(View, { ...props, testID: 'card-content' }, children),
   };
 });
@@ -174,6 +174,7 @@ describe('CalendarCard', () => {
     expect(getByText('Test Event')).toBeTruthy();
     expect(getByText('Meeting')).toBeTruthy();
     expect(getByText('Test Location')).toBeTruthy();
+    expect(getByTestId('card').props.className).toContain('bg-white shadow-sm dark:bg-gray-800');
 
     // Check that WebView is rendered for description
     const webview = getByTestId('description-webview');
@@ -373,4 +374,4 @@ describe('CalendarCard', () => {
     const webviewContent = getByTestId('webview-content');
     expect(webviewContent.props.children).toContain('<html><body><div>Rich <em>text</em> content with <a href="#">links</a></div></body></html>');
   });
-}); 
+});

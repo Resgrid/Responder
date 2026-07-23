@@ -281,11 +281,12 @@ describe('CalendarScreen', () => {
   });
 
   it('renders calendar screen correctly', () => {
-    const { getByText } = render(<CalendarScreen />);
+    const { getByText, getByTestId } = render(<CalendarScreen />);
 
     expect(getByText('Today')).toBeTruthy();
     expect(getByText('Upcoming')).toBeTruthy();
     expect(getByText('Calendar')).toBeTruthy();
+    expect(getByTestId('calendar-screen').props.className).toContain('bg-gray-50 dark:bg-gray-900');
   });
 
   it('initializes data on mount', () => {

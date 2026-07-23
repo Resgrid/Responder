@@ -86,16 +86,19 @@ export const deleteMessage = async (messageId: string) => {
 export interface RespondToMessageRequest {
   messageId: string;
   response: string;
+  type?: number;
   note?: string;
 }
 
 export const respondToMessage = async (responseData: RespondToMessageRequest) => {
+  const normalizedResponse = responseData.response.trim().toLowerCase();
+  const responseType = responseData.type ?? (normalizedResponse === 'yes' ? 1 : normalizedResponse === 'maybe' ? 2 : normalizedResponse === 'no' ? 3 : Number.parseInt(normalizedResponse, 10) || 1);
   const data = {
-    MessageId: responseData.messageId,
-    Response: responseData.response,
+    Id: Number.parseInt(responseData.messageId, 10),
+    Type: responseType,
     Note: responseData.note || '',
   };
 
-  const response = await respondToMessageApi.post<RespondToMessageResult>(data);
+  const response = await respondToMessageApi.put<RespondToMessageResult>(data);
   return response.data;
 };

@@ -421,6 +421,7 @@
     "submit": "إرسال",
     "submitting": "جاري الإرسال...",
     "success": "نجح",
+    "system": "النظام",
     "unknown_department": "إدارة غير معروفة",
     "unknown_user": "مستخدم غير معروف",
     "uploading": "جارٍ الرفع..."
@@ -726,6 +727,8 @@
   },
   "messages": {
     "all_messages": "جميع الرسائل",
+    "attending": "سأحضر",
+    "calendar_rsvp": "الرد على دعوة التقويم",
     "compose": "إنشاء",
     "compose_new_message": "إنشاء رسالة جديدة",
     "date_unknown": "تاريخ غير معروف",
@@ -751,6 +754,7 @@
     "no_messages": "لم يتم العثور على رسائل",
     "no_messages_description": "أرسل رسالتك الأولى للبدء",
     "no_subject": "بدون موضوع",
+    "not_attending": "لن أحضر",
     "note_optional": "ملاحظة (اختيارية)",
     "people": "الأشخاص",
     "recipients": "المستقبلين",
@@ -779,6 +783,7 @@
     "title": "الرسائل",
     "types": {
       "alert": "تنبيه",
+      "calendar_rsvp": "الرد على دعوة التقويم",
       "message": "رسالة",
       "poll": "استطلاع"
     },
@@ -992,8 +997,6 @@
     "logout_confirm_message": "هل أنت متأكد من أنك تريد تسجيل الخروج؟ سيتم مسح جميع البيانات المحلية والقيم المخزنة مؤقتًا والإعدادات المحفوظة من التطبيق.",
     "logout_confirm_title": "تأكيد تسجيل الخروج",
     "logout_confirm_yes": "نعم، تسجيل الخروج",
-    "modern_notification_sounds": "أصوات الإشعارات الحديثة",
-    "modern_notification_sounds_description": "استخدم أصوات الإشعارات الحديثة الجديدة للإشعارات الفورية. أوقف تشغيل هذا الخيار لاستخدام الأصوات الكلاسيكية.",
     "more": "المزيد",
     "no_units_available": "لا توجد وحدات متاحة",
     "none_selected": "لم يتم اختيار أي شيء",
