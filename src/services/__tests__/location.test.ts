@@ -917,6 +917,10 @@ describe('LocationService', () => {
       mockLocation.watchPositionAsync.mockRejectedValue(error);
 
       await expect(locationService.startLocationUpdates()).rejects.toThrow('Location subscription failed');
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Failed to start location updates',
+        context: { error },
+      });
     });
 
     it('should handle background task registration errors', async () => {

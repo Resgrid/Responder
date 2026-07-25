@@ -96,6 +96,15 @@ class SignalRService {
     }
   }
 
+  private consumeIntentionalDisconnect(hubName: string): boolean {
+    if (!this.intentionalDisconnects.has(hubName)) {
+      return false;
+    }
+
+    this.intentionalDisconnects.delete(hubName);
+    return true;
+  }
+
   public async connectToHubWithEventingUrl(config: SignalRHubConnectConfig): Promise<void> {
     // Check for existing lock to prevent concurrent connections to the same hub
     const existingLock = this.connectionLocks.get(config.name);
@@ -424,8 +433,7 @@ class SignalRService {
   }
 
   private handleConnectionClose(hubName: string): void {
-    if (this.intentionalDisconnects.has(hubName)) {
-      this.intentionalDisconnects.delete(hubName);
+    if (this.consumeIntentionalDisconnect(hubName)) {
       logger.debug({
         message: `Hub ${hubName} closed due to intentional disconnect, skipping reconnection`,
       });
@@ -489,8 +497,7 @@ class SignalRService {
 
     const timer = setTimeout(async () => {
       this.reconnectTimers.delete(hubName);
-      if (this.intentionalDisconnects.has(hubName)) {
-        this.intentionalDisconnects.delete(hubName);
+      if (this.consumeIntentionalDisconnect(hubName)) {
         return;
       }
 
@@ -533,8 +540,7 @@ class SignalRService {
 
           await useAuthStore.getState().refreshAccessToken();
 
-          if (this.intentionalDisconnects.has(hubName)) {
-            this.intentionalDisconnects.delete(hubName);
+          if (this.consumeIntentionalDisconnect(hubName)) {
             return;
           }
 

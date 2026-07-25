@@ -168,9 +168,17 @@ class LocationService {
 
   startLocationUpdates(): Promise<void> {
     if (!this.startLocationUpdatesPromise) {
-      this.startLocationUpdatesPromise = this.startLocationUpdatesInternal().finally(() => {
-        this.startLocationUpdatesPromise = null;
-      });
+      this.startLocationUpdatesPromise = this.startLocationUpdatesInternal()
+        .catch((error) => {
+          logger.error({
+            message: 'Failed to start location updates',
+            context: { error },
+          });
+          throw error;
+        })
+        .finally(() => {
+          this.startLocationUpdatesPromise = null;
+        });
     }
 
     return this.startLocationUpdatesPromise;
