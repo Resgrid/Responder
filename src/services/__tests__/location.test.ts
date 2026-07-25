@@ -219,6 +219,7 @@ describe('LocationService', () => {
 
     // Reset internal state of the service
     (locationService as any).locationSubscription = null;
+    (locationService as any).startLocationUpdatesPromise = null;
     (locationService as any).backgroundSubscription = null;
     (locationService as any).isBackgroundGeolocationEnabled = false;
     (locationService as any).isRealtimeGeolocationEnabled = false;
@@ -320,6 +321,25 @@ describe('LocationService', () => {
       expect(firstSubscription.remove).toHaveBeenCalledTimes(1);
       expect(mockLocation.watchPositionAsync).toHaveBeenCalledTimes(2);
       expect((locationService as any).locationSubscription).toBe(secondSubscription);
+    });
+
+    it('should create only one watcher when location starts overlap', async () => {
+      let resolveWatcher: (subscription: Location.LocationSubscription) => void;
+      const watcherPromise = new Promise<Location.LocationSubscription>((resolve) => {
+        resolveWatcher = resolve;
+      });
+      mockLocation.watchPositionAsync.mockReturnValue(watcherPromise);
+
+      const firstStart = locationService.startLocationUpdates();
+      const secondStart = locationService.startLocationUpdates();
+
+      expect(firstStart).toBe(secondStart);
+
+      resolveWatcher!(mockLocationSubscription);
+      await Promise.all([firstStart, secondStart]);
+
+      expect(mockLocation.watchPositionAsync).toHaveBeenCalledTimes(1);
+      expect((locationService as any).locationSubscription).toBe(mockLocationSubscription);
     });
 
     it('should throw error if permissions are not granted', async () => {

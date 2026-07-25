@@ -489,6 +489,11 @@ class SignalRService {
 
     const timer = setTimeout(async () => {
       this.reconnectTimers.delete(hubName);
+      if (this.intentionalDisconnects.has(hubName)) {
+        this.intentionalDisconnects.delete(hubName);
+        return;
+      }
+
       try {
         // Check if the hub config was removed (e.g., by explicit disconnect)
         const currentHubConfig = this.hubConfigs.get(hubName);
@@ -527,6 +532,11 @@ class SignalRService {
           });
 
           await useAuthStore.getState().refreshAccessToken();
+
+          if (this.intentionalDisconnects.has(hubName)) {
+            this.intentionalDisconnects.delete(hubName);
+            return;
+          }
 
           // Verify we have a valid token after refresh
           const token = useAuthStore.getState().accessToken;

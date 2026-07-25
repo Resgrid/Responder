@@ -7,6 +7,23 @@ interface CacheItem<T> {
   expiresIn: number;
 }
 
+const isCacheItem = <T>(value: unknown): value is CacheItem<T> => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const item = value as Partial<CacheItem<T>>;
+  return (
+    Object.prototype.hasOwnProperty.call(item, 'data') &&
+    typeof item.timestamp === 'number' &&
+    Number.isFinite(item.timestamp) &&
+    item.timestamp >= 0 &&
+    typeof item.expiresIn === 'number' &&
+    Number.isFinite(item.expiresIn) &&
+    item.expiresIn >= 0
+  );
+};
+
 export class CacheManager {
   private static instance: CacheManager;
   private defaultTTL = 5 * 60 * 1000; // 5 minutes default
@@ -47,9 +64,9 @@ export class CacheManager {
       return null;
     }
 
-    let cacheItem: CacheItem<T>;
+    let parsed: unknown;
     try {
-      cacheItem = JSON.parse(cached);
+      parsed = JSON.parse(cached);
     } catch (error) {
       logger.warn({
         message: 'Corrupt cache entry, removing',
@@ -59,6 +76,16 @@ export class CacheManager {
       return null;
     }
 
+    if (!isCacheItem<T>(parsed)) {
+      logger.warn({
+        message: 'Corrupt cache entry, removing',
+        context: { key, error: 'Invalid cache item shape' },
+      });
+      storage.delete(key);
+      return null;
+    }
+
+    const cacheItem = parsed;
     if (this.isExpired(cacheItem.timestamp, cacheItem.expiresIn)) {
       storage.delete(key);
       return null;

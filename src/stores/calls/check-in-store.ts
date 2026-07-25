@@ -22,6 +22,8 @@ const STATUS_SEVERITY: Record<string, number> = {
   Ok: 2,
 };
 
+let globalOverdueRequestGeneration = 0;
+
 interface CheckInState {
   timerStatuses: CheckInTimerStatusResultData[];
   resolvedTimers: ResolvedCheckInTimerResultData[];
@@ -166,6 +168,7 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   },
 
   reset: () => {
+    globalOverdueRequestGeneration += 1;
     const interval = get()._pollingInterval;
     if (interval) {
       clearInterval(interval);
@@ -190,18 +193,25 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   },
 
   fetchGlobalOverdueCount: async (calls: CallWithTimerFlag[]) => {
+    const generation = ++globalOverdueRequestGeneration;
     const existing = get()._globalOverdueDebounce;
     if (existing) {
       clearTimeout(existing);
     }
 
     const timer = setTimeout(() => {
+      if (generation !== globalOverdueRequestGeneration) {
+        return;
+      }
+
       set({ _globalOverdueDebounce: null });
 
       const executeFetch = async () => {
         const callsWithTimers = calls.filter((c) => c.CheckInTimersEnabled);
         if (callsWithTimers.length === 0) {
-          set({ globalOverdueCount: 0 });
+          if (generation === globalOverdueRequestGeneration) {
+            set({ globalOverdueCount: 0 });
+          }
           return;
         }
 
@@ -218,7 +228,9 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
           })
         );
 
-        set({ globalOverdueCount: counts.reduce((acc, n) => acc + n, 0) });
+        if (generation === globalOverdueRequestGeneration) {
+          set({ globalOverdueCount: counts.reduce((acc, n) => acc + n, 0) });
+        }
       };
 
       void executeFetch();

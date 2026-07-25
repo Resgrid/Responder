@@ -353,6 +353,7 @@
     "confirm_check_in": "Підтвердити Реєстрацію",
     "duration": "Тривалість",
     "elapsed": "Минуло",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
     "history": "Історія Реєстрацій",
     "last_check_in": "Остання реєстрація",
     "minutes_ago": "{{count}} хв тому",

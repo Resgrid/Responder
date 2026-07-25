@@ -353,6 +353,7 @@
     "confirm_check_in": "Bekräfta incheckning",
     "duration": "Varaktighet",
     "elapsed": "Förfluten",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
     "history": "Incheckningshistorik",
     "last_check_in": "Senaste incheckning",
     "minutes_ago": "{{count}} min sedan",

@@ -353,6 +353,7 @@
     "confirm_check_in": "Confirmer le Pointage",
     "duration": "Durée",
     "elapsed": "Écoulé",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
     "history": "Historique des Pointages",
     "last_check_in": "Dernier pointage",
     "minutes_ago": "il y a {{count}} min",

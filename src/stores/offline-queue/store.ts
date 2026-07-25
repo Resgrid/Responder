@@ -80,11 +80,19 @@ const pruneEvents = (events: QueuedEvent[]): { events: QueuedEvent[]; purgedStal
       const extra = remaining.sort((a, b) => a.createdAt - b.createdAt).slice(0, overflow - toDrop.size);
       extra.forEach((event) => toDrop.add(event.id));
     }
+    const droppedEvents = pruned.filter((event) => toDrop.has(event.id));
+    const droppedDeadLetters = droppedEvents.filter(isExhaustedFailedEvent).length;
+    const droppedPending = droppedEvents.length - droppedDeadLetters;
     pruned = pruned.filter((event) => !toDrop.has(event.id));
-    logger.warn({
+    const logEntry = {
       message: 'Offline queue size cap reached, dropped oldest events',
-      context: { dropped: toDrop.size },
-    });
+      context: { droppedPending, droppedDeadLetters },
+    };
+    if (droppedPending > 0) {
+      logger.error(logEntry);
+    } else {
+      logger.warn(logEntry);
+    }
   }
 
   return { events: pruned, purgedStale };

@@ -188,6 +188,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       };
 
       const isSelected = selectedNotificationIds.has(notification.id);
+      const createdAt = new Date(notification.createdAt);
 
       return (
         <Pressable
@@ -211,7 +212,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
           <View style={styles.notificationContent}>
             <Text style={[styles.notificationBody, !item.read ? styles.unreadNotificationText : {}]}>{notification.body}</Text>
             <Text style={styles.timestamp}>
-              {new Date(notification.createdAt).toLocaleDateString()} {new Date(notification.createdAt).toLocaleTimeString()}
+              {createdAt.toLocaleDateString()} {createdAt.toLocaleTimeString()}
             </Text>
           </View>
 

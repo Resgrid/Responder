@@ -672,6 +672,58 @@ describe('SignalRService', () => {
       connectSpy.mockRestore();
     });
 
+    it('should skip a reconnect timer when an intentional disconnect is already marked', async () => {
+      jest.useFakeTimers();
+      (signalRService as any).hubConfigs.set(mockConfig.name, mockConfig);
+      (signalRService as any).intentionalDisconnects.add(mockConfig.name);
+      const eventingConnectSpy = jest.spyOn(signalRService, 'connectToHubWithEventingUrl').mockResolvedValue();
+      const directConnectSpy = jest.spyOn(signalRService, 'connectToHub').mockResolvedValue();
+
+      await (signalRService as any).attemptReconnection(mockConfig.name, 0);
+      jest.advanceTimersByTime(6000);
+      await jest.runAllTicks();
+
+      expect(mockRefreshAccessToken).not.toHaveBeenCalled();
+      expect(eventingConnectSpy).not.toHaveBeenCalled();
+      expect(directConnectSpy).not.toHaveBeenCalled();
+      expect((signalRService as any).intentionalDisconnects.has(mockConfig.name)).toBe(false);
+
+      jest.useRealTimers();
+      eventingConnectSpy.mockRestore();
+      directConnectSpy.mockRestore();
+    });
+
+    it('should skip reconnection when an intentional disconnect is marked during token refresh', async () => {
+      jest.useFakeTimers();
+      (signalRService as any).hubConfigs.set(mockConfig.name, mockConfig);
+      let resolveRefresh: () => void;
+      mockRefreshAccessToken.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveRefresh = resolve;
+          })
+      );
+      const eventingConnectSpy = jest.spyOn(signalRService, 'connectToHubWithEventingUrl').mockResolvedValue();
+      const directConnectSpy = jest.spyOn(signalRService, 'connectToHub').mockResolvedValue();
+
+      await (signalRService as any).attemptReconnection(mockConfig.name, 0);
+      jest.advanceTimersByTime(6000);
+      expect(mockRefreshAccessToken).toHaveBeenCalledTimes(1);
+
+      (signalRService as any).intentionalDisconnects.add(mockConfig.name);
+      resolveRefresh!();
+      await jest.runAllTicks();
+      await Promise.resolve();
+
+      expect(eventingConnectSpy).not.toHaveBeenCalled();
+      expect(directConnectSpy).not.toHaveBeenCalled();
+      expect((signalRService as any).intentionalDisconnects.has(mockConfig.name)).toBe(false);
+
+      jest.useRealTimers();
+      eventingConnectSpy.mockRestore();
+      directConnectSpy.mockRestore();
+    });
+
     it('should reset reconnection attempts on successful reconnection', async () => {
       // Test that successful reconnection resets the attempt counter
       

@@ -23,114 +23,196 @@ interface SignalRState {
   disconnectGeolocationHub: () => Promise<void>;
 }
 
+type SignalRHandler = (message: unknown) => void;
+
 export const useSignalRStore = create<SignalRState>((set, get) => {
-  signalRService.on('personnelStatusUpdated', (message) => {
-    logger.info({
-      message: 'personnelStatusUpdated',
-      context: { message },
-    });
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+  const createSafeHandler = (event: string, handler: SignalRHandler): SignalRHandler => {
+    return (message) => {
+      try {
+        handler(message);
+      } catch (error) {
+        logger.error({
+          message: `Failed to handle SignalR event: ${event}`,
+          context: { error },
+        });
+      }
+    };
+  };
 
-  signalRService.on('personnelStaffingUpdated', (message) => {
-    logger.info({
-      message: 'personnelStaffingUpdated',
-      context: { message },
-    });
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+  const updateHubHandlers = new Map<string, SignalRHandler>([
+    [
+      'personnelStatusUpdated',
+      createSafeHandler('personnelStatusUpdated', (message) => {
+        logger.info({
+          message: 'personnelStatusUpdated',
+          context: { message },
+        });
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'personnelStaffingUpdated',
+      createSafeHandler('personnelStaffingUpdated', (message) => {
+        logger.info({
+          message: 'personnelStaffingUpdated',
+          context: { message },
+        });
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'unitStatusUpdated',
+      createSafeHandler('unitStatusUpdated', (message) => {
+        logger.info({
+          message: 'unitStatusUpdated',
+          context: { message },
+        });
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'callsUpdated',
+      createSafeHandler('callsUpdated', (message) => {
+        const now = Date.now();
 
-  signalRService.on('unitStatusUpdated', (message) => {
-    logger.info({
-      message: 'unitStatusUpdated',
-      context: { message },
-    });
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+        logger.info({
+          message: 'callsUpdated',
+          context: { message, now },
+        });
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: now });
+      }),
+    ],
+    [
+      'callAdded',
+      createSafeHandler('callAdded', (message) => {
+        logger.info({
+          message: 'callAdded',
+          context: { message },
+        });
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'callClosed',
+      createSafeHandler('callClosed', (message) => {
+        logger.info({
+          message: 'callClosed',
+          context: { message },
+        });
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'weatherAlertReceived',
+      createSafeHandler('weatherAlertReceived', (message) => {
+        logger.info({
+          message: 'weatherAlertReceived',
+          context: { message },
+        });
+        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+        if (alertId) {
+          useWeatherAlertsStore.getState().handleAlertReceived(alertId);
+        }
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'weatherAlertUpdated',
+      createSafeHandler('weatherAlertUpdated', (message) => {
+        logger.info({
+          message: 'weatherAlertUpdated',
+          context: { message },
+        });
+        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+        if (alertId) {
+          useWeatherAlertsStore.getState().handleAlertUpdated(alertId);
+        }
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'weatherAlertExpired',
+      createSafeHandler('weatherAlertExpired', (message) => {
+        logger.info({
+          message: 'weatherAlertExpired',
+          context: { message },
+        });
+        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+        if (alertId) {
+          useWeatherAlertsStore.getState().handleAlertExpired(alertId);
+        }
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'onConnected',
+      createSafeHandler('onConnected', () => {
+        logger.info({
+          message: 'Connected to update SignalR hub',
+        });
+        set({ isUpdateHubConnected: true, error: null });
+      }),
+    ],
+  ]);
 
-  signalRService.on('callsUpdated', (message) => {
-    const now = Date.now();
+  const geolocationHubHandlers = new Map<string, SignalRHandler>([
+    [
+      'onPersonnelLocationUpdated',
+      createSafeHandler('onPersonnelLocationUpdated', (message) => {
+        set({ lastGeolocationMessage: message, lastGeolocationTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'onUnitLocationUpdated',
+      createSafeHandler('onUnitLocationUpdated', (message) => {
+        set({ lastGeolocationMessage: message, lastGeolocationTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'onGeolocationConnect',
+      createSafeHandler('onGeolocationConnect', () => {
+        logger.info({
+          message: 'Connected to geolocation SignalR hub',
+        });
+        set({ isGeolocationHubConnected: true, error: null });
+      }),
+    ],
+  ]);
 
-    logger.info({
-      message: 'callsUpdated',
-      context: { message, now },
-    });
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: now });
-  });
+  let updateHubHandlersSubscribed = false;
+  let geolocationHubHandlersSubscribed = false;
 
-  signalRService.on('callAdded', (message) => {
-    logger.info({
-      message: 'callAdded',
-      context: { message },
-    });
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+  const subscribeHandlers = (handlers: Map<string, SignalRHandler>) => {
+    handlers.forEach((handler, event) => signalRService.on(event, handler));
+  };
 
-  signalRService.on('callClosed', (message) => {
-    logger.info({
-      message: 'callClosed',
-      context: { message },
-    });
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+  const unsubscribeHandlers = (handlers: Map<string, SignalRHandler>) => {
+    handlers.forEach((handler, event) => signalRService.off(event, handler));
+  };
 
-  signalRService.on('weatherAlertReceived', (message) => {
-    logger.info({
-      message: 'weatherAlertReceived',
-      context: { message },
-    });
-    const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
-    if (alertId) {
-      useWeatherAlertsStore.getState().handleAlertReceived(alertId);
-    }
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+  const subscribeUpdateHubHandlers = () => {
+    if (updateHubHandlersSubscribed) return;
+    subscribeHandlers(updateHubHandlers);
+    updateHubHandlersSubscribed = true;
+  };
 
-  signalRService.on('weatherAlertUpdated', (message) => {
-    logger.info({
-      message: 'weatherAlertUpdated',
-      context: { message },
-    });
-    const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
-    if (alertId) {
-      useWeatherAlertsStore.getState().handleAlertUpdated(alertId);
-    }
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+  const unsubscribeUpdateHubHandlers = () => {
+    if (!updateHubHandlersSubscribed) return;
+    unsubscribeHandlers(updateHubHandlers);
+    updateHubHandlersSubscribed = false;
+  };
 
-  signalRService.on('weatherAlertExpired', (message) => {
-    logger.info({
-      message: 'weatherAlertExpired',
-      context: { message },
-    });
-    const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
-    if (alertId) {
-      useWeatherAlertsStore.getState().handleAlertExpired(alertId);
-    }
-    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
-  });
+  const subscribeGeolocationHubHandlers = () => {
+    if (geolocationHubHandlersSubscribed) return;
+    subscribeHandlers(geolocationHubHandlers);
+    geolocationHubHandlersSubscribed = true;
+  };
 
-  signalRService.on('onConnected', () => {
-    logger.info({
-      message: 'Connected to update SignalR hub',
-    });
-    set({ isUpdateHubConnected: true, error: null });
-  });
-
-  signalRService.on('onPersonnelLocationUpdated', (message) => {
-    set({ lastGeolocationMessage: message, lastGeolocationTimestamp: Date.now() });
-  });
-
-  signalRService.on('onUnitLocationUpdated', (message) => {
-    set({ lastGeolocationMessage: message, lastGeolocationTimestamp: Date.now() });
-  });
-
-  signalRService.on('onGeolocationConnect', () => {
-    logger.info({
-      message: 'Connected to geolocation SignalR hub',
-    });
-    set({ isGeolocationHubConnected: true, error: null });
-  });
+  const unsubscribeGeolocationHubHandlers = () => {
+    if (!geolocationHubHandlersSubscribed) return;
+    unsubscribeHandlers(geolocationHubHandlers);
+    geolocationHubHandlersSubscribed = false;
+  };
 
   return {
     isUpdateHubConnected: false,
@@ -162,6 +244,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         }
 
         // Connect to the eventing hub
+        subscribeUpdateHubHandlers();
         await signalRService.connectToHubWithEventingUrl({
           name: Env.CHANNEL_HUB_NAME,
           eventingUrl: eventingUrl,
@@ -187,13 +270,13 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           message: 'Failed to connect to SignalR hubs',
           context: { error: err },
         });
+        unsubscribeUpdateHubHandlers();
         set({ error: err });
       }
     },
     disconnectUpdateHub: async () => {
       try {
         await signalRService.disconnectFromHub(Env.CHANNEL_HUB_NAME);
-        set({ isUpdateHubConnected: false, lastUpdateMessage: null });
       } catch (error) {
         const err = error instanceof Error ? error : new Error('Unknown error occurred');
         logger.error({
@@ -201,6 +284,9 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           context: { error: err },
         });
         set({ error: err });
+      } finally {
+        unsubscribeUpdateHubHandlers();
+        set({ isUpdateHubConnected: false, lastUpdateMessage: null });
       }
     },
     connectGeolocationHub: async () => {
@@ -225,6 +311,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         }
 
         // Connect to the geolocation hub
+        subscribeGeolocationHubHandlers();
         await signalRService.connectToHubWithEventingUrl({
           name: Env.REALTIME_GEO_HUB_NAME,
           eventingUrl: eventingUrl,
@@ -237,13 +324,13 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           message: 'Failed to connect to SignalR hubs',
           context: { error: err },
         });
+        unsubscribeGeolocationHubHandlers();
         set({ error: err });
       }
     },
     disconnectGeolocationHub: async () => {
       try {
         await signalRService.disconnectFromHub(Env.REALTIME_GEO_HUB_NAME);
-        set({ isGeolocationHubConnected: false, lastGeolocationMessage: null });
       } catch (error) {
         const err = error instanceof Error ? error : new Error('Unknown error occurred');
         logger.error({
@@ -251,6 +338,9 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           context: { error: err },
         });
         set({ error: err });
+      } finally {
+        unsubscribeGeolocationHubHandlers();
+        set({ isGeolocationHubConnected: false, lastGeolocationMessage: null });
       }
     },
   };

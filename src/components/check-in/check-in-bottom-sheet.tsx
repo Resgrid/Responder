@@ -106,11 +106,7 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
           </Input>
         </VStack>
 
-        {latitude != null && longitude != null ? (
-          <Text className="text-xs text-gray-500">
-            GPS: {latitude.toFixed(5)}, {longitude.toFixed(5)}
-          </Text>
-        ) : null}
+        {latitude != null && longitude != null ? <Text className="text-xs text-gray-500">{t('check_in.gps_coordinates', { latitude: latitude.toFixed(5), longitude: longitude.toFixed(5) })}</Text> : null}
 
         <Button size="lg" onPress={handleSubmit} isDisabled={isLoading} testID="confirm-check-in-button">
           <ButtonText>{t('check_in.confirm_check_in')}</ButtonText>

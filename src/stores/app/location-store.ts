@@ -47,6 +47,16 @@ export const useLocationStore = create<LocationState>()(
     {
       name: 'location-storage',
       storage: createJSONStorage(() => zustandStorage),
+      version: 1,
+      migrate: (persistedState, version) => {
+        if (version < 1 && persistedState && typeof persistedState === 'object') {
+          const migratedState = { ...(persistedState as Partial<LocationState>) };
+          delete migratedState.latitude;
+          delete migratedState.longitude;
+          return migratedState as LocationState;
+        }
+        return persistedState as LocationState;
+      },
       partialize: (state) => ({
         isBackgroundEnabled: state.isBackgroundEnabled,
         isMapLocked: state.isMapLocked,

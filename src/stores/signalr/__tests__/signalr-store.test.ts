@@ -22,6 +22,7 @@ jest.mock('@/services/signalr.service', () => {
     disconnectFromHub: jest.fn().mockResolvedValue(undefined),
     invoke: jest.fn().mockResolvedValue(undefined),
     on: jest.fn(),
+    off: jest.fn(),
     connectToHub: jest.fn().mockResolvedValue(undefined),
     disconnectAll: jest.fn().mockResolvedValue(undefined),
   };
@@ -199,6 +200,49 @@ describe('useSignalRStore', () => {
   });
 
   describe('disconnectUpdateHub', () => {
+    it('unsubscribes update hub handlers using their registered references', async () => {
+      const { result } = renderHook(() => useSignalRStore());
+
+      await act(async () => {
+        await result.current.connectUpdateHub();
+      });
+
+      const registrations = (signalRService.on as jest.Mock).mock.calls.filter(([event]) => event !== 'onPersonnelLocationUpdated' && event !== 'onUnitLocationUpdated' && event !== 'onGeolocationConnect');
+
+      await act(async () => {
+        await result.current.disconnectUpdateHub();
+      });
+
+      expect(registrations).toHaveLength(10);
+      registrations.forEach(([event, handler]) => {
+        expect(signalRService.off).toHaveBeenCalledWith(event, handler);
+      });
+    });
+
+    it('contains update handler errors and logs them', async () => {
+      const handlerError = new Error('handler failed');
+      const { result } = renderHook(() => useSignalRStore());
+
+      await act(async () => {
+        await result.current.connectUpdateHub();
+      });
+
+      const personnelStatusHandler = (signalRService.on as jest.Mock).mock.calls.find(([event]) => event === 'personnelStatusUpdated')?.[1];
+      (logger.info as jest.Mock).mockImplementationOnce(() => {
+        throw handlerError;
+      });
+
+      expect(() => personnelStatusHandler({ UserId: 'user-1' })).not.toThrow();
+      expect(logger.error).toHaveBeenCalledWith({
+        message: 'Failed to handle SignalR event: personnelStatusUpdated',
+        context: { error: handlerError },
+      });
+
+      await act(async () => {
+        await result.current.disconnectUpdateHub();
+      });
+    });
+
     it('should disconnect from update hub successfully', async () => {
       const { result } = renderHook(() => useSignalRStore());
 
@@ -213,15 +257,20 @@ describe('useSignalRStore', () => {
 
     it('should handle disconnect errors', async () => {
       const disconnectError = new Error('Disconnect failed');
-      (signalRService.disconnectFromHub as jest.Mock).mockRejectedValue(disconnectError);
-
       const { result } = renderHook(() => useSignalRStore());
+
+      await act(async () => {
+        await result.current.connectUpdateHub();
+      });
+
+      (signalRService.disconnectFromHub as jest.Mock).mockRejectedValue(disconnectError);
 
       await act(async () => {
         await result.current.disconnectUpdateHub();
       });
 
       expect(result.current.error).toEqual(disconnectError);
+      expect(signalRService.off).toHaveBeenCalledTimes(10);
       expect(logger.error).toHaveBeenCalledWith({
         message: 'Failed to disconnect from SignalR hubs',
         context: { error: disconnectError },

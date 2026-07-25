@@ -96,7 +96,7 @@ export default function Calls() {
   const renderCallItem = useCallback(
     ({ item }: { item: CallResultData }) => (
       <Pressable onPress={() => router.push(`/call/${item.CallId}`)}>
-        <CallCard call={item} priority={priorityById.get(item.Priority)} callExtraData={callExtrasById[item.CallId]} />
+        <CallCard call={item} priority={priorityById.get(item.Priority)} callExtraData={callExtrasById[item.CallId] ?? null} />
       </Pressable>
     ),
     [priorityById, callExtrasById]

@@ -23,6 +23,22 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { usePersonnelStore } from '@/stores/personnel/store';
 
+type PersonnelListItem = PersonnelInfoResultData & { syntheticId: string };
+
+const syntheticIds = new WeakMap<PersonnelInfoResultData, string>();
+let nextSyntheticId = 0;
+
+const normalizePersonnel = (personnel: PersonnelInfoResultData[]): PersonnelListItem[] =>
+  personnel.map((person) => {
+    let syntheticId = syntheticIds.get(person);
+    if (!syntheticId) {
+      syntheticId = `personnel-${++nextSyntheticId}`;
+      syntheticIds.set(person, syntheticId);
+    }
+
+    return { ...person, syntheticId };
+  });
+
 export default function Personnel() {
   const { t } = useTranslation();
   const personnel = usePersonnelStore((state) => state.personnel);
@@ -49,12 +65,14 @@ export default function Personnel() {
     setRefreshing(false);
   }, [fetchPersonnel]);
 
+  const normalizedPersonnel = React.useMemo(() => (Array.isArray(personnel) ? normalizePersonnel(personnel) : []), [personnel]);
+
   const filteredPersonnel = React.useMemo(() => {
     if (!personnel || !Array.isArray(personnel)) return [];
-    if (!searchQuery.trim()) return personnel;
+    if (!searchQuery.trim()) return normalizedPersonnel;
 
     const query = searchQuery.toLowerCase();
-    return personnel.filter(
+    return normalizedPersonnel.filter(
       (person) =>
         person.FirstName?.toLowerCase().includes(query) ||
         person.LastName?.toLowerCase().includes(query) ||
@@ -65,11 +83,11 @@ export default function Personnel() {
         person.IdentificationNumber?.toLowerCase().includes(query) ||
         person.Roles?.some((role) => role.toLowerCase().includes(query))
     );
-  }, [personnel, searchQuery]);
+  }, [normalizedPersonnel, personnel, searchQuery]);
 
-  const keyExtractor = React.useCallback((item: PersonnelInfoResultData, index: number) => item.UserId || item.EmailAddress || item.IdentificationNumber || `personnel-${index}`, []);
+  const keyExtractor = React.useCallback((item: PersonnelListItem) => item.syntheticId, []);
 
-  const renderPersonnelItem = React.useCallback(({ item }: { item: PersonnelInfoResultData }) => <PersonnelCard personnel={item} onPress={selectPersonnel} />, [selectPersonnel]);
+  const renderPersonnelItem = React.useCallback(({ item }: { item: PersonnelListItem }) => <PersonnelCard personnel={item} onPress={selectPersonnel} />, [selectPersonnel]);
 
   return (
     <>

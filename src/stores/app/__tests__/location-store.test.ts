@@ -171,6 +171,37 @@ describe('useLocationStore', () => {
     expect(persisted.state.timestamp).toBeUndefined();
   });
 
+  it('should remove legacy coordinates during storage migration', async () => {
+    const { zustandStorage } = require('@/lib/storage');
+    await zustandStorage.setItem(
+      'location-storage',
+      JSON.stringify({
+        state: {
+          latitude: 40.7128,
+          longitude: -74.006,
+          isBackgroundEnabled: true,
+          isMapLocked: true,
+        },
+        version: 0,
+      })
+    );
+
+    await act(async () => {
+      await useLocationStore.persist.rehydrate();
+    });
+
+    const state = useLocationStore.getState();
+    expect(state.latitude).toBeNull();
+    expect(state.longitude).toBeNull();
+    expect(state.isBackgroundEnabled).toBe(true);
+    expect(state.isMapLocked).toBe(true);
+
+    const persisted = JSON.parse((await zustandStorage.getItem('location-storage')) as string);
+    expect(persisted.version).toBe(1);
+    expect(persisted.state.latitude).toBeUndefined();
+    expect(persisted.state.longitude).toBeUndefined();
+  });
+
   it('should have all required methods', () => {
     const { result } = renderHook(() => useLocationStore());
 

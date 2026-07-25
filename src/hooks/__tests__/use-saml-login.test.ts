@@ -123,6 +123,17 @@ describe('handleSamlCallbackUrl', () => {
     expect(mockLoginWithSso).not.toHaveBeenCalled();
   });
 
+  it('returns false and clears pending state when the callback state is missing', async () => {
+    mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml' } });
+    mockGetItem.mockReturnValue('DEPT001');
+
+    const result = await handleSamlCallbackUrl('resgrid://auth/callback?saml_response=base64saml');
+
+    expect(result).toBe(false);
+    expect(mockLoginWithSso).not.toHaveBeenCalled();
+    expect(mockSecureDeleteItemAsync).toHaveBeenCalledWith('pending_saml_state');
+  });
+
   it('returns false when the pending state is malformed', async () => {
     mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml' } });
     mockSecureGetItemAsync.mockResolvedValue('not-json');
@@ -135,20 +146,20 @@ describe('handleSamlCallbackUrl', () => {
   });
 
   it('returns false when no pending department code is stored', async () => {
-    mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml' } });
+    mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml', state: 'test-state-uuid' } });
     mockGetItem.mockReturnValue(null);
 
-    const result = await handleSamlCallbackUrl('resgrid://auth/callback?saml_response=base64saml');
+    const result = await handleSamlCallbackUrl('resgrid://auth/callback?saml_response=base64saml&state=test-state-uuid');
     expect(result).toBe(false);
     expect(mockLoginWithSso).not.toHaveBeenCalled();
   });
 
   it('calls loginWithSso and clears stored dept code on success', async () => {
-    mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml=' } });
+    mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml=', state: 'test-state-uuid' } });
     mockGetItem.mockReturnValue('DEPT001');
     mockLoginWithSso.mockResolvedValue(undefined);
 
-    const result = await handleSamlCallbackUrl('resgrid://auth/callback?saml_response=base64saml=');
+    const result = await handleSamlCallbackUrl('resgrid://auth/callback?saml_response=base64saml=&state=test-state-uuid');
 
     expect(mockLoginWithSso).toHaveBeenCalledWith({
       provider: 'saml2',
@@ -176,11 +187,11 @@ describe('handleSamlCallbackUrl', () => {
   });
 
   it('returns false and clears pending state when loginWithSso throws', async () => {
-    mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml' } });
+    mockedParse.mockReturnValue({ queryParams: { saml_response: 'base64saml', state: 'test-state-uuid' } });
     mockGetItem.mockReturnValue('DEPT001');
     mockLoginWithSso.mockRejectedValue(new Error('Token exchange failed'));
 
-    const result = await handleSamlCallbackUrl('resgrid://auth/callback?saml_response=base64saml');
+    const result = await handleSamlCallbackUrl('resgrid://auth/callback?saml_response=base64saml&state=test-state-uuid');
 
     expect(result).toBe(false);
     expect(mockSecureDeleteItemAsync).toHaveBeenCalledWith('pending_saml_state');

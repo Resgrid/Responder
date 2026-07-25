@@ -1,4 +1,5 @@
-import { QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
+import { logger } from '@/lib/logging';
+import { type QueuedEvent, QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
 
 // Mock NetInfo
@@ -39,6 +40,7 @@ jest.mock('@/utils/id-generator', () => ({
 }));
 
 const mockGenerateEventId = require('@/utils/id-generator').generateEventId as jest.MockedFunction<() => string>;
+const mockLogger = logger as jest.Mocked<typeof logger>;
 
 describe('OfflineQueueStore', () => {
   let eventIdCounter = 0;
@@ -478,6 +480,61 @@ describe('OfflineQueueStore', () => {
       const state = useOfflineQueueStore.getState();
       expect(state.queuedEvents).toHaveLength(1);
       expect(state.queuedEvents[0]?.status).toBe(QueuedEventStatus.PENDING);
+    });
+
+    it('should warn with separate counts when the queue cap drops only dead letters', () => {
+      const now = Date.now();
+      const deadLetters: QueuedEvent[] = Array.from({ length: 501 }, (_, index) => ({
+        id: `dead-letter-${index}`,
+        type: QueuedEventType.UNIT_STATUS,
+        status: QueuedEventStatus.FAILED,
+        data: {},
+        retryCount: 3,
+        maxRetries: 3,
+        createdAt: now,
+        lastAttemptAt: now,
+      }));
+      useOfflineQueueStore.setState({ queuedEvents: deadLetters });
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith({
+        message: 'Offline queue size cap reached, dropped oldest events',
+        context: { droppedPending: 0, droppedDeadLetters: 1 },
+      });
+      expect(mockLogger.error).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Offline queue size cap reached, dropped oldest events' }));
+    });
+
+    it('should log an error when the queue cap drops pending events', () => {
+      const now = Date.now();
+      const deadLetter: QueuedEvent = {
+        id: 'dead-letter',
+        type: QueuedEventType.UNIT_STATUS,
+        status: QueuedEventStatus.FAILED,
+        data: {},
+        retryCount: 3,
+        maxRetries: 3,
+        createdAt: now,
+        lastAttemptAt: now,
+      };
+      const pending: QueuedEvent[] = Array.from({ length: 501 }, (_, index) => ({
+        id: `pending-${index}`,
+        type: QueuedEventType.UNIT_STATUS,
+        status: QueuedEventStatus.PENDING,
+        data: {},
+        retryCount: 0,
+        maxRetries: 3,
+        createdAt: index,
+      }));
+      useOfflineQueueStore.setState({ queuedEvents: [deadLetter, ...pending] });
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Offline queue size cap reached, dropped oldest events',
+        context: { droppedPending: 1, droppedDeadLetters: 1 },
+      });
+      expect(mockLogger.warn).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Offline queue size cap reached, dropped oldest events' }));
     });
   });
 });

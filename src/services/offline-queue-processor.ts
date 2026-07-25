@@ -1,11 +1,17 @@
 import NetInfo from '@react-native-community/netinfo';
+import CryptoJS from 'crypto-js';
 
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
+import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { getOfflineQueueStorage } from '@/lib/storage/secure-storage';
 import type { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 
 const MAX_RETRIES = 5;
+
+const hashDiagnosticIdentifier = (identifier: string): string | null => {
+  return identifier ? CryptoJS.HmacSHA256(identifier, Env.LOGGING_KEY || '').toString() : null;
+};
 
 interface QueueItem {
   id: string;
@@ -13,12 +19,14 @@ interface QueueItem {
   payload: SavePersonStatusInput;
   retries: number;
   attempts?: number;
+  nextRetryAt?: number;
 }
 
-class RealOfflineQueueProcessor {
+export class RealOfflineQueueProcessor {
   private static instance: RealOfflineQueueProcessor | null = null;
   private processing = false;
   private storageKey = 'offline_queue';
+  private queueMutationChain: Promise<void> = Promise.resolve();
 
   private constructor() {
     NetInfo.addEventListener((state) => {
@@ -49,32 +57,48 @@ class RealOfflineQueueProcessor {
     }
   }
 
+  private serializeQueueMutation<T>(mutation: () => Promise<T>): Promise<T> {
+    const result = this.queueMutationChain.then(mutation);
+    this.queueMutationChain = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  }
+
   async processQueue(): Promise<void> {
     if (this.processing) return;
     this.processing = true;
     try {
-      const storage = await getOfflineQueueStorage();
-      const items = await this.readQueue(storage);
-      const remaining: QueueItem[] = [];
-      for (const item of items) {
-        try {
-          if (item.type === 'personnelStatus') {
-            await savePersonnelStatus(item.payload);
-          }
-        } catch (error) {
-          item.retries++;
-          item.attempts = (item.attempts ?? item.retries - 1) + 1;
-          if (item.attempts >= MAX_RETRIES) {
-            logger.error({ message: 'Dropping offline queue item after max retries', context: { id: item.id, attempts: item.attempts, error } });
+      await this.serializeQueueMutation(async () => {
+        const storage = await getOfflineQueueStorage();
+        const items = await this.readQueue(storage);
+        const remaining: QueueItem[] = [];
+        for (const item of items) {
+          if (item.nextRetryAt && item.nextRetryAt > Date.now()) {
+            remaining.push(item);
             continue;
           }
-          const backoff = Math.min(2 ** item.retries * 1000, 30000);
-          await new Promise((resolve) => setTimeout(resolve, backoff));
-          remaining.push(item);
-          logger.warn({ message: 'Retrying offline queue item', context: { id: item.id, attempts: item.attempts, error } });
+
+          try {
+            if (item.type === 'personnelStatus') {
+              await savePersonnelStatus(item.payload);
+            }
+          } catch (error) {
+            item.retries++;
+            item.attempts = (item.attempts ?? item.retries - 1) + 1;
+            if (item.attempts >= MAX_RETRIES) {
+              logger.error({ message: 'Dropping offline queue item after max retries', context: { id: item.id, attempts: item.attempts, error } });
+              continue;
+            }
+            const backoff = Math.min(2 ** item.retries * 1000, 30000);
+            item.nextRetryAt = Date.now() + backoff;
+            remaining.push(item);
+            logger.warn({ message: 'Scheduled offline queue item retry', context: { id: item.id, attempts: item.attempts, nextRetryAt: item.nextRetryAt, error } });
+          }
         }
-      }
-      await storage.set(this.storageKey, JSON.stringify(remaining));
+        await storage.set(this.storageKey, JSON.stringify(remaining));
+      });
     } catch (error) {
       logger.error({ message: 'Processing offline queue failed', context: { error } });
     } finally {
@@ -90,11 +114,13 @@ class RealOfflineQueueProcessor {
     return id;
   }
 
-  private async enqueue(item: QueueItem): Promise<void> {
-    const storage = await getOfflineQueueStorage();
-    const items = await this.readQueue(storage);
-    items.push(item);
-    await storage.set(this.storageKey, JSON.stringify(items));
+  private enqueue(item: QueueItem): Promise<void> {
+    return this.serializeQueueMutation(async () => {
+      const storage = await getOfflineQueueStorage();
+      const items = await this.readQueue(storage);
+      items.push(item);
+      await storage.set(this.storageKey, JSON.stringify(items));
+    });
   }
 
   cleanup(): void {
@@ -132,7 +158,15 @@ class StubOfflineQueueProcessor {
       logger.error({ message: 'Stub offline queue used in production' });
       throw new Error('OfflineQueueProcessor stub used in production');
     }
-    logger.warn({ message: 'Stub offline queue: dropping personnel status item (non-production environment)', context: { status } });
+    logger.warn({
+      message: 'Stub offline queue: dropping personnel status item (non-production environment)',
+      context: {
+        userIdHash: hashDiagnosticIdentifier(status.UserId),
+        eventIdHash: hashDiagnosticIdentifier(status.EventId),
+        lawful_basis: 'legitimate_interests',
+        purpose: 'offline_queue_diagnostics',
+      },
+    });
     return '';
   }
   cleanup(): void {

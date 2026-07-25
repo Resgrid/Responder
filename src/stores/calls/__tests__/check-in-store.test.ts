@@ -168,5 +168,51 @@ describe('useCheckInStore', () => {
       expect(result.current.isLoadingStatuses).toBe(false);
       expect(result.current.statusError).toBeNull();
     });
+
+    it('should ignore a pending global overdue request after reset', async () => {
+      let resolveStatuses: (value: any) => void;
+      mockGetTimerStatuses.mockReturnValue(
+        new Promise((resolve) => {
+          resolveStatuses = resolve;
+        }) as any
+      );
+
+      await useCheckInStore.getState().fetchGlobalOverdueCount([{ CallId: '1', CheckInTimersEnabled: true }]);
+      jest.advanceTimersByTime(750);
+      await Promise.resolve();
+
+      useCheckInStore.getState().reset();
+
+      resolveStatuses!({ Data: [{ Status: 'Overdue' }] });
+      await Promise.resolve();
+
+      expect(useCheckInStore.getState().globalOverdueCount).toBe(0);
+    });
+  });
+
+  describe('fetchGlobalOverdueCount', () => {
+    it('should ignore an older request after a newer zero-timers fetch', async () => {
+      let resolveStatuses: (value: any) => void;
+      mockGetTimerStatuses.mockReturnValue(
+        new Promise((resolve) => {
+          resolveStatuses = resolve;
+        }) as any
+      );
+
+      await useCheckInStore.getState().fetchGlobalOverdueCount([{ CallId: '1', CheckInTimersEnabled: true }]);
+      jest.advanceTimersByTime(750);
+      await Promise.resolve();
+
+      useCheckInStore.setState({ globalOverdueCount: 7 });
+      await useCheckInStore.getState().fetchGlobalOverdueCount([]);
+      jest.advanceTimersByTime(750);
+      await Promise.resolve();
+      expect(useCheckInStore.getState().globalOverdueCount).toBe(0);
+
+      resolveStatuses!({ Data: [{ Status: 'Overdue' }] });
+      await Promise.resolve();
+
+      expect(useCheckInStore.getState().globalOverdueCount).toBe(0);
+    });
   });
 });

@@ -353,11 +353,15 @@ const CreateNotificationButton = ({
   userId: string | null;
   departmentCode: string | undefined;
 }) => {
+  const handlePress = useCallback(() => {
+    setIsNotificationsOpen(true);
+  }, [setIsNotificationsOpen]);
+
   if (!userId || !config || !config.NovuApplicationId || !config.NovuBackendApiUrl || !config.NovuSocketUrl || !departmentCode) {
     return null;
   }
 
-  return <NotificationButton onPress={() => setIsNotificationsOpen(true)} />;
+  return <NotificationButton onPress={handlePress} />;
 };
 
 const styles = StyleSheet.create({

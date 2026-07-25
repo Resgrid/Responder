@@ -353,6 +353,7 @@
     "confirm_check_in": "Conferma Check-In",
     "duration": "Durata",
     "elapsed": "Trascorso",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
     "history": "Cronologia Check-In",
     "last_check_in": "Ultimo check-in",
     "minutes_ago": "{{count}} min fa",

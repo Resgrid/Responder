@@ -73,8 +73,8 @@ const consumePendingSamlState = async (callbackState?: string): Promise<boolean>
     return false;
   }
 
-  if (callbackState && callbackState !== pending.state) {
-    logger.warn({ message: 'SAML: callback state mismatch, ignoring deep-link' });
+  if (!callbackState || callbackState !== pending.state) {
+    logger.warn({ message: 'SAML: callback state missing or mismatched, ignoring deep-link' });
     await clearPendingSamlState();
     return false;
   }

@@ -353,6 +353,7 @@
     "confirm_check_in": "تأكيد التسجيل",
     "duration": "المدة",
     "elapsed": "المنقضي",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
     "history": "سجل تسجيل الحضور",
     "last_check_in": "آخر تسجيل",
     "minutes_ago": "قبل {{count}} دقيقة",

@@ -353,6 +353,7 @@
     "confirm_check_in": "Confirmar Registro",
     "duration": "Duración",
     "elapsed": "Transcurrido",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
     "history": "Historial de Registros",
     "last_check_in": "Último registro",
     "minutes_ago": "hace {{count}} min",

@@ -119,6 +119,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 class LocationService {
   private static instance: LocationService;
   private locationSubscription: Location.LocationSubscription | null = null;
+  private startLocationUpdatesPromise: Promise<void> | null = null;
   private appStateSubscription: { remove: () => void } | null = null;
   private isBackgroundGeolocationEnabled = false;
   private isRealtimeGeolocationEnabled = false;
@@ -165,7 +166,17 @@ class LocationService {
     return foregroundStatus === 'granted';
   }
 
-  async startLocationUpdates(): Promise<void> {
+  startLocationUpdates(): Promise<void> {
+    if (!this.startLocationUpdatesPromise) {
+      this.startLocationUpdatesPromise = this.startLocationUpdatesInternal().finally(() => {
+        this.startLocationUpdatesPromise = null;
+      });
+    }
+
+    return this.startLocationUpdatesPromise;
+  }
+
+  private async startLocationUpdatesInternal(): Promise<void> {
     const hasPermissions = await this.requestPermissions();
     if (!hasPermissions) {
       throw new Error('Location permissions not granted');
