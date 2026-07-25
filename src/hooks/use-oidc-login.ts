@@ -14,6 +14,22 @@ export interface UseOidcLoginOptions {
   departmentCode: string;
 }
 
+export const isValidSsoUrl = (url: string): boolean => {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:') {
+      return true;
+    }
+    return __DEV__ && parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+};
+
 export interface UseOidcLoginResult {
   request: AuthSession.AuthRequest | null;
   response: AuthSession.AuthSessionResult | null;
@@ -32,9 +48,11 @@ export interface UseOidcLoginResult {
 export function useOidcLogin({ authority, clientId, departmentCode }: UseOidcLoginOptions): UseOidcLoginResult {
   const redirectUri = AuthSession.makeRedirectUri({ scheme: 'resgrid', path: 'auth/callback' });
 
+  const safeAuthority = isValidSsoUrl(authority) ? authority : '';
+
   // Auto-discover OIDC endpoints from the authority's /.well-known/openid-configuration
   // discovery will be null until the authority URL is non-empty and valid
-  const discovery = AuthSession.useAutoDiscovery(authority || '');
+  const discovery = AuthSession.useAutoDiscovery(safeAuthority);
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -45,7 +63,7 @@ export function useOidcLogin({ authority, clientId, departmentCode }: UseOidcLog
       responseType: AuthSession.ResponseType.Code,
     },
     // Pass null discovery when authority is not yet set to prevent premature requests
-    authority ? discovery : null
+    safeAuthority ? discovery : null
   );
 
   const { loginWithSso } = useAuthStore();

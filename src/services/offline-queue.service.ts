@@ -55,6 +55,8 @@ export class OfflineQueueService {
     try {
       offlineQueueProcessor.cleanup();
 
+      useOfflineQueueStore.getState().teardownNetworkListener();
+
       this.initialized = false;
 
       logger.info({

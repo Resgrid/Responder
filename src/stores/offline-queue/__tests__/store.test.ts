@@ -1,9 +1,10 @@
-import { QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
+import { logger } from '@/lib/logging';
+import { type QueuedEvent, QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
 
 // Mock NetInfo
 jest.mock('@react-native-community/netinfo', () => ({
-  addEventListener: jest.fn(),
+  addEventListener: jest.fn(() => jest.fn()),
   fetch: jest.fn(() =>
     Promise.resolve({
       isConnected: true,
@@ -39,6 +40,7 @@ jest.mock('@/utils/id-generator', () => ({
 }));
 
 const mockGenerateEventId = require('@/utils/id-generator').generateEventId as jest.MockedFunction<() => string>;
+const mockLogger = logger as jest.Mocked<typeof logger>;
 
 describe('OfflineQueueStore', () => {
   let eventIdCounter = 0;
@@ -374,8 +376,7 @@ describe('OfflineQueueStore', () => {
   });
 
   describe('network state management', () => {
-    it('should update network state', () => {
-      const store = useOfflineQueueStore.getState();
+    it('should update network state', () => {const store = useOfflineQueueStore.getState();
       
       store._setNetworkState(false, false);
 
@@ -386,12 +387,154 @@ describe('OfflineQueueStore', () => {
 
     it('should update processing state', () => {
       const store = useOfflineQueueStore.getState();
-      
+
       store._setProcessing(true, 'event-123');
 
       const state = useOfflineQueueStore.getState();
       expect(state.isProcessing).toBe(true);
       expect(state.processingEventId).toBe('event-123');
+    });
+  });
+
+  describe('network listener lifecycle', () => {
+    afterEach(() => {
+      useOfflineQueueStore.getState().teardownNetworkListener();
+    });
+
+    it('should register the network listener only once', () => {
+      const NetInfo = require('@react-native-community/netinfo');
+      const store = useOfflineQueueStore.getState();
+
+      store.initializeNetworkListener();
+      store.initializeNetworkListener();
+
+      expect(NetInfo.addEventListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should unsubscribe and allow re-registration after teardown', () => {
+      const NetInfo = require('@react-native-community/netinfo');
+      const unsubscribeMock = jest.fn();
+      NetInfo.addEventListener.mockReturnValueOnce(unsubscribeMock);
+      const store = useOfflineQueueStore.getState();
+
+      store.initializeNetworkListener();
+      store.teardownNetworkListener();
+
+      expect(unsubscribeMock).toHaveBeenCalledTimes(1);
+
+      store.initializeNetworkListener();
+      expect(NetInfo.addEventListener).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('purgeStaleFailedEvents', () => {
+    const EIGHT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
+
+    const addFailedEvent = (lastAttemptAt: number): string => {
+      const store = useOfflineQueueStore.getState();
+      const eventId = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      store.updateEventStatus(eventId, QueuedEventStatus.FAILED, 'error');
+      store.updateEventStatus(eventId, QueuedEventStatus.FAILED, 'error');
+      store.updateEventStatus(eventId, QueuedEventStatus.FAILED, 'error');
+      useOfflineQueueStore.setState((state) => ({
+        queuedEvents: state.queuedEvents.map((event) => (event.id === eventId ? { ...event, lastAttemptAt } : event)),
+      }));
+      return eventId;
+    };
+
+    it('should remove exhausted failed events older than 7 days', () => {
+      const oldEventId = addFailedEvent(Date.now() - EIGHT_DAYS_MS);
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      const state = useOfflineQueueStore.getState();
+      expect(state.queuedEvents.find((event) => event.id === oldEventId)).toBeUndefined();
+    });
+
+    it('should keep recent exhausted failed events', () => {
+      const recentEventId = addFailedEvent(Date.now());
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      const state = useOfflineQueueStore.getState();
+      expect(state.queuedEvents.find((event) => event.id === recentEventId)).toBeDefined();
+    });
+
+    it('should keep pending events regardless of age', () => {
+      const store = useOfflineQueueStore.getState();
+      const eventId = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      useOfflineQueueStore.setState((state) => ({
+        queuedEvents: state.queuedEvents.map((event) => (event.id === eventId ? { ...event, createdAt: Date.now() - EIGHT_DAYS_MS } : event)),
+      }));
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      expect(useOfflineQueueStore.getState().queuedEvents).toHaveLength(1);
+    });
+
+    it('should purge stale failed events when adding a new event', () => {
+      addFailedEvent(Date.now() - EIGHT_DAYS_MS);
+
+      useOfflineQueueStore.getState().addEvent(QueuedEventType.UNIT_STATUS, { test: 'new' });
+
+      const state = useOfflineQueueStore.getState();
+      expect(state.queuedEvents).toHaveLength(1);
+      expect(state.queuedEvents[0]?.status).toBe(QueuedEventStatus.PENDING);
+    });
+
+    it('should warn with separate counts when the queue cap drops only dead letters', () => {
+      const now = Date.now();
+      const deadLetters: QueuedEvent[] = Array.from({ length: 501 }, (_, index) => ({
+        id: `dead-letter-${index}`,
+        type: QueuedEventType.UNIT_STATUS,
+        status: QueuedEventStatus.FAILED,
+        data: {},
+        retryCount: 3,
+        maxRetries: 3,
+        createdAt: now,
+        lastAttemptAt: now,
+      }));
+      useOfflineQueueStore.setState({ queuedEvents: deadLetters });
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith({
+        message: 'Offline queue size cap reached, dropped oldest events',
+        context: { droppedPending: 0, droppedDeadLetters: 1 },
+      });
+      expect(mockLogger.error).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Offline queue size cap reached, dropped oldest events' }));
+    });
+
+    it('should log an error when the queue cap drops pending events', () => {
+      const now = Date.now();
+      const deadLetter: QueuedEvent = {
+        id: 'dead-letter',
+        type: QueuedEventType.UNIT_STATUS,
+        status: QueuedEventStatus.FAILED,
+        data: {},
+        retryCount: 3,
+        maxRetries: 3,
+        createdAt: now,
+        lastAttemptAt: now,
+      };
+      const pending: QueuedEvent[] = Array.from({ length: 501 }, (_, index) => ({
+        id: `pending-${index}`,
+        type: QueuedEventType.UNIT_STATUS,
+        status: QueuedEventStatus.PENDING,
+        data: {},
+        retryCount: 0,
+        maxRetries: 3,
+        createdAt: index,
+      }));
+      useOfflineQueueStore.setState({ queuedEvents: [deadLetter, ...pending] });
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Offline queue size cap reached, dropped oldest events',
+        context: { droppedPending: 1, droppedDeadLetters: 1 },
+      });
+      expect(mockLogger.warn).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Offline queue size cap reached, dropped oldest events' }));
     });
   });
 });

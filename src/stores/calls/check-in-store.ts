@@ -22,6 +22,8 @@ const STATUS_SEVERITY: Record<string, number> = {
   Ok: 2,
 };
 
+let globalOverdueRequestGeneration = 0;
+
 interface CheckInState {
   timerStatuses: CheckInTimerStatusResultData[];
   resolvedTimers: ResolvedCheckInTimerResultData[];
@@ -32,6 +34,7 @@ interface CheckInState {
   statusError: string | null;
   checkInError: string | null;
   _pollingInterval: ReturnType<typeof setInterval> | null;
+  _globalOverdueDebounce: ReturnType<typeof setTimeout> | null;
   /** Aggregate overdue+warning count across all active calls — used by the home page summary. */
   globalOverdueCount: number;
 
@@ -56,6 +59,7 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   statusError: null,
   checkInError: null,
   _pollingInterval: null,
+  _globalOverdueDebounce: null,
   globalOverdueCount: 0,
 
   fetchTimerStatuses: async (callId: number) => {
@@ -164,9 +168,14 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   },
 
   reset: () => {
+    globalOverdueRequestGeneration += 1;
     const interval = get()._pollingInterval;
     if (interval) {
       clearInterval(interval);
+    }
+    const debounce = get()._globalOverdueDebounce;
+    if (debounce) {
+      clearTimeout(debounce);
     }
     set({
       timerStatuses: [],
@@ -178,30 +187,55 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
       statusError: null,
       checkInError: null,
       _pollingInterval: null,
+      _globalOverdueDebounce: null,
       globalOverdueCount: 0,
     });
   },
 
   fetchGlobalOverdueCount: async (calls: CallWithTimerFlag[]) => {
-    const callsWithTimers = calls.filter((c) => c.CheckInTimersEnabled);
-    if (callsWithTimers.length === 0) {
-      set({ globalOverdueCount: 0 });
-      return;
+    const generation = ++globalOverdueRequestGeneration;
+    const existing = get()._globalOverdueDebounce;
+    if (existing) {
+      clearTimeout(existing);
     }
 
-    const counts = await Promise.all(
-      callsWithTimers.map(async (call) => {
-        try {
-          const callId = parseInt(call.CallId, 10);
-          const result = (await getTimerStatuses(callId)) as ApiResponse<CheckInTimerStatusResultData[]>;
-          const statuses = result.Data ?? [];
-          return statuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Warning').length;
-        } catch {
-          return 0;
-        }
-      })
-    );
+    const timer = setTimeout(() => {
+      if (generation !== globalOverdueRequestGeneration) {
+        return;
+      }
 
-    set({ globalOverdueCount: counts.reduce((acc, n) => acc + n, 0) });
+      set({ _globalOverdueDebounce: null });
+
+      const executeFetch = async () => {
+        const callsWithTimers = calls.filter((c) => c.CheckInTimersEnabled);
+        if (callsWithTimers.length === 0) {
+          if (generation === globalOverdueRequestGeneration) {
+            set({ globalOverdueCount: 0 });
+          }
+          return;
+        }
+
+        const counts = await Promise.all(
+          callsWithTimers.map(async (call) => {
+            try {
+              const callId = parseInt(call.CallId, 10);
+              const result = (await getTimerStatuses(callId)) as ApiResponse<CheckInTimerStatusResultData[]>;
+              const statuses = result.Data ?? [];
+              return statuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Warning').length;
+            } catch {
+              return 0;
+            }
+          })
+        );
+
+        if (generation === globalOverdueRequestGeneration) {
+          set({ globalOverdueCount: counts.reduce((acc, n) => acc + n, 0) });
+        }
+      };
+
+      void executeFetch();
+    }, 750);
+
+    set({ _globalOverdueDebounce: timer });
   },
 }));

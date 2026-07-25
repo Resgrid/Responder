@@ -48,7 +48,8 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
   const { colorScheme } = useColorScheme();
   const [selectedType, setSelectedType] = useState(defaultCheckInType);
   const [note, setNote] = useState('');
-  const location = useLocationStore();
+  const latitude = useLocationStore((state) => state.latitude);
+  const longitude = useLocationStore((state) => state.longitude);
   const resolvedTargetName = targetName?.trim() ?? '';
   const isCardDrivenCheckIn = defaultUnitId !== undefined || resolvedTargetName.length > 0;
   const shouldShowTargetName = shouldUseNamedCheckInTarget(defaultCheckInType) && resolvedTargetName.length > 0;
@@ -69,13 +70,13 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
       CallId: callId,
       CheckInType: selectedType,
       UnitId: defaultUnitId,
-      Latitude: location.latitude?.toString(),
-      Longitude: location.longitude?.toString(),
+      Latitude: latitude?.toString(),
+      Longitude: longitude?.toString(),
       Note: note.trim() || undefined,
     });
     setNote('');
     onClose();
-  }, [callId, selectedType, defaultUnitId, location, note, onSubmit, onClose]);
+  }, [callId, selectedType, defaultUnitId, latitude, longitude, note, onSubmit, onClose]);
 
   const activeBg = colorScheme === 'dark' ? 'bg-primary-700' : 'bg-primary-100';
   const inactiveBg = colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-gray-100';
@@ -105,11 +106,7 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
           </Input>
         </VStack>
 
-        {location.latitude != null && location.longitude != null ? (
-          <Text className="text-xs text-gray-500">
-            GPS: {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-          </Text>
-        ) : null}
+        {latitude != null && longitude != null ? <Text className="text-xs text-gray-500">{t('check_in.gps_coordinates', { latitude: latitude.toFixed(5), longitude: longitude.toFixed(5) })}</Text> : null}
 
         <Button size="lg" onPress={handleSubmit} isDisabled={isLoading} testID="confirm-check-in-button">
           <ButtonText>{t('check_in.confirm_check_in')}</ButtonText>

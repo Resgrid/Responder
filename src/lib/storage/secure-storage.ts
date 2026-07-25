@@ -162,80 +162,86 @@ class WebEncryptedStorage {
 let generalStorage: MMKV | undefined;
 let offlineQueueStorage: MMKV | undefined;
 let webEncryptedStorage: WebEncryptedStorage | undefined;
-let storageInitializing = false;
+let initPromise: Promise<void> | null = null;
 
-const initializeStorage = async (): Promise<void> => {
-  if (storageInitializing) return;
-  storageInitializing = true;
-  try {
-    if (Platform.OS === 'web') {
-      // For web, use encrypted localStorage
-      const encryptionKey = Env.STORAGE_ENCRYPTION_KEY || generateSecureKey();
-      webEncryptedStorage = new WebEncryptedStorage(encryptionKey);
+const initializeStorage = (): Promise<void> => {
+  // Single-flight: share one in-flight init promise across all concurrent callers
+  if (initPromise) return initPromise;
 
-      // Create a MMKV instance that uses our encrypted web storage
+  initPromise = (async (): Promise<void> => {
+    try {
+      if (Platform.OS === 'web') {
+        // For web, use encrypted localStorage
+        const encryptionKey = Env.STORAGE_ENCRYPTION_KEY || generateSecureKey();
+        webEncryptedStorage = new WebEncryptedStorage(encryptionKey);
+
+        // Create a MMKV instance that uses our encrypted web storage
+        generalStorage = new MMKV({
+          id: 'ResgridUnit',
+        });
+
+        // For offline queue, we'll disable persistence on web for PII safety
+        offlineQueueStorage = new MMKV({
+          id: 'ResgridOfflineQueue',
+        });
+
+        logger.info({
+          message: 'Initialized web storage with encryption',
+        });
+      } else {
+        // For mobile platforms, use secure key storage
+        const generalKey = await getOrCreateSecureKey(ENCRYPTION_KEY_STORAGE_KEY);
+        const offlineQueueKey = await getOrCreateSecureKey(OFFLINE_QUEUE_KEY_STORAGE_KEY);
+
+        generalStorage = new MMKV({
+          id: 'ResgridUnit',
+          encryptionKey: generalKey,
+        });
+
+        offlineQueueStorage = new MMKV({
+          id: 'ResgridOfflineQueue',
+          encryptionKey: offlineQueueKey,
+        });
+
+        logger.info({
+          message: 'Initialized mobile storage with secure encryption keys',
+        });
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Failed to initialize secure storage, falling back to basic storage',
+        context: { error },
+      });
+
+      // Fallback to basic MMKV without encryption
       generalStorage = new MMKV({
         id: 'ResgridUnit',
       });
 
-      // For offline queue, we'll disable persistence on web for PII safety
       offlineQueueStorage = new MMKV({
         id: 'ResgridOfflineQueue',
-      });
-
-      logger.info({
-        message: 'Initialized web storage with encryption',
-      });
-    } else {
-      // For mobile platforms, use secure key storage
-      const generalKey = await getOrCreateSecureKey(ENCRYPTION_KEY_STORAGE_KEY);
-      const offlineQueueKey = await getOrCreateSecureKey(OFFLINE_QUEUE_KEY_STORAGE_KEY);
-
-      generalStorage = new MMKV({
-        id: 'ResgridUnit',
-        encryptionKey: generalKey,
-      });
-
-      offlineQueueStorage = new MMKV({
-        id: 'ResgridOfflineQueue',
-        encryptionKey: offlineQueueKey,
-      });
-
-      logger.info({
-        message: 'Initialized mobile storage with secure encryption keys',
       });
     }
-  } catch (error) {
-    logger.error({
-      message: 'Failed to initialize secure storage, falling back to basic storage',
-      context: { error },
-    });
+  })();
 
-    // Fallback to basic MMKV without encryption
-    generalStorage = new MMKV({
-      id: 'ResgridUnit',
-    });
-
-    offlineQueueStorage = new MMKV({
-      id: 'ResgridOfflineQueue',
-    });
-    storageInitializing = false;
-  }
+  return initPromise;
 };
 
 // Storage getters with lazy initialization
 export const getGeneralStorage = async (): Promise<MMKV> => {
+  await initializeStorage();
   if (!generalStorage) {
-    await initializeStorage();
+    throw new Error('General storage failed to initialize');
   }
-  return generalStorage!;
+  return generalStorage;
 };
 
 export const getOfflineQueueStorage = async (): Promise<MMKV> => {
+  await initializeStorage();
   if (!offlineQueueStorage) {
-    await initializeStorage();
+    throw new Error('Offline queue storage failed to initialize');
   }
-  return offlineQueueStorage!;
+  return offlineQueueStorage;
 };
 
 export const getWebEncryptedStorage = (): WebEncryptedStorage | undefined => {

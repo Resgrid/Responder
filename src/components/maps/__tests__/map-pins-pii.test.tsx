@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
-import { useSecurityStore } from '@/stores/security/store';
+import { securityStore } from '@/stores/security/store';
 
 import MapPins from '../map-pins';
 
@@ -12,8 +12,14 @@ jest.mock('@rnmapbox/maps', () => ({
 }));
 
 // Mock the security store
-jest.mock('@/stores/security/store');
-const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
+jest.mock('@/stores/security/store', () => ({
+  securityStore: jest.fn(),
+}));
+const mockSecurityStore = securityStore as jest.MockedFunction<typeof securityStore>;
+
+const mockCanUserViewPII = (canView: boolean) => {
+  mockSecurityStore.mockImplementation((selector: any) => selector({ rights: { CanViewPII: canView } }));
+};
 
 // Mock PinMarker component
 jest.mock('../pin-marker', () => {
@@ -75,9 +81,7 @@ describe('MapPins PII Protection', () => {
   });
 
   it('should show all pins when user can view PII', () => {
-    mockUseSecurityStore.mockReturnValue({
-      canUserViewPII: true,
-    } as any);
+    mockCanUserViewPII(true);
 
     render(
       <MapPins
@@ -92,9 +96,7 @@ describe('MapPins PII Protection', () => {
   });
 
   it('should hide personnel pins when user cannot view PII', () => {
-    mockUseSecurityStore.mockReturnValue({
-      canUserViewPII: false,
-    } as any);
+    mockCanUserViewPII(false);
 
     render(
       <MapPins
@@ -109,9 +111,7 @@ describe('MapPins PII Protection', () => {
   });
 
   it('should filter out multiple personnel pins when PII cannot be viewed', () => {
-    mockUseSecurityStore.mockReturnValue({
-      canUserViewPII: false,
-    } as any);
+    mockCanUserViewPII(false);
 
     const personnelPin2: MapMakerInfoData = {
       ...personnelPin,
@@ -142,9 +142,7 @@ describe('MapPins PII Protection', () => {
   });
 
   it('should handle different person ImagePath variations', () => {
-    mockUseSecurityStore.mockReturnValue({
-      canUserViewPII: false,
-    } as any);
+    mockCanUserViewPII(false);
 
     const personnelPins: MapMakerInfoData[] = [
       { ...personnelPin, Id: '6', Title: 'Person 1', ImagePath: 'person' },
@@ -169,9 +167,7 @@ describe('MapPins PII Protection', () => {
   });
 
   it('should handle empty pins array', () => {
-    mockUseSecurityStore.mockReturnValue({
-      canUserViewPII: false,
-    } as any);
+    mockCanUserViewPII(false);
 
     const { UNSAFE_root } = render(
       <MapPins
@@ -184,9 +180,7 @@ describe('MapPins PII Protection', () => {
   });
 
   it('should handle pins with undefined or null ImagePath', () => {
-    mockUseSecurityStore.mockReturnValue({
-      canUserViewPII: false,
-    } as any);
+    mockCanUserViewPII(false);
 
     const pinWithUndefinedImagePath: MapMakerInfoData = {
       ...callPin,
@@ -214,9 +208,7 @@ describe('MapPins PII Protection', () => {
   });
 
   it('should be case insensitive when filtering personnel pins', () => {
-    mockUseSecurityStore.mockReturnValue({
-      canUserViewPII: false,
-    } as any);
+    mockCanUserViewPII(false);
 
     const personnelPinUppercase: MapMakerInfoData = {
       ...personnelPin,

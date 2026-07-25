@@ -31,21 +31,19 @@ export default function CalendarScreen() {
   const [selectedItem, setSelectedItem] = useState<CalendarItemResultData | null>(null);
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
 
-  const {
-    todayCalendarItems,
-    upcomingCalendarItems,
-    selectedMonthItems,
-    selectedDate,
-    isTodaysLoading,
-    isUpcomingLoading,
-    isLoading,
-    error,
-    loadTodaysCalendarItems,
-    loadUpcomingCalendarItems,
-    loadCalendarItemsForDateRange,
-    viewCalendarItemAction,
-    clearError,
-  } = useCalendarStore();
+  const todayCalendarItems = useCalendarStore((state) => state.todayCalendarItems);
+  const upcomingCalendarItems = useCalendarStore((state) => state.upcomingCalendarItems);
+  const selectedMonthItems = useCalendarStore((state) => state.selectedMonthItems);
+  const selectedDate = useCalendarStore((state) => state.selectedDate);
+  const isTodaysLoading = useCalendarStore((state) => state.isTodaysLoading);
+  const isUpcomingLoading = useCalendarStore((state) => state.isUpcomingLoading);
+  const isLoading = useCalendarStore((state) => state.isLoading);
+  const error = useCalendarStore((state) => state.error);
+  const loadTodaysCalendarItems = useCalendarStore((state) => state.loadTodaysCalendarItems);
+  const loadUpcomingCalendarItems = useCalendarStore((state) => state.loadUpcomingCalendarItems);
+  const loadCalendarItemsForDateRange = useCalendarStore((state) => state.loadCalendarItemsForDateRange);
+  const viewCalendarItemAction = useCalendarStore((state) => state.viewCalendarItemAction);
+  const clearError = useCalendarStore((state) => state.clearError);
 
   useEffect(() => {
     // Initialize data on mount using new Angular-style actions
@@ -79,20 +77,23 @@ export default function CalendarScreen() {
     }
   };
 
-  const handleItemPress = (item: CalendarItemResultData) => {
-    setSelectedItem(item);
-    viewCalendarItemAction(item); // Update store state to match Angular
-    setIsDetailsSheetOpen(true);
+  const handleItemPress = React.useCallback(
+    (item: CalendarItemResultData) => {
+      setSelectedItem(item);
+      viewCalendarItemAction(item); // Update store state to match Angular
+      setIsDetailsSheetOpen(true);
 
-    // Track analytics for item interaction
-    trackEvent('calendar_item_viewed', {
-      timestamp: new Date().toISOString(),
-      itemId: item.CalendarItemId,
-      itemTitle: item.Title,
-      itemType: item.TypeName,
-      tab: activeTab,
-    });
-  };
+      // Track analytics for item interaction
+      trackEvent('calendar_item_viewed', {
+        timestamp: new Date().toISOString(),
+        itemId: item.CalendarItemId,
+        itemTitle: item.Title,
+        itemType: item.TypeName,
+        tab: activeTab,
+      });
+    },
+    [activeTab, trackEvent, viewCalendarItemAction]
+  );
 
   const handleMonthChange = (startDate: string, endDate: string) => {
     loadCalendarItemsForDateRange(startDate, endDate);
@@ -105,7 +106,7 @@ export default function CalendarScreen() {
     });
   };
 
-  const getItemsForSelectedDate = () => {
+  const itemsForSelectedDate = React.useMemo(() => {
     if (!selectedDate) return [];
 
     return selectedMonthItems.filter((item) => {
@@ -115,7 +116,7 @@ export default function CalendarScreen() {
       // 3. single-day events still work (start === end collapses to an exact match)
       return isDateInRange(selectedDate, item.Start, item.End, item.IsAllDay);
     });
-  };
+  }, [selectedDate, selectedMonthItems]);
 
   const renderTabButton = (tab: TabType, label: string) => (
     <Button
@@ -136,9 +137,11 @@ export default function CalendarScreen() {
     </Button>
   );
 
-  const renderCalendarItem = ({ item }: { item: CalendarItemResultData }) => <CalendarCard item={item} onPress={() => handleItemPress(item)} />;
+  const renderCalendarItem = React.useCallback(({ item }: { item: CalendarItemResultData }) => <CalendarCard item={item} onPress={() => handleItemPress(item)} />, [handleItemPress]);
 
-  const renderCompactCalendarItem = ({ item }: { item: CalendarItemResultData }) => <CompactCalendarItem item={item} onPress={() => handleItemPress(item)} />;
+  const renderCompactCalendarItem = React.useCallback(({ item }: { item: CalendarItemResultData }) => <CompactCalendarItem item={item} onPress={() => handleItemPress(item)} />, [handleItemPress]);
+
+  const calendarItemKeyExtractor = React.useCallback((item: CalendarItemResultData) => item.CalendarItemId, []);
 
   const renderTodayTab = () => {
     if (isTodaysLoading) {
@@ -163,7 +166,7 @@ export default function CalendarScreen() {
       <FlatList
         data={todayCalendarItems}
         renderItem={renderCalendarItem}
-        keyExtractor={(item) => item.CalendarItemId}
+        keyExtractor={calendarItemKeyExtractor}
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={true}
@@ -195,7 +198,7 @@ export default function CalendarScreen() {
       <FlatList
         data={upcomingCalendarItems}
         renderItem={renderCalendarItem}
-        keyExtractor={(item) => item.CalendarItemId}
+        keyExtractor={calendarItemKeyExtractor}
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={true}
@@ -212,10 +215,10 @@ export default function CalendarScreen() {
           <View className="flex-1 border-t border-gray-200 dark:border-gray-800">
             {isLoading ? (
               <Loading text={t('calendar.loading.date')} />
-            ) : getItemsForSelectedDate().length === 0 ? (
+            ) : itemsForSelectedDate.length === 0 ? (
               <Text className="py-8 text-center text-gray-500 dark:text-gray-400">{t('calendar.selectedDate.empty')}</Text>
             ) : (
-              <FlatList data={getItemsForSelectedDate()} renderItem={renderCompactCalendarItem} keyExtractor={(item) => item.CalendarItemId} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: 8 }} />
+              <FlatList data={itemsForSelectedDate} renderItem={renderCompactCalendarItem} keyExtractor={calendarItemKeyExtractor} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: 8 }} />
             )}
           </View>
         ) : (

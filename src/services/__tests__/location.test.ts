@@ -219,6 +219,7 @@ describe('LocationService', () => {
 
     // Reset internal state of the service
     (locationService as any).locationSubscription = null;
+    (locationService as any).startLocationUpdatesPromise = null;
     (locationService as any).backgroundSubscription = null;
     (locationService as any).isBackgroundGeolocationEnabled = false;
     (locationService as any).isRealtimeGeolocationEnabled = false;
@@ -306,6 +307,39 @@ describe('LocationService', () => {
           realtimeEnabled: false,
         },
       });
+    });
+
+    it('should remove existing foreground subscription before starting a new one (idempotent restarts)', async () => {
+      await locationService.startLocationUpdates();
+      const firstSubscription = mockLocationSubscription;
+
+      const secondSubscription = { remove: jest.fn() };
+      mockLocation.watchPositionAsync.mockResolvedValue(secondSubscription as jest.Mocked<Location.LocationSubscription>);
+
+      await locationService.startLocationUpdates();
+
+      expect(firstSubscription.remove).toHaveBeenCalledTimes(1);
+      expect(mockLocation.watchPositionAsync).toHaveBeenCalledTimes(2);
+      expect((locationService as any).locationSubscription).toBe(secondSubscription);
+    });
+
+    it('should create only one watcher when location starts overlap', async () => {
+      let resolveWatcher: (subscription: Location.LocationSubscription) => void;
+      const watcherPromise = new Promise<Location.LocationSubscription>((resolve) => {
+        resolveWatcher = resolve;
+      });
+      mockLocation.watchPositionAsync.mockReturnValue(watcherPromise);
+
+      const firstStart = locationService.startLocationUpdates();
+      const secondStart = locationService.startLocationUpdates();
+
+      expect(firstStart).toBe(secondStart);
+
+      resolveWatcher!(mockLocationSubscription);
+      await Promise.all([firstStart, secondStart]);
+
+      expect(mockLocation.watchPositionAsync).toHaveBeenCalledTimes(1);
+      expect((locationService as any).locationSubscription).toBe(mockLocationSubscription);
     });
 
     it('should throw error if permissions are not granted', async () => {
@@ -883,6 +917,10 @@ describe('LocationService', () => {
       mockLocation.watchPositionAsync.mockRejectedValue(error);
 
       await expect(locationService.startLocationUpdates()).rejects.toThrow('Location subscription failed');
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Failed to start location updates',
+        context: { error },
+      });
     });
 
     it('should handle background task registration errors', async () => {

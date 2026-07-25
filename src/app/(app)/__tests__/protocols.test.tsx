@@ -31,11 +31,7 @@ const mockProtocolsStore = {
 };
 
 jest.mock('@/stores/protocols/store', () => ({
-  useProtocolsStore: () => mockProtocolsStore,
-}));
-
-jest.mock('@/stores/protocols/store', () => ({
-  useProtocolsStore: () => mockProtocolsStore,
+  useProtocolsStore: (selector?: (state: typeof mockProtocolsStore) => unknown) => (selector ? selector(mockProtocolsStore) : mockProtocolsStore),
 }));
 
 // Mock react-native-svg first

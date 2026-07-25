@@ -6,7 +6,7 @@ import { useColorScheme } from 'nativewind';
 import { SideMenu } from '../side-menu';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
-import { useSecurityStore, securityStore } from '@/stores/security/store';
+import { securityStore } from '@/stores/security/store';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
@@ -27,13 +27,14 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('@/lib/auth', () => ({
-  useAuthStore: () => ({
-    profile: {
-      name: 'Test User',
-      sub: '12345678',
-    },
-    logout: jest.fn(),
-  }),
+  useAuthStore: (selector: (state: { profile: { name: string; sub: string }; logout: jest.Mock }) => unknown) =>
+    selector({
+      profile: {
+        name: 'Test User',
+        sub: '12345678',
+      },
+      logout: jest.fn(),
+    }),
 }));
 
 jest.mock('@/stores/app/livekit-store', () => ({
@@ -188,8 +189,11 @@ jest.mock('@/components/ui/vstack', () => {
 const mockUseLiveKitStore = useLiveKitStore as jest.MockedFunction<typeof useLiveKitStore>;
 const mockUseAudioStreamStore = useAudioStreamStore as jest.MockedFunction<typeof useAudioStreamStore>;
 const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
-const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
 const mockSecurityStore = securityStore as jest.MockedFunction<typeof securityStore>;
+
+const mockStore = (mockFn: jest.MockedFunction<any>, state: object) => {
+  mockFn.mockImplementation((selector: (s: object) => unknown) => selector(state));
+};
 
 describe('SideMenu', () => {
   const mockSetIsBottomSheetVisible = jest.fn();
@@ -205,26 +209,13 @@ describe('SideMenu', () => {
     });
 
     // Default audio stream store mock
-    mockUseAudioStreamStore.mockReturnValue({
+    mockStore(mockUseAudioStreamStore, {
       currentStream: null,
       isPlaying: false,
       setIsBottomSheetVisible: mockSetAudioStreamBottomSheetVisible,
     });
 
-    // Default security store mock
-    mockUseSecurityStore.mockReturnValue({
-      error: null,
-      getRights: jest.fn(),
-      isUserDepartmentAdmin: false,
-      isUserGroupAdmin: jest.fn().mockReturnValue(false),
-      canUserCreateCalls: false,
-      canUserCreateNotes: false,
-      canUserCreateMessages: false,
-      canUserViewPII: false,
-      departmentCode: 'TEST',
-    });
-
-    mockSecurityStore.mockReturnValue({
+    mockStore(mockSecurityStore, {
       rights: {
         FullName: 'John Doe',
         DepartmentName: 'Fire Department',
@@ -244,7 +235,7 @@ describe('SideMenu', () => {
   });
 
   it('should render PTT button with normal styling when not connected to voice call', () => {
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: false,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -262,7 +253,7 @@ describe('SideMenu', () => {
   });
 
   it('should render PTT button with active styling when connected to voice call', () => {
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: true,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -280,7 +271,7 @@ describe('SideMenu', () => {
   });
 
   it('should open LiveKit bottom sheet when PTT button is pressed and not connected', () => {
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: false,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -296,7 +287,7 @@ describe('SideMenu', () => {
   });
 
   it('should open LiveKit bottom sheet when PTT button is pressed and connected', () => {
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: true,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -317,7 +308,7 @@ describe('SideMenu', () => {
       setColorScheme: jest.fn(),
       toggleColorScheme: jest.fn(),
     });
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: false,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -340,7 +331,7 @@ describe('SideMenu', () => {
       setColorScheme: jest.fn(),
       toggleColorScheme: jest.fn(),
     });
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: true,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -357,7 +348,7 @@ describe('SideMenu', () => {
   });
 
   it('should render profile section correctly', () => {
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: false,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -371,7 +362,7 @@ describe('SideMenu', () => {
   });
 
   it('should render all navigation menu items', () => {
-    mockUseLiveKitStore.mockReturnValue({
+    mockStore(mockUseLiveKitStore, {
       isConnected: false,
       setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
       toggleMicrophone: mockToggleMicrophone,
@@ -393,13 +384,13 @@ describe('SideMenu', () => {
 
   describe('Audio Stream Button', () => {
     it('should render with outline styling when no stream is playing', () => {
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
         toggleMicrophone: mockToggleMicrophone,
       });
 
-      mockUseAudioStreamStore.mockReturnValue({
+      mockStore(mockUseAudioStreamStore, {
         currentStream: null,
         isPlaying: false,
         setIsBottomSheetVisible: mockSetAudioStreamBottomSheetVisible,
@@ -417,13 +408,13 @@ describe('SideMenu', () => {
     });
 
     it('should render with filled styling when stream is playing', () => {
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
         toggleMicrophone: mockToggleMicrophone,
       });
 
-      mockUseAudioStreamStore.mockReturnValue({
+      mockStore(mockUseAudioStreamStore, {
         currentStream: { Id: '1', Name: 'Test Stream' },
         isPlaying: true,
         setIsBottomSheetVisible: mockSetAudioStreamBottomSheetVisible,
@@ -441,13 +432,13 @@ describe('SideMenu', () => {
     });
 
     it('should open audio stream bottom sheet when pressed', () => {
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
         toggleMicrophone: mockToggleMicrophone,
       });
 
-      mockUseAudioStreamStore.mockReturnValue({
+      mockStore(mockUseAudioStreamStore, {
         currentStream: null,
         isPlaying: false,
         setIsBottomSheetVisible: mockSetAudioStreamBottomSheetVisible,
@@ -462,13 +453,13 @@ describe('SideMenu', () => {
     });
 
     it('should re-open audio stream bottom sheet when pressed while playing', () => {
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
         toggleMicrophone: mockToggleMicrophone,
       });
 
-      mockUseAudioStreamStore.mockReturnValue({
+      mockStore(mockUseAudioStreamStore, {
         currentStream: { Id: '1', Name: 'Test Stream' },
         isPlaying: true,
         setIsBottomSheetVisible: mockSetAudioStreamBottomSheetVisible,
@@ -485,13 +476,13 @@ describe('SideMenu', () => {
 
   describe('Profile Section', () => {
     it('should display FullName from security store when available', () => {
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
         toggleMicrophone: mockToggleMicrophone,
       });
 
-      mockSecurityStore.mockReturnValue({
+      mockStore(mockSecurityStore, {
         rights: {
           FullName: 'Jane Smith',
           DepartmentName: 'Police Department',
@@ -517,13 +508,13 @@ describe('SideMenu', () => {
     });
 
     it('should display DepartmentName from security store when available', () => {
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
         toggleMicrophone: mockToggleMicrophone,
       });
 
-      mockSecurityStore.mockReturnValue({
+      mockStore(mockSecurityStore, {
         rights: {
           FullName: 'Bob Johnson',
           DepartmentName: 'Emergency Services',
@@ -548,13 +539,13 @@ describe('SideMenu', () => {
     });
 
     it('should fallback to profile name when security store FullName is not available', () => {
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
         toggleMicrophone: mockToggleMicrophone,
       });
 
-      mockSecurityStore.mockReturnValue({
+      mockStore(mockSecurityStore, {
         rights: null,
         error: null,
         getRights: jest.fn(),
@@ -574,14 +565,14 @@ describe('SideMenu', () => {
 
       // Reset all mocks to ensure proper setup
       const mockUseLiveKitStore = useLiveKitStore as jest.MockedFunction<typeof useLiveKitStore>;
-      mockUseLiveKitStore.mockReturnValue({
+      mockStore(mockUseLiveKitStore, {
         isConnected: false,
         setIsBottomSheetVisible: jest.fn(),
         toggleMicrophone: jest.fn(),
       });
 
       const mockUseAudioStreamStore = useAudioStreamStore as jest.MockedFunction<typeof useAudioStreamStore>;
-      mockUseAudioStreamStore.mockReturnValue({
+      mockStore(mockUseAudioStreamStore, {
         currentStream: null,
         isPlaying: false,
         setIsBottomSheetVisible: jest.fn(),

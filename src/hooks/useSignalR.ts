@@ -1,30 +1,38 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { logger } from '@/lib/logging';
 import { type SignalRHubConfig, signalRService } from '@/services/signalr.service';
 
 export const useSignalR = (config: SignalRHubConfig) => {
+  const configRef = useRef(config);
+
+  useEffect(() => {
+    configRef.current = config;
+  });
+
+  const hubName = config.name;
+
   const connect = useCallback(async () => {
     try {
-      await signalRService.connectToHub(config);
+      await signalRService.connectToHub(configRef.current);
     } catch (error) {
       logger.error({
         message: 'Failed to connect to SignalR hub',
-        context: { error, config },
+        context: { error, config: configRef.current },
       });
     }
-  }, [config]);
+  }, []);
 
   const disconnect = useCallback(async () => {
     try {
-      await signalRService.disconnectFromHub(config.name);
+      await signalRService.disconnectFromHub(hubName);
     } catch (error) {
       logger.error({
         message: 'Failed to disconnect from SignalR hub',
-        context: { error, config },
+        context: { error, config: configRef.current },
       });
     }
-  }, [config]);
+  }, [hubName]);
 
   useEffect(() => {
     connect();

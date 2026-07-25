@@ -50,11 +50,13 @@ describe('useRealtimeGeolocation', () => {
     mockDisconnectGeolocationHub = jest.fn();
 
     mockUseMMKVBoolean.mockReturnValue([false, mockSetRealtimeGeolocationEnabled]);
-    mockUseSignalRStore.mockReturnValue({
-      isGeolocationHubConnected: false,
-      connectGeolocationHub: mockConnectGeolocationHub,
-      disconnectGeolocationHub: mockDisconnectGeolocationHub,
-    });
+    mockUseSignalRStore.mockImplementation((selector: any) =>
+      selector({
+        isGeolocationHubConnected: false,
+        connectGeolocationHub: mockConnectGeolocationHub,
+        disconnectGeolocationHub: mockDisconnectGeolocationHub,
+      })
+    );
   });
 
   it('should return initial state', () => {
@@ -148,11 +150,13 @@ describe('useRealtimeGeolocation', () => {
   });
 
   it('should return hub connected state', () => {
-    mockUseSignalRStore.mockReturnValue({
-      isGeolocationHubConnected: true,
-      connectGeolocationHub: mockConnectGeolocationHub,
-      disconnectGeolocationHub: mockDisconnectGeolocationHub,
-    });
+    mockUseSignalRStore.mockImplementation((selector: any) =>
+      selector({
+        isGeolocationHubConnected: true,
+        connectGeolocationHub: mockConnectGeolocationHub,
+        disconnectGeolocationHub: mockDisconnectGeolocationHub,
+      })
+    );
 
     const { result } = renderHook(() => useRealtimeGeolocation());
 

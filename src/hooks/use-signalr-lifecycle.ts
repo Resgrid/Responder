@@ -12,7 +12,10 @@ interface UseSignalRLifecycleOptions {
 
 export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLifecycleOptions) {
   const { isActive, appState } = useAppLifecycle();
-  const signalRStore = useSignalRStore();
+  const connectUpdateHub = useSignalRStore((state) => state.connectUpdateHub);
+  const disconnectUpdateHub = useSignalRStore((state) => state.disconnectUpdateHub);
+  const connectGeolocationHub = useSignalRStore((state) => state.connectGeolocationHub);
+  const disconnectGeolocationHub = useSignalRStore((state) => state.disconnectGeolocationHub);
 
   // Track current values with refs for timer callbacks
   const currentIsActive = useRef(isActive);
@@ -63,7 +66,7 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
 
     try {
       // Use Promise.allSettled to prevent one failure from blocking the other
-      const results = await Promise.allSettled([signalRStore.disconnectUpdateHub(), signalRStore.disconnectGeolocationHub()]);
+      const results = await Promise.allSettled([disconnectUpdateHub(), disconnectGeolocationHub()]);
 
       // Log any failures without throwing
       results.forEach((result, index) => {
@@ -86,7 +89,7 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
         pendingOperations.current = null;
       }
     }
-  }, [signalRStore]);
+  }, [disconnectUpdateHub, disconnectGeolocationHub]);
 
   const handleAppResume = useCallback(async () => {
     logger.debug({
@@ -117,7 +120,7 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
 
     try {
       // Use Promise.allSettled to prevent one failure from blocking the other
-      const results = await Promise.allSettled([signalRStore.connectUpdateHub(), signalRStore.connectGeolocationHub()]);
+      const results = await Promise.allSettled([connectUpdateHub(), connectGeolocationHub()]);
 
       // Log any failures without throwing
       results.forEach((result, index) => {
@@ -140,7 +143,7 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
         pendingOperations.current = null;
       }
     }
-  }, [signalRStore]);
+  }, [connectUpdateHub, connectGeolocationHub]);
 
   // Clear timers helper
   const clearTimers = useCallback(() => {

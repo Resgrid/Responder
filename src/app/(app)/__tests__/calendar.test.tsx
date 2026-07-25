@@ -263,9 +263,12 @@ describe('CalendarScreen', () => {
   const mockTrackEvent = jest.fn();
   const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
+  const setCalendarStoreMock = (state: unknown) =>
+    (useCalendarStore as unknown as jest.Mock).mockImplementation((selector?: (s: unknown) => unknown) => (selector ? selector(state) : state));
+
   beforeEach(() => {
     (useTranslation as jest.Mock).mockReturnValue({ t: mockT });
-    (useCalendarStore as unknown as jest.Mock).mockReturnValue(mockStore);
+    setCalendarStoreMock(mockStore);
 
     // Default mock for analytics
     mockUseAnalytics.mockReturnValue({
@@ -352,7 +355,7 @@ describe('CalendarScreen', () => {
     });
 
     it('shows loading state for today\'s items', () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         isTodaysLoading: true,
       });
@@ -363,7 +366,7 @@ describe('CalendarScreen', () => {
     });
 
     it('shows error state for today\'s items', () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         error: 'Failed to load',
       });
@@ -393,7 +396,7 @@ describe('CalendarScreen', () => {
         EndUtc: '2024-01-15T16:00:00Z',
       };
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [todayItem],
       });
@@ -414,7 +417,7 @@ describe('CalendarScreen', () => {
         EndUtc: '2024-01-15T16:00:00Z',
       }));
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: multipleItems,
       });
@@ -452,7 +455,7 @@ describe('CalendarScreen', () => {
         EndUtc: '2024-01-16T16:00:00Z',
       };
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [todayItem], // Should only contain today's item
       });
@@ -485,7 +488,7 @@ describe('CalendarScreen', () => {
         EndUtc: '2024-01-15T10:30:00Z',
       };
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [todayItemUTC, todayItemPST],
       });
@@ -510,7 +513,7 @@ describe('CalendarScreen', () => {
         EndUtc: '2024-01-16T07:00:00Z',
       };
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [todayItem],
       });
@@ -533,7 +536,7 @@ describe('CalendarScreen', () => {
         EndUtc: '2024-01-16T04:00:00Z',
       };
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [], // Should be empty since no items are today
       });
@@ -546,7 +549,7 @@ describe('CalendarScreen', () => {
 
   describe('Upcoming Tab', () => {
     it('shows loading state for upcoming items', () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         isUpcomingLoading: true,
       });
@@ -566,7 +569,7 @@ describe('CalendarScreen', () => {
     });
 
     it('renders upcoming items when available', () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         upcomingCalendarItems: [mockCalendarItem],
       });
@@ -588,7 +591,7 @@ describe('CalendarScreen', () => {
         EndUtc: `2024-01-${16 + index}T16:00:00Z`,
       }));
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         upcomingCalendarItems: multipleUpcomingItems,
       });
@@ -642,7 +645,7 @@ describe('CalendarScreen', () => {
         StartUtc: '2024-01-16T14:00:00Z', // Keep for completeness
         End: '2024-01-16T16:00:00Z',
         EndUtc: '2024-01-16T16:00:00Z',
-      }; (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      }; setCalendarStoreMock({
         ...mockStore,
         selectedDate: testDate,
         selectedMonthItems: [todayItem, otherDayItem],
@@ -691,7 +694,7 @@ describe('CalendarScreen', () => {
         EndUtc: '2024-01-16T11:00:00Z',
       };
 
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         selectedDate: testDate,
         selectedMonthItems: [utcItem, pstItem, nextDayItem],
@@ -707,7 +710,7 @@ describe('CalendarScreen', () => {
     });
 
     it('shows empty message when no events for selected date', () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         selectedDate: '2024-01-15',
         selectedMonthItems: [],
@@ -722,7 +725,7 @@ describe('CalendarScreen', () => {
 
   describe('Calendar Item Details', () => {
     it('opens details sheet when item is pressed', async () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [mockCalendarItem],
       });
@@ -749,7 +752,7 @@ describe('CalendarScreen', () => {
     });
 
     it('closes details sheet when close is pressed', async () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [mockCalendarItem],
       });
@@ -774,7 +777,7 @@ describe('CalendarScreen', () => {
 
   describe('Error Handling', () => {
     it('calls retry action when retry button is pressed', () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         error: 'Network error',
       });
@@ -822,7 +825,7 @@ describe('CalendarScreen', () => {
     });
 
     it('tracks item interactions', async () => {
-      (useCalendarStore as unknown as jest.Mock).mockReturnValue({
+      setCalendarStoreMock({
         ...mockStore,
         todayCalendarItems: [mockCalendarItem],
       });

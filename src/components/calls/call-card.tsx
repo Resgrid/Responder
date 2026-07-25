@@ -131,7 +131,7 @@ const DispatchTicker: React.FC<DispatchTickerProps> = ({ dispatches }) => {
   );
 };
 
-export const CallCard: React.FC<CallCardProps> = ({ call, priority, callExtraData }) => {
+export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({ call, priority, callExtraData }) {
   const { t } = useTranslation();
   const currentUser = useHomeStore((state) => state.currentUser);
   const roles = useRolesStore((state) => state.roles);
@@ -255,7 +255,7 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority, callExtraDat
       ) : null}
     </Box>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

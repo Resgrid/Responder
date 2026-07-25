@@ -41,9 +41,11 @@ import { useShiftsStore } from '@/stores/shifts/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
+Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
+
 export default function TabLayout() {
   const { t } = useTranslation();
-  const { status } = useAuthStore();
+  const status = useAuthStore((state) => state.status);
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
@@ -66,8 +68,6 @@ export default function TabLayout() {
 
   // Initialize push notifications
   usePushNotifications();
-
-  Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
 
   const initializeApp = useCallback(async () => {
     if (isInitializing.current) {
@@ -101,24 +101,36 @@ export default function TabLayout() {
       //await usePersonnelStore.getState().init();
       await securityStore.getState().getRights();
 
-      // Initialize weather alerts
-      await useWeatherAlertsStore.getState().fetchSettings();
-      const weatherSettings = useWeatherAlertsStore.getState().settings;
-      if (weatherSettings?.WeatherAlertsEnabled) {
-        await useWeatherAlertsStore.getState().fetchActiveAlerts();
-      }
-
       //await useSignalRStore.getState().connectUpdateHub();
       //await useSignalRStore.getState().connectGeolocationHub();
 
       hasInitialized.current = true;
 
-      // Initialize Bluetooth service
-      await bluetoothAudioService.initialize();
-      await audioService.initialize();
+      const independentInits: [string, () => Promise<unknown>][] = [
+        [
+          'weather alerts',
+          async () => {
+            await useWeatherAlertsStore.getState().fetchSettings();
+            const weatherSettings = useWeatherAlertsStore.getState().settings;
+            if (weatherSettings?.WeatherAlertsEnabled) {
+              await useWeatherAlertsStore.getState().fetchActiveAlerts();
+            }
+          },
+        ],
+        ['bluetooth audio service', () => bluetoothAudioService.initialize()],
+        ['audio service', () => audioService.initialize()],
+        ['offline queue service', () => offlineQueueService.initialize()],
+      ];
 
-      // Initialize offline queue service
-      await offlineQueueService.initialize();
+      const results = await Promise.allSettled(independentInits.map(([, init]) => init()));
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          logger.error({
+            message: `Failed to initialize ${independentInits[index]?.[0] ?? 'service'}`,
+            context: { error: result.reason },
+          });
+        }
+      });
 
       // Start location tracking when user is logged in
       try {
@@ -341,15 +353,15 @@ const CreateNotificationButton = ({
   userId: string | null;
   departmentCode: string | undefined;
 }) => {
+  const handlePress = useCallback(() => {
+    setIsNotificationsOpen(true);
+  }, [setIsNotificationsOpen]);
+
   if (!userId || !config || !config.NovuApplicationId || !config.NovuBackendApiUrl || !config.NovuSocketUrl || !departmentCode) {
     return null;
   }
 
-  return (
-    <NovuProvider subscriberId={`${departmentCode}_User_${userId}`} applicationIdentifier={config.NovuApplicationId} backendUrl={config.NovuBackendApiUrl} socketUrl={config.NovuSocketUrl}>
-      <NotificationButton onPress={() => setIsNotificationsOpen(true)} />
-    </NovuProvider>
-  );
+  return <NotificationButton onPress={handlePress} />;
 };
 
 const styles = StyleSheet.create({

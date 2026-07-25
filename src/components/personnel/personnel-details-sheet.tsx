@@ -6,7 +6,7 @@ import { ScrollView } from 'react-native';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
-import { useSecurityStore } from '@/stores/security/store';
+import { securityStore } from '@/stores/security/store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
 import { Avatar, AvatarFallbackText, AvatarImage } from '../ui/avatar';
@@ -22,7 +22,7 @@ import { VStack } from '../ui/vstack';
 export const PersonnelDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
   const { personnel, selectedPersonnelId, isDetailsOpen, closeDetails } = usePersonnelStore();
-  const { canUserViewPII } = useSecurityStore();
+  const canUserViewPII = securityStore((state) => state.rights?.CanViewPII);
   const { trackEvent } = useAnalytics();
   const [imageError, setImageError] = useState(false);
 

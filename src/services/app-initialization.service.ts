@@ -71,11 +71,9 @@ class AppInitializationService {
       message: 'Starting app initialization',
     });
 
-    // Initialize analytics service
-    await this._initializeAnalytics();
-
-    // Initialize CallKeep for iOS background audio support
-    await this._initializeCallKeep();
+    // Analytics and CallKeep are independent - initialize concurrently.
+    // Each handles its own errors internally and never throws.
+    await Promise.all([this._initializeAnalytics(), this._initializeCallKeep()]);
 
     // Add other global initialization tasks here as needed
     // e.g., crash reporting, background services, etc.

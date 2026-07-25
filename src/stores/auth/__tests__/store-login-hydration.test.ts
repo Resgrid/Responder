@@ -47,6 +47,11 @@ jest.mock('@/lib/storage/app', () => ({
   getBaseApiUrl: jest.fn(() => 'https://mock-api.com/api/v1'),
 }));
 
+jest.mock('@/lib/storage/clear-all-data', () => ({
+  clearAllAppData: jest.fn().mockResolvedValue(undefined),
+  LOGOUT_PRESERVED_STORAGE_KEYS: ['baseUrl', 'IS_FIRST_TIME'],
+}));
+
 import { loginRequest } from '@/lib/auth/api';
 import { getAuth } from '@/lib/auth/utils';
 import useAuthStore from '../store';

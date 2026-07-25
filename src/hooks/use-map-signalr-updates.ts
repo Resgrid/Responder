@@ -14,6 +14,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
   const isUpdating = useRef<boolean>(false);
   const pendingTimestamp = useRef<number | null>(null);
   const debounceTimer = useRef<number | null>(null);
+  const queuedFetchTimer = useRef<number | null>(null);
   const abortController = useRef<AbortController | null>(null);
 
   const lastUpdateTimestamp = useSignalRStore((state) => state.lastUpdateTimestamp);
@@ -126,7 +127,10 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
             context: { nextTimestamp },
           });
           // Use setTimeout to avoid potential stack overflow in case of rapid updates
-          setTimeout(() => fetchAndUpdateMarkers(nextTimestamp), 0);
+          queuedFetchTimer.current = setTimeout(() => {
+            queuedFetchTimer.current = null;
+            fetchAndUpdateMarkers(nextTimestamp);
+          }, 0);
         }
       }
     },
@@ -171,6 +175,12 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
       // Clear debounce timer
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
+      }
+
+      // Clear any queued follow-up fetch
+      if (queuedFetchTimer.current) {
+        clearTimeout(queuedFetchTimer.current);
+        queuedFetchTimer.current = null;
       }
 
       // Abort any ongoing request

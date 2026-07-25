@@ -94,7 +94,6 @@ const client = z.object({
   LOGGING_KEY: z.string(),
   APP_KEY: z.string(),
   RESPOND_MAPBOX_PUBKEY: z.string(),
-  RESPOND_MAPBOX_DLKEY: z.string(),
   IS_MOBILE_APP: z.boolean(),
   SENTRY_DSN: z.string(),
   COUNTLY_URL: z.string(),
@@ -107,6 +106,7 @@ const buildTime = z.object({
   EAS_PROJECT_ID: z.string(),
   IOS_APP_GROUP: z.string(),
   IOS_APPLE_TEAM_ID: z.string().optional(),
+  RESPOND_MAPBOX_DLKEY: z.string(),
   // ADD YOUR BUILD TIME ENV VARS HERE
 });
 
@@ -133,7 +133,6 @@ const _clientEnv = {
   APP_KEY: process.env.RESPOND_APP_KEY || '',
   IS_MOBILE_APP: true, // or whatever default you want
   RESPOND_MAPBOX_PUBKEY: process.env.RESPOND_MAPBOX_PUBKEY || '',
-  RESPOND_MAPBOX_DLKEY: process.env.RESPOND_MAPBOX_DLKEY || '',
   SENTRY_DSN: process.env.RESPOND_SENTRY_DSN || '',
   COUNTLY_APP_KEY: process.env.RESPOND_COUNTLY_APP_KEY || '',
   COUNTLY_URL: process.env.RESPOND_COUNTLY_URL || '',
@@ -148,6 +147,7 @@ const _buildTimeEnv = {
   EAS_PROJECT_ID,
   IOS_APP_GROUP: getIosAppGroup(),
   IOS_APPLE_TEAM_ID: process.env.IOS_APPLE_TEAM_ID || process.env.EXPO_APPLE_TEAM_ID || process.env.APPLE_TEAM_ID,
+  RESPOND_MAPBOX_DLKEY: process.env.RESPOND_MAPBOX_DLKEY || '',
   // ADD YOUR ENV VARS HERE TOO
 };
 

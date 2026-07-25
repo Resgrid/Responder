@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logging';
 import { storage } from '@/lib/storage';
 
 interface CacheItem<T> {
@@ -5,6 +6,23 @@ interface CacheItem<T> {
   timestamp: number;
   expiresIn: number;
 }
+
+const isCacheItem = <T>(value: unknown): value is CacheItem<T> => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const item = value as Partial<CacheItem<T>>;
+  return (
+    Object.prototype.hasOwnProperty.call(item, 'data') &&
+    typeof item.timestamp === 'number' &&
+    Number.isFinite(item.timestamp) &&
+    item.timestamp >= 0 &&
+    typeof item.expiresIn === 'number' &&
+    Number.isFinite(item.expiresIn) &&
+    item.expiresIn >= 0
+  );
+};
 
 export class CacheManager {
   private static instance: CacheManager;
@@ -46,8 +64,28 @@ export class CacheManager {
       return null;
     }
 
-    const cacheItem: CacheItem<T> = JSON.parse(cached);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(cached);
+    } catch (error) {
+      logger.warn({
+        message: 'Corrupt cache entry, removing',
+        context: { key, error },
+      });
+      storage.delete(key);
+      return null;
+    }
 
+    if (!isCacheItem<T>(parsed)) {
+      logger.warn({
+        message: 'Corrupt cache entry, removing',
+        context: { key, error: 'Invalid cache item shape' },
+      });
+      storage.delete(key);
+      return null;
+    }
+
+    const cacheItem = parsed;
     if (this.isExpired(cacheItem.timestamp, cacheItem.expiresIn)) {
       storage.delete(key);
       return null;

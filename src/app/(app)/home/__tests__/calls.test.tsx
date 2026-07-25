@@ -167,6 +167,9 @@ const mockUseCoreStore = useCoreStore as jest.MockedFunction<typeof useCoreStore
 const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
 const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
+const setCallsStoreMock = (state: unknown) =>
+  mockUseCallsStore.mockImplementation(((selector?: (s: unknown) => unknown) => (selector ? selector(state) : state)) as any);
+
 describe('Calls Screen', () => {
   const mockFetchCalls = jest.fn();
   const mockFetchCallPriorities = jest.fn();
@@ -179,7 +182,7 @@ describe('Calls Screen', () => {
       trackEvent: mockTrackEvent,
     });
 
-    mockUseCallsStore.mockReturnValue({
+    setCallsStoreMock({
       calls: [],
       isLoading: false,
       error: null,
@@ -211,7 +214,7 @@ describe('Calls Screen', () => {
   });
 
   it('renders loading state', () => {
-    mockUseCallsStore.mockReturnValue({
+    setCallsStoreMock({
       calls: [],
       isLoading: true,
       error: null,
@@ -228,7 +231,7 @@ describe('Calls Screen', () => {
   });
 
   it('renders error state', () => {
-    mockUseCallsStore.mockReturnValue({
+    setCallsStoreMock({
       calls: [],
       isLoading: false,
       error: 'Test error',
@@ -279,7 +282,7 @@ describe('Calls Screen', () => {
   });
 
   it('filters calls based on search query', () => {
-    mockUseCallsStore.mockReturnValue({
+    setCallsStoreMock({
       calls: [
         { CallId: '1', Name: 'Fire Call', Nature: 'Fire Emergency', Address: 'Main', Priority: 1 },
         { CallId: '2', Name: 'Medical Call', Nature: 'Medical Emergency', Address: 'Oak', Priority: 2 },
@@ -302,7 +305,7 @@ describe('Calls Screen', () => {
   });
 
   it("filters to only calls I'm on", () => {
-    mockUseCallsStore.mockReturnValue({
+    setCallsStoreMock({
       calls: [
         { CallId: '1', Name: 'Fire Call', Nature: 'Fire Emergency', Address: 'Main', Priority: 1 },
         { CallId: '2', Name: 'Medical Call', Nature: 'Medical Emergency', Address: 'Oak', Priority: 2 },

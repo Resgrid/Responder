@@ -16,7 +16,7 @@ import { VStack } from '@/components/ui/vstack';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { useLocationStore } from '@/stores/app/location-store';
-import { useSecurityStore } from '@/stores/security/store';
+import { securityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
 
 interface PinDetailModalProps {
@@ -30,12 +30,10 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const router = useRouter();
-  const { canUserViewPII } = useSecurityStore();
+  const canUserViewPII = securityStore((state) => state.rights?.CanViewPII);
   const showToast = useToastStore((state) => state.showToast);
-  const userLocation = useLocationStore((state) => ({
-    latitude: state.latitude,
-    longitude: state.longitude,
-  }));
+  const userLatitude = useLocationStore((state) => state.latitude);
+  const userLongitude = useLocationStore((state) => state.longitude);
 
   if (!pin) return null;
 
@@ -57,7 +55,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
     }
 
     try {
-      const success = await openMapsWithDirections(pin.Latitude, pin.Longitude, pin.Title, userLocation.latitude || undefined, userLocation.longitude || undefined);
+      const success = await openMapsWithDirections(pin.Latitude, pin.Longitude, pin.Title, userLatitude || undefined, userLongitude || undefined);
 
       if (!success) {
         showToast('error', t('map.failed_to_open_maps'));

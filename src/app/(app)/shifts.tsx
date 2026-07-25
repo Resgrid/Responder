@@ -28,28 +28,22 @@ import { type ShiftViewMode, useShiftsStore } from '@/stores/shifts/store';
 const ShiftsScreen: React.FC = () => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
-  const {
-    // Data
-    shifts,
-    todaysShiftDays,
-    // UI State
-    currentView,
-    searchQuery,
-    isShiftDetailsOpen,
-    isShiftDayDetailsOpen,
-    // Loading states
-    isLoading,
-    isTodaysLoading,
-    // Actions
-    setCurrentView,
-    setSearchQuery,
-    fetchAllShifts,
-    fetchTodaysShifts,
-    closeShiftDetails,
-    closeShiftDayDetails,
-    selectShift,
-    selectShiftDay,
-  } = useShiftsStore();
+  const shifts = useShiftsStore((state) => state.shifts);
+  const todaysShiftDays = useShiftsStore((state) => state.todaysShiftDays);
+  const currentView = useShiftsStore((state) => state.currentView);
+  const searchQuery = useShiftsStore((state) => state.searchQuery);
+  const isShiftDetailsOpen = useShiftsStore((state) => state.isShiftDetailsOpen);
+  const isShiftDayDetailsOpen = useShiftsStore((state) => state.isShiftDayDetailsOpen);
+  const isLoading = useShiftsStore((state) => state.isLoading);
+  const isTodaysLoading = useShiftsStore((state) => state.isTodaysLoading);
+  const setCurrentView = useShiftsStore((state) => state.setCurrentView);
+  const setSearchQuery = useShiftsStore((state) => state.setSearchQuery);
+  const fetchAllShifts = useShiftsStore((state) => state.fetchAllShifts);
+  const fetchTodaysShifts = useShiftsStore((state) => state.fetchTodaysShifts);
+  const closeShiftDetails = useShiftsStore((state) => state.closeShiftDetails);
+  const closeShiftDayDetails = useShiftsStore((state) => state.closeShiftDayDetails);
+  const selectShift = useShiftsStore((state) => state.selectShift);
+  const selectShiftDay = useShiftsStore((state) => state.selectShiftDay);
 
   const filteredShifts = useMemo(() => {
     if (!searchQuery.trim()) return shifts;

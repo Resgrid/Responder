@@ -52,6 +52,8 @@ describe('SignalRService', () => {
     (signalRService as any).connectionLocks.clear();
     (signalRService as any).reconnectingHubs.clear();
     (signalRService as any).hubStates.clear();
+    (signalRService as any).intentionalDisconnects.clear();
+    (signalRService as any).reconnectTimers.clear();
 
     // Mock HubConnection
     mockConnection = {
@@ -104,7 +106,7 @@ describe('SignalRService', () => {
         })
       );
       expect(mockBuilderInstance.withAutomaticReconnect).toHaveBeenCalledWith([0, 2000, 5000, 10000, 30000]);
-      expect(mockBuilderInstance.configureLogging).toHaveBeenCalledWith(LogLevel.Information);
+      expect(mockBuilderInstance.configureLogging).toHaveBeenCalledWith(LogLevel.Warning);
       expect(mockConnection.start).toHaveBeenCalled();
     });
 
@@ -600,6 +602,126 @@ describe('SignalRService', () => {
       });
       
       attemptReconnectionSpy.mockRestore();
+    });
+
+    it('should not reconnect after an intentional disconnect', async () => {
+      // Connect to hub
+      await signalRService.connectToHubWithEventingUrl(mockConfig);
+
+      // Get the onclose callback registered on the connection
+      const onCloseCallback = mockConnection.onclose.mock.calls[0]?.[0];
+      expect(onCloseCallback).toBeDefined();
+
+      // Simulate the real SignalR behavior where stop() fires onclose
+      mockConnection.stop.mockImplementation(async () => {
+        onCloseCallback?.();
+      });
+
+      jest.useFakeTimers();
+
+      // Intentionally disconnect
+      await signalRService.disconnectFromHub(mockConfig.name);
+
+      // Hub should not be marked as reconnecting
+      expect((signalRService as any).hubStates.get(mockConfig.name)).toBeUndefined();
+      expect((signalRService as any).reconnectingHubs.has(mockConfig.name)).toBe(false);
+
+      // No reconnection timer should be pending
+      expect((signalRService as any).reconnectTimers.has(mockConfig.name)).toBe(false);
+
+      // Advancing time should not schedule any reconnection work
+      jest.advanceTimersByTime(60000);
+      await jest.runAllTicks();
+
+      expect((signalRService as any).hubStates.get(mockConfig.name)).toBeUndefined();
+
+      jest.useRealTimers();
+    });
+
+    it('should cancel a pending reconnection timer on intentional disconnect', async () => {
+      // Connect to hub
+      await signalRService.connectToHubWithEventingUrl(mockConfig);
+
+      const onCloseCallback = mockConnection.onclose.mock.calls[0]?.[0];
+
+      const connectSpy = jest.spyOn(signalRService, 'connectToHubWithEventingUrl');
+
+      jest.useFakeTimers();
+
+      // Simulate an unintentional connection drop to schedule a reconnect
+      onCloseCallback?.();
+
+      // A reconnect timer should now be pending
+      expect((signalRService as any).reconnectTimers.has(mockConfig.name)).toBe(true);
+
+      // Intentionally disconnect before the timer fires
+      await signalRService.disconnectFromHub(mockConfig.name);
+
+      // Pending timer must be cancelled
+      expect((signalRService as any).reconnectTimers.has(mockConfig.name)).toBe(false);
+
+      connectSpy.mockClear();
+
+      jest.advanceTimersByTime(60000);
+      await jest.runAllTicks();
+
+      // Reconnection should not have been attempted
+      expect(connectSpy).not.toHaveBeenCalled();
+
+      jest.useRealTimers();
+      connectSpy.mockRestore();
+    });
+
+    it('should skip a reconnect timer when an intentional disconnect is already marked', async () => {
+      jest.useFakeTimers();
+      (signalRService as any).hubConfigs.set(mockConfig.name, mockConfig);
+      (signalRService as any).intentionalDisconnects.add(mockConfig.name);
+      const eventingConnectSpy = jest.spyOn(signalRService, 'connectToHubWithEventingUrl').mockResolvedValue();
+      const directConnectSpy = jest.spyOn(signalRService, 'connectToHub').mockResolvedValue();
+
+      await (signalRService as any).attemptReconnection(mockConfig.name, 0);
+      jest.advanceTimersByTime(6000);
+      await jest.runAllTicks();
+
+      expect(mockRefreshAccessToken).not.toHaveBeenCalled();
+      expect(eventingConnectSpy).not.toHaveBeenCalled();
+      expect(directConnectSpy).not.toHaveBeenCalled();
+      expect((signalRService as any).intentionalDisconnects.has(mockConfig.name)).toBe(false);
+
+      jest.useRealTimers();
+      eventingConnectSpy.mockRestore();
+      directConnectSpy.mockRestore();
+    });
+
+    it('should skip reconnection when an intentional disconnect is marked during token refresh', async () => {
+      jest.useFakeTimers();
+      (signalRService as any).hubConfigs.set(mockConfig.name, mockConfig);
+      let resolveRefresh: () => void;
+      mockRefreshAccessToken.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveRefresh = resolve;
+          })
+      );
+      const eventingConnectSpy = jest.spyOn(signalRService, 'connectToHubWithEventingUrl').mockResolvedValue();
+      const directConnectSpy = jest.spyOn(signalRService, 'connectToHub').mockResolvedValue();
+
+      await (signalRService as any).attemptReconnection(mockConfig.name, 0);
+      jest.advanceTimersByTime(6000);
+      expect(mockRefreshAccessToken).toHaveBeenCalledTimes(1);
+
+      (signalRService as any).intentionalDisconnects.add(mockConfig.name);
+      resolveRefresh!();
+      await jest.runAllTicks();
+      await Promise.resolve();
+
+      expect(eventingConnectSpy).not.toHaveBeenCalled();
+      expect(directConnectSpy).not.toHaveBeenCalled();
+      expect((signalRService as any).intentionalDisconnects.has(mockConfig.name)).toBe(false);
+
+      jest.useRealTimers();
+      eventingConnectSpy.mockRestore();
+      directConnectSpy.mockRestore();
     });
 
     it('should reset reconnection attempts on successful reconnection', async () => {

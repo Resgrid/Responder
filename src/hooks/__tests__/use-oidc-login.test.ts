@@ -33,7 +33,7 @@ jest.mock('@/stores/auth/store', () => {
 });
 
 import useAuthStore from '@/stores/auth/store';
-import { useOidcLogin } from '../use-oidc-login';
+import { isValidSsoUrl, useOidcLogin } from '../use-oidc-login';
 
 // Access mockLoginWithSso via the attached property
 const mockLoginWithSso: jest.Mock = (useAuthStore as any).__loginWithSso;
@@ -41,6 +41,33 @@ const mockLoginWithSso: jest.Mock = (useAuthStore as any).__loginWithSso;
 const mockedUseAuthRequest = AuthSession.useAuthRequest as jest.Mock;
 const mockedUseAutoDiscovery = AuthSession.useAutoDiscovery as jest.Mock;
 const mockedExchangeCodeAsync = AuthSession.exchangeCodeAsync as jest.Mock;
+
+describe('isValidSsoUrl', () => {
+  it('accepts well-formed https URLs', () => {
+    expect(isValidSsoUrl('https://idp.example.com')).toBe(true);
+  });
+
+  it('rejects malformed URLs', () => {
+    expect(isValidSsoUrl('not a url')).toBe(false);
+    expect(isValidSsoUrl('')).toBe(false);
+  });
+
+  it('rejects non-http(s) schemes', () => {
+    expect(isValidSsoUrl('ftp://idp.example.com')).toBe(false);
+    expect(isValidSsoUrl('resgrid://auth/callback')).toBe(false);
+  });
+
+  it('rejects http URLs when not in dev mode', () => {
+    const originalDev = (global as Record<string, unknown>).__DEV__;
+    (global as Record<string, unknown>).__DEV__ = false;
+
+    try {
+      expect(isValidSsoUrl('http://idp.example.com')).toBe(false);
+    } finally {
+      (global as Record<string, unknown>).__DEV__ = originalDev;
+    }
+  });
+});
 
 describe('useOidcLogin', () => {
   beforeEach(() => {
@@ -58,6 +85,22 @@ describe('useOidcLogin', () => {
 
     expect(result.current.request).toBeNull();
     expect(result.current.response).toBeNull();
+  });
+
+  it('passes an empty authority to discovery when the authority URL is invalid', () => {
+    renderHook(() =>
+      useOidcLogin({ authority: 'not a url', clientId: 'test', departmentCode: 'DEPT' }),
+    );
+
+    expect(mockedUseAutoDiscovery).toHaveBeenCalledWith('');
+  });
+
+  it('passes the authority to discovery when the authority URL is valid https', () => {
+    renderHook(() =>
+      useOidcLogin({ authority: 'https://idp.example.com', clientId: 'test', departmentCode: 'DEPT' }),
+    );
+
+    expect(mockedUseAutoDiscovery).toHaveBeenCalledWith('https://idp.example.com');
   });
 
   it('exchangeCodeForResgridToken returns false when response type is not success', async () => {

@@ -14,11 +14,17 @@ import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { RefreshControl } from '@/components/ui/refresh-control';
 import { View } from '@/components/ui/view';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { type CallProtocolsResultData } from '@/models/v4/callProtocols/callProtocolsResultData';
 import { useProtocolsStore } from '@/stores/protocols/store';
 
 export default function Protocols() {
   const { t } = useTranslation();
-  const { protocols, searchQuery, setSearchQuery, selectProtocol, isLoading, fetchProtocols } = useProtocolsStore();
+  const protocols = useProtocolsStore((state) => state.protocols);
+  const searchQuery = useProtocolsStore((state) => state.searchQuery);
+  const setSearchQuery = useProtocolsStore((state) => state.setSearchQuery);
+  const selectProtocol = useProtocolsStore((state) => state.selectProtocol);
+  const isLoading = useProtocolsStore((state) => state.isLoading);
+  const fetchProtocols = useProtocolsStore((state) => state.fetchProtocols);
   const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -40,6 +46,10 @@ export default function Protocols() {
     await fetchProtocols();
     setRefreshing(false);
   }, [fetchProtocols]);
+
+  const keyExtractor = React.useCallback((item: CallProtocolsResultData, index: number) => item.ProtocolId || `protocol-${index}`, []);
+
+  const renderProtocolItem = React.useCallback(({ item }: { item: CallProtocolsResultData }) => <ProtocolCard protocol={item} onPress={selectProtocol} />, [selectProtocol]);
 
   const filteredProtocols = React.useMemo(() => {
     if (!searchQuery.trim()) return protocols;
@@ -77,8 +87,8 @@ export default function Protocols() {
           <FlashList
             testID="protocols-list"
             data={filteredProtocols}
-            keyExtractor={(item, index) => item.ProtocolId || `protocol-${index}`}
-            renderItem={({ item }) => <ProtocolCard protocol={item} onPress={selectProtocol} />}
+            keyExtractor={keyExtractor}
+            renderItem={renderProtocolItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}

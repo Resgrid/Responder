@@ -427,8 +427,14 @@ const mockStore = {
 const mockedUseMessagesStore = useMessagesStore as jest.MockedFunction<typeof useMessagesStore>;
 const mockedUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
 const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
+let currentMessagesStore: unknown = mockStore;
 // Add getState method to the mocked store
-(mockedUseMessagesStore as any).getState = jest.fn(() => mockStore);
+(mockedUseMessagesStore as any).getState = jest.fn(() => currentMessagesStore);
+
+const setMessagesStoreMock = (state: unknown) => {
+  currentMessagesStore = state;
+  mockedUseMessagesStore.mockImplementation(((selector?: (s: unknown) => unknown) => (selector ? selector(state) : state)) as any);
+};
 
 const mockSecurityStore = {
   error: null,
@@ -452,7 +458,7 @@ describe('MessagesScreen', () => {
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
     mockTrackEvent.mockReset();
-    mockedUseMessagesStore.mockReturnValue(mockStore);
+    setMessagesStoreMock(mockStore);
     mockedUseSecurityStore.mockReturnValue(mockSecurityStore);
     mockUseAnalytics.mockReturnValue({
       trackEvent: mockTrackEvent,
@@ -478,7 +484,7 @@ describe('MessagesScreen', () => {
   });
 
   it('shows loading state when loading', () => {
-    mockedUseMessagesStore.mockReturnValue({
+    setMessagesStoreMock({
       ...mockStore,
       isLoading: true,
       getFilteredMessages: jest.fn(() => []),
@@ -490,7 +496,7 @@ describe('MessagesScreen', () => {
   });
 
   it('shows zero state when no messages', () => {
-    mockedUseMessagesStore.mockReturnValue({
+    setMessagesStoreMock({
       ...mockStore,
       getFilteredMessages: jest.fn(() => []),
     });
@@ -502,7 +508,7 @@ describe('MessagesScreen', () => {
   });
 
   it('shows error state when there is an error', () => {
-    mockedUseMessagesStore.mockReturnValue({
+    setMessagesStoreMock({
       ...mockStore,
       error: 'Failed to load messages',
     });
@@ -577,7 +583,7 @@ describe('MessagesScreen', () => {
     });
 
     it('shows send first message button in zero state when user can create messages', () => {
-      mockedUseMessagesStore.mockReturnValue({
+      setMessagesStoreMock({
         ...mockStore,
         getFilteredMessages: jest.fn(() => []),
       });
@@ -592,7 +598,7 @@ describe('MessagesScreen', () => {
     });
 
     it('hides send first message button in zero state when user cannot create messages', () => {
-      mockedUseMessagesStore.mockReturnValue({
+      setMessagesStoreMock({
         ...mockStore,
         getFilteredMessages: jest.fn(() => []),
       });
@@ -607,7 +613,7 @@ describe('MessagesScreen', () => {
     });
 
     it('hides compose FAB when in selection mode even if user can create messages', () => {
-      mockedUseMessagesStore.mockReturnValue({
+      setMessagesStoreMock({
         ...mockStore,
         selectedForDeletion: new Set(['1']),
         hasSelectedMessages: jest.fn(() => true),
@@ -641,7 +647,7 @@ describe('MessagesScreen', () => {
     });
 
     it('calls openCompose when send first message button is pressed and user has permission', () => {
-      mockedUseMessagesStore.mockReturnValue({
+      setMessagesStoreMock({
         ...mockStore,
         getFilteredMessages: jest.fn(() => []),
       });
@@ -671,7 +677,7 @@ describe('MessagesScreen', () => {
     });
 
     it('hides send first message button when permissions have not been loaded yet (undefined)', () => {
-      mockedUseMessagesStore.mockReturnValue({
+      setMessagesStoreMock({
         ...mockStore,
         getFilteredMessages: jest.fn(() => []),
       });
@@ -730,7 +736,7 @@ describe('MessagesScreen', () => {
     });
 
     it('tracks compose opened from zero state', () => {
-      mockedUseMessagesStore.mockReturnValue({
+      setMessagesStoreMock({
         ...mockStore,
         getFilteredMessages: jest.fn(() => []),
       });
@@ -803,7 +809,7 @@ describe('MessagesScreen', () => {
     });
 
     it('tracks retry button press', () => {
-      mockedUseMessagesStore.mockReturnValue({
+      setMessagesStoreMock({
         ...mockStore,
         error: 'Network error',
       });

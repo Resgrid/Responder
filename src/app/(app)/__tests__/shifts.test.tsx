@@ -277,6 +277,9 @@ jest.mock('@/components/ui/icon', () => {
 const mockUseShiftsStore = useShiftsStore as jest.MockedFunction<typeof useShiftsStore>;
 const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
+const setShiftsStoreMock = (state: unknown) =>
+  mockUseShiftsStore.mockImplementation(((selector?: (s: unknown) => unknown) => (selector ? selector(state) : state)) as any);
+
 const mockShifts = [
   {
     ShiftId: '1',
@@ -358,7 +361,7 @@ describe('ShiftsScreen', () => {
       trackEvent: mockTrackEvent,
     });
 
-    mockUseShiftsStore.mockReturnValue(defaultMockStore);
+    setShiftsStoreMock(defaultMockStore);
   });
 
   it('renders correctly with default state', () => {
@@ -371,7 +374,7 @@ describe('ShiftsScreen', () => {
 
   it('switches between today and all shifts views', () => {
     const setCurrentView = jest.fn();
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       setCurrentView,
     });
@@ -383,7 +386,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('shows all shifts when view is set to all', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       currentView: 'all',
     });
@@ -396,7 +399,7 @@ describe('ShiftsScreen', () => {
 
   it('handles search input correctly', () => {
     const setSearchQuery = jest.fn();
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       setSearchQuery,
     });
@@ -410,7 +413,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('shows loading state for today shifts', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       isTodaysLoading: true,
       todaysShiftDays: [],
@@ -422,7 +425,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('shows loading state for all shifts', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       currentView: 'all',
       isLoading: true,
@@ -435,7 +438,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('shows zero state when no shifts available', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       currentView: 'all',
       shifts: [],
@@ -447,7 +450,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('shows zero state when no today shifts available', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       todaysShiftDays: [],
     });
@@ -459,7 +462,7 @@ describe('ShiftsScreen', () => {
 
   it('calls fetchTodaysShifts on mount when in today view', async () => {
     const fetchTodaysShifts = jest.fn();
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       fetchTodaysShifts,
     });
@@ -473,7 +476,7 @@ describe('ShiftsScreen', () => {
 
   it('calls fetchAllShifts when switching to all view', async () => {
     const fetchAllShifts = jest.fn();
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       currentView: 'all',
       fetchAllShifts,
@@ -487,7 +490,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('opens shift details sheet when shift is selected', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       isShiftDetailsOpen: true,
     });
@@ -498,7 +501,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('opens shift day details sheet when shift day is selected', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       isShiftDayDetailsOpen: true,
     });
@@ -523,7 +526,7 @@ describe('ShiftsScreen', () => {
 
   it('handles pull to refresh for today view', async () => {
     const fetchTodaysShifts = jest.fn();
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       fetchTodaysShifts,
     });
@@ -537,7 +540,7 @@ describe('ShiftsScreen', () => {
 
   it('handles pull to refresh for all shifts view', async () => {
     const fetchAllShifts = jest.fn();
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       currentView: 'all',
       fetchAllShifts,
@@ -549,7 +552,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('filters results based on search query', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       currentView: 'all',
       searchQuery: 'day',
@@ -563,7 +566,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('filters today shifts based on search query', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       searchQuery: 'day',
       todaysShiftDays: mockTodaysShifts.filter(shift =>
@@ -577,7 +580,7 @@ describe('ShiftsScreen', () => {
   });
 
   it('handles empty search results', () => {
-    mockUseShiftsStore.mockReturnValue({
+    setShiftsStoreMock({
       ...defaultMockStore,
       searchQuery: 'nonexistent',
       todaysShiftDays: [],
@@ -633,7 +636,7 @@ describe('ShiftsScreen', () => {
 
     it('tracks refresh actions', async () => {
       const fetchTodaysShifts = jest.fn();
-      mockUseShiftsStore.mockReturnValue({
+      setShiftsStoreMock({
         ...defaultMockStore,
         fetchTodaysShifts,
       });
@@ -657,7 +660,7 @@ describe('ShiftsScreen', () => {
 
     it('tracks shift selection in today view', () => {
       const selectShift = jest.fn();
-      mockUseShiftsStore.mockReturnValue({
+      setShiftsStoreMock({
         ...defaultMockStore,
         currentView: 'all',
         selectShift,
@@ -681,7 +684,7 @@ describe('ShiftsScreen', () => {
 
     it('tracks shift day selection in today view', () => {
       const selectShiftDay = jest.fn();
-      mockUseShiftsStore.mockReturnValue({
+      setShiftsStoreMock({
         ...defaultMockStore,
         selectShiftDay,
       });
@@ -703,7 +706,7 @@ describe('ShiftsScreen', () => {
     });
 
     it('tracks analytics with search query state', () => {
-      mockUseShiftsStore.mockReturnValue({
+      setShiftsStoreMock({
         ...defaultMockStore,
         searchQuery: 'day shift',
       });
@@ -719,7 +722,7 @@ describe('ShiftsScreen', () => {
     });
 
     it('tracks analytics for all shifts view', () => {
-      mockUseShiftsStore.mockReturnValue({
+      setShiftsStoreMock({
         ...defaultMockStore,
         currentView: 'all',
       });

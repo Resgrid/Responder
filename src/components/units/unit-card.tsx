@@ -78,7 +78,7 @@ interface UnitCardProps {
   onPress: (id: string) => void;
 }
 
-export const UnitCard: React.FC<UnitCardProps> = ({ unit, unitTypeStatuses, onPress }) => {
+export const UnitCard: React.FC<UnitCardProps> = React.memo(function UnitCard({ unit, unitTypeStatuses, onPress }) {
   const { t } = useTranslation();
   const hasLocation = unit.Latitude && unit.Longitude;
 
@@ -163,4 +163,4 @@ export const UnitCard: React.FC<UnitCardProps> = ({ unit, unitTypeStatuses, onPr
       </Box>
     </Pressable>
   );
-};
+});

@@ -353,6 +353,7 @@
     "confirm_check_in": "Potwierdź Meldowanie",
     "duration": "Czas trwania",
     "elapsed": "Upłynęło",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
     "history": "Historia Meldowań",
     "last_check_in": "Ostatnie meldowanie",
     "minutes_ago": "{{count}} min temu",

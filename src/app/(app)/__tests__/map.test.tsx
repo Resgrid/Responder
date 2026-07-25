@@ -289,14 +289,20 @@ jest.mock('@/stores/app/core-store', () => ({
   })),
 }));
 
-jest.mock('@/stores/app/location-store', () => ({
-  useLocationStore: jest.fn(() => ({
+jest.mock('@/stores/app/location-store', () => {
+  let mockState = {
     latitude: 40.7128,
     longitude: -74.006,
     heading: 90,
     isMapLocked: false,
-  })),
-}));
+  };
+  return {
+    useLocationStore: jest.fn((selector: any) => selector(mockState)),
+    __setMockState: (newState: any) => {
+      mockState = newState;
+    },
+  };
+});
 
 jest.mock('@/stores/toast/store', () => ({
   useToastStore: {
@@ -387,7 +393,7 @@ describe('HomeMap', () => {
 
   it('shows recenter button when user has moved map and location is available', async () => {
     const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
-    mockLocationStore.useLocationStore.mockReturnValue({
+    mockLocationStore.__setMockState({
       latitude: 40.7128,
       longitude: -74.006,
       heading: 90,
@@ -412,7 +418,7 @@ describe('HomeMap', () => {
 
   it('does not show recenter button when map is locked', async () => {
     const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
-    mockLocationStore.useLocationStore.mockReturnValue({
+    mockLocationStore.__setMockState({
       latitude: 40.7128,
       longitude: -74.006,
       heading: 90,
@@ -554,7 +560,7 @@ describe('HomeMap', () => {
   describe('Analytics Tracking', () => {
     it('tracks map view on focus', async () => {
       const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
-      mockLocationStore.useLocationStore.mockReturnValue({
+      mockLocationStore.__setMockState({
         latitude: 40.7128,
         longitude: -74.006,
         heading: 90,
@@ -600,7 +606,7 @@ describe('HomeMap', () => {
 
     it('tracks recenter map action', async () => {
       const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
-      mockLocationStore.useLocationStore.mockReturnValue({
+      mockLocationStore.__setMockState({
         latitude: 40.7128,
         longitude: -74.006,
         heading: 90,
@@ -685,7 +691,7 @@ describe('HomeMap', () => {
 
     it('tracks analytics with correct location data when location is unavailable', async () => {
       const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
-      mockLocationStore.useLocationStore.mockReturnValue({
+      mockLocationStore.__setMockState({
         latitude: null,
         longitude: null,
         heading: null,
@@ -709,7 +715,7 @@ describe('HomeMap', () => {
 
     it('tracks analytics with map locked state', async () => {
       const mockLocationStore = jest.requireMock('@/stores/app/location-store') as any;
-      mockLocationStore.useLocationStore.mockReturnValue({
+      mockLocationStore.__setMockState({
         latitude: 40.7128,
         longitude: -74.006,
         heading: 90,
