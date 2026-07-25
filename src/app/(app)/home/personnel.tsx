@@ -25,19 +25,11 @@ import { usePersonnelStore } from '@/stores/personnel/store';
 
 type PersonnelListItem = PersonnelInfoResultData & { syntheticId: string };
 
-const syntheticIds = new WeakMap<PersonnelInfoResultData, string>();
-let nextSyntheticId = 0;
-
 const normalizePersonnel = (personnel: PersonnelInfoResultData[]): PersonnelListItem[] =>
-  personnel.map((person) => {
-    let syntheticId = syntheticIds.get(person);
-    if (!syntheticId) {
-      syntheticId = `personnel-${++nextSyntheticId}`;
-      syntheticIds.set(person, syntheticId);
-    }
-
-    return { ...person, syntheticId };
-  });
+  personnel.map((person) => ({
+    ...person,
+    syntheticId: `personnel-${person.UserId}`,
+  }));
 
 export default function Personnel() {
   const { t } = useTranslation();
