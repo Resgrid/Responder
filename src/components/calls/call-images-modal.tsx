@@ -142,9 +142,10 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
 
   const handleImageSelect = async () => {
     try {
-      // On Web, permissions are handled by the browser, so we skip the permission check
-      // On iOS/Android, we need to request permissions first
-      if (Platform.OS !== 'web') {
+      // Android uses the system photo picker, which grants access only to the
+      // selected item and does not require broad media-library permission.
+      // iOS still uses its media-library permission flow.
+      if (Platform.OS === 'ios') {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
           // Check if user can be asked again or needs to go to settings
@@ -159,6 +160,7 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        legacy: false,
         // Disable allowsEditing on all platforms - it can cause issues with high-res images
         // On iOS: UIImagePickerController bugs cause crashes
         // On Android: Can cause silent failures with certain device/image configurations
