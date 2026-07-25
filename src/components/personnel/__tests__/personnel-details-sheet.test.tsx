@@ -102,7 +102,7 @@ const mockSecurityStore = {
 };
 
 jest.mock('@/stores/security/store', () => ({
-  useSecurityStore: () => mockSecurityStore,
+  securityStore: (selector: any) => selector({ rights: { CanViewPII: mockSecurityStore.canUserViewPII } }),
 }));
 
 // Mock translation

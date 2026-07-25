@@ -38,7 +38,7 @@ const mockLocationStore = {
 };
 
 jest.mock('@/stores/app/location-store', () => ({
-  useLocationStore: () => mockLocationStore,
+  useLocationStore: (selector?: (state: typeof mockLocationStore) => unknown) => (selector ? selector(mockLocationStore) : mockLocationStore),
 }));
 
 // Mock location service

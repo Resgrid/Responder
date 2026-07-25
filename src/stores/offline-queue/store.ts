@@ -24,6 +24,7 @@ interface OfflineQueueState {
 
   // Actions
   initializeNetworkListener: () => void;
+  teardownNetworkListener: () => void;
   addEvent: (type: QueuedEventType, data: Record<string, any>, maxRetries?: number) => string;
   updateEventStatus: (eventId: string, status: QueuedEventStatus, error?: string) => void;
   removeEvent: (eventId: string) => void;
@@ -35,6 +36,7 @@ interface OfflineQueueState {
   clearAllEvents: () => void;
   retryEvent: (eventId: string) => void;
   retryAllFailedEvents: () => void;
+  purgeStaleFailedEvents: () => void;
 
   // Internal actions
   _setNetworkState: (isConnected: boolean, isReachable: boolean) => void;
@@ -43,6 +45,50 @@ interface OfflineQueueState {
 
 const DEFAULT_MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000; // 1 second base delay
+const FAILED_EVENT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // Purge dead-letter events after 7 days
+const MAX_QUEUE_SIZE = 500; // Cap total queue size, dropping oldest dead-letter events first
+
+let networkUnsubscribe: (() => void) | null = null;
+
+const isExhaustedFailedEvent = (event: QueuedEvent): boolean => event.status === QueuedEventStatus.FAILED && event.retryCount >= event.maxRetries;
+
+const isStaleFailedEvent = (event: QueuedEvent, now: number): boolean => {
+  if (!isExhaustedFailedEvent(event)) return false;
+  const referenceTime = event.lastAttemptAt ?? event.createdAt;
+  return now - referenceTime > FAILED_EVENT_TTL_MS;
+};
+
+const pruneEvents = (events: QueuedEvent[]): { events: QueuedEvent[]; purgedStale: number } => {
+  const now = Date.now();
+  let purgedStale = 0;
+  let pruned = events.filter((event) => {
+    if (isStaleFailedEvent(event, now)) {
+      purgedStale++;
+      return false;
+    }
+    return true;
+  });
+
+  // Enforce queue size cap: drop oldest dead-letter events first
+  if (pruned.length > MAX_QUEUE_SIZE) {
+    const overflow = pruned.length - MAX_QUEUE_SIZE;
+    const deadLetters = pruned.filter(isExhaustedFailedEvent).sort((a, b) => (a.lastAttemptAt ?? a.createdAt) - (b.lastAttemptAt ?? b.createdAt));
+    const toDrop = new Set(deadLetters.slice(0, overflow).map((event) => event.id));
+    if (toDrop.size < overflow) {
+      // Not enough dead letters: fall back to dropping oldest events overall
+      const remaining = pruned.filter((event) => !toDrop.has(event.id));
+      const extra = remaining.sort((a, b) => a.createdAt - b.createdAt).slice(0, overflow - toDrop.size);
+      extra.forEach((event) => toDrop.add(event.id));
+    }
+    pruned = pruned.filter((event) => !toDrop.has(event.id));
+    logger.warn({
+      message: 'Offline queue size cap reached, dropped oldest events',
+      context: { dropped: toDrop.size },
+    });
+  }
+
+  return { events: pruned, purgedStale };
+};
 
 export const useOfflineQueueStore = create<OfflineQueueState>()(
   persist(
@@ -59,7 +105,14 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
 
       // Initialize network state listener
       initializeNetworkListener: () => {
-        NetInfo.addEventListener((state: NetInfoState) => {
+        if (networkUnsubscribe) {
+          logger.debug({
+            message: 'Network listener already registered, skipping',
+          });
+          return;
+        }
+
+        networkUnsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
           const isConnected = state.isConnected ?? false;
           const isReachable = state.isInternetReachable ?? false;
 
@@ -84,6 +137,18 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
         });
       },
 
+      // Remove the network state listener
+      teardownNetworkListener: () => {
+        if (networkUnsubscribe) {
+          networkUnsubscribe();
+          networkUnsubscribe = null;
+
+          logger.info({
+            message: 'Network listener torn down',
+          });
+        }
+      },
+
       // Add new event to queue
       addEvent: (type: QueuedEventType, data: Record<string, any>, maxRetries = DEFAULT_MAX_RETRIES) => {
         const eventId = generateEventId();
@@ -99,10 +164,19 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
           createdAt: now,
         };
 
-        set((state) => ({
-          queuedEvents: [...state.queuedEvents, event],
-          totalEvents: state.totalEvents + 1,
-        }));
+        set((state) => {
+          const { events, purgedStale } = pruneEvents(state.queuedEvents);
+          if (purgedStale > 0) {
+            logger.info({
+              message: 'Purged stale failed events from offline queue',
+              context: { purgedStale },
+            });
+          }
+          return {
+            queuedEvents: [...events, event],
+            totalEvents: state.totalEvents + 1,
+          };
+        });
 
         logger.info({
           message: 'Event added to offline queue',
@@ -253,6 +327,21 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
         });
       },
 
+      // Purge dead-letter events older than the TTL and enforce queue size cap
+      purgeStaleFailedEvents: () => {
+        set((state) => {
+          const { events, purgedStale } = pruneEvents(state.queuedEvents);
+          if (purgedStale > 0 || events.length !== state.queuedEvents.length) {
+            logger.info({
+              message: 'Purged events from offline queue',
+              context: { purgedStale, removed: state.queuedEvents.length - events.length },
+            });
+            return { queuedEvents: events };
+          }
+          return state;
+        });
+      },
+
       // Internal actions
       _setNetworkState: (isConnected: boolean, isReachable: boolean) => {
         set({ isConnected, isNetworkReachable: isReachable });
@@ -275,6 +364,10 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
         failedEvents: state.failedEvents,
         completedEvents: state.completedEvents,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Purge stale dead-letter events once the persisted queue has been loaded
+        state?.purgeStaleFailedEvents();
+      },
     }
   )
 );

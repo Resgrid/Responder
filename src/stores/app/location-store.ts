@@ -47,6 +47,10 @@ export const useLocationStore = create<LocationState>()(
     {
       name: 'location-storage',
       storage: createJSONStorage(() => zustandStorage),
+      partialize: (state) => ({
+        isBackgroundEnabled: state.isBackgroundEnabled,
+        isMapLocked: state.isMapLocked,
+      }),
     }
   )
 );

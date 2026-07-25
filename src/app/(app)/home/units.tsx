@@ -21,11 +21,23 @@ import { UnitCard } from '@/components/units/unit-card';
 import { UnitDetailsSheet } from '@/components/units/unit-details-sheet';
 import { UnitsFilterSheet } from '@/components/units/units-filter-sheet';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
+import { type UnitResultData } from '@/models/v4/units/unitResultData';
 import { useUnitsStore } from '@/stores/units/store';
+
+type UnitListItem = UnitResultData | UnitInfoResultData;
 
 export default function Units() {
   const { t } = useTranslation();
-  const { units, unitTypeStatuses, searchQuery, setSearchQuery, selectUnit, isLoading, fetchUnits, selectedFilters, openFilterSheet } = useUnitsStore();
+  const units = useUnitsStore((state) => state.units);
+  const unitTypeStatuses = useUnitsStore((state) => state.unitTypeStatuses);
+  const searchQuery = useUnitsStore((state) => state.searchQuery);
+  const setSearchQuery = useUnitsStore((state) => state.setSearchQuery);
+  const selectUnit = useUnitsStore((state) => state.selectUnit);
+  const isLoading = useUnitsStore((state) => state.isLoading);
+  const fetchUnits = useUnitsStore((state) => state.fetchUnits);
+  const selectedFilters = useUnitsStore((state) => state.selectedFilters);
+  const openFilterSheet = useUnitsStore((state) => state.openFilterSheet);
   const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -48,7 +60,9 @@ export default function Units() {
     setRefreshing(false);
   }, [fetchUnits]);
 
-  const renderUnitItem = useCallback(({ item }: { item: any }) => <UnitCard unit={item} unitTypeStatuses={unitTypeStatuses} onPress={selectUnit} />, [unitTypeStatuses, selectUnit]);
+  const keyExtractor = useCallback((item: UnitListItem, index: number) => item.UnitId || item.Name || `unit-${index}`, []);
+
+  const renderUnitItem = useCallback(({ item }: { item: UnitListItem }) => <UnitCard unit={item} unitTypeStatuses={unitTypeStatuses} onPress={selectUnit} />, [unitTypeStatuses, selectUnit]);
 
   const filteredUnits = React.useMemo(() => {
     if (!searchQuery.trim()) return units;
@@ -84,11 +98,11 @@ export default function Units() {
             <Button onPress={openFilterSheet} className="h-10 rounded-lg bg-white dark:bg-gray-800" variant="outline" testID="filter-button">
               <HStack className="items-center" space="xs">
                 <Filter size={20} className="text-gray-600 dark:text-gray-400" />
-                {selectedFilters.length > 0 && (
+                {selectedFilters.length > 0 ? (
                   <Badge size="sm" variant="solid" className="bg-blue-500">
                     <Text className="text-xs text-white">{selectedFilters.length}</Text>
                   </Badge>
-                )}
+                ) : null}
               </HStack>
             </Button>
           </HStack>
@@ -98,7 +112,7 @@ export default function Units() {
           ) : filteredUnits.length > 0 ? (
             <FlashList
               data={filteredUnits}
-              keyExtractor={(item, index) => item.UnitId || `unit-${index}`}
+              keyExtractor={keyExtractor}
               renderItem={renderUnitItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}

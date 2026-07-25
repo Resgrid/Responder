@@ -9,7 +9,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { useAnalytics } from '@/hooks/use-analytics';
-import { useOidcLogin } from '@/hooks/use-oidc-login';
+import { isValidSsoUrl, useOidcLogin } from '@/hooks/use-oidc-login';
 import { useSamlLogin } from '@/hooks/use-saml-login';
 import { useAuth } from '@/lib/auth';
 import { logger } from '@/lib/logging';
@@ -99,6 +99,26 @@ export default function SsoLogin() {
     setSsoPhase('department');
   }, []);
 
+  const handleOidcPress = useCallback(() => {
+    const authorityUrl = ssoConfig?.authority ?? '';
+    if (!isValidSsoUrl(authorityUrl)) {
+      logger.error({ message: 'SSO: refusing OIDC login with invalid or insecure authority URL' });
+      setIsErrorModalVisible(true);
+      return;
+    }
+    void oidc.promptAsync();
+  }, [oidc, ssoConfig]);
+
+  const handleSamlPress = useCallback(() => {
+    const samlUrl = ssoConfig?.metadataUrl ?? ssoConfig?.authority ?? '';
+    if (!isValidSsoUrl(samlUrl)) {
+      logger.error({ message: 'SSO: refusing SAML login with invalid or insecure IdP URL' });
+      setIsErrorModalVisible(true);
+      return;
+    }
+    void saml.startSamlLogin();
+  }, [saml, ssoConfig]);
+
   const ssoEnabled = ssoConfig?.ssoEnabled ?? false;
 
   return (
@@ -117,8 +137,8 @@ export default function SsoLogin() {
         <SsoLoginButtons
           departmentCode={username}
           ssoConfig={ssoConfig}
-          onOidcPress={() => oidc.promptAsync()}
-          onSamlPress={() => saml.startSamlLogin()}
+          onOidcPress={handleOidcPress}
+          onSamlPress={handleSamlPress}
           onChangeDepartment={handleChangeDepartment}
           oidcRequestReady={!!oidc.request}
           isLoading={status === 'loading'}

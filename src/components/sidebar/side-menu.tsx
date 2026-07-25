@@ -16,7 +16,7 @@ import { useAuthStore } from '@/lib/auth';
 import { getAvatarUrl } from '@/lib/utils';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
-import { securityStore, useSecurityStore } from '@/stores/security/store';
+import { securityStore } from '@/stores/security/store';
 
 import { AudioStreamBottomSheet } from '../audio-stream/audio-stream-bottom-sheet';
 
@@ -36,11 +36,14 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const router = useRouter();
-  const { profile, logout } = useAuthStore();
-  const { isConnected, setIsBottomSheetVisible } = useLiveKitStore();
-  const { currentStream, isPlaying, setIsBottomSheetVisible: setAudioStreamBottomSheetVisible } = useAudioStreamStore();
-  const { departmentCode } = useSecurityStore();
-  const securityStoreState = securityStore();
+  const profile = useAuthStore((state) => state.profile);
+  const logout = useAuthStore((state) => state.logout);
+  const isConnected = useLiveKitStore((state) => state.isConnected);
+  const setIsBottomSheetVisible = useLiveKitStore((state) => state.setIsBottomSheetVisible);
+  const currentStream = useAudioStreamStore((state) => state.currentStream);
+  const isPlaying = useAudioStreamStore((state) => state.isPlaying);
+  const setAudioStreamBottomSheetVisible = useAudioStreamStore((state) => state.setIsBottomSheetVisible);
+  const rights = securityStore((state) => state.rights);
 
   const menuItems: MenuItem[] = useMemo(
     () => [
@@ -141,8 +144,8 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   }, []);
 
   // Get user display name and department name from security store
-  const displayName = securityStoreState.rights?.FullName || profile?.name || t('common.unknown_user');
-  const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
+  const displayName = rights?.FullName || profile?.name || t('common.unknown_user');
+  const departmentName = rights?.DepartmentName || t('common.unknown_department');
 
   const isDark = colorScheme === 'dark';
 

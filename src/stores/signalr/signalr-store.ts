@@ -23,234 +23,235 @@ interface SignalRState {
   disconnectGeolocationHub: () => Promise<void>;
 }
 
-export const useSignalRStore = create<SignalRState>((set, get) => ({
-  isUpdateHubConnected: false,
-  lastUpdateMessage: null,
-  lastUpdateTimestamp: 0,
-  isGeolocationHubConnected: false,
-  lastGeolocationMessage: null,
-  lastGeolocationTimestamp: 0,
-  error: null,
-  connectUpdateHub: async () => {
-    try {
-      if (get().isUpdateHubConnected) {
-        return;
-      }
+export const useSignalRStore = create<SignalRState>((set, get) => {
+  signalRService.on('personnelStatusUpdated', (message) => {
+    logger.info({
+      message: 'personnelStatusUpdated',
+      context: { message },
+    });
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
 
-      set({ isUpdateHubConnected: false, error: null });
+  signalRService.on('personnelStaffingUpdated', (message) => {
+    logger.info({
+      message: 'personnelStaffingUpdated',
+      context: { message },
+    });
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
 
-      // Get the eventing URL from the core store config
-      const coreState = useCoreStore.getState();
-      const eventingUrl = coreState.config?.EventingUrl;
+  signalRService.on('unitStatusUpdated', (message) => {
+    logger.info({
+      message: 'unitStatusUpdated',
+      context: { message },
+    });
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
 
-      if (!eventingUrl) {
-        const errorMessage = 'EventingUrl not available in config. Please ensure config is loaded first.';
+  signalRService.on('callsUpdated', (message) => {
+    const now = Date.now();
+
+    logger.info({
+      message: 'callsUpdated',
+      context: { message, now },
+    });
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: now });
+  });
+
+  signalRService.on('callAdded', (message) => {
+    logger.info({
+      message: 'callAdded',
+      context: { message },
+    });
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
+
+  signalRService.on('callClosed', (message) => {
+    logger.info({
+      message: 'callClosed',
+      context: { message },
+    });
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
+
+  signalRService.on('weatherAlertReceived', (message) => {
+    logger.info({
+      message: 'weatherAlertReceived',
+      context: { message },
+    });
+    const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+    if (alertId) {
+      useWeatherAlertsStore.getState().handleAlertReceived(alertId);
+    }
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
+
+  signalRService.on('weatherAlertUpdated', (message) => {
+    logger.info({
+      message: 'weatherAlertUpdated',
+      context: { message },
+    });
+    const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+    if (alertId) {
+      useWeatherAlertsStore.getState().handleAlertUpdated(alertId);
+    }
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
+
+  signalRService.on('weatherAlertExpired', (message) => {
+    logger.info({
+      message: 'weatherAlertExpired',
+      context: { message },
+    });
+    const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
+    if (alertId) {
+      useWeatherAlertsStore.getState().handleAlertExpired(alertId);
+    }
+    set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+  });
+
+  signalRService.on('onConnected', () => {
+    logger.info({
+      message: 'Connected to update SignalR hub',
+    });
+    set({ isUpdateHubConnected: true, error: null });
+  });
+
+  signalRService.on('onPersonnelLocationUpdated', (message) => {
+    set({ lastGeolocationMessage: message, lastGeolocationTimestamp: Date.now() });
+  });
+
+  signalRService.on('onUnitLocationUpdated', (message) => {
+    set({ lastGeolocationMessage: message, lastGeolocationTimestamp: Date.now() });
+  });
+
+  signalRService.on('onGeolocationConnect', () => {
+    logger.info({
+      message: 'Connected to geolocation SignalR hub',
+    });
+    set({ isGeolocationHubConnected: true, error: null });
+  });
+
+  return {
+    isUpdateHubConnected: false,
+    lastUpdateMessage: null,
+    lastUpdateTimestamp: 0,
+    isGeolocationHubConnected: false,
+    lastGeolocationMessage: null,
+    lastGeolocationTimestamp: 0,
+    error: null,
+    connectUpdateHub: async () => {
+      try {
+        if (get().isUpdateHubConnected) {
+          return;
+        }
+
+        set({ isUpdateHubConnected: false, error: null });
+
+        // Get the eventing URL from the core store config
+        const coreState = useCoreStore.getState();
+        const eventingUrl = coreState.config?.EventingUrl;
+
+        if (!eventingUrl) {
+          const errorMessage = 'EventingUrl not available in config. Please ensure config is loaded first.';
+          logger.error({
+            message: errorMessage,
+          });
+          set({ error: new Error(errorMessage) });
+          return;
+        }
+
+        // Connect to the eventing hub
+        await signalRService.connectToHubWithEventingUrl({
+          name: Env.CHANNEL_HUB_NAME,
+          eventingUrl: eventingUrl,
+          hubName: Env.CHANNEL_HUB_NAME,
+          methods: [
+            'personnelStatusUpdated',
+            'personnelStaffingUpdated',
+            'unitStatusUpdated',
+            'callsUpdated',
+            'callAdded',
+            'callClosed',
+            'weatherAlertReceived',
+            'weatherAlertUpdated',
+            'weatherAlertExpired',
+            'onConnected',
+          ],
+        });
+
+        await signalRService.invoke(Env.CHANNEL_HUB_NAME, 'connect', parseInt(securityStore.getState().rights?.DepartmentId ?? '0'));
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
         logger.error({
-          message: errorMessage,
+          message: 'Failed to connect to SignalR hubs',
+          context: { error: err },
         });
-        set({ error: new Error(errorMessage) });
-        return;
+        set({ error: err });
       }
-
-      // Connect to the eventing hub
-      await signalRService.connectToHubWithEventingUrl({
-        name: Env.CHANNEL_HUB_NAME,
-        eventingUrl: eventingUrl,
-        hubName: Env.CHANNEL_HUB_NAME,
-        methods: [
-          'personnelStatusUpdated',
-          'personnelStaffingUpdated',
-          'unitStatusUpdated',
-          'callsUpdated',
-          'callAdded',
-          'callClosed',
-          'weatherAlertReceived',
-          'weatherAlertUpdated',
-          'weatherAlertExpired',
-          'onConnected',
-        ],
-      });
-
-      await signalRService.invoke(Env.CHANNEL_HUB_NAME, 'connect', parseInt(securityStore.getState().rights?.DepartmentId ?? '0'));
-
-      signalRService.on('personnelStatusUpdated', (message) => {
-        logger.info({
-          message: 'personnelStatusUpdated',
-          context: { message },
-        });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('personnelStaffingUpdated', (message) => {
-        logger.info({
-          message: 'personnelStaffingUpdated',
-          context: { message },
-        });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('unitStatusUpdated', (message) => {
-        logger.info({
-          message: 'unitStatusUpdated',
-          context: { message },
-        });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('callsUpdated', (message) => {
-        const now = Date.now();
-
-        logger.info({
-          message: 'callsUpdated',
-          context: { message, now },
-        });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: now });
-      });
-
-      signalRService.on('callAdded', (message) => {
-        logger.info({
-          message: 'callAdded',
-          context: { message },
-        });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('callClosed', (message) => {
-        logger.info({
-          message: 'callClosed',
-          context: { message },
-        });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('weatherAlertReceived', (message) => {
-        logger.info({
-          message: 'weatherAlertReceived',
-          context: { message },
-        });
-        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
-        if (alertId) {
-          useWeatherAlertsStore.getState().handleAlertReceived(alertId);
-        }
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('weatherAlertUpdated', (message) => {
-        logger.info({
-          message: 'weatherAlertUpdated',
-          context: { message },
-        });
-        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
-        if (alertId) {
-          useWeatherAlertsStore.getState().handleAlertUpdated(alertId);
-        }
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('weatherAlertExpired', (message) => {
-        logger.info({
-          message: 'weatherAlertExpired',
-          context: { message },
-        });
-        const alertId = typeof message === 'string' ? message : ((message as Record<string, string>)?.AlertId ?? '');
-        if (alertId) {
-          useWeatherAlertsStore.getState().handleAlertExpired(alertId);
-        }
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
-      });
-
-      signalRService.on('onConnected', () => {
-        logger.info({
-          message: 'Connected to update SignalR hub',
-        });
-        set({ isUpdateHubConnected: true, error: null });
-      });
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Unknown error occurred');
-      logger.error({
-        message: 'Failed to connect to SignalR hubs',
-        context: { error: err },
-      });
-      set({ error: err });
-    }
-  },
-  disconnectUpdateHub: async () => {
-    try {
-      await signalRService.disconnectFromHub(Env.CHANNEL_HUB_NAME);
-      set({ isUpdateHubConnected: false, lastUpdateMessage: null });
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Unknown error occurred');
-      logger.error({
-        message: 'Failed to disconnect from SignalR hubs',
-        context: { error: err },
-      });
-      set({ error: err });
-    }
-  },
-  connectGeolocationHub: async () => {
-    try {
-      if (get().isGeolocationHubConnected) {
-        return;
-      }
-
-      set({ isGeolocationHubConnected: false, error: null });
-
-      // Get the eventing URL from the core store config
-      const coreState = useCoreStore.getState();
-      const eventingUrl = coreState.config?.EventingUrl;
-
-      if (!eventingUrl) {
-        const errorMessage = 'EventingUrl not available in config. Please ensure config is loaded first.';
+    },
+    disconnectUpdateHub: async () => {
+      try {
+        await signalRService.disconnectFromHub(Env.CHANNEL_HUB_NAME);
+        set({ isUpdateHubConnected: false, lastUpdateMessage: null });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
         logger.error({
-          message: errorMessage,
+          message: 'Failed to disconnect from SignalR hubs',
+          context: { error: err },
         });
-        set({ error: new Error(errorMessage) });
-        return;
+        set({ error: err });
       }
+    },
+    connectGeolocationHub: async () => {
+      try {
+        if (get().isGeolocationHubConnected) {
+          return;
+        }
 
-      // Connect to the geolocation hub
-      await signalRService.connectToHubWithEventingUrl({
-        name: Env.REALTIME_GEO_HUB_NAME,
-        eventingUrl: eventingUrl,
-        hubName: Env.REALTIME_GEO_HUB_NAME,
-        methods: ['onPersonnelLocationUpdated', 'onUnitLocationUpdated', 'onGeolocationConnect'],
-      });
+        set({ isGeolocationHubConnected: false, error: null });
 
-      // Set up message handler
-      signalRService.on('onPersonnelLocationUpdated', (message) => {
-        set({ lastGeolocationMessage: JSON.stringify(message), lastGeolocationTimestamp: Date.now() });
-      });
+        // Get the eventing URL from the core store config
+        const coreState = useCoreStore.getState();
+        const eventingUrl = coreState.config?.EventingUrl;
 
-      signalRService.on('onUnitLocationUpdated', (message) => {
-        set({ lastGeolocationMessage: JSON.stringify(message), lastGeolocationTimestamp: Date.now() });
-      });
+        if (!eventingUrl) {
+          const errorMessage = 'EventingUrl not available in config. Please ensure config is loaded first.';
+          logger.error({
+            message: errorMessage,
+          });
+          set({ error: new Error(errorMessage) });
+          return;
+        }
 
-      signalRService.on('onGeolocationConnect', () => {
-        logger.info({
-          message: 'Connected to geolocation SignalR hub',
+        // Connect to the geolocation hub
+        await signalRService.connectToHubWithEventingUrl({
+          name: Env.REALTIME_GEO_HUB_NAME,
+          eventingUrl: eventingUrl,
+          hubName: Env.REALTIME_GEO_HUB_NAME,
+          methods: ['onPersonnelLocationUpdated', 'onUnitLocationUpdated', 'onGeolocationConnect'],
         });
-        set({ isGeolocationHubConnected: true, error: null });
-      });
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Unknown error occurred');
-      logger.error({
-        message: 'Failed to connect to SignalR hubs',
-        context: { error: err },
-      });
-      set({ error: err });
-    }
-  },
-  disconnectGeolocationHub: async () => {
-    try {
-      await signalRService.disconnectFromHub(Env.REALTIME_GEO_HUB_NAME);
-      set({ isGeolocationHubConnected: false, lastGeolocationMessage: null });
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Unknown error occurred');
-      logger.error({
-        message: 'Failed to disconnect from SignalR hubs',
-        context: { error: err },
-      });
-      set({ error: err });
-    }
-  },
-}));
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
+        logger.error({
+          message: 'Failed to connect to SignalR hubs',
+          context: { error: err },
+        });
+        set({ error: err });
+      }
+    },
+    disconnectGeolocationHub: async () => {
+      try {
+        await signalRService.disconnectFromHub(Env.REALTIME_GEO_HUB_NAME);
+        set({ isGeolocationHubConnected: false, lastGeolocationMessage: null });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
+        logger.error({
+          message: 'Failed to disconnect from SignalR hubs',
+          context: { error: err },
+        });
+        set({ error: err });
+      }
+    },
+  };
+});

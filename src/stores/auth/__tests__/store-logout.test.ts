@@ -47,10 +47,19 @@ jest.mock('@/lib/storage/app', () => ({
   getBaseApiUrl: jest.fn(() => 'https://mock-api.com/api/v1'),
 }));
 
+jest.mock('@/lib/storage/clear-all-data', () => ({
+  clearAllAppData: jest.fn().mockResolvedValue(undefined),
+  LOGOUT_PRESERVED_STORAGE_KEYS: ['baseUrl', 'IS_FIRST_TIME'],
+}));
+
+import * as SecureStore from 'expo-secure-store';
+
+import { clearAllAppData } from '@/lib/storage/clear-all-data';
 import useAuthStore from '../store';
 
 const mockedRemoveItem = removeItem as jest.MockedFunction<typeof removeItem>;
 const mockedLogger = logger as jest.Mocked<typeof logger>;
+const mockedClearAllAppData = clearAllAppData as jest.MockedFunction<typeof clearAllAppData>;
 
 describe('Auth Store - Logout Functionality', () => {
   beforeEach(() => {
@@ -75,6 +84,16 @@ describe('Auth Store - Logout Functionality', () => {
 
       // Verify authResponse was removed from storage
       expect(mockedRemoveItem).toHaveBeenCalledWith('authResponse');
+
+      expect(mockedClearAllAppData).toHaveBeenCalledWith({
+        resetStores: true,
+        clearStorage: true,
+        clearFilters: true,
+        clearSecure: false,
+        preserveStorageKeys: ['baseUrl', 'IS_FIRST_TIME'],
+      });
+
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('pending_saml_state');
 
       // Verify auth state was reset
       const state = useAuthStore.getState();
@@ -102,6 +121,22 @@ describe('Auth Store - Logout Functionality', () => {
       });
 
       // Verify auth state was still reset
+      const state = useAuthStore.getState();
+      expect(state.accessToken).toBeNull();
+      expect(state.status).toBe('signedOut');
+    });
+
+    it('should log warning if clearAllAppData fails but still reset auth state', async () => {
+      const mockError = new Error('Cleanup error');
+      mockedClearAllAppData.mockRejectedValueOnce(mockError);
+
+      await useAuthStore.getState().logout();
+
+      expect(mockedLogger.warn).toHaveBeenCalledWith({
+        message: 'Failed to clear app data during logout',
+        context: { error: mockError, reason: undefined },
+      });
+
       const state = useAuthStore.getState();
       expect(state.accessToken).toBeNull();
       expect(state.status).toBe('signedOut');

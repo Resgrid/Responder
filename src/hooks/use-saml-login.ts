@@ -1,13 +1,86 @@
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
+import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback } from 'react';
 
+import { isValidSsoUrl } from '@/hooks/use-oidc-login';
 import { logger } from '@/lib/logging';
 import { getItem, removeItem, setItem } from '@/lib/storage';
-import useAuthStore from '@/stores/auth/store';
+import useAuthStore, { PENDING_SAML_STATE_KEY } from '@/stores/auth/store';
 
 /** MMKV key used to persist the active SAML department code across cold starts */
 export const PENDING_SAML_DEPT_CODE_KEY = 'pending_saml_dept_code';
+
+const PENDING_SAML_STATE_TTL_MS = 10 * 60 * 1000;
+
+interface PendingSamlState {
+  state: string;
+  createdAt: number;
+}
+
+export async function clearPendingSamlState(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(PENDING_SAML_STATE_KEY);
+  } catch (error) {
+    logger.warn({
+      message: 'SAML: failed to clear pending state',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
+  }
+}
+
+const savePendingSamlState = async (state: string): Promise<void> => {
+  const payload: PendingSamlState = { state, createdAt: Date.now() };
+  await SecureStore.setItemAsync(PENDING_SAML_STATE_KEY, JSON.stringify(payload));
+};
+
+const consumePendingSamlState = async (callbackState?: string): Promise<boolean> => {
+  let raw: string | null = null;
+  try {
+    raw = await SecureStore.getItemAsync(PENDING_SAML_STATE_KEY);
+  } catch (error) {
+    logger.error({
+      message: 'SAML: failed to read pending state',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
+    return false;
+  }
+
+  if (!raw) {
+    logger.warn({ message: 'SAML: no pending login state, ignoring deep-link' });
+    return false;
+  }
+
+  let pending: PendingSamlState;
+  try {
+    pending = JSON.parse(raw) as PendingSamlState;
+  } catch {
+    logger.warn({ message: 'SAML: pending login state is malformed, clearing' });
+    await clearPendingSamlState();
+    return false;
+  }
+
+  if (!pending.state || typeof pending.createdAt !== 'number') {
+    logger.warn({ message: 'SAML: pending login state is malformed, clearing' });
+    await clearPendingSamlState();
+    return false;
+  }
+
+  if (Date.now() - pending.createdAt > PENDING_SAML_STATE_TTL_MS) {
+    logger.warn({ message: 'SAML: pending login state expired, ignoring deep-link' });
+    await clearPendingSamlState();
+    return false;
+  }
+
+  if (callbackState && callbackState !== pending.state) {
+    logger.warn({ message: 'SAML: callback state mismatch, ignoring deep-link' });
+    await clearPendingSamlState();
+    return false;
+  }
+
+  return true;
+};
 
 export interface UseSamlLoginOptions {
   idpSsoUrl: string;
@@ -42,11 +115,21 @@ export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions)
       return;
     }
 
+    if (!isValidSsoUrl(idpSsoUrl)) {
+      logger.error({ message: 'SAML: refusing to open non-HTTPS or malformed IdP SSO URL', context: { idpSsoUrl } });
+      return;
+    }
+
+    const state = Crypto.randomUUID();
+    await savePendingSamlState(state);
+
     // Persist department code so the cold-start deep-link handler can retrieve it
     await setItem<string>(PENDING_SAML_DEPT_CODE_KEY, departmentCode);
 
+    const initiateUrl = `${idpSsoUrl}${idpSsoUrl.includes('?') ? '&' : '?'}state=${encodeURIComponent(state)}`;
+
     logger.info({ message: 'SAML: opening IdP SSO URL', context: { idpSsoUrl } });
-    await WebBrowser.openBrowserAsync(idpSsoUrl);
+    await WebBrowser.openBrowserAsync(initiateUrl);
   }, [idpSsoUrl, departmentCode]);
 
   const handleDeepLink = useCallback(
@@ -59,6 +142,12 @@ export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions)
         return false;
       }
 
+      const stateValid = await consumePendingSamlState(parsed.queryParams?.state as string | undefined);
+      if (!stateValid) {
+        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
+        return false;
+      }
+
       logger.info({ message: 'SAML: received saml_response via deep-link, exchanging for Resgrid token' });
 
       try {
@@ -67,15 +156,16 @@ export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions)
           externalToken: samlResponse,
           departmentCode,
         });
-        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
         return true;
       } catch (error) {
-        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
         logger.error({
           message: 'SAML: token exchange failed',
           context: { error: error instanceof Error ? error.message : String(error) },
         });
         return false;
+      } finally {
+        await clearPendingSamlState();
+        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
       }
     },
     [departmentCode, loginWithSso]
@@ -95,9 +185,16 @@ export async function handleSamlCallbackUrl(url: string): Promise<boolean> {
 
   if (!samlResponse) return false;
 
+  const stateValid = await consumePendingSamlState(parsed.queryParams?.state as string | undefined);
+  if (!stateValid) {
+    await removeItem(PENDING_SAML_DEPT_CODE_KEY);
+    return false;
+  }
+
   const departmentCode = getItem<string>(PENDING_SAML_DEPT_CODE_KEY);
   if (!departmentCode) {
     logger.warn({ message: 'SAML cold-start: no pending department code found in storage' });
+    await clearPendingSamlState();
     return false;
   }
 
@@ -117,5 +214,7 @@ export async function handleSamlCallbackUrl(url: string): Promise<boolean> {
       context: { error: error instanceof Error ? error.message : String(error) },
     });
     return false;
+  } finally {
+    await clearPendingSamlState();
   }
 }

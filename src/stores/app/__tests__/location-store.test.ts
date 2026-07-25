@@ -138,6 +138,39 @@ describe('useLocationStore', () => {
     });
   });
 
+  it('should persist only durable preferences, not live location data', () => {
+    const { zustandStorage } = require('@/lib/storage');
+    const { result } = renderHook(() => useLocationStore());
+
+    act(() => {
+      result.current.setLocation({
+        coords: {
+          latitude: 40.7128,
+          longitude: -74.006,
+          heading: 180,
+          accuracy: 5,
+          speed: 0,
+          altitude: 10,
+          altitudeAccuracy: 5,
+        },
+        timestamp: 1640995200000,
+      });
+      result.current.setMapLocked(true);
+      result.current.setBackgroundEnabled(true);
+    });
+
+    const persistedRaw = zustandStorage.getItem('location-storage');
+    expect(persistedRaw).toBeTruthy();
+
+    const persisted = JSON.parse(persistedRaw as string);
+    expect(persisted.state.isMapLocked).toBe(true);
+    expect(persisted.state.isBackgroundEnabled).toBe(true);
+    expect(persisted.state.latitude).toBeUndefined();
+    expect(persisted.state.longitude).toBeUndefined();
+    expect(persisted.state.heading).toBeUndefined();
+    expect(persisted.state.timestamp).toBeUndefined();
+  });
+
   it('should have all required methods', () => {
     const { result } = renderHook(() => useLocationStore());
 

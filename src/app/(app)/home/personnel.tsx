@@ -20,11 +20,19 @@ import { InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { RefreshControl } from '@/components/ui/refresh-control';
 import { Text } from '@/components/ui/text';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { usePersonnelStore } from '@/stores/personnel/store';
 
 export default function Personnel() {
   const { t } = useTranslation();
-  const { personnel, searchQuery, setSearchQuery, selectPersonnel, isLoading, fetchPersonnel, selectedFilters, openFilterSheet } = usePersonnelStore();
+  const personnel = usePersonnelStore((state) => state.personnel);
+  const searchQuery = usePersonnelStore((state) => state.searchQuery);
+  const setSearchQuery = usePersonnelStore((state) => state.setSearchQuery);
+  const selectPersonnel = usePersonnelStore((state) => state.selectPersonnel);
+  const isLoading = usePersonnelStore((state) => state.isLoading);
+  const fetchPersonnel = usePersonnelStore((state) => state.fetchPersonnel);
+  const selectedFilters = usePersonnelStore((state) => state.selectedFilters);
+  const openFilterSheet = usePersonnelStore((state) => state.openFilterSheet);
   const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -59,6 +67,10 @@ export default function Personnel() {
     );
   }, [personnel, searchQuery]);
 
+  const keyExtractor = React.useCallback((item: PersonnelInfoResultData, index: number) => item.UserId || item.EmailAddress || item.IdentificationNumber || `personnel-${index}`, []);
+
+  const renderPersonnelItem = React.useCallback(({ item }: { item: PersonnelInfoResultData }) => <PersonnelCard personnel={item} onPress={selectPersonnel} />, [selectPersonnel]);
+
   return (
     <>
       <View className="flex-1 bg-gray-50 dark:bg-gray-900">
@@ -79,11 +91,11 @@ export default function Personnel() {
             <Button onPress={openFilterSheet} className="h-10 rounded-lg bg-white dark:bg-gray-800" variant="outline" testID="filter-button">
               <HStack className="items-center" space="xs">
                 <Filter size={20} className="text-gray-600 dark:text-gray-400" />
-                {selectedFilters.length > 0 && (
+                {selectedFilters.length > 0 ? (
                   <Badge size="sm" variant="solid" className="bg-blue-500">
                     <Text className="text-xs text-white">{selectedFilters.length}</Text>
                   </Badge>
-                )}
+                ) : null}
               </HStack>
             </Button>
           </HStack>
@@ -93,8 +105,8 @@ export default function Personnel() {
           ) : filteredPersonnel.length > 0 ? (
             <FlashList
               data={filteredPersonnel}
-              keyExtractor={(item, index) => item.UserId || `personnel-${index}`}
-              renderItem={({ item }) => <PersonnelCard personnel={item} onPress={selectPersonnel} />}
+              keyExtractor={keyExtractor}
+              renderItem={renderPersonnelItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}

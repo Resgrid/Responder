@@ -30,7 +30,9 @@ export const registerLocationServiceRealtimeUpdater = (updater: LocationServiceR
 export const useRealtimeGeolocation = () => {
   const [realtimeGeolocationEnabled, _setRealtimeGeolocationEnabled] = useMMKVBoolean(getRealtimeGeolocationStorageKey(), storage);
 
-  const { isGeolocationHubConnected, connectGeolocationHub, disconnectGeolocationHub } = useSignalRStore();
+  const isGeolocationHubConnected = useSignalRStore((state) => state.isGeolocationHubConnected);
+  const connectGeolocationHub = useSignalRStore((state) => state.connectGeolocationHub);
+  const disconnectGeolocationHub = useSignalRStore((state) => state.disconnectGeolocationHub);
 
   const setRealtimeGeolocationEnabled = React.useCallback(
     async (enabled: boolean) => {

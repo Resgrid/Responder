@@ -13,6 +13,9 @@ const withForegroundService = (config) => {
     // Allow cleartext HTTP traffic for dev server connectivity (required for targetSdk 35+)
     mainApplication.$['android:usesCleartextTraffic'] = 'true';
 
+    // Disable adb/cloud backup of app data (PII, tokens)
+    mainApplication.$['android:allowBackup'] = 'false';
+
     mainApplication['service'] = mainApplication['service'] || [];
     mainApplication['service'].push({
       $: {

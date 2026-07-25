@@ -54,7 +54,8 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const { colorScheme } = useColorScheme();
-  const { latitude, longitude } = useLocationStore();
+  const latitude = useLocationStore((state) => state.latitude);
+  const longitude = useLocationStore((state) => state.longitude);
   const { showToast } = useToastStore();
 
   // Create dynamic styles based on color scheme

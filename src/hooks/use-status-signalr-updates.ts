@@ -23,33 +23,25 @@ export const useStatusSignalRUpdates = () => {
           return;
         }
 
-        // Parse the SignalR message to check if it's a personnel status/staffing update
-        if (lastUpdateMessage && typeof lastUpdateMessage === 'string') {
-          try {
-            const parsedMessage = JSON.parse(lastUpdateMessage);
+        // Check if this is a personnel status or staffing update message for the current user
+        if (lastUpdateMessage && typeof lastUpdateMessage === 'object') {
+          const parsedMessage = lastUpdateMessage as { UserId?: string };
 
-            // Check if this is a personnel status or staffing update message for the current user
-            if (parsedMessage && parsedMessage.UserId === userId) {
-              logger.info({
-                message: 'Processing personnel status/staffing update for current user',
-                context: {
-                  userId,
-                  timestamp: lastUpdateTimestamp,
-                  message: parsedMessage,
-                },
-              });
-
-              // Refresh the current user's status and staffing
-              await fetchCurrentUserInfo();
-
-              // Update the last processed timestamp
-              lastProcessedTimestamp.current = lastUpdateTimestamp;
-            }
-          } catch (parseError) {
-            logger.error({
-              message: 'Failed to parse SignalR message',
-              context: { error: parseError, message: lastUpdateMessage },
+          if (parsedMessage.UserId === userId) {
+            logger.info({
+              message: 'Processing personnel status/staffing update for current user',
+              context: {
+                userId,
+                timestamp: lastUpdateTimestamp,
+                message: parsedMessage,
+              },
             });
+
+            // Refresh the current user's status and staffing
+            await fetchCurrentUserInfo();
+
+            // Update the last processed timestamp
+            lastProcessedTimestamp.current = lastUpdateTimestamp;
           }
         }
       } catch (error) {

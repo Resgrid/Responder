@@ -19,6 +19,7 @@ jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
 // Mock the units store
 const mockUnitsStore = {
   units: [],
+  unitTypeStatuses: [],
   searchQuery: '',
   selectedFilters: [],
   setSearchQuery: jest.fn(),
@@ -29,7 +30,7 @@ const mockUnitsStore = {
 };
 
 jest.mock('@/stores/units/store', () => ({
-  useUnitsStore: () => mockUnitsStore,
+  useUnitsStore: (selector?: (state: typeof mockUnitsStore) => unknown) => (selector ? selector(mockUnitsStore) : mockUnitsStore),
 }));
 
 // Mock the analytics hook

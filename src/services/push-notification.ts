@@ -62,6 +62,20 @@ class PushNotificationService {
   // response twice (once from getLastNotificationResponseAsync and once from the response listener).
   private lastHandledResponseId: string | null = null;
 
+  private static toErrorContext(error: unknown): { errorMessage: string; errorName: string } {
+    return {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+    };
+  }
+
+  private static truncateToken(token: string): string {
+    if (token.length <= 12) {
+      return `${token.slice(0, 4)}…`;
+    }
+    return `${token.slice(0, 8)}…${token.slice(-4)}`;
+  }
+
   private constructor() {
     this.initialize();
   }
@@ -116,7 +130,7 @@ class PushNotificationService {
     } catch (error) {
       logger.error({
         message: 'Error setting up Android notification channels',
-        context: { error },
+        context: { ...PushNotificationService.toErrorContext(error) },
       });
     }
   }
@@ -147,7 +161,7 @@ class PushNotificationService {
     } catch (error) {
       logger.error({
         message: 'Error handling launch notification response',
-        context: { error },
+        context: { ...PushNotificationService.toErrorContext(error) },
       });
     }
   };
@@ -178,10 +192,11 @@ class PushNotificationService {
   };
 
   private handleNotificationReceived = (notification: Notifications.Notification): void => {
+    const data = notification.request.content.data;
     logger.info({
       message: 'Notification received',
       context: {
-        data: notification.request.content.data,
+        eventCode: typeof data?.eventCode === 'string' ? data.eventCode : undefined,
       },
     });
 
@@ -201,7 +216,7 @@ class PushNotificationService {
     logger.info({
       message: 'Notification response received',
       context: {
-        data: response.notification.request.content.data,
+        eventCode: typeof response.notification.request.content.data?.eventCode === 'string' ? (response.notification.request.content.data.eventCode as string) : undefined,
       },
     });
 
@@ -231,7 +246,7 @@ class PushNotificationService {
     } catch (error) {
       logger.error({
         message: 'Failed to navigate to weather alert from push notification',
-        context: { error, alertId },
+        context: { ...PushNotificationService.toErrorContext(error), alertId },
       });
     }
   };
@@ -279,7 +294,7 @@ class PushNotificationService {
       logger.info({
         message: 'Push notification token obtained',
         context: {
-          token: this.pushToken,
+          tokenPreview: PushNotificationService.truncateToken(this.pushToken),
           userId,
           platform: Platform.OS,
         },
@@ -297,7 +312,7 @@ class PushNotificationService {
     } catch (error) {
       logger.error({
         message: 'Error registering for push notifications',
-        context: { error },
+        context: { ...PushNotificationService.toErrorContext(error) },
       });
       return null;
     }
@@ -332,7 +347,7 @@ class PushNotificationService {
     } catch (error) {
       logger.error({
         message: 'Failed to send test notification',
-        context: { error },
+        context: { ...PushNotificationService.toErrorContext(error) },
       });
     }
   }
@@ -374,7 +389,10 @@ export const usePushNotifications = () => {
         .catch((error) => {
           logger.error({
             message: 'Error in push notification registration hook',
-            context: { error },
+            context: {
+              errorMessage: error instanceof Error ? error.message : String(error),
+              errorName: error instanceof Error ? error.name : 'UnknownError',
+            },
           });
         });
 

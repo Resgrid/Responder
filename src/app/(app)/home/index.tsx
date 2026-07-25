@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
@@ -26,11 +26,12 @@ import { useHomeStore } from '@/stores/home/home-store';
 
 export default function HomeDashboard() {
   const { t } = useTranslation();
-  const { refreshAll } = useHomeStore();
+  const refreshAll = useHomeStore((state) => state.refreshAll);
   const getStatusesAndStaffing = useCoreStore((state) => state.getStatusesAndStaffing);
   const { trackEvent } = useAnalytics();
   const activeCall = useActiveCallStore((state) => state.activeCall);
-  const overdueCount = useCheckInStore((state) => state.timerStatuses.filter((s) => s.Status === 'Overdue').length);
+  const timerStatuses = useCheckInStore((state) => state.timerStatuses);
+  const overdueCount = useMemo(() => timerStatuses.filter((s) => s.Status === 'Overdue').length, [timerStatuses]);
   const calls = useCallsStore((state) => state.calls);
   const fetchCalls = useCallsStore((state) => state.fetchCalls);
   const fetchGlobalOverdueCount = useCheckInStore((state) => state.fetchGlobalOverdueCount);

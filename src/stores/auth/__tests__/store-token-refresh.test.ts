@@ -47,6 +47,11 @@ jest.mock('@/lib/storage/app', () => ({
   getBaseApiUrl: jest.fn(() => 'https://mock-api.com/api/v1'),
 }));
 
+jest.mock('@/lib/storage/clear-all-data', () => ({
+  clearAllAppData: jest.fn().mockResolvedValue(undefined),
+  LOGOUT_PRESERVED_STORAGE_KEYS: ['baseUrl', 'IS_FIRST_TIME'],
+}));
+
 import { refreshTokenRequest } from '@/lib/auth/api';
 import useAuthStore from '../store';
 
@@ -123,6 +128,64 @@ describe('Auth Store - Token Refresh Functionality', () => {
           newAccessTokenObtainedAt: expect.any(Number),
         },
       });
+    });
+
+    it('should share a single in-flight refresh between concurrent callers', async () => {
+      type RefreshResponse = Awaited<ReturnType<typeof refreshTokenRequest>>;
+      let resolveRefresh: (value: RefreshResponse) => void = () => undefined;
+      mockedRefreshTokenRequest.mockImplementationOnce(
+        () =>
+          new Promise<RefreshResponse>((resolve) => {
+            resolveRefresh = resolve;
+          })
+      );
+
+      const first = useAuthStore.getState().refreshAccessToken();
+      const second = useAuthStore.getState().refreshAccessToken();
+
+      resolveRefresh({
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+        id_token: 'new-id-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+        expiration_date: new Date(Date.now() + 3600 * 1000).toISOString(),
+      });
+
+      await Promise.all([first, second]);
+
+      expect(mockedRefreshTokenRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('should start a new refresh once the in-flight one settles', async () => {
+      const mockResponse = {
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+        id_token: 'new-id-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+        expiration_date: new Date(Date.now() + 3600 * 1000).toISOString(),
+      };
+
+      mockedRefreshTokenRequest.mockResolvedValue(mockResponse);
+
+      await useAuthStore.getState().refreshAccessToken();
+      await useAuthStore.getState().refreshAccessToken();
+
+      expect(mockedRefreshTokenRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it('should propagate transient errors to all concurrent callers', async () => {
+      const mockError = new Error('Network request failed');
+      mockedRefreshTokenRequest.mockRejectedValueOnce(mockError);
+
+      const first = useAuthStore.getState().refreshAccessToken();
+      const second = useAuthStore.getState().refreshAccessToken();
+
+      await expect(first).rejects.toThrow('Network request failed');
+      await expect(second).rejects.toThrow('Network request failed');
+
+      expect(mockedRefreshTokenRequest).toHaveBeenCalledTimes(1);
     });
 
     it('should logout when no refresh token is available', async () => {

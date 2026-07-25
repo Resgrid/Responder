@@ -78,7 +78,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify({ UserId: 'different-user' }),
+          lastUpdateMessage: { UserId: 'different-user' },
         });
         return selector(state);
       });
@@ -91,7 +91,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 2000,
-          lastUpdateMessage: JSON.stringify({ UserId: 'user123' }),
+          lastUpdateMessage: { UserId: 'user123' },
         });
         return selector(state);
       });
@@ -113,7 +113,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify(personnelStatusMessage),
+          lastUpdateMessage: personnelStatusMessage,
         });
         return selector(state);
       });
@@ -144,7 +144,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify(personnelStaffingMessage),
+          lastUpdateMessage: personnelStaffingMessage,
         });
         return selector(state);
       });
@@ -175,7 +175,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify(otherUserMessage),
+          lastUpdateMessage: otherUserMessage,
         });
         return selector(state);
       });
@@ -196,7 +196,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: timestamp,
-          lastUpdateMessage: JSON.stringify(personnelStatusMessage),
+          lastUpdateMessage: personnelStatusMessage,
         });
         return selector(state);
       });
@@ -225,7 +225,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: timestamp,
-          lastUpdateMessage: JSON.stringify(personnelStatusMessage),
+          lastUpdateMessage: personnelStatusMessage,
         });
         return selector(state);
       });
@@ -247,7 +247,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: timestamp,
-          lastUpdateMessage: JSON.stringify(newMessage),
+          lastUpdateMessage: newMessage,
         });
         return selector(state);
       });
@@ -273,12 +273,12 @@ describe('useStatusSignalRUpdates', () => {
       const fetchError = new Error('Fetch failed');
       mockFetchCurrentUserInfo.mockRejectedValue(fetchError);
 
-      const validJsonMessage = '{"UserId":"user123","StatusId":1,"StatusText":"Available"}';
+      const validMessage = { UserId: 'user123', StatusId: 1, StatusText: 'Available' };
 
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: validJsonMessage,
+          lastUpdateMessage: validMessage,
         });
         return selector(state);
       });
@@ -299,24 +299,18 @@ describe('useStatusSignalRUpdates', () => {
       });
     });
 
-    it('should handle invalid JSON gracefully', () => {
+    it('should handle string message gracefully', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: 'invalid-json',
+          lastUpdateMessage: 'string-payload',
         });
         return selector(state);
       });
 
       renderHook(() => useStatusSignalRUpdates());
 
-      expect(mockedLogger.error).toHaveBeenCalledWith({
-        message: 'Failed to parse SignalR message',
-        context: { 
-          error: expect.any(SyntaxError), 
-          message: 'invalid-json' 
-        },
-      });
+      expect(mockedLogger.error).not.toHaveBeenCalled();
       expect(mockFetchCurrentUserInfo).not.toHaveBeenCalled();
     });
 
@@ -334,18 +328,20 @@ describe('useStatusSignalRUpdates', () => {
       expect(mockFetchCurrentUserInfo).not.toHaveBeenCalled();
     });
 
-    it('should handle non-string message gracefully', () => {
+    it('should process object message directly without parsing', async () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: { UserId: 'user123' }, // Non-string message
+          lastUpdateMessage: { UserId: 'user123' },
         });
         return selector(state);
       });
 
       renderHook(() => useStatusSignalRUpdates());
 
-      expect(mockFetchCurrentUserInfo).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockFetchCurrentUserInfo).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
@@ -359,7 +355,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify(messageWithoutUserId),
+          lastUpdateMessage: messageWithoutUserId,
         });
         return selector(state);
       });
@@ -373,7 +369,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify({}),
+          lastUpdateMessage: {},
         });
         return selector(state);
       });
@@ -412,7 +408,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify(personnelStatusMessage),
+          lastUpdateMessage: personnelStatusMessage,
         });
         return selector(state);
       });
@@ -443,7 +439,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify(personnelStatusMessage),
+          lastUpdateMessage: personnelStatusMessage,
         });
         return selector(state);
       });
@@ -461,7 +457,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 2000,
-          lastUpdateMessage: JSON.stringify(personnelStatusMessage),
+          lastUpdateMessage: personnelStatusMessage,
         });
         return selector(state);
       });
@@ -486,7 +482,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 1000,
-          lastUpdateMessage: JSON.stringify(firstUserMessage),
+          lastUpdateMessage: firstUserMessage,
         });
         return selector(state);
       });
@@ -509,7 +505,7 @@ describe('useStatusSignalRUpdates', () => {
       mockedUseSignalRStore.mockImplementation((selector) => {
         const state = createMockSignalRState({
           lastUpdateTimestamp: 2000,
-          lastUpdateMessage: JSON.stringify(secondUserMessage),
+          lastUpdateMessage: secondUserMessage,
         });
         return selector(state);
       });

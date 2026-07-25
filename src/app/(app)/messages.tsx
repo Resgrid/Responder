@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router, Stack } from 'expo-router';
 import { ChevronDown, Mail, MailOpen, MessageSquarePlus, MoreVertical, Search, Trash2, X } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
@@ -36,30 +36,29 @@ export default function MessagesScreen() {
   const { canUserCreateMessages } = useSecurityStore();
   const { trackEvent } = useAnalytics();
 
-  const {
-    isLoading,
-    error,
-    searchQuery,
-    currentFilter,
-    selectedForDeletion,
-    isDetailsOpen,
-    isComposeOpen,
-    isDeleting,
-    setSearchQuery,
-    setCurrentFilter,
-    selectMessage,
-    fetchInboxMessages,
-    fetchSentMessages,
-    getFilteredMessages,
-    hasSelectedMessages,
-    clearSelection,
-    selectAllVisibleMessages,
-    deleteMessages,
-    openCompose,
-    toggleMessageSelection,
-  } = useMessagesStore();
+  const isLoading = useMessagesStore((state) => state.isLoading);
+  const error = useMessagesStore((state) => state.error);
+  const searchQuery = useMessagesStore((state) => state.searchQuery);
+  const currentFilter = useMessagesStore((state) => state.currentFilter);
+  const selectedForDeletion = useMessagesStore((state) => state.selectedForDeletion);
+  const isDeleting = useMessagesStore((state) => state.isDeleting);
+  const inboxMessages = useMessagesStore((state) => state.inboxMessages);
+  const sentMessages = useMessagesStore((state) => state.sentMessages);
+  const setSearchQuery = useMessagesStore((state) => state.setSearchQuery);
+  const setCurrentFilter = useMessagesStore((state) => state.setCurrentFilter);
+  const selectMessage = useMessagesStore((state) => state.selectMessage);
+  const fetchInboxMessages = useMessagesStore((state) => state.fetchInboxMessages);
+  const fetchSentMessages = useMessagesStore((state) => state.fetchSentMessages);
+  const hasSelectedMessages = useMessagesStore((state) => state.hasSelectedMessages);
+  const clearSelection = useMessagesStore((state) => state.clearSelection);
+  const selectAllVisibleMessages = useMessagesStore((state) => state.selectAllVisibleMessages);
+  const deleteMessages = useMessagesStore((state) => state.deleteMessages);
+  const openCompose = useMessagesStore((state) => state.openCompose);
+  const toggleMessageSelection = useMessagesStore((state) => state.toggleMessageSelection);
 
-  const filteredMessages = getFilteredMessages();
+  // Deps drive recomputation; getState() read is intentional so the memo tracks store arrays.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const filteredMessages = useMemo(() => useMessagesStore.getState().getFilteredMessages(), [inboxMessages, sentMessages, searchQuery, currentFilter]);
 
   // Fetch messages when screen comes into focus
   useFocusEffect(
@@ -83,34 +82,40 @@ export default function MessagesScreen() {
     }, [fetchInboxMessages, fetchSentMessages, currentFilter, trackEvent, filteredMessages.length])
   );
 
-  const handleMessagePress = (message: MessageResultData) => {
-    if (isSelectionMode) {
-      toggleMessageSelection(message.MessageId);
-      trackEvent('message_selection_toggled', {
-        timestamp: new Date().toISOString(),
-        messageId: message.MessageId,
-        isSelected: !selectedForDeletion.has(message.MessageId),
-      });
-    } else {
-      selectMessage(message.MessageId);
-      trackEvent('message_selected', {
-        timestamp: new Date().toISOString(),
-        messageId: message.MessageId,
-        messageType: message.Type.toString(),
-      });
-    }
-  };
+  const handleMessagePress = useCallback(
+    (message: MessageResultData) => {
+      if (isSelectionMode) {
+        toggleMessageSelection(message.MessageId);
+        trackEvent('message_selection_toggled', {
+          timestamp: new Date().toISOString(),
+          messageId: message.MessageId,
+          isSelected: !selectedForDeletion.has(message.MessageId),
+        });
+      } else {
+        selectMessage(message.MessageId);
+        trackEvent('message_selected', {
+          timestamp: new Date().toISOString(),
+          messageId: message.MessageId,
+          messageType: message.Type.toString(),
+        });
+      }
+    },
+    [isSelectionMode, selectedForDeletion, selectMessage, toggleMessageSelection, trackEvent]
+  );
 
-  const handleLongPress = (message: MessageResultData) => {
-    if (!isSelectionMode) {
-      setIsSelectionMode(true);
-      toggleMessageSelection(message.MessageId);
-      trackEvent('message_selection_mode_entered', {
-        timestamp: new Date().toISOString(),
-        messageId: message.MessageId,
-      });
-    }
-  };
+  const handleLongPress = useCallback(
+    (message: MessageResultData) => {
+      if (!isSelectionMode) {
+        setIsSelectionMode(true);
+        toggleMessageSelection(message.MessageId);
+        trackEvent('message_selection_mode_entered', {
+          timestamp: new Date().toISOString(),
+          messageId: message.MessageId,
+        });
+      }
+    },
+    [isSelectionMode, toggleMessageSelection, trackEvent]
+  );
 
   const handleDeleteSelected = () => {
     const selectedMessages = Array.from(selectedForDeletion);
@@ -193,9 +198,14 @@ export default function MessagesScreen() {
     }
   };
 
-  const renderMessage = ({ item }: { item: MessageResultData }) => (
-    <MessageCard message={item} onPress={() => handleMessagePress(item)} onLongPress={() => handleLongPress(item)} isSelected={selectedForDeletion.has(item.MessageId)} showCheckbox={isSelectionMode} />
+  const renderMessage = useCallback(
+    ({ item }: { item: MessageResultData }) => (
+      <MessageCard message={item} onPress={() => handleMessagePress(item)} onLongPress={() => handleLongPress(item)} isSelected={selectedForDeletion.has(item.MessageId)} showCheckbox={isSelectionMode} />
+    ),
+    [handleMessagePress, handleLongPress, isSelectionMode, selectedForDeletion]
   );
+
+  const keyExtractor = useCallback((item: MessageResultData, index: number) => item.MessageId || `message-${index}`, []);
 
   if (isLoading && filteredMessages.length === 0) {
     return <Loading />;
@@ -293,7 +303,7 @@ export default function MessagesScreen() {
           <FlatList
             data={filteredMessages}
             renderItem={renderMessage}
-            keyExtractor={(item, index) => item.MessageId || `message-${index}`}
+            keyExtractor={keyExtractor}
             className="flex-1"
             contentContainerStyle={{ paddingBottom: 16 }}
             showsVerticalScrollIndicator={false}
@@ -317,7 +327,7 @@ export default function MessagesScreen() {
           />
         )}
 
-        {isLoading && filteredMessages.length === 0 && <Loading />}
+        {isLoading && filteredMessages.length === 0 ? <Loading /> : null}
 
         {/* Filter Action Sheet */}
         <Actionsheet isOpen={isFilterMenuOpen} onClose={() => setIsFilterMenuOpen(false)}>
@@ -394,11 +404,11 @@ export default function MessagesScreen() {
         <ComposeMessageSheet />
 
         {/* FAB button for composing new message */}
-        {!isSelectionMode && canUserCreateMessages && (
+        {!isSelectionMode && canUserCreateMessages ? (
           <Fab placement="bottom right" size="lg" onPress={() => handleOpenCompose('fab')} testID="messages-compose-fab">
             <FabIcon as={MessageSquarePlus} size="lg" />
           </Fab>
-        )}
+        ) : null}
       </View>
     </>
   );

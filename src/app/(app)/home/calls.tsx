@@ -24,7 +24,13 @@ import { useRolesStore } from '@/stores/roles/store';
 import { useSecurityStore } from '@/stores/security/store';
 
 export default function Calls() {
-  const { calls, isLoading, error, fetchCalls, fetchCallPriorities, callPriorities, callExtrasById } = useCallsStore();
+  const calls = useCallsStore((state) => state.calls);
+  const isLoading = useCallsStore((state) => state.isLoading);
+  const error = useCallsStore((state) => state.error);
+  const fetchCalls = useCallsStore((state) => state.fetchCalls);
+  const fetchCallPriorities = useCallsStore((state) => state.fetchCallPriorities);
+  const callPriorities = useCallsStore((state) => state.callPriorities);
+  const callExtrasById = useCallsStore((state) => state.callExtrasById);
   const { canUserCreateCalls } = useSecurityStore();
   const { trackEvent } = useAnalytics();
   const { t } = useTranslation();
@@ -61,6 +67,12 @@ export default function Calls() {
 
   const assignmentContext = useMemo(() => buildCallAssignmentContext(currentUser, roles, activeUnitId), [activeUnitId, currentUser, roles]);
 
+  const priorityById = useMemo(() => {
+    const map = new Map<number, (typeof callPriorities)[number]>();
+    callPriorities.forEach((priority) => map.set(priority.Id, priority));
+    return map;
+  }, [callPriorities]);
+
   const filteredCalls = useMemo(() => {
     const normalizedSearchQuery = searchQuery.toLowerCase();
 
@@ -79,6 +91,17 @@ export default function Calls() {
     });
   }, [assignmentContext, callExtrasById, calls, onlyCallsImOn, searchQuery]);
 
+  const keyExtractor = useCallback((item: CallResultData) => item.CallId, []);
+
+  const renderCallItem = useCallback(
+    ({ item }: { item: CallResultData }) => (
+      <Pressable onPress={() => router.push(`/call/${item.CallId}`)}>
+        <CallCard call={item} priority={priorityById.get(item.Priority)} callExtraData={callExtrasById[item.CallId]} />
+      </Pressable>
+    ),
+    [priorityById, callExtrasById]
+  );
+
   const renderContent = () => {
     if (isLoading) {
       return <Loading text={t('calls.loading')} />;
@@ -91,12 +114,8 @@ export default function Calls() {
     return (
       <FlatList<CallResultData>
         data={filteredCalls}
-        renderItem={({ item }: { item: CallResultData }) => (
-          <Pressable onPress={() => router.push(`/call/${item.CallId}`)}>
-            <CallCard call={item} priority={callPriorities.find((p: { Id: number }) => p.Id === item.Priority)} callExtraData={callExtrasById[item.CallId]} />
-          </Pressable>
-        )}
-        keyExtractor={(item: CallResultData) => item.CallId}
+        renderItem={renderCallItem}
+        keyExtractor={keyExtractor}
         refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} />}
         ListEmptyComponent={<ZeroState heading={t('calls.no_calls')} description={t('calls.no_calls_description')} icon={RefreshCcwDotIcon} />}
         contentContainerStyle={{ paddingBottom: 20 }}

@@ -5,11 +5,14 @@ import { logger } from '@/lib/logging';
 import { getOfflineQueueStorage } from '@/lib/storage/secure-storage';
 import type { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 
+const MAX_RETRIES = 5;
+
 interface QueueItem {
   id: string;
   type: 'personnelStatus';
   payload: SavePersonStatusInput;
   retries: number;
+  attempts?: number;
 }
 
 class RealOfflineQueueProcessor {
@@ -20,7 +23,9 @@ class RealOfflineQueueProcessor {
   private constructor() {
     NetInfo.addEventListener((state) => {
       if (state.isInternetReachable) {
-        this.processQueue();
+        void this.processQueue().catch((error) => {
+          logger.error({ message: 'Offline queue processing failed on network change', context: { error } });
+        });
       }
     });
   }
@@ -32,13 +37,24 @@ class RealOfflineQueueProcessor {
     return RealOfflineQueueProcessor.instance!;
   }
 
+  private async readQueue(storage: Awaited<ReturnType<typeof getOfflineQueueStorage>>): Promise<QueueItem[]> {
+    const raw = storage.getString(this.storageKey);
+    if (!raw) return [];
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as QueueItem[]) : [];
+    } catch (error) {
+      logger.warn({ message: 'Corrupt offline queue data, resetting queue', context: { error } });
+      return [];
+    }
+  }
+
   async processQueue(): Promise<void> {
     if (this.processing) return;
     this.processing = true;
     try {
       const storage = await getOfflineQueueStorage();
-      const raw = storage.getString(this.storageKey);
-      const items: QueueItem[] = raw ? JSON.parse(raw) : [];
+      const items = await this.readQueue(storage);
       const remaining: QueueItem[] = [];
       for (const item of items) {
         try {
@@ -47,10 +63,15 @@ class RealOfflineQueueProcessor {
           }
         } catch (error) {
           item.retries++;
+          item.attempts = (item.attempts ?? item.retries - 1) + 1;
+          if (item.attempts >= MAX_RETRIES) {
+            logger.error({ message: 'Dropping offline queue item after max retries', context: { id: item.id, attempts: item.attempts, error } });
+            continue;
+          }
           const backoff = Math.min(2 ** item.retries * 1000, 30000);
           await new Promise((resolve) => setTimeout(resolve, backoff));
           remaining.push(item);
-          logger.warn({ message: 'Retrying offline queue item', context: { id: item.id, error } });
+          logger.warn({ message: 'Retrying offline queue item', context: { id: item.id, attempts: item.attempts, error } });
         }
       }
       await storage.set(this.storageKey, JSON.stringify(remaining));
@@ -63,14 +84,15 @@ class RealOfflineQueueProcessor {
 
   addPersonnelStatusToQueue(status: SavePersonStatusInput): string {
     const id = `${Date.now()}-${Math.random()}`;
-    this.enqueue({ id, type: 'personnelStatus', payload: status, retries: 0 });
+    void this.enqueue({ id, type: 'personnelStatus', payload: status, retries: 0, attempts: 0 }).catch((error) => {
+      logger.error({ message: 'Failed to enqueue personnel status', context: { id, error } });
+    });
     return id;
   }
 
   private async enqueue(item: QueueItem): Promise<void> {
     const storage = await getOfflineQueueStorage();
-    const raw = storage.getString(this.storageKey);
-    const items: QueueItem[] = raw ? JSON.parse(raw) : [];
+    const items = await this.readQueue(storage);
     items.push(item);
     await storage.set(this.storageKey, JSON.stringify(items));
   }
@@ -102,6 +124,7 @@ class StubOfflineQueueProcessor {
       logger.error({ message: 'Stub offline queue used in production' });
       throw new Error('OfflineQueueProcessor stub used in production');
     }
+    logger.warn({ message: 'Stub offline queue active: queued items are NOT persisted or processed (non-production environment)' });
     return Promise.resolve();
   }
   addPersonnelStatusToQueue(status: SavePersonStatusInput): string {
@@ -109,6 +132,7 @@ class StubOfflineQueueProcessor {
       logger.error({ message: 'Stub offline queue used in production' });
       throw new Error('OfflineQueueProcessor stub used in production');
     }
+    logger.warn({ message: 'Stub offline queue: dropping personnel status item (non-production environment)', context: { status } });
     return '';
   }
   cleanup(): void {

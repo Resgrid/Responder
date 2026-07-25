@@ -43,12 +43,10 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
   const [selectedPin, setSelectedPin] = useState<MapMakerInfoData | null>(null);
   const [isPinDetailModalOpen, setIsPinDetailModalOpen] = useState(false);
-  const location = useLocationStore((state) => ({
-    latitude: state.latitude,
-    longitude: state.longitude,
-    heading: state.heading,
-    isMapLocked: state.isMapLocked,
-  }));
+  const latitude = useLocationStore((state) => state.latitude);
+  const longitude = useLocationStore((state) => state.longitude);
+  const heading = useLocationStore((state) => state.heading);
+  const isMapLocked = useLocationStore((state) => state.isMapLocked);
 
   const mapOptions = useMemo(() => {
     return Object.keys(Mapbox.StyleURL)
@@ -61,9 +59,9 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
 
   const styleURL = mapOptions[0]?.data;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const isFollowingUser = isScreenFocused && location.isMapLocked && focusedPoi == null;
-  const isInteractionLocked = location.isMapLocked && focusedPoi == null;
-  const showRecenterButton = !isFollowingUser && hasUserMovedMap && location.latitude != null && location.longitude != null;
+  const isFollowingUser = isScreenFocused && isMapLocked && focusedPoi == null;
+  const isInteractionLocked = isMapLocked && focusedPoi == null;
+  const showRecenterButton = !isFollowingUser && hasUserMovedMap && latitude != null && longitude != null;
 
   useMapSignalRUpdates(setMapPins);
 
@@ -80,15 +78,15 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
     useCallback(() => {
       trackEvent('map_viewed', {
         timestamp: new Date().toISOString(),
-        isMapLocked: location.isMapLocked,
-        hasLocation: location.latitude != null && location.longitude != null,
+        isMapLocked: isMapLocked,
+        hasLocation: latitude != null && longitude != null,
       });
 
       if (focusedPoi == null) {
         setHasUserMovedMap(false);
       }
 
-      if (focusedPoi == null && isMapReady && location.latitude != null && location.longitude != null) {
+      if (focusedPoi == null && isMapReady && latitude != null && longitude != null) {
         const cameraConfig: {
           centerCoordinate: [number, number];
           zoomLevel: number;
@@ -96,21 +94,21 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
           heading: number;
           pitch: number;
         } = {
-          centerCoordinate: [location.longitude, location.latitude],
-          zoomLevel: location.isMapLocked ? 16 : 12,
+          centerCoordinate: [longitude, latitude],
+          zoomLevel: isMapLocked ? 16 : 12,
           animationDuration: 1000,
           heading: 0,
           pitch: 0,
         };
 
-        if (location.isMapLocked && location.heading != null) {
-          cameraConfig.heading = location.heading;
+        if (isMapLocked && heading != null) {
+          cameraConfig.heading = heading;
           cameraConfig.pitch = 45;
         }
 
         cameraRef.current?.setCamera(cameraConfig);
       }
-    }, [focusedPoi, isMapReady, location.heading, location.isMapLocked, location.latitude, location.longitude, trackEvent])
+    }, [focusedPoi, isMapReady, heading, isMapLocked, latitude, longitude, trackEvent])
   );
 
   useEffect(() => {
@@ -140,7 +138,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
       return;
     }
 
-    if (isMapReady && location.latitude != null && location.longitude != null) {
+    if (isMapReady && latitude != null && longitude != null) {
       if (isFollowingUser || !hasUserMovedMap) {
         const cameraConfig: {
           centerCoordinate: [number, number];
@@ -149,27 +147,27 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
           heading?: number;
           pitch?: number;
         } = {
-          centerCoordinate: [location.longitude, location.latitude],
-          zoomLevel: location.isMapLocked ? 16 : 12,
-          animationDuration: location.isMapLocked ? 500 : 1000,
+          centerCoordinate: [longitude, latitude],
+          zoomLevel: isMapLocked ? 16 : 12,
+          animationDuration: isMapLocked ? 500 : 1000,
         };
 
-        if (location.isMapLocked && location.heading != null) {
-          cameraConfig.heading = location.heading;
+        if (isMapLocked && heading != null) {
+          cameraConfig.heading = heading;
           cameraConfig.pitch = 45;
         }
 
         cameraRef.current?.setCamera(cameraConfig);
       }
     }
-  }, [focusedPoi, hasUserMovedMap, isFollowingUser, isMapReady, isScreenFocused, location.heading, location.isMapLocked, location.latitude, location.longitude]);
+  }, [focusedPoi, hasUserMovedMap, isFollowingUser, isMapReady, isScreenFocused, heading, isMapLocked, latitude, longitude]);
 
   useEffect(() => {
     if (focusedPoi != null) {
       return;
     }
 
-    if (location.isMapLocked) {
+    if (isMapLocked) {
       setHasUserMovedMap(false);
       return;
     }
@@ -177,16 +175,16 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
     setHasUserMovedMap(false);
 
     // Only drive the camera while focused — see isScreenFocused note above.
-    if (isScreenFocused && isMapReady && location.latitude != null && location.longitude != null) {
+    if (isScreenFocused && isMapReady && latitude != null && longitude != null) {
       cameraRef.current?.setCamera({
-        centerCoordinate: [location.longitude, location.latitude],
+        centerCoordinate: [longitude, latitude],
         zoomLevel: 12,
         heading: 0,
         pitch: 0,
         animationDuration: 1000,
       });
     }
-  }, [focusedPoi, isMapReady, isScreenFocused, location.isMapLocked, location.latitude, location.longitude]);
+  }, [focusedPoi, isMapReady, isScreenFocused, isMapLocked, latitude, longitude]);
 
   useEffect(() => {
     let isMounted = true;
@@ -244,7 +242,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   );
 
   const handleRecenterMap = useCallback(() => {
-    if (location.latitude != null && location.longitude != null) {
+    if (latitude != null && longitude != null) {
       const cameraConfig: {
         centerCoordinate: [number, number];
         zoomLevel: number;
@@ -252,13 +250,13 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
         heading?: number;
         pitch?: number;
       } = {
-        centerCoordinate: [location.longitude, location.latitude],
-        zoomLevel: location.isMapLocked ? 16 : 12,
+        centerCoordinate: [longitude, latitude],
+        zoomLevel: isMapLocked ? 16 : 12,
         animationDuration: 1000,
       };
 
-      if (location.isMapLocked && location.heading != null) {
-        cameraConfig.heading = location.heading;
+      if (isMapLocked && heading != null) {
+        cameraConfig.heading = heading;
         cameraConfig.pitch = 45;
       }
 
@@ -267,11 +265,11 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
 
       trackEvent('map_recentered', {
         timestamp: new Date().toISOString(),
-        isMapLocked: location.isMapLocked,
-        zoomLevel: location.isMapLocked ? 16 : 12,
+        isMapLocked: isMapLocked,
+        zoomLevel: isMapLocked ? 16 : 12,
       });
     }
-  }, [location.heading, location.isMapLocked, location.latitude, location.longitude, trackEvent]);
+  }, [heading, isMapLocked, latitude, longitude, trackEvent]);
 
   const handlePinPress = useCallback(
     (pin: MapMakerInfoData) => {
@@ -342,14 +340,14 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
       >
         <Mapbox.Camera
           ref={cameraRef}
-          followZoomLevel={location.isMapLocked ? 16 : 12}
+          followZoomLevel={isMapLocked ? 16 : 12}
           followUserLocation={isFollowingUser}
           {...(isFollowingUser ? { followUserMode: Mapbox.UserTrackingMode.FollowWithHeading } : {})}
           {...(isFollowingUser ? { followPitch: 45 } : {})}
         />
 
-        {location.latitude != null && location.longitude != null ? (
-          <Mapbox.PointAnnotation id="userLocation" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 0.5 }}>
+        {latitude != null && longitude != null ? (
+          <Mapbox.PointAnnotation id="userLocation" coordinate={[longitude, latitude]} anchor={{ x: 0.5, y: 0.5 }}>
             <Animated.View
               style={[
                 styles.markerContainer,
@@ -361,12 +359,12 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
               <View style={styles.markerOuterRing} />
               <View style={styles.markerInnerContainer}>
                 <View style={styles.markerDot} />
-                {location.heading != null ? (
+                {heading != null ? (
                   <View
                     style={[
                       styles.directionIndicator,
                       {
-                        transform: [{ rotate: `${location.heading}deg` }],
+                        transform: [{ rotate: `${heading}deg` }],
                       },
                     ]}
                   />

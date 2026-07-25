@@ -1,15 +1,19 @@
 import type { AxiosError } from 'axios';
+import * as SecureStore from 'expo-secure-store';
 import base64 from 'react-native-base64';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { logger } from '@/lib/logging';
+import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/clear-all-data';
 
 import { externalTokenRequest, loginRequest, refreshTokenRequest } from '../../lib/auth/api';
 import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage';
+
+export const PENDING_SAML_STATE_KEY = 'pending_saml_state';
 
 // Helper function to determine if a refresh error is transient (network issues, rate limiting, etc.)
 // Transient errors should not force logout as they might resolve on retry
@@ -37,6 +41,8 @@ const isTransientRefreshError = (error: unknown): boolean => {
 
   return false;
 };
+
+let refreshAccessTokenInFlight: Promise<void> | null = null;
 
 interface AuthState {
   // Tokens
@@ -270,6 +276,30 @@ const useAuthStore = create<AuthState>()(
           });
         }
 
+        try {
+          await clearAllAppData({
+            resetStores: true,
+            clearStorage: true,
+            clearFilters: true,
+            clearSecure: false,
+            preserveStorageKeys: [...LOGOUT_PRESERVED_STORAGE_KEYS],
+          });
+        } catch (error) {
+          logger.warn({
+            message: 'Failed to clear app data during logout',
+            context: { error, reason },
+          });
+        }
+
+        try {
+          await SecureStore.deleteItemAsync(PENDING_SAML_STATE_KEY);
+        } catch (error) {
+          logger.warn({
+            message: 'Failed to clear pending SAML state during logout',
+            context: { error, reason },
+          });
+        }
+
         set({
           accessToken: null,
           refreshToken: null,
@@ -284,104 +314,118 @@ const useAuthStore = create<AuthState>()(
       },
 
       refreshAccessToken: async () => {
-        try {
-          const currentState = get();
-          const { refreshToken, userId } = currentState;
+        if (refreshAccessTokenInFlight) {
+          return refreshAccessTokenInFlight;
+        }
 
-          if (!refreshToken) {
-            logger.error({
-              message: 'No refresh token available for token refresh',
+        const refreshPromise = (async (): Promise<void> => {
+          try {
+            const currentState = get();
+            const { refreshToken, userId } = currentState;
+
+            if (!refreshToken) {
+              logger.error({
+                message: 'No refresh token available for token refresh',
+                context: { userId },
+              });
+              await get().logout('No refresh token available');
+              return;
+            }
+
+            // Check if refresh token is expired
+            if (currentState.isRefreshTokenExpired()) {
+              logger.error({
+                message: 'Refresh token expired, forcing logout',
+                context: {
+                  userId,
+                  refreshTokenObtainedAt: currentState.refreshTokenObtainedAt,
+                  currentTime: Date.now(),
+                },
+              });
+              await get().logout('Refresh token expired');
+              return;
+            }
+
+            logger.info({
+              message: 'Attempting to refresh access token',
               context: { userId },
             });
-            await get().logout('No refresh token available');
-            return;
-          }
 
-          // Check if refresh token is expired
-          if (currentState.isRefreshTokenExpired()) {
-            logger.error({
-              message: 'Refresh token expired, forcing logout',
+            const response = await refreshTokenRequest(refreshToken);
+            const now = Date.now();
+
+            // Read existing stored auth response to preserve refresh token if not provided
+            const existingAuthResponse = getItem<AuthResponse>('authResponse');
+
+            // Determine which refresh token and timestamp to use
+            const refreshTokenToUse = response.refresh_token || currentState.refreshToken || refreshToken;
+            const refreshTokenTimestamp = response.refresh_token ? now : currentState.refreshTokenObtainedAt || now;
+
+            // Update stored auth response with new tokens, preserving refresh token if not provided
+            const updatedAuthResponse: AuthResponse = {
+              access_token: response.access_token,
+              refresh_token: refreshTokenToUse,
+              id_token: response.id_token,
+              expires_in: response.expires_in,
+              token_type: response.token_type,
+              expiration_date: new Date(now + response.expires_in * 1000).toISOString(),
+              obtained_at: now,
+            };
+
+            setItem<AuthResponse>('authResponse', updatedAuthResponse);
+
+            set({
+              accessToken: response.access_token,
+              refreshToken: refreshTokenToUse,
+              accessTokenObtainedAt: now,
+              refreshTokenObtainedAt: refreshTokenTimestamp,
+              status: 'signedIn',
+              error: null,
+            });
+
+            logger.info({
+              message: 'Successfully refreshed access token',
               context: {
                 userId,
-                refreshTokenObtainedAt: currentState.refreshTokenObtainedAt,
-                currentTime: Date.now(),
+                newAccessTokenObtainedAt: now,
               },
             });
-            await get().logout('Refresh token expired');
-            return;
+          } catch (error) {
+            const currentState = get();
+
+            // Check if this is a transient error that might resolve on retry
+            const isTransientError = isTransientRefreshError(error);
+
+            if (isTransientError) {
+              logger.warn({
+                message: 'Transient token refresh error, not logging out',
+                context: {
+                  userId: currentState.userId,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+              });
+              // Re-throw the error to let the caller handle it (e.g., retry or use cached token)
+              throw error;
+            } else {
+              logger.error({
+                message: 'Failed to refresh access token, forcing logout',
+                context: {
+                  userId: currentState.userId,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+              });
+              // Only logout for permanent auth failures
+              await get().logout('Token refresh failed');
+            }
           }
+        })();
 
-          logger.info({
-            message: 'Attempting to refresh access token',
-            context: { userId },
-          });
+        refreshAccessTokenInFlight = refreshPromise;
 
-          const response = await refreshTokenRequest(refreshToken);
-          const now = Date.now();
-
-          // Read existing stored auth response to preserve refresh token if not provided
-          const existingAuthResponse = getItem<AuthResponse>('authResponse');
-
-          // Determine which refresh token and timestamp to use
-          const refreshTokenToUse = response.refresh_token || currentState.refreshToken || refreshToken;
-          const refreshTokenTimestamp = response.refresh_token ? now : currentState.refreshTokenObtainedAt || now;
-
-          // Update stored auth response with new tokens, preserving refresh token if not provided
-          const updatedAuthResponse: AuthResponse = {
-            access_token: response.access_token,
-            refresh_token: refreshTokenToUse,
-            id_token: response.id_token,
-            expires_in: response.expires_in,
-            token_type: response.token_type,
-            expiration_date: new Date(now + response.expires_in * 1000).toISOString(),
-            obtained_at: now,
-          };
-
-          setItem<AuthResponse>('authResponse', updatedAuthResponse);
-
-          set({
-            accessToken: response.access_token,
-            refreshToken: refreshTokenToUse,
-            accessTokenObtainedAt: now,
-            refreshTokenObtainedAt: refreshTokenTimestamp,
-            status: 'signedIn',
-            error: null,
-          });
-
-          logger.info({
-            message: 'Successfully refreshed access token',
-            context: {
-              userId,
-              newAccessTokenObtainedAt: now,
-            },
-          });
-        } catch (error) {
-          const currentState = get();
-
-          // Check if this is a transient error that might resolve on retry
-          const isTransientError = isTransientRefreshError(error);
-
-          if (isTransientError) {
-            logger.warn({
-              message: 'Transient token refresh error, not logging out',
-              context: {
-                userId: currentState.userId,
-                error: error instanceof Error ? error.message : 'Unknown error',
-              },
-            });
-            // Re-throw the error to let the caller handle it (e.g., retry or use cached token)
-            throw error;
-          } else {
-            logger.error({
-              message: 'Failed to refresh access token, forcing logout',
-              context: {
-                userId: currentState.userId,
-                error: error instanceof Error ? error.message : 'Unknown error',
-              },
-            });
-            // Only logout for permanent auth failures
-            await get().logout('Token refresh failed');
-          }
+        try {
+          await refreshPromise;
+        } finally {
+          refreshAccessTokenInFlight = null;
         }
       },
       hydrate: () => {

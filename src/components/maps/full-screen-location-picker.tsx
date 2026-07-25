@@ -43,7 +43,9 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
   const insets = useSafeAreaInsets();
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
-  const locationStore = useLocationStore();
+  const latitude = useLocationStore((state) => state.latitude);
+  const longitude = useLocationStore((state) => state.longitude);
+  const setLocation = useLocationStore((state) => state.setLocation);
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -161,10 +163,10 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     try {
       // First try to use stored location from location store
       const storedLocation =
-        locationStore.latitude && locationStore.longitude
+        latitude && longitude
           ? {
-              latitude: locationStore.latitude,
-              longitude: locationStore.longitude,
+              latitude,
+              longitude,
             }
           : null;
 
@@ -219,7 +221,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     } finally {
       if (isMountedRef.current) setIsLoading(false);
     }
-  }, [isMapReady, reverseGeocode, locationStore.latitude, locationStore.longitude, getCurrentLocationFromDevice]);
+  }, [isMapReady, reverseGeocode, latitude, longitude, getCurrentLocationFromDevice]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -246,10 +248,10 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     } else {
       // Check for stored location from location store
       const storedLocation =
-        locationStore.latitude && locationStore.longitude
+        latitude && longitude
           ? {
-              latitude: locationStore.latitude,
-              longitude: locationStore.longitude,
+              latitude,
+              longitude,
             }
           : null;
 
@@ -274,7 +276,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       // Reset map ready state
       setIsMapReady(false);
     };
-  }, [initialLocation, isMapboxConfigured, reverseGeocode, locationStore.latitude, locationStore.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialLocation, isMapboxConfigured, reverseGeocode, latitude, longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMapPress = (event: any) => {
     if (mapError || !isMapboxConfigured) return;
@@ -302,7 +304,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       timestamp: Date.now(),
     } as Location.LocationObject;
 
-    locationStore.setLocation(locationObject);
+    setLocation(locationObject);
   };
 
   const handleConfirmLocation = () => {
@@ -333,7 +335,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
         timestamp: Date.now(),
       } as Location.LocationObject;
 
-      locationStore.setLocation(locationObject);
+      setLocation(locationObject);
 
       onLocationSelected(locationData);
       onClose();

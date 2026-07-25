@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logging';
 import { storage } from '@/lib/storage';
 
 interface CacheItem<T> {
@@ -46,7 +47,17 @@ export class CacheManager {
       return null;
     }
 
-    const cacheItem: CacheItem<T> = JSON.parse(cached);
+    let cacheItem: CacheItem<T>;
+    try {
+      cacheItem = JSON.parse(cached);
+    } catch (error) {
+      logger.warn({
+        message: 'Corrupt cache entry, removing',
+        context: { key, error },
+      });
+      storage.delete(key);
+      return null;
+    }
 
     if (this.isExpired(cacheItem.timestamp, cacheItem.expiresIn)) {
       storage.delete(key);

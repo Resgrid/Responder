@@ -49,4 +49,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PinMarker;
+export default React.memo(PinMarker);

@@ -18,7 +18,7 @@ interface PersonnelCardProps {
   onPress: (id: string) => void;
 }
 
-export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress }) => {
+export const PersonnelCard: React.FC<PersonnelCardProps> = React.memo(function PersonnelCard({ personnel, onPress }) {
   const fullName = `${personnel.FirstName} ${personnel.LastName}`.trim();
   const { canUserViewPII } = useSecurityStore();
   const [imageError, setImageError] = React.useState(false);
@@ -122,4 +122,4 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = ({ personnel, onPress
       </Box>
     </Pressable>
   );
-};
+});

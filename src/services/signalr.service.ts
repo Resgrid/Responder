@@ -36,6 +36,8 @@ class SignalRService {
   private connectionLocks: Map<string, Promise<void>> = new Map();
   private reconnectingHubs: Set<string> = new Set();
   private hubStates: Map<string, HubConnectingState> = new Map();
+  private intentionalDisconnects: Set<string> = new Set();
+  private reconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private readonly RECONNECT_INTERVAL = 5000; // 5 seconds
 
@@ -212,7 +214,7 @@ class SignalRService {
               }
         )
         .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-        .configureLogging(LogLevel.Information);
+        .configureLogging(LogLevel.Warning);
 
       const connection = connectionBuilder.build();
 
@@ -357,7 +359,7 @@ class SignalRService {
           accessTokenFactory: () => token,
         })
         .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-        .configureLogging(LogLevel.Information)
+        .configureLogging(LogLevel.Warning)
         .build();
 
       // Set up event handlers
@@ -422,6 +424,14 @@ class SignalRService {
   }
 
   private handleConnectionClose(hubName: string): void {
+    if (this.intentionalDisconnects.has(hubName)) {
+      this.intentionalDisconnects.delete(hubName);
+      logger.debug({
+        message: `Hub ${hubName} closed due to intentional disconnect, skipping reconnection`,
+      });
+      return;
+    }
+
     // Immediately set the hub status to RECONNECTING
     this.hubStates.set(hubName, HubConnectingState.RECONNECTING);
     this.reconnectingHubs.add(hubName);
@@ -477,7 +487,8 @@ class SignalRService {
     const jitter = Math.random() * 1000; // Add up to 1 second of jitter
     const delay = baseDelay * backoffMultiplier + jitter;
 
-    setTimeout(async () => {
+    const timer = setTimeout(async () => {
+      this.reconnectTimers.delete(hubName);
       try {
         // Check if the hub config was removed (e.g., by explicit disconnect)
         const currentHubConfig = this.hubConfigs.get(hubName);
@@ -569,6 +580,7 @@ class SignalRService {
         this.attemptReconnection(hubName, currentAttempts);
       }
     }, delay);
+    this.reconnectTimers.set(hubName, timer);
   }
 
   private handleMessage(hubName: string, method: string, data: unknown): void {
@@ -598,10 +610,18 @@ class SignalRService {
       }
     }
 
+    const pendingTimer = this.reconnectTimers.get(hubName);
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      this.reconnectTimers.delete(hubName);
+    }
+
     const connection = this.connections.get(hubName);
     if (connection) {
       try {
+        this.intentionalDisconnects.add(hubName);
         await connection.stop();
+        this.intentionalDisconnects.delete(hubName);
         this.connections.delete(hubName);
         this.reconnectAttempts.delete(hubName);
         this.hubConfigs.delete(hubName);
@@ -611,6 +631,7 @@ class SignalRService {
           message: `Disconnected from hub: ${hubName}`,
         });
       } catch (error) {
+        this.intentionalDisconnects.delete(hubName);
         logger.error({
           message: `Error disconnecting from hub: ${hubName}`,
           context: { error },

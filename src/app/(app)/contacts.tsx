@@ -15,11 +15,17 @@ import { Pressable as UIPressable } from '@/components/ui/pressable';
 import { RefreshControl } from '@/components/ui/refresh-control';
 import { View } from '@/components/ui/view';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { type ContactResultData } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
 
 export default function Contacts() {
   const { t } = useTranslation();
-  const { contacts, searchQuery, setSearchQuery, selectContact, isLoading, fetchContacts } = useContactsStore();
+  const contacts = useContactsStore((state) => state.contacts);
+  const searchQuery = useContactsStore((state) => state.searchQuery);
+  const setSearchQuery = useContactsStore((state) => state.setSearchQuery);
+  const selectContact = useContactsStore((state) => state.selectContact);
+  const isLoading = useContactsStore((state) => state.isLoading);
+  const fetchContacts = useContactsStore((state) => state.fetchContacts);
   const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -41,6 +47,8 @@ export default function Contacts() {
     await fetchContacts();
     setRefreshing(false);
   }, [fetchContacts]);
+
+  const renderContactItem = React.useCallback(({ item }: { item: ContactResultData }) => <ContactCard contact={item} onPress={selectContact} />, [selectContact]);
 
   const filteredContacts = React.useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -86,7 +94,7 @@ export default function Contacts() {
             testID="contacts-list"
             data={filteredContacts}
             keyExtractor={(item) => item.ContactId}
-            renderItem={({ item }) => <ContactCard contact={item} onPress={selectContact} />}
+            renderItem={renderContactItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}

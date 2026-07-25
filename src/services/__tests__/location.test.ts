@@ -308,6 +308,20 @@ describe('LocationService', () => {
       });
     });
 
+    it('should remove existing foreground subscription before starting a new one (idempotent restarts)', async () => {
+      await locationService.startLocationUpdates();
+      const firstSubscription = mockLocationSubscription;
+
+      const secondSubscription = { remove: jest.fn() };
+      mockLocation.watchPositionAsync.mockResolvedValue(secondSubscription as jest.Mocked<Location.LocationSubscription>);
+
+      await locationService.startLocationUpdates();
+
+      expect(firstSubscription.remove).toHaveBeenCalledTimes(1);
+      expect(mockLocation.watchPositionAsync).toHaveBeenCalledTimes(2);
+      expect((locationService as any).locationSubscription).toBe(secondSubscription);
+    });
+
     it('should throw error if permissions are not granted', async () => {
       mockLocation.requestForegroundPermissionsAsync.mockResolvedValue({
         status: 'denied' as any,

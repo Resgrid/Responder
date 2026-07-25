@@ -201,6 +201,12 @@ class LocationService {
       }
     }
 
+    // Remove any existing foreground subscription so repeated calls stay idempotent
+    if (this.locationSubscription) {
+      this.locationSubscription.remove();
+      this.locationSubscription = null;
+    }
+
     // Start foreground updates
     this.locationSubscription = await Location.watchPositionAsync(
       {
