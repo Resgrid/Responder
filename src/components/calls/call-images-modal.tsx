@@ -614,7 +614,9 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
               renderItem={renderImageItem}
               keyExtractor={(item: CallFileResultData, index: number) => item?.Id || `image-${index}-${item?.Name || 'unknown'}`}
               horizontal
-              pagingEnabled
+              snapToInterval={listWidth}
+              snapToAlignment="start"
+              disableIntervalMomentum
               showsHorizontalScrollIndicator={false}
               onViewableItemsChanged={handleViewableItemsChanged}
               viewabilityConfig={{

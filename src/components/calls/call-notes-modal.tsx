@@ -2,8 +2,7 @@ import { SearchIcon, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Keyboard, Modal, StyleSheet, View } from 'react-native';
-import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { showErrorMessage } from '@/components/ui/utils';
@@ -45,6 +44,9 @@ function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
         container: {
           flex: 1,
           backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
+        },
+        keyboardAvoidingContainer: {
+          flex: 1,
         },
         header: {
           backgroundColor: colorScheme === 'dark' ? '#111827' : 'white',
@@ -200,48 +202,48 @@ function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-        {/* Fixed Header */}
-        <View style={styles.header}>
-          <Box className="w-full flex-row items-center justify-between px-4 pb-4 pt-2">
-            <Heading size="lg">{t('callNotes.title')}</Heading>
-            <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
-              <X size={24} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
-            </Button>
-          </Box>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardAvoidingContainer}>
+          {/* Fixed Header */}
+          <View style={styles.header}>
+            <Box className="w-full flex-row items-center justify-between px-4 pb-4 pt-2">
+              <Heading size="lg">{t('callNotes.title')}</Heading>
+              <Button variant="link" onPress={handleClose} className="p-1" testID="close-button">
+                <X size={24} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+              </Button>
+            </Box>
 
-          {/* Search Bar - Fixed */}
-          <Box className="px-4 pb-4">
-            <Input className="w-full rounded-lg bg-gray-100 dark:bg-gray-700">
-              <InputSlot>
-                <SearchIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
-              </InputSlot>
-              <InputField placeholder={t('callNotes.searchPlaceholder')} value={searchQuery} onChangeText={handleSearchQueryChange} />
-            </Input>
-          </Box>
-        </View>
+            {/* Search Bar - Fixed */}
+            <Box className="px-4 pb-4">
+              <Input className="w-full rounded-lg bg-gray-100 dark:bg-gray-700">
+                <InputSlot>
+                  <SearchIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
+                </InputSlot>
+                <InputField placeholder={t('callNotes.searchPlaceholder')} value={searchQuery} onChangeText={handleSearchQueryChange} />
+              </Input>
+            </Box>
+          </View>
 
-        {/* Scrollable Notes List */}
-        <View style={styles.listContainer}>
-          {isNotesLoading ? (
-            <Loading />
-          ) : (
-            <FlatList
-              data={filteredNotes}
-              renderItem={renderNoteItem}
-              keyExtractor={keyExtractor}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={ListEmptyComponent}
-              showsVerticalScrollIndicator={true}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-            />
-          )}
-        </View>
+          {/* Scrollable Notes List */}
+          <View style={styles.listContainer}>
+            {isNotesLoading ? (
+              <Loading />
+            ) : (
+              <FlatList
+                data={filteredNotes}
+                renderItem={renderNoteItem}
+                keyExtractor={keyExtractor}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={ListEmptyComponent}
+                showsVerticalScrollIndicator={true}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+              />
+            )}
+          </View>
 
-        {/* Footer with KeyboardStickyView */}
-        <KeyboardStickyView offset={{ opened: 0, closed: 0 }}>
+          {/* Footer */}
           <View style={styles.footer}>
             <VStack space="md" className="w-full">
               <Textarea className="w-full rounded-lg bg-white dark:bg-gray-700">
@@ -259,7 +261,7 @@ function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
               </HStack>
             </VStack>
           </View>
-        </KeyboardStickyView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );
