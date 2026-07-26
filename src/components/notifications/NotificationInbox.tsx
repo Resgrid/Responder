@@ -25,6 +25,67 @@ interface NotificationInboxProps {
   onClose: () => void;
 }
 
+interface NotificationRowProps {
+  item: any;
+  isSelectionMode: boolean;
+  isSelected: boolean;
+  onPress: (notification: NotificationPayload) => void;
+  onLongPress: (notification: NotificationPayload) => void;
+  onNavigateToReference: (referenceType: string, referenceId: string) => void;
+}
+
+const NotificationRow = React.memo(function NotificationRow({ item, isSelectionMode, isSelected, onPress, onLongPress, onNavigateToReference }: NotificationRowProps) {
+  const notification: NotificationPayload = {
+    id: item.id,
+    title: item.title,
+    body: item.body,
+    createdAt: item.createdAt,
+    read: item.read,
+    type: item.type,
+    referenceId: item.payload?.referenceId,
+    referenceType: item.payload?.referenceType,
+    metadata: item.payload?.metadata,
+  };
+
+  const createdAt = new Date(notification.createdAt);
+
+  return (
+    <Pressable
+      onPress={() => onPress(notification)}
+      onLongPress={() => onLongPress(notification)}
+      style={[styles.notificationItem, !item.read ? styles.unreadNotificationItem : {}, isSelected ? styles.selectedNotificationItem : {}]}
+    >
+      {!item.read ? <View style={styles.unreadIndicator} /> : null}
+
+      {isSelectionMode ? (
+        <View style={styles.selectionIndicator}>
+          {isSelected ? <CheckCircle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} /> : <Circle size={24} className="text-gray-400 dark:text-gray-500" strokeWidth={2} />}
+        </View>
+      ) : null}
+
+      <View style={styles.notificationContent}>
+        <Text style={[styles.notificationBody, !item.read ? styles.unreadNotificationText : {}]}>{notification.body}</Text>
+        <Text style={styles.timestamp}>
+          {createdAt.toLocaleDateString()} {createdAt.toLocaleTimeString()}
+        </Text>
+      </View>
+
+      {!isSelectionMode ? (
+        notification.referenceType && notification.referenceId ? (
+          <View style={styles.actionButtons}>
+            <Button onPress={() => onNavigateToReference(notification.referenceType!, notification.referenceId!)} variant="outline" className="size-8 p-0">
+              <ExternalLink size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+            </Button>
+            <ChevronRight size={24} className="ml-2 text-gray-400" strokeWidth={2} />
+          </View>
+        ) : (
+          <ChevronRight size={24} className="ml-2 text-gray-400" strokeWidth={2} />
+        )
+      ) : null}
+    </Pressable>
+  );
+});
+
 export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) => {
   const { t } = useTranslation();
   const config = useCoreStore((state: any) => state.config);
@@ -79,18 +140,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
     }
   }, [isOpen, slideAnim, fadeAnim]);
 
-  const handleNotificationPress = React.useCallback(
-    (notification: NotificationPayload) => {
-      if (isSelectionMode) {
-        toggleNotificationSelection(notification.id);
-      } else {
-        setSelectedNotification(notification);
-      }
-    },
-    [isSelectionMode]
-  );
-
-  const toggleNotificationSelection = (notificationId: string) => {
+  const toggleNotificationSelection = React.useCallback((notificationId: string) => {
     setSelectedNotificationIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(notificationId)) {
@@ -100,12 +150,33 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const enterSelectionMode = () => {
+  const handleNotificationPress = React.useCallback(
+    (notification: NotificationPayload) => {
+      if (isSelectionMode) {
+        toggleNotificationSelection(notification.id);
+      } else {
+        setSelectedNotification(notification);
+      }
+    },
+    [isSelectionMode, toggleNotificationSelection]
+  );
+
+  const enterSelectionMode = React.useCallback(() => {
     setIsSelectionMode(true);
     setSelectedNotificationIds(new Set());
-  };
+  }, []);
+
+  const handleNotificationLongPress = React.useCallback(
+    (notification: NotificationPayload) => {
+      if (!isSelectionMode) {
+        enterSelectionMode();
+        toggleNotificationSelection(notification.id);
+      }
+    },
+    [isSelectionMode, enterSelectionMode, toggleNotificationSelection]
+  );
 
   const exitSelectionMode = React.useCallback(() => {
     setIsSelectionMode(false);
@@ -174,65 +245,20 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
   );
 
   const renderItem = React.useCallback(
-    ({ item }: { item: any }) => {
-      const notification: NotificationPayload = {
-        id: item.id,
-        title: item.title,
-        body: item.body,
-        createdAt: item.createdAt,
-        read: item.read,
-        type: item.type,
-        referenceId: item.payload?.referenceId,
-        referenceType: item.payload?.referenceType,
-        metadata: item.payload?.metadata,
-      };
-
-      const isSelected = selectedNotificationIds.has(notification.id);
-      const createdAt = new Date(notification.createdAt);
-
-      return (
-        <Pressable
-          onPress={() => handleNotificationPress(notification)}
-          onLongPress={() => {
-            if (!isSelectionMode) {
-              enterSelectionMode();
-              toggleNotificationSelection(notification.id);
-            }
-          }}
-          style={[styles.notificationItem, !item.read ? styles.unreadNotificationItem : {}, isSelected ? styles.selectedNotificationItem : {}]}
-        >
-          {!item.read ? <View style={styles.unreadIndicator} /> : null}
-
-          {isSelectionMode ? (
-            <View style={styles.selectionIndicator}>
-              {isSelected ? <CheckCircle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} /> : <Circle size={24} className="text-gray-400 dark:text-gray-500" strokeWidth={2} />}
-            </View>
-          ) : null}
-
-          <View style={styles.notificationContent}>
-            <Text style={[styles.notificationBody, !item.read ? styles.unreadNotificationText : {}]}>{notification.body}</Text>
-            <Text style={styles.timestamp}>
-              {createdAt.toLocaleDateString()} {createdAt.toLocaleTimeString()}
-            </Text>
-          </View>
-
-          {!isSelectionMode ? (
-            notification.referenceType && notification.referenceId ? (
-              <View style={styles.actionButtons}>
-                <Button onPress={() => handleNavigateToReference(notification.referenceType!, notification.referenceId!)} variant="outline" className="size-8 p-0">
-                  <ExternalLink size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
-                </Button>
-                <ChevronRight size={24} className="ml-2 text-gray-400" strokeWidth={2} />
-              </View>
-            ) : (
-              <ChevronRight size={24} className="ml-2 text-gray-400" strokeWidth={2} />
-            )
-          ) : null}
-        </Pressable>
-      );
-    },
-    [isSelectionMode, selectedNotificationIds, handleNotificationPress, handleNavigateToReference]
+    ({ item }: { item: any }) => (
+      <NotificationRow
+        item={item}
+        isSelectionMode={isSelectionMode}
+        isSelected={selectedNotificationIds.has(item.id)}
+        onPress={handleNotificationPress}
+        onLongPress={handleNotificationLongPress}
+        onNavigateToReference={handleNavigateToReference}
+      />
+    ),
+    [isSelectionMode, selectedNotificationIds, handleNotificationPress, handleNotificationLongPress, handleNavigateToReference]
   );
+
+  const listExtraData = React.useMemo(() => ({ isSelectionMode, selectedNotificationIds }), [isSelectionMode, selectedNotificationIds]);
 
   const renderFooter = () => {
     if (!hasMore) return null;
@@ -332,7 +358,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
               <FlashList
                 data={notifications}
                 renderItem={renderItem}
-                extraData={{ isSelectionMode, selectedNotificationIds }}
+                extraData={listExtraData}
                 keyExtractor={(item: any) => item.id}
                 onEndReached={fetchMore}
                 onEndReachedThreshold={0.5}
