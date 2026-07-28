@@ -6,7 +6,7 @@ import { textStyle } from './styles';
 type ITextProps = React.ComponentProps<'span'> & VariantProps<typeof textStyle>;
 
 const Text = React.forwardRef<React.ElementRef<'span'>, ITextProps>(
-  ({ className, isTruncated, bold, underline, strikeThrough, size = 'md', sub, italic, highlight, ...props }: { className?: string } & ITextProps, ref) => {
+  ({ className, isTruncated, bold, underline, strikeThrough, size = 'md', sub, italic, highlight, style: _style, ...props }: { className?: string } & ITextProps, ref) => {
     return (
       <span
         className={textStyle({

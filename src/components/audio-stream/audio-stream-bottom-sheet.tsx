@@ -1,13 +1,14 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Loader, Volume2, VolumeX } from 'lucide-react-native';
+import { CheckCircle, Loader, Volume2, VolumeX } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ScrollView } from 'react-native';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
-import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
+import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
@@ -96,6 +97,22 @@ export const AudioStreamBottomSheet = () => {
     return currentStream ? currentStream.Id : 'none';
   };
 
+  const renderStreamOption = (streamId: string, label: string) => {
+    const isSelected = getCurrentStreamValue() === streamId;
+    return (
+      <Pressable
+        key={streamId}
+        onPress={() => handleStreamSelection(streamId)}
+        disabled={isLoading || isBuffering}
+        testID={`stream-option-${streamId}`}
+        className={`flex-row items-center justify-between rounded-lg border p-3 ${isSelected ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/30' : 'border-gray-200 dark:border-gray-700'} ${isLoading || isBuffering ? 'opacity-50' : ''}`}
+      >
+        <Text className={`flex-1 ${isSelected ? 'font-medium text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>{label}</Text>
+        {isSelected ? <CheckCircle size={20} color="#2563eb" /> : null}
+      </Pressable>
+    );
+  };
+
   const getDisplayText = () => {
     if (isLoading) {
       return t('audio_streams.loading_stream');
@@ -141,28 +158,12 @@ export const AudioStreamBottomSheet = () => {
                 <Text className="text-sm text-gray-500">{t('audio_streams.loading_streams')}</Text>
               </HStack>
             ) : (
-              <Select selectedValue={getCurrentStreamValue()} onValueChange={handleStreamSelection} isDisabled={isLoading || isBuffering}>
-                <SelectTrigger>
-                  <SelectInput placeholder={t('audio_streams.select_placeholder')} value={currentStream ? currentStream.Name : t('audio_streams.none')} />
-                  <SelectIcon />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="max-h-[60vh] pb-20">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-
-                    {/* None option */}
-                    <SelectItem label={t('audio_streams.none')} value="none" />
-
-                    {/* Available streams */}
-                    {availableStreams.map((stream) => (
-                      <SelectItem key={stream.Id} label={stream.Name} value={stream.Id} />
-                    ))}
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
+              <ScrollView className="max-h-[40vh]">
+                <VStack space="sm">
+                  {renderStreamOption('none', t('audio_streams.none'))}
+                  {availableStreams.map((stream) => renderStreamOption(stream.Id, stream.Name))}
+                </VStack>
+              </ScrollView>
             )}
           </VStack>
 

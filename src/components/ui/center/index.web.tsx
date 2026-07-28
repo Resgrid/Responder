@@ -5,7 +5,7 @@ import { centerStyle } from './styles';
 
 type ICenterProps = React.ComponentPropsWithoutRef<'div'> & VariantProps<typeof centerStyle>;
 
-const Center = React.forwardRef<HTMLDivElement, ICenterProps>(({ className, ...props }, ref) => {
+const Center = React.forwardRef<HTMLDivElement, ICenterProps>(({ className, style: _style, ...props }, ref) => {
   return <div className={centerStyle({ class: className })} {...props} ref={ref} />;
 });
 

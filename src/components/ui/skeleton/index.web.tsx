@@ -9,7 +9,7 @@ type ISkeletonProps = React.ComponentPropsWithoutRef<'div'> &
     isLoaded?: boolean;
   };
 
-const Skeleton = React.forwardRef<HTMLDivElement, ISkeletonProps>(({ className, variant = 'rounded', children, speed = 2, startColor = 'bg-background-200', isLoaded = false, ...props }, ref) => {
+const Skeleton = React.forwardRef<HTMLDivElement, ISkeletonProps>(({ className, variant = 'rounded', children, speed = 2, startColor = 'bg-background-200', isLoaded = false, style: _style, ...props }, ref) => {
   if (!isLoaded) {
     return (
       <div
@@ -34,7 +34,7 @@ type ISkeletonTextProps = React.ComponentPropsWithoutRef<'div'> &
     startColor?: string;
   };
 
-const SkeletonText = React.forwardRef<HTMLDivElement, ISkeletonTextProps>(({ className, _lines, isLoaded = false, startColor = 'bg-background-200', gap = 2, children, ...props }, ref) => {
+const SkeletonText = React.forwardRef<HTMLDivElement, ISkeletonTextProps>(({ className, _lines, isLoaded = false, startColor = 'bg-background-200', gap = 2, children, style: _style, ...props }, ref) => {
   if (!isLoaded) {
     if (_lines) {
       return (

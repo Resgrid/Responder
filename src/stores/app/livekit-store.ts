@@ -1,9 +1,9 @@
 import { AudioSession } from '@livekit/react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
-import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Audio } from 'expo-av';
 import { ConnectionState, Room, RoomEvent } from 'livekit-client';
 import { Platform } from 'react-native';
+import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import { create } from 'zustand';
 
 import { getCanConnectToVoiceSession, getDepartmentVoiceSettings } from '../../api/voice';
@@ -168,15 +168,18 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
   requestPermissions: async () => {
     try {
       if (Platform.OS === 'android' || Platform.OS === 'ios') {
-        // Use expo-audio for both Android and iOS microphone permissions
-        const micPermission = await getRecordingPermissionsAsync();
+        // Use react-native-permissions for both Android and iOS microphone permissions.
+        // NOTE: expo-audio's permission request activates AVAudioSession on iOS which
+        // deadlocks against expo-av's active session and freezes the app.
+        const permission = Platform.OS === 'ios' ? PERMISSIONS.IOS.MICROPHONE : PERMISSIONS.ANDROID.RECORD_AUDIO;
 
-        if (!micPermission.granted) {
-          const result = await requestRecordingPermissionsAsync();
-          if (!result.granted) {
+        const status = await check(permission);
+        if (status !== RESULTS.GRANTED) {
+          const result = await request(permission);
+          if (result !== RESULTS.GRANTED) {
             logger.error({
               message: 'Microphone permission not granted',
-              context: { platform: Platform.OS },
+              context: { platform: Platform.OS, result },
             });
             return;
           }
@@ -212,10 +215,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       // BEFORE starting a foreground service with microphone type.
       // This is a security requirement - the app must be "eligible" to use the microphone.
       if (Platform.OS === 'android') {
-        const micPermission = await getRecordingPermissionsAsync();
-        if (!micPermission.granted) {
-          const result = await requestRecordingPermissionsAsync();
-          if (!result.granted) {
+        const status = await check(PERMISSIONS.ANDROID.RECORD_AUDIO);
+        if (status !== RESULTS.GRANTED) {
+          const result = await request(PERMISSIONS.ANDROID.RECORD_AUDIO);
+          if (result !== RESULTS.GRANTED) {
             logger.error({
               message: 'Cannot connect to room - microphone permission denied',
               context: { platform: Platform.OS },

@@ -5,7 +5,7 @@ import { hstackStyle } from './styles';
 
 type IHStackProps = React.ComponentPropsWithoutRef<'div'> & VariantProps<typeof hstackStyle>;
 
-const HStack = React.forwardRef<React.ElementRef<'div'>, IHStackProps>(({ className, space, reversed, ...props }, ref) => {
+const HStack = React.forwardRef<React.ElementRef<'div'>, IHStackProps>(({ className, space, reversed, style: _style, ...props }, ref) => {
   return <div className={hstackStyle({ space, reversed, class: className })} {...props} ref={ref} />;
 });
 
