@@ -1,5 +1,5 @@
 import Mapbox from '@rnmapbox/maps';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
 
@@ -16,8 +16,32 @@ interface StaticMapProps {
   onPress?: () => void;
 }
 
-const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoom = 15, height = 200, showUserLocation: _showUserLocation = false, onPress }) => {
+const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoom = 15, height = 200, showUserLocation = false, onPress }) => {
   const { t } = useTranslation();
+  const [userCoordinate, setUserCoordinate] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    if (!showUserLocation || typeof navigator === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (!cancelled) {
+          setUserCoordinate([position.coords.longitude, position.coords.latitude]);
+        }
+      },
+      () => {
+        // Geolocation unavailable or denied — skip rendering the indicator
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showUserLocation]);
   if (!latitude || !longitude) {
     return (
       <Box className="w-full items-center justify-center bg-gray-200" style={{ height }}>
@@ -41,6 +65,21 @@ const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoo
             }}
           />
         </Mapbox.MarkerView>
+
+        {showUserLocation && userCoordinate ? (
+          <Mapbox.MarkerView coordinate={userCoordinate}>
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: 8,
+                backgroundColor: '#3b82f6',
+                border: '3px solid #ffffff',
+                boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.25)',
+              }}
+            />
+          </Mapbox.MarkerView>
+        ) : null}
       </Mapbox.MapView>
 
       {onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={address || t('call_detail.title')} testID="static-map-press-overlay" style={StyleSheet.absoluteFill} /> : null}
@@ -56,6 +95,7 @@ const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoo
             padding: 8,
             color: 'white',
             fontSize: 12,
+            pointerEvents: 'none',
           }}
         >
           {address}

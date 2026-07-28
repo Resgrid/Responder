@@ -15,6 +15,34 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { useToast } from '@/hooks/use-toast';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 
+interface StreamOptionProps {
+  streamId: string;
+  label: string;
+  isSelected: boolean;
+  isDisabled: boolean;
+  onSelect: (streamId: string) => void;
+}
+
+const StreamOption: React.FC<StreamOptionProps> = React.memo(({ streamId, label, isSelected, isDisabled, onSelect }) => {
+  const handlePress = React.useCallback(() => {
+    onSelect(streamId);
+  }, [onSelect, streamId]);
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      disabled={isDisabled}
+      testID={`stream-option-${streamId}`}
+      className={`flex-row items-center justify-between rounded-lg border p-3 ${isSelected ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/30' : 'border-gray-200 dark:border-gray-700'} ${isDisabled ? 'opacity-50' : ''}`}
+    >
+      <Text className={`flex-1 ${isSelected ? 'font-medium text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>{label}</Text>
+      {isSelected ? <CheckCircle size={20} color="#2563eb" /> : null}
+    </Pressable>
+  );
+});
+
+StreamOption.displayName = 'StreamOption';
+
 export const AudioStreamBottomSheet = () => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
@@ -98,19 +126,7 @@ export const AudioStreamBottomSheet = () => {
   };
 
   const renderStreamOption = (streamId: string, label: string) => {
-    const isSelected = getCurrentStreamValue() === streamId;
-    return (
-      <Pressable
-        key={streamId}
-        onPress={() => handleStreamSelection(streamId)}
-        disabled={isLoading || isBuffering}
-        testID={`stream-option-${streamId}`}
-        className={`flex-row items-center justify-between rounded-lg border p-3 ${isSelected ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/30' : 'border-gray-200 dark:border-gray-700'} ${isLoading || isBuffering ? 'opacity-50' : ''}`}
-      >
-        <Text className={`flex-1 ${isSelected ? 'font-medium text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>{label}</Text>
-        {isSelected ? <CheckCircle size={20} color="#2563eb" /> : null}
-      </Pressable>
-    );
+    return <StreamOption key={streamId} streamId={streamId} label={label} isSelected={getCurrentStreamValue() === streamId} isDisabled={isLoading || isBuffering} onSelect={handleStreamSelection} />;
   };
 
   const getDisplayText = () => {
