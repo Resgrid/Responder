@@ -5,7 +5,7 @@ import { cardStyle } from './styles';
 
 type ICardProps = React.ComponentPropsWithoutRef<'div'> & VariantProps<typeof cardStyle>;
 
-const Card = React.forwardRef<HTMLDivElement, ICardProps>(({ className, size = 'md', variant = 'elevated', ...props }, ref) => {
+const Card = React.forwardRef<HTMLDivElement, ICardProps>(({ className, size = 'md', variant = 'elevated', style: _style, ...props }, ref) => {
   return <div className={cardStyle({ size, variant, class: className })} {...props} ref={ref} />;
 });
 

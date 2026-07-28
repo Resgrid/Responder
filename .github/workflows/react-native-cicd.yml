@@ -356,6 +356,8 @@ jobs:
             fi
             # Remove "Summary by CodeRabbit" line
             NOTES="$(printf '%s\n' "$NOTES" | grep -v "Summary by CodeRabbit")"
+            # Replace occurrences of "PR" with "Release"
+            NOTES="$(printf '%s\n' "$NOTES" | sed 's/\bPR\b/Release/g')"
           else
             NOTES="$(git log -n 5 --pretty=format:'- %s')"
           fi

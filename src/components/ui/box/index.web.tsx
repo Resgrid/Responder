@@ -5,7 +5,7 @@ import { boxStyle } from './styles';
 
 type IBoxProps = React.ComponentPropsWithoutRef<'div'> & VariantProps<typeof boxStyle> & { className?: string };
 
-const Box = React.forwardRef<HTMLDivElement, IBoxProps>(({ className, ...props }, ref) => {
+const Box = React.forwardRef<HTMLDivElement, IBoxProps>(({ className, style: _style, ...props }, ref) => {
   return <div ref={ref} className={boxStyle({ class: className })} {...props} />;
 });
 

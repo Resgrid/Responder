@@ -136,6 +136,7 @@
     "lodash": "^4.17.21",
     "lodash.memoize": "~4.1.2",
     "lucide-react-native": "~0.475.0",
+    "mapbox-gl": "^2.15.0",
     "moti": "~0.29.0",
     "nativewind": "~4.1.21",
     "react": "19.1.0",
