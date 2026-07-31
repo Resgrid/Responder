@@ -1,5 +1,8 @@
 export default class CountlyConfig {
-  constructor(_serverUrl?: string, _appKey?: string) {}
+  constructor(_serverUrl?: string, _appKey?: string) {
+    void _serverUrl;
+    void _appKey;
+  }
   setLoggingEnabled() {
     return this;
   }
