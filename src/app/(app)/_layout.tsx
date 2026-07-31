@@ -104,6 +104,19 @@ export default function TabLayout() {
       //await useSignalRStore.getState().connectUpdateHub();
       //await useSignalRStore.getState().connectGeolocationHub();
 
+      // Connect the realtime chat hub (best-effort; chat may be disabled per department)
+      try {
+        await useSignalRStore.getState().connectChatHub();
+        logger.info({
+          message: 'SignalR chat hub connected successfully',
+        });
+      } catch (error) {
+        logger.error({
+          message: 'Failed to connect SignalR chat hub during initialization',
+          context: { error },
+        });
+      }
+
       hasInitialized.current = true;
 
       const independentInits: [string, () => Promise<unknown>][] = [

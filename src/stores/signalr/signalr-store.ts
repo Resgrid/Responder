@@ -6,6 +6,7 @@ import { logger } from '@/lib/logging';
 import { signalRService } from '@/services/signalr.service';
 
 import { useCoreStore } from '../app/core-store';
+import { useChatStore } from '../chat/store';
 import { securityStore, useSecurityStore } from '../security/store';
 import { useWeatherAlertsStore } from '../weather-alerts/weather-alerts-store';
 
@@ -16,11 +17,14 @@ interface SignalRState {
   isGeolocationHubConnected: boolean;
   lastGeolocationMessage: unknown;
   lastGeolocationTimestamp: number;
+  isChatHubConnected: boolean;
   error: Error | null;
   connectUpdateHub: () => Promise<void>;
   disconnectUpdateHub: () => Promise<void>;
   connectGeolocationHub: () => Promise<void>;
   disconnectGeolocationHub: () => Promise<void>;
+  connectChatHub: () => Promise<void>;
+  disconnectChatHub: () => Promise<void>;
 }
 
 type SignalRHandler = (message: unknown) => void;
@@ -179,8 +183,57 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     ],
   ]);
 
+  // Client-event method names raised by the chat SignalR hub.
+  const CHAT_HUB_METHODS = [
+    'chatMessageReceived',
+    'chatMessageEdited',
+    'chatMessageDeleted',
+    'chatReactionUpdated',
+    'chatReceiptUpdated',
+    'chatChannelUpdated',
+    'chatChannelProvisioned',
+    'chatModerationApplied',
+    'chatMessageAckRequired',
+    'chatThreadUpdated',
+    'chatbotMessageReceived',
+    'chatbotTyping',
+    'chatTyping',
+    'chatPresenceChanged',
+    'onChatConnected',
+  ];
+  const CHAT_HEARTBEAT_INTERVAL_MS = 45000;
+
+  const chatHubHandlers = new Map<string, SignalRHandler>([
+    ['chatMessageReceived', createSafeHandler('chatMessageReceived', (message) => useChatStore.getState().handleMessageReceived(message))],
+    ['chatMessageEdited', createSafeHandler('chatMessageEdited', (message) => useChatStore.getState().handleMessageEdited(message))],
+    ['chatMessageDeleted', createSafeHandler('chatMessageDeleted', (message) => useChatStore.getState().handleMessageDeleted(message))],
+    ['chatReactionUpdated', createSafeHandler('chatReactionUpdated', (message) => useChatStore.getState().handleReactionUpdated(message))],
+    ['chatReceiptUpdated', createSafeHandler('chatReceiptUpdated', (message) => useChatStore.getState().handleReceiptUpdated(message))],
+    ['chatChannelUpdated', createSafeHandler('chatChannelUpdated', (message) => useChatStore.getState().handleChannelUpdated(message))],
+    ['chatChannelProvisioned', createSafeHandler('chatChannelProvisioned', (message) => useChatStore.getState().handleChannelProvisioned(message))],
+    ['chatModerationApplied', createSafeHandler('chatModerationApplied', (message) => useChatStore.getState().handleModerationApplied(message))],
+    ['chatMessageAckRequired', createSafeHandler('chatMessageAckRequired', (message) => useChatStore.getState().handleAckRequired(message))],
+    ['chatThreadUpdated', createSafeHandler('chatThreadUpdated', (message) => useChatStore.getState().handleThreadUpdated(message))],
+    ['chatbotMessageReceived', createSafeHandler('chatbotMessageReceived', (message) => useChatStore.getState().handleChatbotMessageReceived(message))],
+    ['chatbotTyping', createSafeHandler('chatbotTyping', (message) => useChatStore.getState().handleChatbotTyping(message))],
+    ['chatTyping', createSafeHandler('chatTyping', (message) => useChatStore.getState().handleTyping(message))],
+    ['chatPresenceChanged', createSafeHandler('chatPresenceChanged', (message) => useChatStore.getState().handlePresenceChanged(message))],
+    [
+      'onChatConnected',
+      createSafeHandler('onChatConnected', () => {
+        logger.info({
+          message: 'Connected to chat SignalR hub',
+        });
+        set({ isChatHubConnected: true, error: null });
+        useChatStore.getState().handleChatConnected();
+      }),
+    ],
+  ]);
+
   let updateHubHandlersSubscribed = false;
   let geolocationHubHandlersSubscribed = false;
+  let chatHubHandlersSubscribed = false;
+  let chatHeartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   const subscribeHandlers = (handlers: Map<string, SignalRHandler>) => {
     handlers.forEach((handler, event) => signalRService.on(event, handler));
@@ -214,6 +267,25 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     geolocationHubHandlersSubscribed = false;
   };
 
+  const subscribeChatHubHandlers = () => {
+    if (chatHubHandlersSubscribed) return;
+    subscribeHandlers(chatHubHandlers);
+    chatHubHandlersSubscribed = true;
+  };
+
+  const unsubscribeChatHubHandlers = () => {
+    if (!chatHubHandlersSubscribed) return;
+    unsubscribeHandlers(chatHubHandlers);
+    chatHubHandlersSubscribed = false;
+  };
+
+  const stopChatHeartbeat = () => {
+    if (chatHeartbeatTimer) {
+      clearInterval(chatHeartbeatTimer);
+      chatHeartbeatTimer = null;
+    }
+  };
+
   return {
     isUpdateHubConnected: false,
     lastUpdateMessage: null,
@@ -221,6 +293,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     isGeolocationHubConnected: false,
     lastGeolocationMessage: null,
     lastGeolocationTimestamp: 0,
+    isChatHubConnected: false,
     error: null,
     connectUpdateHub: async () => {
       try {
@@ -341,6 +414,71 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
       } finally {
         unsubscribeGeolocationHubHandlers();
         set({ isGeolocationHubConnected: false, lastGeolocationMessage: null });
+      }
+    },
+    connectChatHub: async () => {
+      try {
+        if (get().isChatHubConnected) {
+          return;
+        }
+
+        // Get the eventing URL from the core store config
+        const eventingUrl = useCoreStore.getState().config?.EventingUrl;
+        if (!eventingUrl) {
+          logger.warn({
+            message: 'EventingUrl not available for chat hub, skipping connection',
+          });
+          return;
+        }
+
+        // Register the chat event handlers, then connect the chat hub via the eventing URL.
+        subscribeChatHubHandlers();
+        await signalRService.connectToHubWithEventingUrl({
+          name: Env.CHAT_HUB_NAME,
+          eventingUrl: eventingUrl,
+          hubName: Env.CHAT_HUB_NAME,
+          methods: CHAT_HUB_METHODS,
+        });
+
+        // Announce chat presence to the hub, then begin the periodic heartbeat.
+        await signalRService.invoke(Env.CHAT_HUB_NAME, 'Connect');
+        set({ isChatHubConnected: true });
+
+        stopChatHeartbeat();
+        chatHeartbeatTimer = setInterval(() => {
+          signalRService.invoke(Env.CHAT_HUB_NAME, 'Heartbeat').catch(() => {
+            // Heartbeat is best-effort; ignore transient failures.
+          });
+        }, CHAT_HEARTBEAT_INTERVAL_MS);
+
+        logger.info({
+          message: 'Chat hub handlers registered successfully',
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
+        logger.error({
+          message: 'Failed to connect to chat SignalR hub',
+          context: { error: err },
+        });
+        stopChatHeartbeat();
+        unsubscribeChatHubHandlers();
+        set({ error: err });
+      }
+    },
+    disconnectChatHub: async () => {
+      try {
+        stopChatHeartbeat();
+        await signalRService.disconnectFromHub(Env.CHAT_HUB_NAME);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
+        logger.error({
+          message: 'Failed to disconnect from chat SignalR hub',
+          context: { error: err },
+        });
+        set({ error: err });
+      } finally {
+        unsubscribeChatHubHandlers();
+        set({ isChatHubConnected: false });
       }
     },
   };

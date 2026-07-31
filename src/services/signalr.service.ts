@@ -663,7 +663,7 @@ class SignalRService {
     }
   }
 
-  public async invoke<TResult = unknown>(hubName: string, method: string, data: unknown): Promise<TResult> {
+  public async invoke<TResult = unknown>(hubName: string, method: string, ...args: unknown[]): Promise<TResult> {
     // Wait for any ongoing connection attempt to complete
     const existingLock = this.connectionLocks.get(hubName);
     if (existingLock) {
@@ -677,7 +677,7 @@ class SignalRService {
     const connection = this.connections.get(hubName);
     if (connection) {
       try {
-        const result = await connection.invoke<TResult>(method, data);
+        const result = await connection.invoke<TResult>(method, ...args);
         logger.debug({
           message: `Successfully invoked method ${method} on hub: ${hubName}`,
           context: { method, hasResult: result !== undefined },

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarCheck, CloudAlert, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map as MapIcon, Megaphone, Mic, Notebook, Settings, Truck, User, Users } from 'lucide-react-native';
+import { Calendar, CalendarCheck, CloudAlert, Contact, Headphones, Home, ListTree, LogOut, type LucideIcon, Mail, Map as MapIcon, Megaphone, MessagesSquare, Mic, Notebook, Settings, Sparkles, Truck, User, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -109,6 +109,20 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
         icon: CloudAlert,
         route: '/(app)/weather-alerts',
         testID: 'side-menu-weather-alerts',
+      },
+      {
+        id: 'chat',
+        title: t('tabs.chat'),
+        icon: MessagesSquare,
+        route: '/(app)/chat',
+        testID: 'side-menu-chat',
+      },
+      {
+        id: 'assistant',
+        title: t('tabs.assistant'),
+        icon: Sparkles,
+        route: '/(app)/chatbot',
+        testID: 'side-menu-assistant',
       },
       {
         id: 'settings',
