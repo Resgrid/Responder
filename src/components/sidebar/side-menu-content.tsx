@@ -130,8 +130,13 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   );
 
   const handleLogout = useCallback(async () => {
-    await logout();
-    onNavigate?.();
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Failed to log out:', error);
+    } finally {
+      onNavigate?.();
+    }
   }, [logout, onNavigate]);
 
   const getInitials = useCallback((name?: string) => {

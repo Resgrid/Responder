@@ -10,18 +10,22 @@ type IHeadingProps = VariantProps<typeof headingStyle> &
     numberOfLines?: number;
   };
 
+const getMergedHeadingStyle = (numberOfLines?: number, style?: IHeadingProps['style']): React.CSSProperties | undefined => {
+  const lineClampStyle: React.CSSProperties | undefined = numberOfLines
+    ? {
+        display: '-webkit-box',
+        WebkitBoxOrient: 'vertical',
+        WebkitLineClamp: numberOfLines,
+        overflow: 'hidden',
+      }
+    : undefined;
+  const flatStyle = StyleSheet.flatten(style) as React.CSSProperties | undefined;
+  return lineClampStyle ? { ...lineClampStyle, ...flatStyle } : flatStyle;
+};
+
 const MappedHeading = memo(
   forwardRef<HTMLHeadingElement, IHeadingProps>(function MappedHeading({ size, className, isTruncated, bold, underline, strikeThrough, sub, italic, highlight, testID, numberOfLines, style, ...props }, ref) {
-    const lineClampStyle: React.CSSProperties | undefined = numberOfLines
-      ? {
-          display: '-webkit-box',
-          WebkitBoxOrient: 'vertical',
-          WebkitLineClamp: numberOfLines,
-          overflow: 'hidden',
-        }
-      : undefined;
-    const flatStyle = StyleSheet.flatten(style) as React.CSSProperties | undefined;
-    const mergedStyle = lineClampStyle ? { ...lineClampStyle, ...flatStyle } : flatStyle;
+    const mergedStyle = getMergedHeadingStyle(numberOfLines, style);
     switch (size) {
       case '5xl':
       case '4xl':
@@ -175,16 +179,7 @@ const Heading = memo(
     const { isTruncated, bold, underline, strikeThrough, sub, italic, highlight } = props;
 
     if (AsComp) {
-      const lineClampStyle: React.CSSProperties | undefined = numberOfLines
-        ? {
-            display: '-webkit-box',
-            WebkitBoxOrient: 'vertical',
-            WebkitLineClamp: numberOfLines,
-            overflow: 'hidden',
-          }
-        : undefined;
-      const flatStyle = StyleSheet.flatten(style) as React.CSSProperties | undefined;
-      const mergedStyle = lineClampStyle ? { ...lineClampStyle, ...flatStyle } : flatStyle;
+      const mergedStyle = getMergedHeadingStyle(numberOfLines, style);
       return (
         <AsComp
           className={headingStyle({

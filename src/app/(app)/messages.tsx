@@ -164,16 +164,23 @@ export default function MessagesScreen() {
     openCompose();
   };
 
-  const handleSearchQueryChange = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      trackEvent('messages_searched', {
-        timestamp: new Date().toISOString(),
-        searchLength: query.length,
-        currentFilter,
-      });
-    }
-  };
+  const handleSearchQueryChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      if (query.trim()) {
+        trackEvent('messages_searched', {
+          timestamp: new Date().toISOString(),
+          searchLength: query.length,
+          currentFilter,
+        });
+      }
+    },
+    [setSearchQuery, trackEvent, currentFilter]
+  );
+
+  const handleClearSearch = useCallback(() => {
+    handleSearchQueryChange('');
+  }, [handleSearchQueryChange]);
 
   const getFilterLabel = (filter: MessageFilter) => {
     switch (filter) {
@@ -230,7 +237,7 @@ export default function MessagesScreen() {
                 </InputSlot>
                 <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={handleSearchQueryChange} testID="messages-search-input" />
                 {searchQuery ? (
-                  <InputSlot className="pr-3" onPress={() => handleSearchQueryChange('')} testID="clear-search-button">
+                  <InputSlot className="pr-3" onPress={handleClearSearch} testID="clear-search-button">
                     <InputIcon as={X} />
                   </InputSlot>
                 ) : null}
