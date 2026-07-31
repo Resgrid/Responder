@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -260,7 +260,7 @@ export default function CalendarScreen() {
         </HStack>
 
         {/* Tab Content */}
-        {renderActiveTab()}
+        <View className="flex-1">{renderActiveTab()}</View>
 
         {/* Calendar Item Details Sheet */}
         <CalendarItemDetailsSheet

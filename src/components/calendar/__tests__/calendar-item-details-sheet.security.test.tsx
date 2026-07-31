@@ -70,6 +70,7 @@ jest.mock('react-native-webview', () => {
 
 // Mock nativewind
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: () => ({ colorScheme: 'light' }),
 }));
 

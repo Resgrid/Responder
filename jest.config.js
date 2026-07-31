@@ -1,5 +1,14 @@
+const expoPreset = require('jest-expo/jest-preset');
+
+// Must be set before babel-preset-expo transforms modules (it inlines
+// EXPO_PUBLIC_* vars) — makes expo's winter runtime keep RN's fetch in tests.
+process.env.EXPO_PUBLIC_USE_RN_FETCH = '1';
+
 module.exports = {
   preset: 'jest-expo',
+  // Reanimated v4 worklets: resolve to the non-native builds in Jest
+  resolver: 'react-native-worklets/jest/resolver.js',
+  setupFiles: ['<rootDir>/jest-env-setup.js', ...(expoPreset.setupFiles ?? [])],
   setupFilesAfterEnv: ['<rootDir>/jest-setup.ts'],
   testMatch: ['**/?(*.)+(spec|test).ts?(x)'],
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '\\.\\._.*'],
@@ -8,7 +17,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleDirectories: ['node_modules', '<rootDir>/'],
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@legendapp/motion|@gluestack-ui|expo-audio/.*|@aptabase/.*|@dev-plugins/.*))',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|standard-navigation|@sentry/react-native|native-base|react-native-svg|@legendapp/motion|@gluestack-ui|nativewind|react-native-css|expo-audio/.*|@aptabase/.*|@dev-plugins/.*))',
   ],
   coverageReporters: ['json-summary', ['text', { file: 'coverage.txt' }], 'cobertura'],
   reporters: [

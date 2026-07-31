@@ -16,109 +16,13 @@ jest.mock('@/lib/auth');
 jest.mock('@/api/novu/inbox');
 jest.mock('react-i18next');
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   colorScheme: {
     get: jest.fn(() => 'light'),
     set: jest.fn(),
     toggle: jest.fn(),
   },
   cssInterop: jest.fn(),
-}));
-
-// Mock gluestack-ui components and utilities
-jest.mock('@gluestack-ui/nativewind-utils/withStyleContext', () => ({
-  withStyleContext: jest.fn((Component) => Component),
-  useStyleContext: jest.fn(() => ({
-    variant: 'solid',
-    size: 'md',
-    action: 'primary',
-  })),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/withStyleContextAndStates', () => ({
-  withStyleContextAndStates: jest.fn((Component) => Component),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
-  tva: jest.fn(() => jest.fn()),
-}));
-
-jest.mock('@gluestack-ui/button', () => ({
-  createButton: jest.fn(() => {
-    const React = require('react');
-    const { Pressable, Text, View, ActivityIndicator } = require('react-native');
-
-    const MockButton = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(Pressable, { ...props, ref, testID: props.testID });
-    });
-
-    MockButton.Text = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(Text, { ...props, ref });
-    });
-
-    MockButton.Group = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(View, { ...props, ref });
-    });
-
-    MockButton.Spinner = ActivityIndicator;
-
-    MockButton.Icon = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(View, { ...props, ref });
-    });
-
-    return MockButton;
-  }),
-}));
-
-jest.mock('@gluestack-ui/icon', () => ({
-  PrimitiveIcon: jest.fn((props) => {
-    const React = require('react');
-    const { View } = require('react-native');
-    return React.createElement(View, { ...props });
-  }),
-  UIIcon: jest.fn((props) => {
-    const React = require('react');
-    const { View } = require('react-native');
-    return React.createElement(View, { ...props });
-  }),
-}));
-
-jest.mock('@gluestack-ui/modal', () => ({
-  createModal: jest.fn(() => {
-    const React = require('react');
-    const { Modal: RNModal, View, Pressable, ScrollView } = require('react-native');
-
-    const MockModal = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(View, { ...props, ref });
-    });
-
-    MockModal.Backdrop = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(Pressable, { ...props, ref });
-    });
-
-    MockModal.Content = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(View, { ...props, ref });
-    });
-
-    MockModal.Header = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(View, { ...props, ref });
-    });
-
-    MockModal.Body = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(ScrollView, { ...props, ref });
-    });
-
-    MockModal.Footer = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(View, { ...props, ref });
-    });
-
-    MockModal.CloseButton = React.forwardRef((props: any, ref: any) => {
-      return React.createElement(Pressable, { ...props, ref });
-    });
-
-    MockModal.AnimatePresence = ({ children }: any) => children;
-
-    return MockModal;
-  }),
 }));
 
 jest.mock('@legendapp/motion', () => ({
@@ -141,21 +45,6 @@ jest.mock('@/components/notifications/NotificationDetail', () => ({
     return React.createElement(View, { testID: 'notification-detail' },
       React.createElement(Text, {}, 'Notification Detail')
     );
-  }),
-}));
-
-// Mock gluestack-ui hooks to prevent keyboard bottom inset errors
-jest.mock('@gluestack-ui/hooks', () => ({
-  useKeyboardBottomInset: jest.fn(() => 0),
-  useControllableState: jest.fn((initialValue, onValueChange) => {
-    let state = initialValue;
-    const setState = (newValue: any) => {
-      state = newValue;
-      if (onValueChange) {
-        onValueChange(newValue);
-      }
-    };
-    return [state, setState];
   }),
 }));
 
@@ -320,7 +209,7 @@ describe('NotificationInbox', () => {
     );
 
     // Find the action button (MoreVertical icon) to enter selection mode
-    const actionButton = getByText('Notifications').parentNode?.querySelector('[data-testid="action-button"]');
+    const actionButton = (getByText('Notifications') as any).parentNode?.querySelector('[data-testid="action-button"]');
 
     if (actionButton) {
       await act(async () => {

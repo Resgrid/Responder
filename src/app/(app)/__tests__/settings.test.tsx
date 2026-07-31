@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -22,10 +22,12 @@ jest.mock('@env', () => ({
 }));
 
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: jest.fn(),
 }));
 
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
   useFocusEffect: jest.fn(),
 }));
 
@@ -582,9 +584,9 @@ describe('Settings Screen', () => {
     jest.restoreAllMocks();
   });
 
-  it('handles undefined color scheme gracefully', () => {
+  it('handles unspecified color scheme gracefully', () => {
     mockUseColorScheme.mockReturnValue({
-      colorScheme: undefined,
+      colorScheme: 'unspecified',
       setColorScheme: jest.fn(),
       toggleColorScheme: jest.fn(),
     });

@@ -313,7 +313,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 
 		it('should set selected group correctly and update related state', () => {
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
-			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 };
+			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 2 };
 
 			act(() => {
 				result.current.setSelectedGroup(mockGroup as any);
@@ -327,7 +327,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 
 		it('should clear group selection when null is passed', () => {
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
-			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 };
+			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 2 };
 
 			// First set a group
 			act(() => {
@@ -444,9 +444,9 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 	describe('fetchGroups', () => {
 		it('should fetch groups successfully and filter to only station groups', async () => {
 			const mockGroups = [
-				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: '1' },
-				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: '1' },
-				{ GroupId: '3', Name: 'Response Group', Address: '', GroupType: 'Response', TypeId: '2' },
+				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: '2' },
+				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: '2' },
+				{ GroupId: '3', Name: 'Response Group', Address: '', GroupType: 'Response', TypeId: '1' },
 				{ GroupId: '4', Name: 'Admin Group', Address: '', GroupType: 'Admin', TypeId: '3' },
 			];
 			mockGetAllGroups.mockResolvedValue({ Data: mockGroups } as any);
@@ -458,11 +458,11 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			});
 
 			expect(mockGetAllGroups).toHaveBeenCalled();
-			// Should only contain station groups (TypeId: "1" from the v4 API)
+			// Should only contain station groups (DepartmentGroupTypes.Station = 2)
 			expect(result.current.groups).toHaveLength(2);
 			expect(result.current.groups).toEqual([
-				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: '1' },
-				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: '1' },
+				{ GroupId: '1', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: '2' },
+				{ GroupId: '2', Name: 'Station 2', Address: '200 Fire Station Ave', GroupType: 'Fire Station', TypeId: '2' },
 			]);
 			expect(result.current.isLoadingGroups).toBe(false);
 		});
@@ -552,7 +552,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 				Notes: [],
 				Recordings: []
 			};
-			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 };
+			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 2 };
 
 			// Set some state
 			act(() => {
@@ -699,7 +699,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 				Note: 0, 
 				Detail: 0 
 			};
-			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 1 };
+			const mockGroup = { GroupId: '456', Name: 'Station 1', Address: '100 Fire Station Rd', GroupType: 'Fire Station', TypeId: 2 };
 			
 			mockSavePersonnelStatus.mockResolvedValue({} as any);
 

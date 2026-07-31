@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationButton } from '@/components/notifications/NotificationButton';
 import { NotificationInbox } from '@/components/notifications/NotificationInbox';
-import SideMenu from '@/components/sidebar/side-menu';
+import SideMenu from '@/components/sidebar/side-menu-content';
 import { View } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer/index';

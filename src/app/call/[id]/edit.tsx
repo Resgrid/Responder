@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 /* eslint-disable import/order */
 import { SHA256 } from 'crypto-js';
+import { useFocusEffect } from 'expo-router';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';

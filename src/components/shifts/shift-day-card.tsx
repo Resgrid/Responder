@@ -76,7 +76,7 @@ export const ShiftDayCard: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress })
 
   return (
     <Pressable onPress={onPress} className="mb-3">
-      <Card size="md" variant="elevated" className="bg-background-0 shadow-sm">
+      <Card size="md" variant="elevated" className="bg-background-0 shadow-xs">
         <View className="p-4">
           <VStack space="sm">
             {/* Header */}

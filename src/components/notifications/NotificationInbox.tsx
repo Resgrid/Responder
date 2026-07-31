@@ -1,10 +1,9 @@
 import { useNotifications } from '@novu/react-native';
 import { FlashList } from '@shopify/flash-list';
 import { CheckCircle, ChevronRight, Circle, ExternalLink, MoreVertical, Trash2, X } from 'lucide-react-native';
-import { colorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Animated, Dimensions, Modal as RNModal, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Appearance, Dimensions, Modal as RNModal, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { deleteMessage } from '@/api/novu/inbox';
 import { NotificationDetail } from '@/components/notifications/NotificationDetail';
@@ -418,8 +417,8 @@ const styles = StyleSheet.create({
     right: 0,
     width: SIDEBAR_WIDTH,
     height: '100%',
-    backgroundColor: colorScheme.get() === 'dark' ? '#171717' : '#fff',
-    shadowColor: colorScheme.get() === 'dark' ? '#262626' : '#e5e5e5',
+    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#171717' : '#fff',
+    shadowColor: Appearance.getColorScheme() === 'dark' ? '#262626' : '#e5e5e5',
     shadowOffset: {
       width: -2,
       height: 0,
@@ -465,7 +464,7 @@ const styles = StyleSheet.create({
   selectionCount: {
     fontSize: 16,
     fontWeight: '600',
-    color: colorScheme.get() === 'dark' ? '#ffffff' : '#000000',
+    color: Appearance.getColorScheme() === 'dark' ? '#ffffff' : '#000000',
   },
   selectionActions: {
     flexDirection: 'row',
@@ -484,7 +483,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 12,
     padding: 16,
-    backgroundColor: colorScheme.get() === 'dark' ? '#171717' : '#fff',
+    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#171717' : '#fff',
   },
   confirmActions: {
     flexDirection: 'row',
@@ -499,14 +498,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colorScheme.get() === 'dark' ? '#333333' : '#eee',
+    borderBottomColor: Appearance.getColorScheme() === 'dark' ? '#333333' : '#eee',
     position: 'relative',
   },
   unreadNotificationItem: {
-    backgroundColor: colorScheme.get() === 'dark' ? '#262626' : '#f0f7ff',
+    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#262626' : '#f0f7ff',
   },
   selectedNotificationItem: {
-    backgroundColor: colorScheme.get() === 'dark' ? '#1e3a8a' : '#dbeafe',
+    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#1e3a8a' : '#dbeafe',
   },
   unreadIndicator: {
     position: 'absolute',
@@ -514,7 +513,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 4,
     height: '100%',
-    backgroundColor: colorScheme.get() === 'dark' ? '#60a5fa' : '#3b82f6',
+    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#60a5fa' : '#3b82f6',
   },
   selectionIndicator: {
     marginRight: 12,
@@ -526,15 +525,15 @@ const styles = StyleSheet.create({
   notificationBody: {
     fontSize: 16,
     marginBottom: 4,
-    color: colorScheme.get() === 'dark' ? '#e5e5e5' : '#333333',
+    color: Appearance.getColorScheme() === 'dark' ? '#e5e5e5' : '#333333',
   },
   unreadNotificationText: {
     fontWeight: '600',
-    color: colorScheme.get() === 'dark' ? '#ffffff' : '#000000',
+    color: Appearance.getColorScheme() === 'dark' ? '#ffffff' : '#000000',
   },
   timestamp: {
     fontSize: 12,
-    color: colorScheme.get() === 'dark' ? '#a3a3a3' : '#666',
+    color: Appearance.getColorScheme() === 'dark' ? '#a3a3a3' : '#666',
   },
   actionButtons: {
     flexDirection: 'row',

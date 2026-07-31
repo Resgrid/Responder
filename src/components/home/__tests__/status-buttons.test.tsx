@@ -7,29 +7,6 @@ import { useCoreStore } from '@/stores/app/core-store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
 
-jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
-  tva: jest.fn().mockImplementation(() => {
-    return jest.fn().mockImplementation((props) => {
-      const { class: className } = props || {};
-      return className || '';
-    });
-  }),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/IsWeb', () => ({
-  isWeb: false,
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils', () => ({
-  tva: jest.fn().mockImplementation(() => {
-    return jest.fn().mockImplementation((props) => {
-      const { class: className } = props || {};
-      return className || '';
-    });
-  }),
-  isWeb: false,
-}));
-
 jest.mock('@/components/common/loading', () => ({
   Loading: () => null,
 }));

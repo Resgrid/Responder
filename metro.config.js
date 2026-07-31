@@ -3,7 +3,7 @@
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 //const { getDefaultConfig } = require('expo/metro-config');
 //const path = require('path');
-const { withNativeWind } = require('nativewind/metro');
+const { withNativewind } = require('nativewind/metro');
 
 const config = getSentryExpoConfig(__dirname, {
   isCSSEnabled: true,
@@ -62,4 +62,4 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 //  '@assets': path.resolve(__dirname, 'assets'),
 //};
 
-module.exports = withNativeWind(config, { input: './global.css', inlineRem: 16 });
+module.exports = withNativewind(config, { inlineRem: 16 });

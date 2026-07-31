@@ -33,7 +33,7 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = React.memo(function P
 
   return (
     <Pressable onPress={() => onPress(personnel.UserId)} testID={`personnel-card-${personnel.UserId}`}>
-      <Box className="mb-3 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+      <Box className="mb-3 rounded-lg bg-white p-4 shadow-xs dark:bg-gray-800">
         <HStack space="md" className="items-start">
           {/* Profile Avatar */}
           <Avatar size="md" style={imageError ? { backgroundColor: fallbackColor } : undefined}>

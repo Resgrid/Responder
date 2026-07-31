@@ -7,7 +7,6 @@ import { useAuthStore } from '@/lib/auth';
 import { translate } from '@/lib/i18n/utils';
 import {
   areCallsAllowedForDetail,
-  arePoisAllowedForDetail,
   arePoisAllowedForStatus,
   areStationsAllowedForDetail,
   getCallDestinationPayload,
@@ -97,7 +96,8 @@ const getTranslatedMessage = (key: Parameters<typeof translate>[0], fallback: st
 };
 
 const isStationGroup = (group: GroupResultData) => {
-  return `${group.TypeId ?? ''}` === '1';
+  // DepartmentGroupTypes: Orginizational = 1, Station = 2
+  return `${group.TypeId ?? ''}` === '2';
 };
 
 const getClearedDestinationState = (selectedTab: ResponseTab = 'calls'): DestinationSelectionState => ({
@@ -267,7 +267,7 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
       const allowedTabs = [
         ...(areCallsAllowedForDetail(selectedStatus.Detail) ? (['calls'] as ResponseTab[]) : []),
         ...(areStationsAllowedForDetail(selectedStatus.Detail) ? (['stations'] as ResponseTab[]) : []),
-        ...(arePoisAllowedForDetail(selectedStatus.Detail) ? (['pois'] as ResponseTab[]) : []),
+        ...(arePoisAllowedForStatus(selectedStatus.Detail) ? (['pois'] as ResponseTab[]) : []),
       ];
 
       if (allowedTabs.length > 0 && !allowedTabs.includes(selectedTab)) {

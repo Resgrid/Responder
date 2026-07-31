@@ -157,7 +157,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({ 
         borderWidth: isAssignedToCurrentUser ? 3 : 0,
         borderColor: isAssignedToCurrentUser ? '#FDE047' : 'transparent',
       }}
-      className="mb-4 rounded-xl p-2 shadow-sm"
+      className="mb-4 rounded-xl p-2 shadow-xs"
     >
       <HStack className="mb-4 items-center justify-between">
         <HStack className="items-center space-x-2">

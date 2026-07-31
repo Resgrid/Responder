@@ -1,4 +1,4 @@
-import { cssInterop } from 'nativewind';
+import { styled } from 'nativewind';
 import Svg from 'react-native-svg';
 
 export * from './button';
@@ -19,8 +19,8 @@ export * from './text';
 export { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 export { SafeAreaView } from 'react-native-safe-area-context';
 
-//Apply cssInterop to Svg to resolve className string into style
-cssInterop(Svg, {
+// Svg with className resolved into style (NativeWind v5 styled wrapper)
+export const StyledSvg = styled(Svg, {
   className: {
     target: 'style',
   },

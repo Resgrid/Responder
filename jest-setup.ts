@@ -62,13 +62,6 @@ jest.mock('react-native-svg', () => {
   };
 });
 
-// Mock React Native Appearance for NativeWind
-jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
-  getColorScheme: jest.fn(() => 'light'),
-  addChangeListener: jest.fn(),
-  removeChangeListener: jest.fn(),
-}));
-
 // Mock NativeWind
 jest.mock('nativewind', () => {
   const React = require('react');
@@ -99,43 +92,6 @@ jest.mock('nativewind', () => {
     verifyInstallation: jest.fn(),
   };
 });
-
-// Mock react-native-css-interop
-jest.mock('react-native-css-interop', () => {
-  const React = require('react');
-
-  const cssInterop = jest.fn((component: any) => component);
-
-  return {
-    __esModule: true,
-    createElement: React.createElement,
-    wrapJSX: jest.fn((component: any) => component),
-    StyleSheet: {
-      create: jest.fn((styles: Record<string, unknown>) => styles),
-    },
-    colorScheme: {
-      get: jest.fn(() => 'light'),
-      set: jest.fn(),
-      toggle: jest.fn(),
-    },
-    createInteropElement: jest.fn((component: any) => component),
-    cssInterop,
-    rem: jest.fn((value: number) => value),
-    remapProps: jest.fn((component: any) => component),
-    useColorScheme: jest.fn(() => ({ colorScheme: 'light', setColorScheme: jest.fn(), toggleColorScheme: jest.fn() })),
-    useSafeAreaEnv: jest.fn(() => ({})),
-    useUnstableNativeVariable: jest.fn(() => undefined),
-    vars: jest.fn((value: Record<string, unknown>) => value),
-    getColorScheme: jest.fn(() => 'light'),
-    appearanceObservables: {
-      getColorScheme: jest.fn(() => 'light'),
-    },
-  };
-});
-
-jest.mock('react-native-css-interop/src/runtime/native/appearance-observables', () => ({
-  getColorScheme: jest.fn(() => 'light'),
-}));
 
 // Mock expo-audio manually using the __mocks__/expo-audio.ts file
 jest.mock('expo-audio');
@@ -302,6 +258,7 @@ jest.mock('react-native', () => {
     // Appearance
     Appearance: {
       getColorScheme: jest.fn(() => 'light'),
+      setColorScheme: jest.fn(),
       addChangeListener: jest.fn(),
       removeChangeListener: jest.fn(),
     },
@@ -361,6 +318,53 @@ jest.mock('react-native', () => {
     // Share
     Share: {
       share: jest.fn().mockResolvedValue({ action: 'sharedAction' }),
+    },
+
+    // AppRegistry (required by expo's Expo.fx at import time)
+    AppRegistry: {
+      registerComponent: jest.fn(),
+      getAppKeys: jest.fn().mockReturnValue([]),
+      runApplication: jest.fn(),
+    },
+
+    // TurboModuleRegistry (required by react-native-screens at import time)
+    TurboModuleRegistry: {
+      get: jest.fn(() => null),
+      getEnforcing: jest.fn(() => ({})),
+    },
+
+    // Fabric codegen helpers (required by react-native-screens at import time)
+    codegenNativeComponent: jest.fn((name: string) => mockComponent(name)),
+    codegenNativeCommands: jest.fn(() => ({})),
+
+    // UIManager (required by expo-router's vendored react-navigation at import time)
+    UIManager: {
+      getViewManagerConfig: jest.fn(() => null),
+      hasViewManagerConfig: jest.fn(() => false),
+      dispatchViewManagerCommand: jest.fn(),
+      measure: jest.fn(),
+      measureInWindow: jest.fn(),
+    },
+
+    // Easing (required by expo-router's vendored react-navigation at import time)
+    Easing: {
+      step0: jest.fn(),
+      step1: jest.fn(),
+      linear: jest.fn(),
+      ease: jest.fn(),
+      quad: jest.fn(),
+      cubic: jest.fn(),
+      poly: jest.fn(() => jest.fn()),
+      sin: jest.fn(),
+      circle: jest.fn(),
+      exp: jest.fn(),
+      elastic: jest.fn(() => jest.fn()),
+      back: jest.fn(() => jest.fn()),
+      bounce: jest.fn(),
+      bezier: jest.fn(() => jest.fn()),
+      in: jest.fn((fn) => fn),
+      out: jest.fn((fn) => fn),
+      inOut: jest.fn((fn) => fn),
     },
 
     // PanResponder
@@ -435,8 +439,9 @@ jest.mock('react-native', () => {
   };
 });
 
-// Mock useFocusEffect from react-navigation
-jest.mock('@react-navigation/native', () => ({
+// Mock useFocusEffect from expo-router (react-navigation was removed in SDK 56)
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
   useFocusEffect: (callback: () => void) => callback(),
 }));
 
@@ -771,8 +776,17 @@ jest.mock('expo-modules-core', () => {
     SharedRef: class {},
     registerWebModule: jest.fn((module: unknown) => module),
     uuid: jest.fn(() => 'mock-uuid'),
-    requireNativeModule: jest.fn((moduleName: string) => createMockNativeModule(moduleName)),
-    requireOptionalNativeModule: jest.fn(() => null),
+    // Prefer the stubs jest-expo installs on globalThis.expo.modules (e.g.
+    // ExpoFetchModule with real NativeRequest/NativeResponse classes) so
+    // modules that subclass native classes keep working.
+    requireNativeModule: jest.fn((moduleName: string) => (globalThis as any).expo?.modules?.[moduleName] ?? createMockNativeModule(moduleName)),
+    requireOptionalNativeModule: jest.fn((moduleName: string) => (globalThis as any).expo?.modules?.[moduleName] ?? null),
+    requireNativeViewManager: jest.fn((name: string) => {
+      const React = require('react');
+      const Component = React.forwardRef((props: any, ref: any) => React.createElement('ExpoView' + name, { ...props, ref }));
+      Component.displayName = name;
+      return Component;
+    }),
   };
 });
 

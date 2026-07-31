@@ -42,7 +42,7 @@ export const CheckInTimerCard: React.FC<CheckInTimerCardProps> = React.memo(({ s
   const borderStyle = isOverdue ? { borderLeftColor: '#EF4444', borderLeftWidth: 4 } : isWarning ? { borderLeftColor: '#F59E0B', borderLeftWidth: 4 } : { borderLeftColor: '#22C55E', borderLeftWidth: 4 };
 
   return (
-    <Box className={`mb-3 rounded-xl p-4 shadow-sm ${bgColor}`} style={borderStyle}>
+    <Box className={`mb-3 rounded-xl p-4 shadow-xs ${bgColor}`} style={borderStyle}>
       <VStack space="sm">
         <HStack className="items-center justify-between">
           <HStack className="flex-1 items-center" space="sm">

@@ -1,5 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
-import { Search } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
+import { Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
@@ -14,8 +14,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { FlatList } from '@/components/ui/flat-list';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
-import { Icon } from '@/components/ui/icon';
-import { Input, InputField } from '@/components/ui/input';
+import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { RefreshControl } from '@/components/ui/refresh-control';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
@@ -171,22 +170,23 @@ const ShiftsScreen: React.FC = () => {
   );
 
   const renderTabButton = (mode: ShiftViewMode, title: string) => (
-    <Button
-      onPress={() => handleTabChange(mode)}
-      variant={currentView === mode ? 'solid' : 'outline'}
-      className={`flex-1 ${currentView === mode ? 'border-primary-600 bg-primary-600' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'}`}
-    >
-      <ButtonText className={currentView === mode ? 'font-semibold text-white' : 'text-gray-700 dark:text-gray-300'}>{title}</ButtonText>
+    <Button onPress={() => handleTabChange(mode)} variant={currentView === mode ? 'solid' : 'outline'} className={`flex-1 ${currentView === mode ? 'bg-primary-600' : 'border-primary-600 bg-transparent'}`}>
+      <ButtonText className={currentView === mode ? 'text-white' : 'text-primary-600'}>{title}</ButtonText>
     </Button>
   );
 
   const renderSearchBar = () => (
-    <View className="px-4 pb-2">
-      <Input variant="outline" className="bg-white dark:bg-gray-800">
-        <Icon as={Search} className="ml-3 text-gray-400" size="sm" />
-        <InputField placeholder={t('shifts.search_placeholder')} value={searchQuery} onChangeText={handleSearchChange} className="ml-2" />
-      </Input>
-    </View>
+    <Input variant="outline" size="md" className="rounded-lg bg-white dark:bg-gray-800">
+      <InputSlot className="pl-3">
+        <InputIcon as={Search} />
+      </InputSlot>
+      <InputField placeholder={t('shifts.search_placeholder')} value={searchQuery} onChangeText={handleSearchChange} />
+      {searchQuery ? (
+        <InputSlot className="pr-3" onPress={() => handleSearchChange('')} testID="clear-search-button">
+          <InputIcon as={X} />
+        </InputSlot>
+      ) : null}
+    </Input>
   );
 
   const renderTodayShifts = () => {
@@ -247,15 +247,13 @@ const ShiftsScreen: React.FC = () => {
 
       <VStack className="flex-1">
         {/* Tab Navigation */}
-        <View className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <HStack className="space-x-2 px-4 py-3">
-            {renderTabButton('today', t('shifts.today'))}
-            {renderTabButton('all', t('shifts.all_shifts'))}
-          </HStack>
-        </View>
+        <HStack className="space-x-2 px-4 pt-4">
+          {renderTabButton('today', t('shifts.today'))}
+          {renderTabButton('all', t('shifts.all_shifts'))}
+        </HStack>
 
         {/* Search Bar */}
-        {renderSearchBar()}
+        <View className="px-4 py-3">{renderSearchBar()}</View>
 
         {/* Content */}
         <View className="flex-1">{currentView === 'today' ? renderTodayShifts() : renderAllShifts()}</View>

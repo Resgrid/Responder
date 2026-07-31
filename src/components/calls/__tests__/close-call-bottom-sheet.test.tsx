@@ -1,5 +1,9 @@
 // Mock dependencies first before imports
 jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn((callback) => {
+    // Execute the callback immediately for testing
+    callback();
+  }),
   useRouter: jest.fn(),
 }));
 jest.mock('react-i18next');
@@ -9,12 +13,6 @@ jest.mock('@/stores/calls/store');
 jest.mock('@/stores/toast/store');
 
 // Mock react navigation
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((callback) => {
-    // Execute the callback immediately for testing
-    callback();
-  }),
-}));
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react-native';
@@ -44,6 +42,7 @@ afterEach(() => {
 
 // Mock nativewind
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: () => ({ colorScheme: 'light' }),
   cssInterop: jest.fn(),
 }));

@@ -144,7 +144,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   const getTabStyles = (index: number) => {
     const isActive = index === currentIndex;
 
-    const baseStyles = 'flex items-center justify-center';
+    const baseStyles = 'items-center justify-center';
     const sizeStyles = {
       sm: variant === 'segmented' ? (isLandscape ? 'px-3 py-1.5' : 'px-3 py-1') : isLandscape ? 'px-3 py-1.5' : 'px-2 py-1',
       md: variant === 'segmented' ? (isLandscape ? 'px-4 py-2.5' : 'px-4 py-2') : isLandscape ? 'px-4 py-2' : 'px-3 py-1.5',

@@ -52,7 +52,7 @@ export default function HomeMap() {
         key: 'map',
         title: t('map.tabs.map'),
         content: (
-          <View className="flex-1 overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+          <View className="flex-1 overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
             <MapPanel focusedPoi={focusedPoi} />
           </View>
         ),
@@ -61,7 +61,7 @@ export default function HomeMap() {
         key: 'pois',
         title: t('map.tabs.pois'),
         content: (
-          <View className="flex-1 overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+          <View className="flex-1 overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
             <PoiListPanel onPoiPress={handlePoiPress} onViewOnMap={handleViewPoiOnMap} />
           </View>
         ),
@@ -84,7 +84,7 @@ export default function HomeMap() {
             variant="segmented"
             size={isLandscape ? 'lg' : 'md'}
             scrollable={false}
-            tabsContainerClassName="rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+            tabsContainerClassName="rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
             tabClassName="rounded-xl"
             contentClassName="pt-4"
           />

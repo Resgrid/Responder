@@ -1,5 +1,5 @@
-import { useIsFocused } from '@react-navigation/native';
 import * as NavigationBar from 'expo-navigation-bar';
+import { useIsFocused } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Platform, StatusBar } from 'react-native';

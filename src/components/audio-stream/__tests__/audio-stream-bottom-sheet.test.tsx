@@ -8,7 +8,8 @@ jest.mock('@/hooks/use-analytics', () => ({
   }),
 }));
 
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
   useFocusEffect: mockUseFocusEffect,
 }));
 
@@ -24,6 +25,7 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: () => ({ colorScheme: 'light' }),
   cssInterop: jest.fn(),
 }));
@@ -368,7 +370,7 @@ describe('AudioStreamBottomSheet Analytics', () => {
 
   describe('Focus Effect Integration', () => {
     it('should call useFocusEffect with proper callback', () => {
-      const { useFocusEffect } = require('@react-navigation/native');
+      const { useFocusEffect } = require('expo-router');
 
       expect(useFocusEffect).toBeDefined();
       expect(typeof useFocusEffect).toBe('function');
@@ -376,7 +378,7 @@ describe('AudioStreamBottomSheet Analytics', () => {
 
     it('should track page view when useFocusEffect callback is triggered', () => {
       const { useAnalytics } = require('@/hooks/use-analytics');
-      const { useFocusEffect } = require('@react-navigation/native');
+      const { useFocusEffect } = require('expo-router');
 
       // Test the pattern without actually using React hooks
       const trackEventFn = jest.fn();

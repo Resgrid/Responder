@@ -17,7 +17,8 @@ jest.mock('@/hooks/use-analytics', () => ({
 }));
 
 // Mock React Navigation
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
   useIsFocused: () => true,
   useFocusEffect: (callback: () => void) => {
     callback();
@@ -34,6 +35,7 @@ jest.mock('@/components/ui/focus-aware-status-bar', () => ({
 
 // Mock nativewind
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: () => ({ colorScheme: 'light' }),
   cssInterop: jest.fn(),
 }));
@@ -196,6 +198,8 @@ jest.mock('@/components/ui/input', () => {
         },
         React.createElement(Text, null, placeholder)
       ),
+    InputIcon: () => React.createElement(View, { testID: 'input-icon' }),
+    InputSlot: ({ children, onPress, ...props }: any) => React.createElement(TouchableOpacity, { ...props, onPress }, children),
   };
 });
 

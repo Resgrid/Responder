@@ -54,7 +54,7 @@ const PoiPinMarker: React.FC<PoiPinMarkerProps> = ({ color, poiImage, imagePath,
        */}
       <Svg width={POI_MARKER_WIDTH} height={POI_MARKER_HEIGHT} viewBox={POI_MARKER_VIEWBOX} preserveAspectRatio="none">
         {/* Shadow layer: offset down by 1px, semi-transparent black */}
-        <Path d={shapePath} fill="rgba(17, 24, 39, 0.25)" translateY={1} />
+        <Path d={shapePath} fill="rgba(17, 24, 39, 0.25)" transform="translate(0, 1)" />
         {/* Main shape */}
         <Path d={shapePath} fill={fillColor} />
       </Svg>

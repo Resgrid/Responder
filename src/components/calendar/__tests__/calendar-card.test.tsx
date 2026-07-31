@@ -12,6 +12,7 @@ jest.mock('react-i18next', () => ({
 
 // Mock nativewind useColorScheme
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: jest.fn(() => ({ colorScheme: 'light' })),
 }));
 
@@ -174,7 +175,7 @@ describe('CalendarCard', () => {
     expect(getByText('Test Event')).toBeTruthy();
     expect(getByText('Meeting')).toBeTruthy();
     expect(getByText('Test Location')).toBeTruthy();
-    expect(getByTestId('card').props.className).toContain('bg-white shadow-sm dark:bg-gray-800');
+    expect(getByTestId('card').props.className).toContain('bg-white shadow-xs dark:bg-gray-800');
 
     // Check that WebView is rendered for description
     const webview = getByTestId('description-webview');

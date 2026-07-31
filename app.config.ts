@@ -40,12 +40,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'default',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
-  newArchEnabled: true,
-  splash: {
-    image: './assets/adaptive-icon.png',
-    resizeMode: 'contain',
-    backgroundColor: '#2484c4',
-  },
   updates: {
     fallbackToCacheTimeout: 0,
   },
@@ -255,7 +249,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         android: {
           extraProguardRules: '-keep class expo.modules.location.** { *; }',
           extraMavenRepos: ['../../node_modules/@notifee/react-native/android/libs'],
-          targetSdkVersion: 35,
+          targetSdkVersion: 36,
         },
         ios: {
           deploymentTarget: '18.1',
@@ -313,6 +307,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'react-native-ble-manager',
     'expo-secure-store',
     'expo-web-browser',
+    'expo-image',
+    'expo-sharing',
+    'expo-status-bar',
     '@livekit/react-native-expo-plugin',
     '@config-plugins/react-native-webrtc',
     '@config-plugins/react-native-callkeep',

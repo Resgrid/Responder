@@ -5,11 +5,9 @@ const mockPush = jest.fn();
 const mockTrackEvent = jest.fn();
 const mockLogin = jest.fn();
 
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((callback) => callback()),
-}));
 
 jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn((callback) => callback()),
   useRouter: () => ({
     push: mockPush,
   }),

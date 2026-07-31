@@ -1,17 +1,15 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { render, fireEvent } from '@testing-library/react-native';
 import React from 'react';
 
 // Mock all dependencies first
 jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn(),
+  useIsFocused: jest.fn(() => true),
   useRouter: jest.fn(),
 }));
 // Mock react-navigation focus effect for onboarding tests
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn(),
-  useIsFocused: jest.fn(() => true),
-}));
 
 // Mock nativewind - override jest-setup to include useColorScheme
 jest.mock('nativewind', () => ({
