@@ -9,9 +9,6 @@ jest.mock('@/hooks/use-analytics', () => ({
 }));
 
 // Mock useFocusEffect
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((callback) => callback()),
-}));
 
 // Mock useAuth
 const mockLogin = jest.fn();
@@ -22,6 +19,7 @@ jest.mock('@/lib/auth', () => ({
 
 // Mock useRouter
 jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn((callback) => callback()),
   useRouter: jest.fn(),
 }));
 
@@ -52,7 +50,7 @@ describe('Login Analytics Tests', () => {
 
   it('should call trackEvent with login_viewed when useFocusEffect is triggered', () => {
     const { useAnalytics } = require('@/hooks/use-analytics');
-    const { useFocusEffect } = require('@react-navigation/native');
+    const { useFocusEffect } = require('expo-router');
     const { trackEvent } = useAnalytics();
 
     // Simulate the pattern used in Login component

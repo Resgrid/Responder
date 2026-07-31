@@ -71,17 +71,6 @@ jest.mock('react-i18next', () => ({
 }));
 
 // Mock navigation and focus hooks
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: () => true,
-  useFocusEffect: jest.fn((callback) => {
-    // Immediately call the callback to simulate focus effect
-    callback();
-  }),
-  useNavigation: () => ({
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-  }),
-}));
 
 // Mock analytics hook
 const mockTrackEvent = jest.fn();
@@ -126,6 +115,15 @@ jest.mock('@/components/ui/shared-tabs', () => ({
 
 // Mock expo-router
 jest.mock('expo-router', () => ({
+  useIsFocused: () => true,
+  useFocusEffect: jest.fn((callback) => {
+    // Immediately call the callback to simulate focus effect
+    callback();
+  }),
+  useNavigation: () => ({
+    navigate: jest.fn(),
+    goBack: jest.fn(),
+  }),
   Stack: {
     Screen: ({ options }: any) => {
       const React = require('react');
@@ -169,7 +167,7 @@ const MockHomeDashboard = () => {
   const React = require('react');
   const { View, ScrollView } = require('react-native');
   const { useHomeStore } = require('@/stores/home/home-store');
-  const { useFocusEffect } = require('@react-navigation/native');
+  const { useFocusEffect } = require('expo-router');
   const { useAnalytics } = require('@/hooks/use-analytics');
 
   const { refreshAll } = useHomeStore();

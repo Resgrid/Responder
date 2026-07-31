@@ -100,6 +100,7 @@ jest.mock('@/hooks/use-analytics', () => ({
 
 // Mock other modules
 jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn((fn) => fn()),
   router: { push: jest.fn(), back: jest.fn() },
   Stack: {
     Screen: ({ children }: any) => {
@@ -107,12 +108,8 @@ jest.mock('expo-router', () => ({
       return React.createElement('div', { 'data-testid': 'stack-screen' }, children);
     },
   },
-  useFocusEffect: jest.fn((fn) => fn()),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((fn) => fn()),
-}));
 
 // Mock useWindowDimensions and Alert separately to avoid module issues
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -204,6 +201,16 @@ jest.mock('@/components/ui/input', () => ({
     const React = require('react');
     const { TextInput } = require('react-native');
     return React.createElement(TextInput, { ...props, onChangeText, value, placeholder });
+  },
+  InputIcon: () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'input-icon' });
+  },
+  InputSlot: ({ children, onPress, ...props }: any) => {
+    const React = require('react');
+    const { TouchableOpacity } = require('react-native');
+    return React.createElement(TouchableOpacity, { ...props, onPress }, children);
   },
 }));
 

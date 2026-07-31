@@ -178,7 +178,7 @@ export default function WeatherAlertDetail() {
         ) : null}
 
         {/* Timing */}
-        <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
+        <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
           <HStack className="items-center" space="sm">
             <Clock size={16} color="#6B7280" />
             <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('weatherAlerts.detail.timing')}</Text>
@@ -207,7 +207,7 @@ export default function WeatherAlertDetail() {
 
         {/* Area */}
         {selectedAlert.AreaDescription ? (
-          <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
+          <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
             <HStack className="items-center" space="sm">
               <MapPin size={16} color="#6B7280" />
               <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('weatherAlerts.detail.area')}</Text>
@@ -251,7 +251,7 @@ export default function WeatherAlertDetail() {
 
         {/* Description */}
         {selectedAlert.Description ? (
-          <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
+          <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
             <Text className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('weatherAlerts.detail.description')}</Text>
             <Text className="text-sm leading-5 text-gray-600 dark:text-gray-400">{selectedAlert.Description}</Text>
           </Box>
@@ -271,7 +271,7 @@ export default function WeatherAlertDetail() {
         ) : null}
 
         {/* Metadata */}
-        <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
+        <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
           <HStack className="items-center" space="sm">
             <Info size={16} color="#6B7280" />
             <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('weatherAlerts.detail.metadata')}</Text>

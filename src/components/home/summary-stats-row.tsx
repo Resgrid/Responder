@@ -91,7 +91,7 @@ const SummaryStatItem: React.FC<SummaryStatItemProps> = ({ label, value, testID,
             : { flex: 1 }
         }
       >
-        <Card className={`overflow-hidden rounded-2xl border-0 p-2 shadow-sm ${accentClassName}`} testID={testID}>
+        <Card className={`overflow-hidden rounded-2xl border-0 p-2 shadow-xs ${accentClassName}`} testID={testID}>
           <VStack space="xs" className="items-center">
             <Text className={`text-lg font-bold ${valueClassName ?? 'text-white'}`}>{value}</Text>
             <Text className="text-center text-[8px] font-semibold uppercase tracking-[0.3px] text-white/75" numberOfLines={1}>

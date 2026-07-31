@@ -3,37 +3,6 @@ import React from 'react';
 
 import { ContactType, type ContactResultData } from '@/models/v4/contacts/contactResultData';
 
-// Local mocks for Gluestack UI utilities to avoid TypeErrors
-jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
-  tva: jest.fn().mockImplementation(() => jest.fn().mockReturnValue('')),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/withStyleContext', () => ({
-  withStyleContext: jest.fn().mockImplementation((Component) => Component),
-  useStyleContext: jest.fn().mockReturnValue({}),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/withStyleContextAndStates', () => ({
-  withStyleContextAndStates: jest.fn().mockImplementation((Component) => Component),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/withStates', () => ({
-  withStates: jest.fn().mockImplementation((Component) => Component),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/IsWeb', () => ({
-  isWeb: false,
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils', () => ({
-  tva: jest.fn().mockImplementation(() => jest.fn().mockReturnValue('')),
-  withStyleContext: jest.fn().mockImplementation((Component) => Component),
-  withStyleContextAndStates: jest.fn().mockImplementation((Component) => Component),
-  useStyleContext: jest.fn().mockReturnValue({}),
-  withStates: jest.fn().mockImplementation((Component) => Component),
-  isWeb: false,
-}));
-
 // Local mocks for UI components to ensure proper rendering
 jest.mock('@/components/ui/actionsheet', () => {
   const React = jest.requireActual('react');

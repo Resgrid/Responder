@@ -46,7 +46,7 @@ const PoiListItem: React.FC<PoiListItemProps> = React.memo(({ poi, onPoiPress, o
   const displayName = getPoiDisplayName(poi);
 
   return (
-    <Box className="mb-3 rounded-2xl border border-neutral-200 bg-neutral-50/90 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+    <Box className="mb-3 rounded-2xl border border-neutral-200 bg-neutral-50/90 p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-950/70">
       <VStack space="sm">
         <HStack className="items-start justify-between">
           <VStack className="flex-1 pr-3">

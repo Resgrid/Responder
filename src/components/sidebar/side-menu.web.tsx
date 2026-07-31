@@ -2,7 +2,9 @@ import React from 'react';
 
 import { Box } from '@/components/ui/box';
 
-import SideMenu from './side-menu';
+// Import from side-menu-content directly to avoid a require cycle.
+// On web, './side-menu' resolves to side-menu.web.tsx (this file), not side-menu.tsx.
+import SideMenu from './side-menu-content';
 
 const WebSidebar = () => {
   return (

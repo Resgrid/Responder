@@ -1,7 +1,7 @@
-import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
+import { useFocusEffect } from 'expo-router';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { FileTextIcon, ImageIcon, PaperclipIcon, RouteIcon } from 'lucide-react-native';
+import { RouteIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -410,7 +410,7 @@ export default function CallDetail() {
         key: 'info',
         title: t('call_detail.tabs.info'),
         content: (
-          <Box className={`p-4 shadow-sm ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
+          <Box className={`p-4 shadow-xs ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
             <VStack className="space-y-3">
               <Box className="border-b border-outline-100 pb-2">
                 <Text className="text-sm text-gray-500">{t('call_detail.priority')}</Text>
@@ -661,7 +661,7 @@ export default function CallDetail() {
       />
       <ScrollView className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>
         {/* Header */}
-        <Box className={`p-4 shadow-sm ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
+        <Box className={`p-4 shadow-xs ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
           <HStack className="mb-2 items-center">
             <Heading size="md">
               {call.Name} ({call.Number})
@@ -714,10 +714,9 @@ export default function CallDetail() {
         </Box>
 
         {/* Action Buttons */}
-        <HStack className={`justify-around p-4 shadow-sm ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
+        <HStack className={`justify-around p-4 shadow-xs ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
           <Box className="relative mx-1 flex-1">
             <Button onPress={() => openNotesModal()} variant="outline" className="w-full" size={isLandscape ? 'md' : 'sm'}>
-              <ButtonIcon as={FileTextIcon} />
               <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('call_detail.notes')}</ButtonText>
             </Button>
             {call?.NotesCount ? (
@@ -728,7 +727,6 @@ export default function CallDetail() {
           </Box>
           <Box className="relative mx-1 flex-1">
             <Button onPress={openImagesModal} variant="outline" className="w-full" size={isLandscape ? 'md' : 'sm'}>
-              <ButtonIcon as={ImageIcon} />
               <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('call_detail.images')}</ButtonText>
             </Button>
             {call?.ImgagesCount ? (
@@ -739,7 +737,6 @@ export default function CallDetail() {
           </Box>
           <Box className="relative mx-1 flex-1">
             <Button onPress={openFilesModal} variant="outline" className="w-full" size={isLandscape ? 'md' : 'sm'}>
-              <ButtonIcon as={PaperclipIcon} />
               <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('call_detail.files.button')}</ButtonText>
             </Button>
             {call?.FileCount ? (
@@ -750,7 +747,6 @@ export default function CallDetail() {
           </Box>
           <Box className="relative mx-1 flex-1">
             <Button onPress={handleRoute} variant="outline" className="w-full" size={isLandscape ? 'md' : 'sm'}>
-              <ButtonIcon as={RouteIcon} />
               <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.route')}</ButtonText>
             </Button>
           </Box>
@@ -758,7 +754,7 @@ export default function CallDetail() {
 
         {/* Tabs */}
         <Box className={`mt-4 flex-1 pb-8 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
-          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'md' : 'sm'} scrollable={true} />
+          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'lg' : 'md'} scrollable={true} />
         </Box>
       </ScrollView>
       {isMapModalOpen && coordinates.latitude != null && coordinates.longitude != null ? (

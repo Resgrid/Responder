@@ -22,7 +22,7 @@ export const ProtocolCard: React.FC<ProtocolCardProps> = ({ protocol, onPress })
 
   return (
     <Pressable onPress={handlePress} testID={`protocol-card-${protocol.ProtocolId}`}>
-      <Box className="mb-3 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+      <Box className="mb-3 rounded-lg bg-white p-4 shadow-xs dark:bg-gray-800">
         <VStack space="xs">
           <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{protocol.Name}</Text>
           <Text className="text-sm text-gray-600 dark:text-gray-300" numberOfLines={2}>

@@ -12,17 +12,15 @@ import { useSecurityStore } from '@/stores/security/store';
 import Calls from '../calls';
 
 jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn((callback: () => void) => {
+    callback();
+  }),
   router: {
     push: jest.fn(),
   },
   useLocalSearchParams: jest.fn(() => ({})),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((callback: () => void) => {
-    callback();
-  }),
-}));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

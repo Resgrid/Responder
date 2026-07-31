@@ -166,13 +166,10 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-// Mock navigation hooks
-jest.mock('@react-navigation/core', () => ({
-  useIsFocused: () => true,
-}));
-
 // Mock navigation with useFocusEffect
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
+  useIsFocused: () => true,
   useFocusEffect: jest.fn((callback: () => void) => {
     // Execute the callback immediately in tests
     callback();

@@ -12,7 +12,8 @@ jest.mock('@/hooks/use-analytics', () => ({
 }));
 
 // Mock navigation
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
   useFocusEffect: jest.fn((callback) => {
     // Immediately call the callback to simulate focus effect
     callback();

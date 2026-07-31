@@ -16,6 +16,7 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: jest.fn(),
   cssInterop: jest.fn(),
 }));

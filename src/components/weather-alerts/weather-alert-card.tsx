@@ -45,7 +45,7 @@ export const WeatherAlertCard: React.FC<WeatherAlertCardProps> = ({ alert, onPre
 
   return (
     <Pressable onPress={handlePress} testID={`weather-alert-card-${alertRequestId || 'unknown'}`}>
-      <Box className="mb-3 overflow-hidden rounded-xl bg-white shadow-sm dark:bg-gray-800" style={[styles.card]}>
+      <Box className="mb-3 overflow-hidden rounded-xl bg-white shadow-xs dark:bg-gray-800" style={[styles.card]}>
         <HStack className="flex-1">
           <Box style={[styles.accent, { backgroundColor: accentColor }]} />
           <VStack className="flex-1 p-3" space="sm">

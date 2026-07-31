@@ -1,6 +1,6 @@
 /* eslint-disable react/react-in-jsx-scope */
 import { Env } from '@env';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +47,7 @@ export default function Settings() {
     useCallback(() => {
       trackEvent('settings_viewed', {
         timestamp: new Date().toISOString(),
-        colorScheme: colorScheme || 'light',
+        colorScheme: colorScheme === 'dark' ? 'dark' : 'light',
         isAuthenticated,
         serverUrl: getBaseApiUrl(),
         unitsCount: units.length,

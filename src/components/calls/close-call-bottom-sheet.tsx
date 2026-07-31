@@ -1,9 +1,9 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Keyboard, Platform, type ScrollView, useWindowDimensions } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { Keyboard, Platform, useWindowDimensions } from 'react-native';
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -46,7 +46,7 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   // does not apply to dialog windows), so keyboard-controller's inset
   // animations never reach it. Pad the scroll content by the keyboard height
   // and scroll the note input back into view manually.
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<KeyboardAwareScrollViewRef>(null);
   const scrollToEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [keyboardPadding, setKeyboardPadding] = useState(0);
 

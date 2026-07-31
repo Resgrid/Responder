@@ -8,16 +8,13 @@ import HomeMap from '../map';
 
 // Mock NativeWind and CSS Interop
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   cssInterop: jest.fn(),
   useColorScheme: () => ({
     colorScheme: 'light',
     setColorScheme: jest.fn(),
     toggleColorScheme: jest.fn(),
   }),
-}));
-
-jest.mock('react-native-css-interop', () => ({
-  cssInterop: jest.fn(),
 }));
 
 // Mock Lucide React Native SVG components

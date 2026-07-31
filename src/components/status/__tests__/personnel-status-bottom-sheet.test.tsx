@@ -41,6 +41,7 @@ jest.mock('@/hooks/use-analytics', () => ({
 
 // Mock nativewind useColorScheme hook
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: () => ({
     colorScheme: 'light',
     setColorScheme: jest.fn(),
@@ -275,14 +276,14 @@ describe('PersonnelStatusBottomSheet', () => {
       Name: 'Station 1',
       Address: '100 Fire Station Rd',
       GroupType: 'Fire Station',
-      TypeId: 1,
+      TypeId: 2,
     },
     {
       GroupId: '2',
       Name: 'Station 2',
       Address: '200 Fire Station Ave',
       GroupType: 'Fire Station',
-      TypeId: 1,
+      TypeId: 2,
     },
   ];
 

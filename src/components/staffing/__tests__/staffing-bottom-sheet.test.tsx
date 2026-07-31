@@ -62,6 +62,7 @@ jest.mock('@/lib/utils', () => ({
 
 // Mock NativeWind useColorScheme
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: jest.fn(() => ({
     colorScheme: 'light',
     setColorScheme: jest.fn(),

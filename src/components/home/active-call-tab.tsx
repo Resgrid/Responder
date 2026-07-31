@@ -150,7 +150,7 @@ export const ActiveCallTab: React.FC = () => {
   return (
     <VStack space="md" className="py-2">
       {/* Call summary */}
-      <Box className={`rounded-xl p-4 shadow-sm ${bgColor}`}>
+      <Box className={`rounded-xl p-4 shadow-xs ${bgColor}`}>
         <VStack space="xs">
           <HStack className="items-center justify-between">
             <Heading size="sm">

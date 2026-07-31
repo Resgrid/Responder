@@ -54,7 +54,7 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({ shift, onPress }) => {
 
   return (
     <Pressable onPress={onPress} className="mb-3">
-      <Card className="border-l-4 bg-white shadow-sm dark:bg-gray-800" style={{ borderLeftColor: shift.Color || '#3B82F6' }}>
+      <Card className="border-l-4 bg-white shadow-xs dark:bg-gray-800" style={{ borderLeftColor: shift.Color || '#3B82F6' }}>
         <VStack space="md" className="p-4">
           {/* Header */}
           <HStack className="items-start justify-between">

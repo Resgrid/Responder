@@ -135,7 +135,7 @@ describe('CompactCalendarItem', () => {
     expect(getByText('Test Event')).toBeTruthy();
     expect(getByText('Meeting')).toBeTruthy();
     expect(getByText('Test Location')).toBeTruthy();
-    expect(getByTestId('card').props.className).toContain('bg-white shadow-sm dark:bg-gray-800');
+    expect(getByTestId('card').props.className).toContain('bg-white shadow-xs dark:bg-gray-800');
   });
 
   it('displays all day event correctly', () => {

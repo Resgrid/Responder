@@ -42,6 +42,7 @@ jest.mock('@/hooks/use-analytics', () => ({
 
 // Mock nativewind useColorScheme hook
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: () => ({
     colorScheme: 'light',
     setColorScheme: jest.fn(),
@@ -412,7 +413,7 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
 
       // Find and click the close button
       const closeButton = screen.getByTestId('x-icon');
-      fireEvent.press(closeButton.parent); // Press the TouchableOpacity parent
+      fireEvent.press(closeButton.parent!); // Press the TouchableOpacity parent
 
       // Verify reset is called
       expect(mockReset).toHaveBeenCalled();

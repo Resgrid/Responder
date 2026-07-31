@@ -1,33 +1,3 @@
-// Local mocks for Gluestack UI utilities to avoid TypeErrors
-jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
-  tva: jest.fn().mockImplementation(() => jest.fn().mockReturnValue('')),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/withStyleContext', () => ({
-  withStyleContext: jest.fn().mockImplementation((Component) => Component),
-  useStyleContext: jest.fn().mockReturnValue({}),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/withStyleContextAndStates', () => ({
-  withStyleContextAndStates: jest.fn().mockImplementation((Component) => Component),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/withStates', () => ({
-  withStates: jest.fn().mockImplementation((Component) => Component),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils/IsWeb', () => ({
-  isWeb: false,
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils', () => ({
-  tva: jest.fn().mockImplementation(() => jest.fn().mockReturnValue('')),
-  withStyleContext: jest.fn().mockImplementation((Component) => Component),
-  withStyleContextAndStates: jest.fn().mockImplementation((Component) => Component),
-  useStyleContext: jest.fn().mockReturnValue({}),
-  withStates: jest.fn().mockImplementation((Component) => Component),
-  isWeb: false,
-}));
 
 // Mock UI components to ensure proper rendering
 jest.mock('@/components/ui', () => {
@@ -132,6 +102,7 @@ jest.mock('lucide-react-native', () => ({
 
 // Mock nativewind
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: () => ({ colorScheme: 'light' }),
   cssInterop: jest.fn(),
 }));

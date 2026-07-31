@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { router, Stack } from 'expo-router';
 import { ChevronDown, Mail, MailOpen, MessageSquarePlus, MoreVertical, Search, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Fab, FabIcon } from '@/components/ui/fab';
 import { FlatList } from '@/components/ui/flat-list';
 import { HStack } from '@/components/ui/hstack';
-import { Input, InputField } from '@/components/ui/input';
+import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
 import { SafeAreaView } from '@/components/ui/safe-area-view';
 import { Text } from '@/components/ui/text';
@@ -224,8 +224,16 @@ export default function MessagesScreen() {
         <VStack space="sm" className="border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
           <HStack space="sm" className="items-center">
             <View className="flex-1">
-              <Input variant="outline" className="flex-1">
+              <Input variant="outline" size="md" className="flex-1 rounded-lg bg-white dark:bg-gray-800">
+                <InputSlot className="pl-3">
+                  <InputIcon as={Search} />
+                </InputSlot>
                 <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={handleSearchQueryChange} testID="messages-search-input" />
+                {searchQuery ? (
+                  <InputSlot className="pr-3" onPress={() => handleSearchQueryChange('')} testID="clear-search-button">
+                    <InputIcon as={X} />
+                  </InputSlot>
+                ) : null}
               </Input>
             </View>
             <Pressable className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800" onPress={() => setIsFilterMenuOpen(true)} testID="messages-filter-button">

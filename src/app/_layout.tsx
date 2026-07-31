@@ -7,16 +7,16 @@ import '../lib/i18n';
 import { Env } from '@env';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { registerGlobals } from '@livekit/react-native';
-import { createNavigationContainerRef, DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
-import { Stack, useNavigationContainerRef } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
+import { useColorScheme } from 'nativewind';
 import React, { useEffect } from 'react';
-import { LogBox, useColorScheme } from 'react-native';
+import { LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -43,7 +43,6 @@ WebBrowser.maybeCompleteAuthSession();
 //SplashScreen.preventAutoHideAsync();
 
 export { ErrorBoundary } from 'expo-router';
-export const navigationRef = createNavigationContainerRef();
 
 export const unstable_settings = {
   initialRouteName: '(app)',
@@ -215,7 +214,9 @@ function RootLayout() {
 }
 
 function Providers({ children }: { children: React.ReactNode }) {
-  const colorScheme = useColorScheme();
+  // nativewind's hook (not react-native's) so manually selected themes are
+  // reflected on web, where Appearance only tracks the system preference.
+  const { colorScheme } = useColorScheme();
 
   const renderContent = () => (
     <APIProvider>

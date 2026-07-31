@@ -182,7 +182,7 @@ function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
   // Render note item for FlatList
   const renderNoteItem = useCallback(
     ({ item: note }: { item: CallNoteResultData }) => (
-      <Box className="mb-3 w-full rounded-lg bg-gray-50 p-4 shadow-sm dark:bg-gray-700">
+      <Box className="mb-3 w-full rounded-lg bg-gray-50 p-4 shadow-xs dark:bg-gray-700">
         <Text className="mb-2 text-gray-800 dark:text-gray-200">{note.Note}</Text>
         <HStack className="w-full justify-between">
           <Text className="text-xs text-gray-500 dark:text-gray-400">{note.FullName}</Text>

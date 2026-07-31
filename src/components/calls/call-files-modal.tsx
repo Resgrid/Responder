@@ -1,5 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { Download, File, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';

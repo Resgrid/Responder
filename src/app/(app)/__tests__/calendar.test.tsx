@@ -13,6 +13,10 @@ jest.mock('react-i18next', () => ({
 
 // Mock expo-router components
 jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn((callback) => {
+    // Immediately call the callback to simulate focus effect
+    callback();
+  }),
   Stack: {
     Screen: ({ children, ...props }: any) => {
       const React = require('react');
@@ -26,12 +30,6 @@ jest.mock('expo-router', () => ({
 }));
 
 // Mock react-navigation/native
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((callback) => {
-    // Immediately call the callback to simulate focus effect
-    callback();
-  }),
-}));
 
 // Mock the calendar store
 jest.mock('@/stores/calendar/store', () => ({

@@ -10,7 +10,8 @@ jest.mock('@/hooks/use-analytics', () => ({
 
 // Mock navigation
 const mockUseFocusEffect = jest.fn();
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
   useFocusEffect: mockUseFocusEffect,
 }));
 

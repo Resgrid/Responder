@@ -100,7 +100,7 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(function UnitCard({ 
 
   return (
     <Pressable onPress={() => onPress(unit.UnitId)} testID={`unit-card-${unit.UnitId}`}>
-      <Box className="mb-3 rounded-lg border border-outline-100 bg-background-0 p-4 shadow-sm">
+      <Box className="mb-3 rounded-lg border border-outline-100 bg-background-0 p-4 shadow-xs">
         <VStack space="sm">
           <HStack className="items-center justify-between">
             <HStack className="flex-1 items-center" space="sm">

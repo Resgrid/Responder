@@ -13,7 +13,8 @@ jest.mock('@/hooks/use-analytics', () => ({
 }));
 
 // Mock React Navigation
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router', () => ({
+  ...(jest.requireActual('expo-router') as object),
   useFocusEffect: jest.fn((callback: () => void) => {
     // Execute immediately for testing
     callback();
@@ -43,6 +44,7 @@ jest.mock('react-native-svg', () => ({
 
 // Mock nativewind
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   cssInterop: jest.fn(),
 }));
 

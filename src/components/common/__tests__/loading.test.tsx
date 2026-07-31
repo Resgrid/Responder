@@ -3,25 +3,6 @@ import React from 'react';
 
 import { Loading, Skeleton } from '../loading';
 
-jest.mock('@gluestack-ui/nativewind-utils/tva', () => ({
-  tva: jest.fn().mockImplementation(() => {
-    return jest.fn().mockImplementation((props) => {
-      const { class: className } = props || {};
-      return className || '';
-    });
-  }),
-}));
-
-jest.mock('@gluestack-ui/nativewind-utils', () => ({
-  tva: jest.fn().mockImplementation(() => {
-    return jest.fn().mockImplementation((props) => {
-      const { class: className } = props || {};
-      return className || '';
-    });
-  }),
-  isWeb: false,
-}));
-
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {

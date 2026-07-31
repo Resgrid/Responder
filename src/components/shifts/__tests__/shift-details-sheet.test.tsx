@@ -20,6 +20,7 @@ const mockUseWindowDimensions = mockReactNative.useWindowDimensions;
 
 // Mock nativewind
 jest.mock('nativewind', () => ({
+  styled: jest.fn((Component: any) => Component),
   useColorScheme: jest.fn(() => ({
     colorScheme: 'light',
     setColorScheme: jest.fn(),
@@ -322,7 +323,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for shift name in text elements
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasShiftName = textElements.some((el: any) => el.props.children === 'Test Shift');
       expect(hasShiftName).toBe(true);
     });
@@ -332,7 +333,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for shift code components in text elements
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasShiftCodeLabel = textElements.some((el: any) =>
         Array.isArray(el.props.children) &&
         el.props.children.includes('Shift Code') &&
@@ -347,7 +348,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for "In Shift" in badge text elements
-      const badgeTextElements = root.findAllByType('badge-text');
+      const badgeTextElements = root.findAllByType('badge-text' as any);
       const hasInShiftBadge = badgeTextElements.some((element: any) => element.props.children === 'In Shift');
       expect(hasInShiftBadge).toBe(true);
     });
@@ -368,7 +369,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for personnel count in text elements
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasPersonnelCount = textElements.some((el: any) => el.props.children === 10 || el.props.children === '10');
       const hasPersonnelLabel = textElements.some((el: any) => el.props.children === 'Personnel');
 
@@ -381,7 +382,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for group count in text elements
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasGroupCount = textElements.some((el: any) => el.props.children === 3 || el.props.children === '3');
       const hasGroupsLabel = textElements.some((el: any) => el.props.children === 'Groups');
 
@@ -394,7 +395,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for next day information in text elements
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasNextDayLabel = textElements.some((el: any) => el.props.children === 'Next Day');
       const hasNextDayDate = textElements.some((el: any) => el.props.children === 'Jan 15, 2024');
 
@@ -407,7 +408,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for "Automatic" in badge text elements
-      const badgeTextElements = root.findAllByType('badge-text');
+      const badgeTextElements = root.findAllByType('badge-text' as any);
       const hasAutomatic = badgeTextElements.some((element: any) => element.props.children === 'Automatic');
       expect(hasAutomatic).toBe(true);
     });
@@ -417,7 +418,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for "Optional" in badge text elements
-      const badgeTextElements = root.findAllByType('badge-text');
+      const badgeTextElements = root.findAllByType('badge-text' as any);
       const hasOptional = badgeTextElements.some((element: any) => element.props.children === 'Optional');
       expect(hasOptional).toBe(true);
     });
@@ -429,7 +430,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for shift name in text elements 
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasShiftName = textElements.some((el: any) => el.props.children === 'Test Shift');
       expect(hasShiftName).toBe(true);
     });
@@ -442,12 +443,12 @@ describe('ShiftDetailsSheet', () => {
       mockTrackEvent.mockClear();
 
       // Find buttons by type and click the calendar one
-      const buttonElements = root.findAllByType('button');
+      const buttonElements = root.findAllByType('button' as any);
 
       // Find calendar button by looking for button-text with "Calendar"
       let calendarButton: any = null;
       for (const button of buttonElements) {
-        const buttonTextElements = button.findAllByType('button-text');
+        const buttonTextElements = button.findAllByType('button-text' as any);
         const hasCalendarText = buttonTextElements.some((textEl: any) => textEl.props.children === 'Calendar');
         if (hasCalendarText && button.props.onPress) {
           calendarButton = button;
@@ -464,7 +465,7 @@ describe('ShiftDetailsSheet', () => {
       }
 
       // Should render calendar view
-      const calendarViews = root.findAllByType('shift-calendar-view');
+      const calendarViews = root.findAllByType('shift-calendar-view' as any);
       expect(calendarViews.length).toBeGreaterThan(0);
     });
   });
@@ -480,11 +481,11 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for spinner element
-      const spinners = root.findAllByType('spinner');
+      const spinners = root.findAllByType('spinner' as any);
       expect(spinners.length).toBeGreaterThan(0);
 
       // Check for loading text
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasLoadingText = textElements.some((el: any) => el.props.children === 'Loading...');
       expect(hasLoadingText).toBe(true);
     });
@@ -496,12 +497,12 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Check for "Upcoming Shift Days" text
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasUpcomingShiftDaysText = textElements.some((el: any) => el.props.children === 'Upcoming Shift Days');
       expect(hasUpcomingShiftDaysText).toBe(true);
 
       // Check for shift day cards - should display all available days
-      const shiftDayCards = root.findAllByType('shift-day-card');
+      const shiftDayCards = root.findAllByType('shift-day-card' as any);
       expect(shiftDayCards.length).toBe(2);
       expect(shiftDayCards[0].props.children).toBe('Shift Day day-1');
       expect(shiftDayCards[1].props.children).toBe('Shift Day day-2');
@@ -517,7 +518,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Should not find "Upcoming Shift Days" text
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasUpcomingShiftDaysText = textElements.some((el: any) => el.props.children === 'Upcoming Shift Days');
       expect(hasUpcomingShiftDaysText).toBe(false);
     });
@@ -546,7 +547,7 @@ describe('ShiftDetailsSheet', () => {
       const { root } = component;
 
       // Should render shift day cards but limited to 7 due to slice(0, 7)
-      const shiftDayCards = root.findAllByType('shift-day-card');
+      const shiftDayCards = root.findAllByType('shift-day-card' as any);
       expect(shiftDayCards.length).toBe(7);
 
       // Verify first and last cards are present
@@ -579,7 +580,7 @@ describe('ShiftDetailsSheet', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasNextDay = textElements.some((el: any) => el.props.children === 'Next Day');
       // The component returns the invalid date as-is when parsing fails
       const hasInvalidDate = textElements.some((el: any) => el.props.children === 'invalid-date');
@@ -597,7 +598,7 @@ describe('ShiftDetailsSheet', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasNextDay = textElements.some((el: any) => el.props.children === 'Next Day');
 
       expect(hasNextDay).toBe(false);
@@ -614,7 +615,7 @@ describe('ShiftDetailsSheet', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      const badgeTextElements = root.findAllByType('badge-text');
+      const badgeTextElements = root.findAllByType('badge-text' as any);
       const hasManual = badgeTextElements.some((element: any) => element.props.children === 'Manual');
       expect(hasManual).toBe(true);
     });
@@ -628,7 +629,7 @@ describe('ShiftDetailsSheet', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      const badgeTextElements = root.findAllByType('badge-text');
+      const badgeTextElements = root.findAllByType('badge-text' as any);
       const hasRequired = badgeTextElements.some((element: any) => element.props.children === 'Required');
       expect(hasRequired).toBe(true);
     });
@@ -642,7 +643,7 @@ describe('ShiftDetailsSheet', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      const badgeTextElements = root.findAllByType('badge-text');
+      const badgeTextElements = root.findAllByType('badge-text' as any);
       const hasUnknown = badgeTextElements.some((element: any) => element.props.children === 'Unknown');
       expect(hasUnknown).toBe(true);
     });
@@ -656,7 +657,7 @@ describe('ShiftDetailsSheet', () => {
       const component = render(<ShiftDetailsSheet isOpen={true} onClose={jest.fn()} />);
       const { root } = component;
 
-      const badgeTextElements = root.findAllByType('badge-text');
+      const badgeTextElements = root.findAllByType('badge-text' as any);
       const hasUnknown = badgeTextElements.some((element: any) => element.props.children === 'Unknown');
       expect(hasUnknown).toBe(true);
     });
@@ -705,7 +706,7 @@ describe('ShiftDetailsSheet', () => {
 
       // Find shift day cards by their test output content
       const { root } = component;
-      const shiftDayElements = root.findAllByType('shift-day-card');
+      const shiftDayElements = root.findAllByType('shift-day-card' as any);
       expect(shiftDayElements.length).toBeGreaterThan(0);
 
       const firstCard = shiftDayElements[0];
@@ -753,12 +754,12 @@ describe('ShiftDetailsSheet', () => {
       mockTrackEvent.mockClear();
 
       const { root } = component;
-      const buttonElements = root.findAllByType('button');
+      const buttonElements = root.findAllByType('button' as any);
 
       // Find calendar button by looking for button-text with "Calendar"
       let calendarButton: any = null;
       for (const button of buttonElements) {
-        const buttonTextElements = button.findAllByType('button-text');
+        const buttonTextElements = button.findAllByType('button-text' as any);
         const hasCalendarText = buttonTextElements.some((textEl: any) => textEl.props.children === 'Calendar');
         if (hasCalendarText && button.props.onPress) {
           calendarButton = button;
@@ -931,12 +932,12 @@ describe('ShiftDetailsSheet', () => {
 
       // Find buttons by type and click the calendar one
       const { root } = component;
-      const buttonElements = root.findAllByType('button');
+      const buttonElements = root.findAllByType('button' as any);
 
       // Find calendar button by looking for button-text with "Calendar"
       let calendarButton: any = null;
       for (const button of buttonElements) {
-        const buttonTextElements = button.findAllByType('button-text');
+        const buttonTextElements = button.findAllByType('button-text' as any);
         const hasCalendarText = buttonTextElements.some((textEl: any) => textEl.props.children === 'Calendar');
         if (hasCalendarText && button.props.onPress) {
           calendarButton = button;
@@ -953,7 +954,7 @@ describe('ShiftDetailsSheet', () => {
       }
 
       // Should find the calendar view component by type
-      const calendarViews = root.findAllByType('shift-calendar-view');
+      const calendarViews = root.findAllByType('shift-calendar-view' as any);
       expect(calendarViews.length).toBeGreaterThan(0);
       expect(calendarViews[0].props['data-shift-id']).toBe('shift-1');
     });
@@ -981,7 +982,7 @@ describe('ShiftDetailsSheet', () => {
 
       // Check for zero in the rendered content by examining text elements
       const { root } = component;
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasZero = textElements.some((element: any) => element.props.children === 0 || element.props.children === '0');
       expect(hasZero).toBe(true);
     });
@@ -996,7 +997,7 @@ describe('ShiftDetailsSheet', () => {
 
       // Check for zero in the rendered content by examining text elements
       const { root } = component;
-      const textElements = root.findAllByType('text');
+      const textElements = root.findAllByType('text' as any);
       const hasZero = textElements.some((element: any) => element.props.children === 0 || element.props.children === '0');
       expect(hasZero).toBe(true);
     });
