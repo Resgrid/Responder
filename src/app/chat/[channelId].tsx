@@ -1,9 +1,9 @@
+import { Image } from 'expo-image';
 import { type Href, Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Circle } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform } from 'react-native';
-import { Image } from 'expo-image';
 
 import { getPresence, uploadAttachment } from '@/api/chat/chat';
 import { AckBanner } from '@/components/chat/ack-banner';
@@ -19,16 +19,16 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Center } from '@/components/ui/center';
 import { FlatList } from '@/components/ui/flat-list';
 import { HStack } from '@/components/ui/hstack';
+import { KeyboardAvoidingView } from '@/components/ui/keyboard-avoiding-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
-import { KeyboardAvoidingView } from '@/components/ui/keyboard-avoiding-view';
 import { VStack } from '@/components/ui/vstack';
-import { ChatChannelType, ChatMessagePriority, ChatMessageType, type ChatMessageResultData, type GifResultData } from '@/models/v4/chat';
+import { ChatChannelType, ChatMessagePriority, type ChatMessageResultData, ChatMessageType, type GifResultData } from '@/models/v4/chat';
+import useAuthStore from '@/stores/auth/store';
 import { useChatStore } from '@/stores/chat/store';
 import { securityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
-import useAuthStore from '@/stores/auth/store';
 
 export default function ChannelConversationScreen() {
   const { t } = useTranslation();
@@ -57,8 +57,8 @@ export default function ChannelConversationScreen() {
   const isDm = channel?.ChannelType === ChatChannelType.DirectMessage;
   const showSender = !isDm;
 
-  // Newest-first for the inverted list.
-  const inverted = useMemo(() => (messages ? messages.slice().reverse() : []), [messages]);
+  // Natural order (oldest first); FlashList v2 renders from the bottom.
+  const ordered = useMemo(() => messages ?? [], [messages]);
 
   // Mount: activate channel, join hub, load history and members.
   useFocusEffect(
@@ -92,10 +92,10 @@ export default function ChannelConversationScreen() {
 
   // Mark read whenever the newest message changes while viewing.
   useEffect(() => {
-    if (channelId && inverted.length > 0) {
+    if (channelId && ordered.length > 0) {
       void useChatStore.getState().markChannelRead(channelId);
     }
-  }, [channelId, inverted.length]);
+  }, [channelId, ordered.length]);
 
   const otherOnline = useMemo(() => {
     if (!isDm) return false;
@@ -211,7 +211,7 @@ export default function ChannelConversationScreen() {
 
   const keyExtractor = useCallback((item: ChatMessageResultData) => item.ChatMessageId, []);
 
-  const handleEndReached = useCallback(() => {
+  const handleStartReached = useCallback(() => {
     if (channelId) void useChatStore.getState().loadOlderMessages(channelId);
   }, [channelId]);
 
@@ -231,19 +231,19 @@ export default function ChannelConversationScreen() {
       <AckBanner acks={channelAcks} onAcknowledge={(messageId) => useChatStore.getState().acknowledgeMessage(messageId)} />
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
-        {loading && inverted.length === 0 ? (
+        {loading && ordered.length === 0 ? (
           <Center className="flex-1">
             <Spinner />
           </Center>
         ) : (
           <FlatList
-            data={inverted}
-            inverted
+            data={ordered}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.3}
+            onStartReached={handleStartReached}
+            onStartReachedThreshold={0.3}
             removeClippedSubviews
+            maintainVisibleContentPosition={{ startRenderingFromBottom: true }}
             contentContainerStyle={{ paddingVertical: 8 }}
           />
         )}
@@ -268,7 +268,13 @@ export default function ChannelConversationScreen() {
         onClose={() => setActionsMessage(null)}
         isOwn={!!actionsMessage?.SenderUserId && actionsMessage.SenderUserId === currentUserId}
         isModerator={isModerator}
-        onReact={(m, emoji) => handleToggleReaction(m, emoji, m.Reactions.some((r) => r.Emoji === emoji && r.UserId === currentUserId))}
+        onReact={(m, emoji) =>
+          handleToggleReaction(
+            m,
+            emoji,
+            m.Reactions.some((r) => r.Emoji === emoji && r.UserId === currentUserId)
+          )
+        }
         onReply={openThread}
         onCopy={async (m) => {
           const ok = await copyToClipboard(m.Body ?? '');

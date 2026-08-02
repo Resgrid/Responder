@@ -13,9 +13,9 @@ import { KeyboardAvoidingView } from '@/components/ui/keyboard-avoiding-view';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { logger } from '@/lib/logging';
-import { ChatMessagePriority, ChatMessageType, type ChatMessageResultData } from '@/models/v4/chat';
-import { useChatStore } from '@/stores/chat/store';
+import { ChatMessagePriority, type ChatMessageResultData, ChatMessageType } from '@/models/v4/chat';
 import useAuthStore from '@/stores/auth/store';
+import { useChatStore } from '@/stores/chat/store';
 
 export default function ThreadScreen() {
   const { t } = useTranslation();
@@ -48,8 +48,6 @@ export default function ThreadScreen() {
     }
     return Array.from(map.values()).sort((a, b) => a.MessageSeq - b.MessageSeq);
   }, [fetchedReplies, channelMessages, messageId]);
-
-  const inverted = useMemo(() => replies.slice().reverse(), [replies]);
 
   const handleSendText = useCallback(
     (body: string, urgent: boolean) => {
@@ -111,21 +109,14 @@ export default function ThreadScreen() {
         <Divider />
 
         <FlatList
-          data={inverted}
-          inverted
+          data={replies}
+          maintainVisibleContentPosition={{ startRenderingFromBottom: true }}
           keyExtractor={(item: ChatMessageResultData) => item.ChatMessageId}
           renderItem={renderItem}
           contentContainerStyle={{ paddingVertical: 8 }}
         />
 
-        <MessageComposer
-          onSendText={handleSendText}
-          onSendImage={() => undefined}
-          onSendLocation={handleSendLocation}
-          onOpenGif={handleSendGif}
-          onTyping={() => undefined}
-          placeholder={t('chat.reply_placeholder')}
-        />
+        <MessageComposer onSendText={handleSendText} onSendImage={() => undefined} onSendLocation={handleSendLocation} onOpenGif={handleSendGif} onTyping={() => undefined} placeholder={t('chat.reply_placeholder')} />
       </KeyboardAvoidingView>
     </Box>
   );
