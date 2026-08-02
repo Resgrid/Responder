@@ -1,6 +1,5 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
@@ -8,6 +7,7 @@ import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
+import { routerPushWithRetry } from '@/lib/navigation';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
@@ -28,13 +28,11 @@ export function handleChatDeepLink(eventCode: string): boolean {
   const match = /^([tg]):(.+)$/.exec(eventCode);
   if (!match) return false;
   const channelId = match[2];
-  try {
-    router.push(`/chat/${channelId}`);
-    return true;
-  } catch (error) {
+  if (/[/\\?#]/.test(channelId)) return false;
+  void routerPushWithRetry({ pathname: '/chat/[channelId]', params: { channelId } }, { maxAttempts: 20, retryDelayMs: 250 }).catch((error) => {
     logger.error({ message: 'Failed to deep-link to chat channel', context: { error, eventCode } });
-    return false;
-  }
+  });
+  return true;
 }
 
 // Configure notifications behavior

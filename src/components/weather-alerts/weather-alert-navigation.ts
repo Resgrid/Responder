@@ -1,5 +1,4 @@
-import { router } from 'expo-router';
-
+import { routerPushWithRetry } from '@/lib/navigation';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
 interface OpenWeatherAlertDetailOptions {
@@ -19,22 +18,6 @@ export const getWeatherAlertDetailPath = (alertId: string): `/(app)/weather-aler
  * error if every attempt fails.
  */
 export const openWeatherAlertDetail = async (alertId: string, options?: OpenWeatherAlertDetailOptions): Promise<void> => {
-  const maxAttempts = options?.maxAttempts ?? 1;
-  const retryDelayMs = options?.retryDelayMs ?? 250;
-
   await useWeatherAlertsStore.getState().handleAlertReceived(alertId);
-
-  const path = getWeatherAlertDetailPath(alertId);
-
-  for (let attempt = 1; ; attempt++) {
-    try {
-      router.push(path);
-      return;
-    } catch (error) {
-      if (attempt >= maxAttempts) {
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-    }
-  }
+  await routerPushWithRetry(getWeatherAlertDetailPath(alertId), options);
 };
