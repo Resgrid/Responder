@@ -42,3 +42,4 @@ expo-env.d.ts
 .dual-graph/
 .mcp.json
 /.dual-graph-pro
+.claude/settings.local.json

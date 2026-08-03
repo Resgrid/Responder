@@ -26,11 +26,14 @@ const createMockSignalRState = (overrides: Partial<any> = {}) => ({
   isGeolocationHubConnected: false,
   lastGeolocationMessage: null,
   lastGeolocationTimestamp: 0,
+  isChatHubConnected: false,
   error: null,
   connectUpdateHub: jest.fn(),
   disconnectUpdateHub: jest.fn(),
   connectGeolocationHub: jest.fn(),
   disconnectGeolocationHub: jest.fn(),
+  connectChatHub: jest.fn(),
+  disconnectChatHub: jest.fn(),
   ...overrides,
 });
 

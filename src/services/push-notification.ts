@@ -7,6 +7,7 @@ import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
+import { routerPushWithRetry } from '@/lib/navigation';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
@@ -16,6 +17,22 @@ export interface PushNotificationData {
   title?: string;
   body?: string;
   data?: Record<string, unknown>;
+}
+
+/**
+ * Handles chat push deep-links. Chat notifications carry an eventCode of
+ * "t:{channelId}" (direct message) or "g:{channelId}" (group/channel); both
+ * navigate to the chat conversation route.
+ */
+export function handleChatDeepLink(eventCode: string): boolean {
+  const match = /^([tg]):(.+)$/.exec(eventCode);
+  if (!match) return false;
+  const channelId = match[2];
+  if (/[/\\?#]/.test(channelId)) return false;
+  void routerPushWithRetry({ pathname: '/chat/[channelId]', params: { channelId } }, { maxAttempts: 20, retryDelayMs: 250 }).catch((error) => {
+    logger.error({ message: 'Failed to deep-link to chat channel', context: { error, eventCode } });
+  });
+  return true;
 }
 
 // Configure notifications behavior
@@ -231,6 +248,11 @@ class PushNotificationService {
 
       if (parsed.type === 'weather' && parsed.id) {
         void this.navigateToWeatherAlert(parsed.id);
+        return;
+      }
+
+      // Deep-link chat notifications: eventCode "t:{channelId}" (DM) / "g:{channelId}" (group)
+      if (handleChatDeepLink(data.eventCode)) {
         return;
       }
     }

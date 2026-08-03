@@ -16,6 +16,8 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
   const disconnectUpdateHub = useSignalRStore((state) => state.disconnectUpdateHub);
   const connectGeolocationHub = useSignalRStore((state) => state.connectGeolocationHub);
   const disconnectGeolocationHub = useSignalRStore((state) => state.disconnectGeolocationHub);
+  const connectChatHub = useSignalRStore((state) => state.connectChatHub);
+  const disconnectChatHub = useSignalRStore((state) => state.disconnectChatHub);
 
   // Track current values with refs for timer callbacks
   const currentIsActive = useRef(isActive);
@@ -66,14 +68,14 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
 
     try {
       // Use Promise.allSettled to prevent one failure from blocking the other
-      const results = await Promise.allSettled([disconnectUpdateHub(), disconnectGeolocationHub()]);
+      const hubNames = ['UpdateHub', 'GeolocationHub', 'ChatHub'];
+      const results = await Promise.allSettled([disconnectUpdateHub(), disconnectGeolocationHub(), disconnectChatHub()]);
 
       // Log any failures without throwing
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const hubName = index === 0 ? 'UpdateHub' : 'GeolocationHub';
           logger.error({
-            message: `Failed to disconnect ${hubName} on app background`,
+            message: `Failed to disconnect ${hubNames[index]} on app background`,
             context: { error: result.reason },
           });
         }
@@ -89,7 +91,7 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
         pendingOperations.current = null;
       }
     }
-  }, [disconnectUpdateHub, disconnectGeolocationHub]);
+  }, [disconnectUpdateHub, disconnectGeolocationHub, disconnectChatHub]);
 
   const handleAppResume = useCallback(async () => {
     logger.debug({
@@ -120,14 +122,14 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
 
     try {
       // Use Promise.allSettled to prevent one failure from blocking the other
-      const results = await Promise.allSettled([connectUpdateHub(), connectGeolocationHub()]);
+      const hubNames = ['UpdateHub', 'GeolocationHub', 'ChatHub'];
+      const results = await Promise.allSettled([connectUpdateHub(), connectGeolocationHub(), connectChatHub()]);
 
       // Log any failures without throwing
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const hubName = index === 0 ? 'UpdateHub' : 'GeolocationHub';
           logger.error({
-            message: `Failed to reconnect ${hubName} on app resume`,
+            message: `Failed to reconnect ${hubNames[index]} on app resume`,
             context: { error: result.reason },
           });
         }
@@ -143,7 +145,7 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
         pendingOperations.current = null;
       }
     }
-  }, [connectUpdateHub, connectGeolocationHub]);
+  }, [connectUpdateHub, connectGeolocationHub, connectChatHub]);
 
   // Clear timers helper
   const clearTimers = useCallback(() => {

@@ -91,6 +91,7 @@ const client = z.object({
   CHANNEL_API_URL: z.string(),
   CHANNEL_HUB_NAME: z.string(),
   REALTIME_GEO_HUB_NAME: z.string(),
+  CHAT_HUB_NAME: z.string(),
   LOGGING_KEY: z.string(),
   APP_KEY: z.string(),
   RESPOND_MAPBOX_PUBKEY: z.string(),
@@ -129,6 +130,7 @@ const _clientEnv = {
   CHANNEL_API_URL: process.env.RESPOND_CHANNEL_API_URL || 'https://qaevents.resgrid.dev/',
   CHANNEL_HUB_NAME: process.env.RESPOND_CHANNEL_HUB_NAME || 'eventingHub',
   REALTIME_GEO_HUB_NAME: process.env.RESPOND_REALTIME_GEO_HUB_NAME || 'geolocationHub',
+  CHAT_HUB_NAME: process.env.RESPOND_CHAT_HUB_NAME || 'chatHub',
   LOGGING_KEY: process.env.RESPOND_LOGGING_KEY || '',
   APP_KEY: process.env.RESPOND_APP_KEY || '',
   IS_MOBILE_APP: true, // or whatever default you want
