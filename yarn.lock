@@ -7350,11 +7350,6 @@ expo-auth-session@~56.0.16:
     expo-web-browser "~56.0.6"
     invariant "^2.2.4"
 
-expo-av@~16.0.8:
-  version "16.0.8"
-  resolved "https://registry.yarnpkg.com/expo-av/-/expo-av-16.0.8.tgz#b1671127f3b2ecaeb9c69fc2301cf791d4504dd6"
-  integrity sha512-cmVPftGR/ca7XBgs7R6ky36lF3OC0/MM/lpgX/yXqfv0jASTsh7AYX9JxHCwFmF+Z6JEB1vne9FDx4GiLcGreQ==
-
 expo-build-properties@~56.0.24:
   version "56.0.24"
   resolved "https://registry.yarnpkg.com/expo-build-properties/-/expo-build-properties-56.0.24.tgz#3285ff60e87fc9f23b6ee35a44da7fe82edf3cb0"
@@ -7644,6 +7639,11 @@ expo-updates-interface@~56.0.1:
   version "56.0.2"
   resolved "https://registry.yarnpkg.com/expo-updates-interface/-/expo-updates-interface-56.0.2.tgz#39ad3894535901773419a477cb478df95df9e38c"
   integrity sha512-eWTwSZ9y8vrULG2oBn2TQSSIwBGSq/TxGJ3jY6tuVS2FWH/ASRIiKs3zkUZTRoC3ZuV2alz0mUClYV7nNrFx8g==
+
+expo-video@~56.1.4:
+  version "56.1.4"
+  resolved "https://registry.yarnpkg.com/expo-video/-/expo-video-56.1.4.tgz#796426fb2b7b82007a844fa3be6b82611f4757f8"
+  integrity sha512-8mXZOnb7ZsWneDlcnRf0M2Ox9eb5dGnNiGiCkj9bwLPY+3jM2Pc1t5ymNUuhw8lSpT/rOnE0J0/81Y3+0k2Zcw==
 
 expo-web-browser@~56.0.6:
   version "56.0.6"

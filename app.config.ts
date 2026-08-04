@@ -297,6 +297,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         microphonePermission: 'Allow Resgrid Responder to access the microphone for audio input used in PTT and calls.',
       },
     ],
+    'expo-video',
     [
       'expo-image-picker',
       {

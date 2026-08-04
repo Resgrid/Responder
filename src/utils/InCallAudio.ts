@@ -1,4 +1,4 @@
-import { Audio, InterruptionModeIOS } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { NativeModules, Platform } from 'react-native';
 
 import { logger } from '../lib/logging';
@@ -61,13 +61,11 @@ class InCallAudioService {
             logger.warn({ message: 'InCallAudioModule not found on Android' });
           }
         } else {
-          // iOS / Web: expo-av handles loading on play or we can preload if needed,
-          // but simple play usually works fine.
-          await Audio.setAudioModeAsync({
-            playsInSilentModeIOS: true,
-            interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
-            staysActiveInBackground: true,
-            shouldDuckAndroid: false,
+          // iOS / Web: expo-audio loads these short sounds on demand.
+          await setAudioModeAsync({
+            playsInSilentMode: true,
+            interruptionMode: 'mixWithOthers',
+            shouldPlayInBackground: true,
           });
 
           this.isInitialized = true;
@@ -101,12 +99,23 @@ class InCallAudioService {
       } else {
         // iOS
         const source = SOUNDS[name].ios;
-        const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true });
-        sound.setOnPlaybackStatusUpdate(async (status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            await sound.unloadAsync();
+        const player = createAudioPlayer(source, { keepAudioSessionActive: true });
+        const subscription = player.addListener('playbackStatusUpdate', (status) => {
+          if (status.didJustFinish || status.error) {
+            subscription.remove();
+            player.remove();
           }
         });
+        try {
+          player.play();
+        } catch (error) {
+          try {
+            subscription.remove();
+          } finally {
+            player.remove();
+          }
+          throw error;
+        }
       }
     } catch (error) {
       logger.warn({ message: 'Failed to play in-call sound', context: { name, error } });

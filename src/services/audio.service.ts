@@ -1,5 +1,5 @@
 import { Asset } from 'expo-asset';
-import { Audio, type AVPlaybackSource, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
+import { type AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { NativeModules, Platform } from 'react-native';
 
 import { logger } from '@/lib/logging';
@@ -8,11 +8,11 @@ const { InCallAudioModule } = NativeModules;
 
 class AudioService {
   private static instance: AudioService;
-  private startTransmittingSound: Audio.Sound | null = null;
-  private stopTransmittingSound: Audio.Sound | null = null;
-  private connectedDeviceSound: Audio.Sound | null = null;
-  private connectToAudioRoomSound: Audio.Sound | null = null;
-  private disconnectedFromAudioRoomSound: Audio.Sound | null = null;
+  private startTransmittingSound: AudioPlayer | null = null;
+  private stopTransmittingSound: AudioPlayer | null = null;
+  private connectedDeviceSound: AudioPlayer | null = null;
+  private connectToAudioRoomSound: AudioPlayer | null = null;
+  private disconnectedFromAudioRoomSound: AudioPlayer | null = null;
   private isInitialized = false;
   private isPlayingSound: Set<string> = new Set();
   private isNativeAudioInitialized = false;
@@ -39,14 +39,12 @@ class AudioService {
 
     try {
       // Configure audio mode for production builds
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        staysActiveInBackground: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: true,
-        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
-        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        shouldPlayInBackground: true,
+        playsInSilentMode: true,
+        shouldRouteThroughEarpiece: true,
+        interruptionMode: Platform.OS === 'android' ? 'duckOthers' : 'mixWithOthers',
       });
 
       // Initialize native audio module on Android
@@ -128,55 +126,45 @@ class AudioService {
       const startTransmittingSoundAsset = Asset.fromModule(require('@assets/audio/ui/space_notification1.mp3'));
       await startTransmittingSoundAsset.downloadAsync();
 
-      const { sound: startSound } = await Audio.Sound.createAsync({ uri: startTransmittingSoundAsset.localUri || startTransmittingSoundAsset.uri } as AVPlaybackSource, {
-        shouldPlay: false,
-        isLooping: false,
-        volume: 1.0,
-      });
+      const startSound = createAudioPlayer({ uri: startTransmittingSoundAsset.localUri || startTransmittingSoundAsset.uri }, { keepAudioSessionActive: true });
+      startSound.loop = false;
+      startSound.volume = 1.0;
       this.startTransmittingSound = startSound;
 
       // Load stop transmitting sound
       const stopTransmittingSoundAsset = Asset.fromModule(require('@assets/audio/ui/space_notification2.mp3'));
       await stopTransmittingSoundAsset.downloadAsync();
 
-      const { sound: stopSound } = await Audio.Sound.createAsync({ uri: stopTransmittingSoundAsset.localUri || stopTransmittingSoundAsset.uri } as AVPlaybackSource, {
-        shouldPlay: false,
-        isLooping: false,
-        volume: 1.0,
-      });
+      const stopSound = createAudioPlayer({ uri: stopTransmittingSoundAsset.localUri || stopTransmittingSoundAsset.uri }, { keepAudioSessionActive: true });
+      stopSound.loop = false;
+      stopSound.volume = 1.0;
       this.stopTransmittingSound = stopSound;
 
       // Load connected device sound
       const connectedDeviceSoundAsset = Asset.fromModule(require('@assets/audio/ui/positive_interface_beep.mp3'));
       await connectedDeviceSoundAsset.downloadAsync();
 
-      const { sound: connectedSound } = await Audio.Sound.createAsync({ uri: connectedDeviceSoundAsset.localUri || connectedDeviceSoundAsset.uri } as AVPlaybackSource, {
-        shouldPlay: false,
-        isLooping: false,
-        volume: 1.0,
-      });
+      const connectedSound = createAudioPlayer({ uri: connectedDeviceSoundAsset.localUri || connectedDeviceSoundAsset.uri }, { keepAudioSessionActive: true });
+      connectedSound.loop = false;
+      connectedSound.volume = 1.0;
       this.connectedDeviceSound = connectedSound;
 
       // Load connect to audio room sound
       const connectToAudioRoomSoundAsset = Asset.fromModule(require('@assets/audio/ui/software_interface_start.mp3'));
       await connectToAudioRoomSoundAsset.downloadAsync();
 
-      const { sound: connectToRoomSound } = await Audio.Sound.createAsync({ uri: connectToAudioRoomSoundAsset.localUri || connectToAudioRoomSoundAsset.uri } as AVPlaybackSource, {
-        shouldPlay: false,
-        isLooping: false,
-        volume: 1.0,
-      });
+      const connectToRoomSound = createAudioPlayer({ uri: connectToAudioRoomSoundAsset.localUri || connectToAudioRoomSoundAsset.uri }, { keepAudioSessionActive: true });
+      connectToRoomSound.loop = false;
+      connectToRoomSound.volume = 1.0;
       this.connectToAudioRoomSound = connectToRoomSound;
 
       // Load disconnect from audio room sound
       const disconnectedFromAudioRoomSoundAsset = Asset.fromModule(require('@assets/audio/ui/software_interface_back.mp3'));
       await disconnectedFromAudioRoomSoundAsset.downloadAsync();
 
-      const { sound: disconnectFromRoomSound } = await Audio.Sound.createAsync({ uri: disconnectedFromAudioRoomSoundAsset.localUri || disconnectedFromAudioRoomSoundAsset.uri } as AVPlaybackSource, {
-        shouldPlay: false,
-        isLooping: false,
-        volume: 1.0,
-      });
+      const disconnectFromRoomSound = createAudioPlayer({ uri: disconnectedFromAudioRoomSoundAsset.localUri || disconnectedFromAudioRoomSoundAsset.uri }, { keepAudioSessionActive: true });
+      disconnectFromRoomSound.loop = false;
+      disconnectFromRoomSound.volume = 1.0;
       this.disconnectedFromAudioRoomSound = disconnectFromRoomSound;
 
       logger.debug({
@@ -190,7 +178,7 @@ class AudioService {
     }
   }
 
-  private async playSound(sound: Audio.Sound | null, soundName: string): Promise<void> {
+  private async playSound(sound: AudioPlayer | null, soundName: string): Promise<void> {
     // If Android and Native Module is available, use it for specific sounds
     if (Platform.OS === 'android' && this.isNativeAudioInitialized && InCallAudioModule) {
       try {
@@ -202,10 +190,10 @@ class AudioService {
         return;
       } catch (error) {
         logger.warn({
-          message: 'Failed to play native sound, falling back to expo-av',
+          message: 'Failed to play native sound, falling back to expo-audio',
           context: { soundName, error },
         });
-        // Fallthrough to expo-av if native fails
+        // Fall through to expo-audio if native playback fails.
       }
     }
 
@@ -234,29 +222,11 @@ class AudioService {
         await this.initializeAudio();
       }
 
-      // Verify the sound object is still valid before playing
-      try {
-        const status = await sound.getStatusAsync();
-        if (!status.isLoaded) {
-          logger.warn({
-            message: `Sound not in loaded state: ${soundName}`,
-            context: { status },
-          });
-          this.isPlayingSound.delete(soundName);
-          return;
-        }
-      } catch (statusError) {
-        logger.warn({
-          message: `Failed to get sound status: ${soundName}`,
-          context: { error: statusError },
-        });
-        this.isPlayingSound.delete(soundName);
-        return;
-      }
-
       // Reset to start and play
-      await sound.setPositionAsync(0);
-      await sound.playAsync();
+      if (sound.isLoaded) {
+        await sound.seekTo(0);
+      }
+      sound.play();
 
       logger.debug({
         message: 'Sound played successfully',
@@ -347,31 +317,31 @@ class AudioService {
 
       // Unload start transmitting sound
       if (this.startTransmittingSound) {
-        await this.startTransmittingSound.unloadAsync();
+        this.startTransmittingSound.remove();
         this.startTransmittingSound = null;
       }
 
       // Unload stop transmitting sound
       if (this.stopTransmittingSound) {
-        await this.stopTransmittingSound.unloadAsync();
+        this.stopTransmittingSound.remove();
         this.stopTransmittingSound = null;
       }
 
       // Unload connected device sound
       if (this.connectedDeviceSound) {
-        await this.connectedDeviceSound.unloadAsync();
+        this.connectedDeviceSound.remove();
         this.connectedDeviceSound = null;
       }
 
       // Unload connect to audio room sound
       if (this.connectToAudioRoomSound) {
-        await this.connectToAudioRoomSound.unloadAsync();
+        this.connectToAudioRoomSound.remove();
         this.connectToAudioRoomSound = null;
       }
 
       // Unload disconnect from audio room sound
       if (this.disconnectedFromAudioRoomSound) {
-        await this.disconnectedFromAudioRoomSound.unloadAsync();
+        this.disconnectedFromAudioRoomSound.remove();
         this.disconnectedFromAudioRoomSound = null;
       }
 

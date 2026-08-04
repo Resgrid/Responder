@@ -20,12 +20,12 @@ The service now uses the existing audio files located in:
 ```typescript
 private async initializeAudio(): Promise<void> {
   // Configure audio mode for playback
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: false,
-    staysActiveInBackground: false,
-    playsInSilentModeIOS: true,
-    shouldDuckAndroid: true,
-    playThroughEarpieceAndroid: false,
+  await setAudioModeAsync({
+    allowsRecording: false,
+    shouldPlayInBackground: false,
+    playsInSilentMode: true,
+    interruptionMode: 'duckOthers',
+    shouldRouteThroughEarpiece: false,
   });
 
   // Pre-load audio files
@@ -39,13 +39,13 @@ private async initializeAudio(): Promise<void> {
 - Sounds are stored as class properties for efficient reuse
 
 #### Sound Playback
-- Uses `sound.replayAsync()` for direct playback
+- Uses `player.seekTo(0)` and `player.play()` for direct playback
 - Includes proper error handling and logging
 - Plays sounds immediately without notification system overhead
 
 #### Resource Management
 - Proper cleanup in the `cleanup()` method
-- Unloads audio files to prevent memory leaks
+- Removes native audio players to prevent memory leaks
 - Null checks to prevent errors during cleanup
 
 ### 4. Benefits

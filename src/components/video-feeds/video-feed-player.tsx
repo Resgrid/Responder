@@ -1,7 +1,7 @@
-import { ResizeMode, Video } from 'expo-av';
+import { useVideoPlayer, type VideoSource, VideoView } from 'expo-video';
 import { CopyIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Modal, Share, StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
@@ -29,19 +29,41 @@ const getYouTubeEmbedUrl = (url: string): string => {
 export const VideoFeedPlayer: React.FC<VideoFeedPlayerProps> = ({ feed, visible, onClose }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const videoRef = useRef<Video>(null);
   const [hasError, setHasError] = useState(false);
   const [mjpegKey, setMjpegKey] = useState(0);
+
+  const handleError = useCallback(() => {
+    setHasError(true);
+  }, []);
+
+  const nativeVideoSource: VideoSource =
+    visible && feed && (feed.FeedFormat === CallVideoFeedFormat.HLS || feed.FeedFormat === CallVideoFeedFormat.DASH)
+      ? {
+          uri: feed.Url,
+          contentType: feed.FeedFormat === CallVideoFeedFormat.HLS ? 'hls' : 'dash',
+        }
+      : null;
+  const videoPlayer = useVideoPlayer(nativeVideoSource, (player) => {
+    if (nativeVideoSource) {
+      player.play();
+    }
+  });
+
+  useEffect(() => {
+    const subscription = videoPlayer.addListener('statusChange', ({ status }) => {
+      if (status === 'error') {
+        handleError();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [handleError, videoPlayer]);
 
   const handleCopyUrl = useCallback(async () => {
     if (feed) {
       await Share.share({ message: feed.Url });
     }
   }, [feed]);
-
-  const handleError = useCallback(() => {
-    setHasError(true);
-  }, []);
 
   const handleClose = useCallback(() => {
     setHasError(false);
@@ -74,7 +96,7 @@ export const VideoFeedPlayer: React.FC<VideoFeedPlayerProps> = ({ feed, visible,
     switch (format) {
       case CallVideoFeedFormat.HLS:
       case CallVideoFeedFormat.DASH:
-        return <Video ref={videoRef} source={{ uri: feed.Url }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} shouldPlay onError={handleError} />;
+        return <VideoView player={videoPlayer} style={styles.video} nativeControls contentFit="contain" />;
 
       case CallVideoFeedFormat.MJPEG:
         return <Image key={mjpegKey} source={{ uri: `${feed.Url}${feed.Url.includes('?') ? '&' : '?'}t=${Date.now()}` }} style={styles.video} resizeMode="contain" onError={handleError} />;
