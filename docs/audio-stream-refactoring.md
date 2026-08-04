@@ -1,148 +1,56 @@
-# Audio Stream Store Refactoring
+# Audio Stream Store
 
 ## Overview
 
-The audio stream store has been refactored to use `expo-av` instead of `expo-audio` to resolve issues with playing remote MP3 streams over the internet in the new Expo architecture.
+The audio stream store uses `expo-audio`, the audio package supported by the current Expo SDK. Remote streams are created with `createAudioPlayer()` and their loading, buffering, playback, completion, and error states are observed through `playbackStatusUpdate` events.
 
-## Key Changes
-
-### 1. Replaced expo-audio with expo-av
-
-**Before:**
-```typescript
-import { type AudioPlayer, createAudioPlayer } from 'expo-audio';
-```
-
-**After:**
-```typescript
-import { Audio, type AVPlaybackSource, type AVPlaybackStatus } from 'expo-av';
-```
-
-### 2. Updated Audio Player Management
-
-**Before:**
-- Used `createAudioPlayer()` function
-- Audio player instance stored as `AudioPlayer`
-
-**After:**
-- Uses `Audio.Sound.createAsync()` method
-- Audio player instance stored as `Audio.Sound`
-
-### 3. Enhanced Audio Configuration
-
-Added proper audio mode configuration for streaming:
+## Player lifecycle
 
 ```typescript
-await Audio.setAudioModeAsync({
-  allowsRecordingIOS: false,
-  staysActiveInBackground: true,
-  playsInSilentModeIOS: true,
-  shouldDuckAndroid: true,
-  playThroughEarpieceAndroid: false,
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+
+await setAudioModeAsync({
+  allowsRecording: false,
+  shouldPlayInBackground: true,
+  playsInSilentMode: true,
+  interruptionMode: 'duckOthers',
+  shouldRouteThroughEarpiece: false,
 });
+
+const player: AudioPlayer = createAudioPlayer(stream.Url, {
+  updateInterval: 1000,
+  keepAudioSessionActive: true,
+  preferredForwardBufferDuration: 5,
+});
+
+player.addListener('playbackStatusUpdate', (status) => {
+  // Synchronize playback and buffering state and handle status.error.
+});
+player.play();
 ```
 
-### 4. Improved State Management
+Call `player.pause()` followed by `player.remove()` when replacing or stopping a stream. `remove()` releases the native player and its listeners.
 
-Added new state properties for better stream status tracking:
+## State
 
-```typescript
-interface AudioStreamState {
-  // ... existing properties
-  isLoading: boolean;        // Track loading state
-  isBuffering: boolean;      // Track buffering state
-  soundObject: Audio.Sound | null; // Sound instance
-}
-```
+`useAudioStreamStore` exposes the available streams, the current stream and player, loading and buffering flags, and the `playStream`, `stopStream`, and `cleanup` operations. The public store API remains stable for UI consumers.
 
-### 5. Better Error Handling
+## Dependencies
 
-Enhanced error handling with proper cleanup and status updates.
-
-## Installation
-
-Make sure you have `expo-av` installed:
+Use Expo's SDK-aware installer when changing audio dependencies:
 
 ```bash
-yarn add expo-av
+yarn expo install expo-audio
 ```
 
-## Usage Example
+Run `yarn expo install --check` after dependency changes to ensure every native package matches the installed Expo SDK.
 
-```typescript
-import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
+## Configuration
 
-const MyComponent = () => {
-  const {
-    availableStreams,
-    isLoadingStreams,
-    currentStream,
-    isPlaying,
-    isLoading,
-    isBuffering,
-    fetchAvailableStreams,
-    playStream,
-    stopStream,
-  } = useAudioStreamStore();
-
-  useEffect(() => {
-    fetchAvailableStreams();
-  }, []);
-
-  const handlePlay = async (stream) => {
-    try {
-      await playStream(stream);
-    } catch (error) {
-      console.error('Failed to play stream:', error);
-    }
-  };
-
-  // ... render logic
-};
-```
-
-## Benefits
-
-1. **Better Remote Streaming Support**: `expo-av` provides more robust support for remote MP3 streams
-2. **Improved Audio Configuration**: Proper audio mode settings for background playback and silent mode
-3. **Enhanced Error Handling**: Better error recovery and cleanup
-4. **Loading States**: More granular loading and buffering states for better UX
-5. **Memory Management**: Proper cleanup of audio resources
-
-## Migration Notes
-
-If you were using the previous audio stream store:
-
-1. Replace any direct `audioPlayer` references with `soundObject`
-2. Update any custom audio handling code to use `expo-av` APIs
-3. The store API remains largely the same, so most usage code should work without changes
+The app config enables background audio and declares microphone permissions for PTT and LiveKit calls. Runtime microphone permissions are handled with `react-native-permissions` so permission prompts do not race the active LiveKit or CallKeep audio session.
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Audio not playing on iOS in silent mode**: Make sure `playsInSilentModeIOS: true` is set
-2. **Buffering issues**: The store now properly tracks buffering state - use `isBuffering` to show loading indicators
-3. **Background playback**: Ensure your app has proper background audio permissions configured
-
-### Audio Permissions
-
-Make sure your app's configuration includes proper audio permissions:
-
-**app.json/app.config.js:**
-```json
-{
-  "expo": {
-    "ios": {
-      "infoPlist": {
-        "UIBackgroundModes": ["audio"]
-      }
-    },
-    "android": {
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
-    }
-  }
-}
-```
+1. For silent-mode playback, verify `playsInSilentMode: true`.
+2. For remote stream stalls, inspect the `isBuffering` and `error` fields delivered by `playbackStatusUpdate`.
+3. For background playback, verify the platform background-audio configuration and keep the player audio session active.

@@ -1,6 +1,6 @@
 import { AudioSession } from '@livekit/react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
-import { Audio } from 'expo-av';
+import { setAudioModeAsync } from 'expo-audio';
 import { ConnectionState, Room, RoomEvent } from 'livekit-client';
 import { Platform } from 'react-native';
 import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
@@ -51,12 +51,12 @@ const setupAudioRouting = async (room: Room): Promise<void> => {
 
       try {
         // Ensure we are in a call-compatible mode
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          staysActiveInBackground: true,
-          playsInSilentModeIOS: true,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: outputType !== 'speaker',
+        await setAudioModeAsync({
+          allowsRecording: true,
+          shouldPlayInBackground: true,
+          playsInSilentMode: true,
+          interruptionMode: 'duckOthers',
+          shouldRouteThroughEarpiece: outputType !== 'speaker',
         });
 
         if (outputType === 'bluetooth') {
@@ -169,8 +169,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
     try {
       if (Platform.OS === 'android' || Platform.OS === 'ios') {
         // Use react-native-permissions for both Android and iOS microphone permissions.
-        // NOTE: expo-audio's permission request activates AVAudioSession on iOS which
-        // deadlocks against expo-av's active session and freezes the app.
+        // Keep permission handling separate from audio-session configuration so it
+        // cannot race LiveKit or CallKeep while a call session is active.
         const permission = Platform.OS === 'ios' ? PERMISSIONS.IOS.MICROPHONE : PERMISSIONS.ANDROID.RECORD_AUDIO;
 
         const status = await check(permission);

@@ -828,16 +828,14 @@ jest.mock('@sentry/react-native', () => {
   };
 });
 
-// Mock expo-av to avoid import issues
-jest.mock('expo-av', () => ({
-  Audio: {
-    setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
-    Sound: {
-      createAsync: jest.fn().mockResolvedValue({ sound: { setPositionAsync: jest.fn(), playAsync: jest.fn(), unloadAsync: jest.fn() } }),
-    },
-  },
-  InterruptionModeAndroid: { DuckOthers: 0 },
-  InterruptionModeIOS: { DoNotMix: 0 },
+// Mock expo-video to avoid loading its native module in component tests.
+jest.mock('expo-video', () => ({
+  VideoView: 'VideoView',
+  useVideoPlayer: jest.fn(() => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+  })),
 }));
 
 // Mock react-native-webview to avoid TurboModule errors

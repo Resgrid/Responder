@@ -1,67 +1,38 @@
-# Audio Service Permissions and Configuration Update
+# Audio Permissions and Configuration
 
-## Overview
-Updated the audio service configuration to include proper iOS microphone usage description and Android interruption mode for enhanced audio behavior across platforms.
+## Platform configuration
 
-## Changes Made
+- iOS declares `NSMicrophoneUsageDescription` and includes `audio` in `UIBackgroundModes`.
+- Android declares recording, connected-device, media-playback, and foreground-service permissions needed by PTT and LiveKit calls.
+- The `expo-audio` config plugin supplies the user-facing microphone permission message.
 
-### 1. iOS Configuration (app.config.ts)
-- **Added**: `NSMicrophoneUsageDescription` to iOS `infoPlist` section
-- **Description**: "Allow Resgrid Responder to access the microphone for voice communication and push-to-talk functionality during emergency response."
-- **Existing**: `UIBackgroundModes` already includes "audio" for background audio support
+## Audio session configuration
 
-### 2. Android Configuration (app.config.ts) 
-- **Existing**: `android.permission.RECORD_AUDIO` already declared in permissions array
-- **Existing**: Foreground service permissions already properly configured:
-  - `android.permission.FOREGROUND_SERVICE`
-  - `android.permission.FOREGROUND_SERVICE_MICROPHONE`
-  - `android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE`
-  - `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK`
+The audio service uses the current cross-platform `expo-audio` field names:
 
-### 3. Audio Service Configuration (src/services/audio.service.ts)
-- **Added**: Import for `InterruptionModeAndroid` from expo-av
-- **Added**: `interruptionModeAndroid: InterruptionModeAndroid.DuckOthers` to audio mode configuration
-- **Behavior**: This ensures predictable Android audio behavior where the app's audio will duck (lower volume of) other audio instead of completely interrupting it
-
-### 4. Test Updates (src/services/__tests__/audio.service.test.ts)
-- **Added**: Mock for `InterruptionModeAndroid` to maintain test compatibility
-
-## Runtime Permission Handling
-
-The app already correctly handles runtime permissions using `expo-audio`:
-- **Location**: `src/stores/app/livekit-store.ts`
-- **Functions**: `getRecordingPermissionsAsync()` and `requestRecordingPermissionsAsync()`
-- **Coverage**: Both Android and iOS platforms
-- **Integration**: Permissions are requested when connecting to LiveKit rooms
-
-## Audio Configuration Details
-
-The audio service now uses the following configuration:
 ```typescript
-await Audio.setAudioModeAsync({
-  allowsRecordingIOS: true,                                    // Enable recording on iOS
-  staysActiveInBackground: true,                               // Background audio support  
-  playsInSilentModeIOS: true,                                 // Play in silent mode
-  shouldDuckAndroid: true,                                    // Duck other audio on Android
-  playThroughEarpieceAndroid: true,                           // Use earpiece when appropriate
-  interruptionModeIOS: InterruptionModeIOS.DoNotMix,         // iOS: Don't mix with other audio
-  interruptionModeAndroid: InterruptionModeAndroid.DuckOthers, // Android: Duck other audio
+import { setAudioModeAsync } from 'expo-audio';
+
+await setAudioModeAsync({
+  allowsRecording: true,
+  shouldPlayInBackground: true,
+  playsInSilentMode: true,
+  shouldRouteThroughEarpiece: true,
+  interruptionMode: Platform.OS === 'android' ? 'duckOthers' : 'mixWithOthers',
 });
 ```
 
-## Benefits
+Android ducks other audio while Responder is active. iOS mixes short UI sounds with the active communication session. LiveKit routing can override the earpiece setting for a selected speaker, wired headset, or Bluetooth device.
 
-1. **iOS**: Clear user-facing microphone permission explanation
-2. **Android**: Predictable audio interruption behavior 
-3. **Cross-platform**: Consistent audio behavior across platforms
-4. **Compliance**: Meets platform requirements for audio permissions
-5. **User Experience**: Better audio handling during emergency communications
+## Runtime permission handling
+
+`src/stores/app/livekit-store.ts` uses `react-native-permissions` for both Android and iOS microphone access. Permission handling remains separate from audio-session activation so it cannot race LiveKit or CallKeep during a call.
 
 ## Verification
 
-All changes have been verified to:
-- ✅ Compile without TypeScript errors
-- ✅ Import `InterruptionModeAndroid` correctly
-- ✅ Include proper iOS permission description
-- ✅ Maintain existing Android permissions
-- ✅ Update test mocks appropriately
+After changing native audio configuration, run:
+
+```bash
+yarn type-check
+yarn expo install --check
+```
