@@ -17,7 +17,12 @@ await setAudioModeAsync({
   shouldRouteThroughEarpiece: false,
 });
 
-const player: AudioPlayer = createAudioPlayer(stream.Url, {
+const streamUrl = stream?.Url?.trim();
+if (!streamUrl) {
+  throw new Error('Audio stream URL is required');
+}
+
+const player: AudioPlayer = createAudioPlayer(streamUrl, {
   updateInterval: 1000,
   keepAudioSessionActive: true,
   preferredForwardBufferDuration: 5,

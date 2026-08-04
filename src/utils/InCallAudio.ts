@@ -106,7 +106,16 @@ class InCallAudioService {
             player.remove();
           }
         });
-        player.play();
+        try {
+          player.play();
+        } catch (error) {
+          try {
+            subscription.remove();
+          } finally {
+            player.remove();
+          }
+          throw error;
+        }
       }
     } catch (error) {
       logger.warn({ message: 'Failed to play in-call sound', context: { name, error } });

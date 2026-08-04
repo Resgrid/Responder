@@ -201,6 +201,29 @@ describe('AudioStreamStore', () => {
   });
 
   describe('playStream', () => {
+    it('should reject a missing URL without disrupting the current stream', async () => {
+      const invalidStream = { ...mockStream, Id: 'invalid', Name: 'Invalid Stream', Url: ' ' };
+      useAudioStreamStore.setState({
+        soundObject: mockSoundObject,
+        currentStream: mockStream,
+        isPlaying: true,
+      });
+
+      await useAudioStreamStore.getState().playStream(invalidStream);
+
+      const state = useAudioStreamStore.getState();
+      expect(state.soundObject).toBe(mockSoundObject);
+      expect(state.currentStream).toEqual(mockStream);
+      expect(state.isPlaying).toBe(true);
+      expect(mockSetAudioModeAsync).not.toHaveBeenCalled();
+      expect(mockCreateAudioPlayer).not.toHaveBeenCalled();
+      expect(mockSoundObject.remove).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Cannot play audio stream without a URL',
+        context: { streamId: invalidStream.Id, streamName: invalidStream.Name },
+      });
+    });
+
     it('should play stream successfully', async () => {
       await useAudioStreamStore.getState().playStream(mockStream);
       
@@ -275,6 +298,38 @@ describe('AudioStreamStore', () => {
         context: { error: mockError, streamName: mockStream.Name },
       });
     });
+
+    it('should not clear a newer stream when an older setup rejects', async () => {
+      const olderStream = { ...mockStream, Id: 'older', Name: 'Older Stream' };
+      const newerStream = { ...mockStream, Id: 'newer', Name: 'Newer Stream' };
+      const olderError = new Error('Older setup failed');
+      let rejectOlderSetup!: (error: Error) => void;
+      const olderSetup = new Promise<void>((_resolve, reject) => {
+        rejectOlderSetup = reject;
+      });
+
+      mockSetAudioModeAsync.mockImplementationOnce(() => olderSetup).mockResolvedValueOnce(undefined);
+
+      const olderRequest = useAudioStreamStore.getState().playStream(olderStream);
+      await Promise.resolve();
+      expect(mockSetAudioModeAsync).toHaveBeenCalledTimes(1);
+
+      await useAudioStreamStore.getState().playStream(newerStream);
+      rejectOlderSetup(olderError);
+      await olderRequest;
+
+      const state = useAudioStreamStore.getState();
+      expect(state.soundObject).toBe(mockSoundObject);
+      expect(state.currentStream).toEqual(newerStream);
+      expect(state.isPlaying).toBe(true);
+      expect(state.isLoading).toBe(false);
+      expect(state.isBuffering).toBe(false);
+      expect(mockSoundObject.remove).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        message: 'Failed to play audio stream',
+        context: { error: olderError, streamName: olderStream.Name },
+      });
+    });
   });
 
   describe('stopStream', () => {
@@ -322,6 +377,14 @@ describe('AudioStreamStore', () => {
         message: 'Failed to stop audio stream',
         context: { error: mockError },
       });
+      expect(mockSoundObject.remove).toHaveBeenCalled();
+
+      const state = useAudioStreamStore.getState();
+      expect(state.soundObject).toBeNull();
+      expect(state.currentStream).toBeNull();
+      expect(state.isPlaying).toBe(false);
+      expect(state.isLoading).toBe(false);
+      expect(state.isBuffering).toBe(false);
     });
 
     it('should handle null sound object', async () => {
