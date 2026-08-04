@@ -330,6 +330,47 @@ describe('AudioStreamStore', () => {
         context: { error: olderError, streamName: olderStream.Name },
       });
     });
+
+    it('should release an older player when its setup resolves after a newer stream', async () => {
+      const olderStream = { ...mockStream, Id: 'older', Name: 'Older Stream' };
+      const newerStream = { ...mockStream, Id: 'newer', Name: 'Newer Stream' };
+      const newerSound = {
+        ...mockSoundObject,
+        play: jest.fn(),
+        remove: jest.fn(),
+        addListener: jest.fn(() => ({ remove: jest.fn() })),
+      } as any;
+      const olderSound = {
+        ...mockSoundObject,
+        play: jest.fn(),
+        remove: jest.fn(),
+        addListener: jest.fn(() => ({ remove: jest.fn() })),
+      } as any;
+      let resolveOlderSetup!: () => void;
+      const olderSetup = new Promise<void>((resolve) => {
+        resolveOlderSetup = resolve;
+      });
+
+      mockSetAudioModeAsync.mockImplementationOnce(() => olderSetup).mockResolvedValueOnce(undefined);
+      mockCreateAudioPlayer.mockReturnValueOnce(newerSound).mockReturnValueOnce(olderSound);
+
+      const olderRequest = useAudioStreamStore.getState().playStream(olderStream);
+      await Promise.resolve();
+      expect(mockSetAudioModeAsync).toHaveBeenCalledTimes(1);
+
+      await useAudioStreamStore.getState().playStream(newerStream);
+      resolveOlderSetup();
+      await olderRequest;
+
+      const state = useAudioStreamStore.getState();
+      expect(state.soundObject).toBe(newerSound);
+      expect(state.currentStream).toEqual(newerStream);
+      expect(state.isPlaying).toBe(true);
+      expect(newerSound.play).toHaveBeenCalledTimes(1);
+      expect(newerSound.remove).not.toHaveBeenCalled();
+      expect(olderSound.play).not.toHaveBeenCalled();
+      expect(olderSound.remove).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('stopStream', () => {

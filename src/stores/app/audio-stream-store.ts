@@ -128,6 +128,17 @@ export const useAudioStreamStore = create<AudioStreamState>((set, get) => ({
       sound.volume = 1.0;
       sound.muted = false;
 
+      // A newer playStream may have started while audio mode was being set up.
+      // Release this superseded player without touching shared store state.
+      if (requestId !== latestPlayRequestId) {
+        try {
+          sound.remove();
+        } catch {
+          // The player may already have been released.
+        }
+        return;
+      }
+
       set({ soundObject: sound });
 
       sound.addListener('playbackStatusUpdate', (status: AudioStatus) => {
