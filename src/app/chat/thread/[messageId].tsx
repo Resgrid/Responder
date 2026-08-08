@@ -135,7 +135,7 @@ export default function ThreadScreen() {
           contentContainerStyle={{ paddingVertical: 8 }}
         />
 
-        <MessageComposer onSendText={handleSendText} onSendImage={() => undefined} onSendLocation={handleSendLocation} onOpenGif={handleSendGif} onTyping={() => undefined} placeholder={t('chat.reply_placeholder')} />
+        <MessageComposer onSendText={handleSendText} onSendImage={() => undefined} onSendLocation={handleSendLocation} onOpenGif={handleSendGif} onTyping={() => undefined} placeholder={t('chat.reply_placeholder')} allowUrgent={false} />
       </KeyboardAvoidingView>
     </Box>
   );
