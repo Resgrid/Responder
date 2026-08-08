@@ -1,4 +1,4 @@
-import { Stack, useFocusEffect } from 'expo-router';
+import { Redirect, Stack, useFocusEffect } from 'expo-router';
 import { RefreshCw, Send, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,10 +19,12 @@ import { VStack } from '@/components/ui/vstack';
 import { type ChatMessageResultData } from '@/models/v4/chat';
 import useAuthStore from '@/stores/auth/store';
 import { useChatStore } from '@/stores/chat/store';
+import { useIsChatEnabled } from '@/stores/feature-flags/store';
 
 export default function ChatbotScreen() {
   const { t } = useTranslation();
   const currentUserId = useAuthStore((s) => s.userId);
+  const isChatEnabled = useIsChatEnabled();
   const chatbotChannelId = useChatStore((s) => s.chatbotChannelId);
   const chatbotTyping = useChatStore((s) => s.chatbotTyping);
   const messages = useChatStore((s) => (chatbotChannelId ? s.messagesByChannel[chatbotChannelId] : undefined));
@@ -30,12 +32,13 @@ export default function ChatbotScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (!isChatEnabled) return;
       const store = useChatStore.getState();
       void store.initChatbot();
       return () => {
         useChatStore.getState().setActiveChannel(null);
       };
-    }, [])
+    }, [isChatEnabled])
   );
 
   // Keep the assistant channel active while viewing so incoming messages don't inflate unread.
@@ -60,6 +63,11 @@ export default function ChatbotScreen() {
     ),
     [currentUserId]
   );
+
+  // Chat.System feature flag off: the assistant rides on the chat system, hide it too.
+  if (!isChatEnabled) {
+    return <Redirect href="/(app)/home" />;
+  }
 
   return (
     <Box className="size-full flex-1 bg-background-0">
