@@ -34,6 +34,7 @@ import { usePushNotifications } from '@/services/push-notification';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCalendarStore } from '@/stores/calendar/store';
 import { useCallsStore } from '@/stores/calls/store';
+import { FeatureFlagKeys, featureFlagsStore } from '@/stores/feature-flags/store';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { useRolesStore } from '@/stores/roles/store';
 import { securityStore } from '@/stores/security/store';
@@ -100,20 +101,28 @@ export default function TabLayout() {
       //await useShiftsStore.getState().init();
       //await usePersonnelStore.getState().init();
       await securityStore.getState().getRights();
+      await featureFlagsStore.getState().fetchFlags();
 
       //await useSignalRStore.getState().connectUpdateHub();
       //await useSignalRStore.getState().connectGeolocationHub();
 
-      // Connect the realtime chat hub (best-effort; chat may be disabled per department)
-      try {
-        await useSignalRStore.getState().connectChatHub();
+      // Connect the realtime chat hub only when the Chat.System feature flag is on for
+      // this department; when it is off every chat surface stays hidden.
+      if (featureFlagsStore.getState().isEnabled(FeatureFlagKeys.ChatSystem)) {
+        try {
+          await useSignalRStore.getState().connectChatHub();
+          logger.info({
+            message: 'SignalR chat hub connected successfully',
+          });
+        } catch (error) {
+          logger.error({
+            message: 'Failed to connect SignalR chat hub during initialization',
+            context: { error },
+          });
+        }
+      } else {
         logger.info({
-          message: 'SignalR chat hub connected successfully',
-        });
-      } catch (error) {
-        logger.error({
-          message: 'Failed to connect SignalR chat hub during initialization',
-          context: { error },
+          message: 'Chat disabled by feature flag; skipping chat hub connection',
         });
       }
 

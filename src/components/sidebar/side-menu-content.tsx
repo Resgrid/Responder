@@ -37,6 +37,7 @@ import { useAuthStore } from '@/lib/auth';
 import { getAvatarUrl } from '@/lib/utils';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
+import { useIsChatEnabled } from '@/stores/feature-flags/store';
 import { securityStore } from '@/stores/security/store';
 
 import { AudioStreamBottomSheet } from '../audio-stream/audio-stream-bottom-sheet';
@@ -65,6 +66,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const isPlaying = useAudioStreamStore((state) => state.isPlaying);
   const setAudioStreamBottomSheetVisible = useAudioStreamStore((state) => state.setIsBottomSheetVisible);
   const rights = securityStore((state) => state.rights);
+  const isChatEnabled = useIsChatEnabled();
 
   const menuItems: MenuItem[] = useMemo(
     () => [
@@ -152,8 +154,9 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
         route: '/(app)/settings',
         testID: 'side-menu-settings',
       },
-    ],
-    [t]
+      // Chat and the assistant are gated by the Chat.System feature flag.
+    ].filter((item) => (item.id === 'chat' || item.id === 'assistant' ? isChatEnabled : true)),
+    [t, isChatEnabled]
   );
 
   const handleNavigation = useCallback(
