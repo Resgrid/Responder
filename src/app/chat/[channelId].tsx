@@ -27,7 +27,7 @@ import { VStack } from '@/components/ui/vstack';
 import { ChatChannelType, ChatMessagePriority, type ChatMessageResultData, ChatMessageType, type GifResultData } from '@/models/v4/chat';
 import useAuthStore from '@/stores/auth/store';
 import { useChatStore } from '@/stores/chat/store';
-import { useIsChatEnabled } from '@/stores/feature-flags/store';
+import { useChatSystemStatus } from '@/stores/feature-flags/store';
 import { securityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
 
@@ -39,7 +39,8 @@ export default function ChannelConversationScreen() {
 
   const currentUserId = useAuthStore((s) => s.userId);
   const isModerator = !!securityStore((s) => s.rights)?.IsAdmin;
-  const isChatEnabled = useIsChatEnabled();
+  const chatStatus = useChatSystemStatus();
+  const isChatEnabled = chatStatus === 'enabled';
 
   const channel = useChatStore((s) => s.channels.find((c) => c.ChatChannelId === channelId));
   const messages = useChatStore((s) => (channelId ? s.messagesByChannel[channelId] : undefined));
@@ -238,8 +239,18 @@ export default function ChannelConversationScreen() {
 
   const title = channel ? getChannelDisplayName(channel, t) : t('chat.title');
 
+  // Chat.System flag not yet resolved: wait instead of redirecting away from a valid deep link.
+  if (chatStatus === 'unknown') {
+    return (
+      <Box className="size-full flex-1 items-center justify-center bg-background-0">
+        <Stack.Screen options={{ title, headerShown: true, headerBackTitle: '' }} />
+        <Spinner />
+      </Box>
+    );
+  }
+
   // Chat.System feature flag off: block deep links (push notifications, stale routes).
-  if (!isChatEnabled) {
+  if (chatStatus === 'disabled') {
     return <Redirect href="/(app)/home" />;
   }
 
