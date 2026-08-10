@@ -28,6 +28,8 @@ import { useToastStore } from '@/stores/toast/store';
 const PENDING_SEQ_BASE = 9_000_000_000_000;
 const TYPING_EXPIRY_MS = 5000;
 const TYPING_THROTTLE_MS = 3000;
+const JOIN_CHANNEL_MAX_ATTEMPTS = 3;
+const JOIN_CHANNEL_RETRY_MS = 2000;
 
 const getTranslatedMessage = (key: Parameters<typeof translate>[0], fallback: string) => {
   const message = translate(key);
@@ -120,7 +122,7 @@ interface ChatState {
   handleChatbotMessageReceived: (raw: unknown) => void;
   handleChatbotTyping: (raw: unknown) => void;
   handleTyping: (raw: unknown) => void;
-  handlePresenceChanged: (raw: unknown) => void;
+  handlePresenceChanged: (raw: unknown, isOnlineArg?: unknown) => void;
   handleChatConnected: () => void;
 
   reset: () => void;
@@ -146,6 +148,11 @@ function currentUserId(): string | null {
   return useAuthStore.getState().userId;
 }
 
+/** Name broadcast with typing signals; the hub echoes it to the other participants. */
+function currentDisplayName(): string | null {
+  return useAuthStore.getState().profile?.name ?? null;
+}
+
 function parseEventData<T>(raw: unknown): T | null {
   if (raw == null) return null;
   if (typeof raw === 'string') {
@@ -169,6 +176,18 @@ function compareMessages(a: ChatMessageResultData, b: ChatMessageResultData): nu
   return new Date(a.SentOn).getTime() - new Date(b.SentOn).getTime();
 }
 
+/** The realtime payloads omit empty collections even though the DTO types them as
+ * required, so every stored message is normalized on the way in — the UI iterates
+ * Reactions/Attachments directly. An existing value always wins over a missing one
+ * so a partial hub update can never drop reactions already on screen. */
+function withCollections(incoming: ChatMessageResultData, existing?: ChatMessageResultData): ChatMessageResultData {
+  return {
+    ...incoming,
+    Reactions: incoming.Reactions ?? existing?.Reactions ?? [],
+    Attachments: incoming.Attachments ?? existing?.Attachments ?? [],
+  };
+}
+
 /** Insert or replace a message in an ascending-by-sequence list, de-duplicated
  * by ChatMessageId and ClientMessageId (so optimistic sends reconcile). */
 function upsertMessage(list: ChatMessageResultData[], incoming: ChatMessageResultData): ChatMessageResultData[] {
@@ -176,9 +195,9 @@ function upsertMessage(list: ChatMessageResultData[], incoming: ChatMessageResul
   const idx = next.findIndex((m) => m.ChatMessageId === incoming.ChatMessageId || (!!incoming.ClientMessageId && !!m.ClientMessageId && m.ClientMessageId === incoming.ClientMessageId));
   if (idx >= 0) {
     const existing = next[idx];
-    next[idx] = { ...existing, ...incoming };
+    next[idx] = withCollections({ ...existing, ...incoming }, existing);
   } else {
-    next.push(incoming);
+    next.push(withCollections(incoming));
   }
   next.sort(compareMessages);
   return next;
@@ -208,6 +227,10 @@ async function safeInvoke(method: string, ...args: unknown[]): Promise<void> {
   } catch (error) {
     logger.debug({ message: `chat: invoke ${method} skipped`, context: { error } });
   }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export const useChatStore = create<ChatState>()(
@@ -528,7 +551,8 @@ export const useChatStore = create<ChatState>()(
           channels: s.channels.map((c) => (c.ChatChannelId === channelId ? { ...c, UnreadCount: 0, MyLastReadSeq: seq } : c)),
         }));
 
-        void safeInvoke('MarkRead', channelId, seq);
+        // Hub signature: MarkRead(channelId, seq, asUnitId).
+        void safeInvoke('MarkRead', channelId, seq, null);
         try {
           await chatApi.markRead(channelId, { Seq: seq });
         } catch (error) {
@@ -643,7 +667,24 @@ export const useChatStore = create<ChatState>()(
       // Realtime send helpers
       // ------------------------------------------------------------------
       joinChannel: async (channelId: string) => {
-        await safeInvoke('JoinChannel', channelId);
+        // Screens join on focus, which can beat the hub handshake on cold starts and
+        // push deep links. A dropped join leaves the channel permanently silent, so
+        // retry a few times instead of swallowing the first failure.
+        for (let attempt = 1; attempt <= JOIN_CHANNEL_MAX_ATTEMPTS; attempt += 1) {
+          try {
+            // The hub signature is JoinChannel(channelId, asUnitId). SignalR binds hub
+            // arguments positionally and rejects an invocation that supplies fewer than
+            // the method declares, so the optional asUnitId must be sent explicitly.
+            await signalRService.invoke(Env.CHAT_HUB_NAME, 'JoinChannel', channelId, null);
+            return;
+          } catch (error) {
+            if (attempt === JOIN_CHANNEL_MAX_ATTEMPTS) {
+              logger.warn({ message: 'chat: failed to join channel', context: { error, channelId, attempts: attempt } });
+              return;
+            }
+            await wait(JOIN_CHANNEL_RETRY_MS);
+          }
+        }
       },
 
       sendTyping: (channelId: string, isTyping: boolean) => {
@@ -655,7 +696,8 @@ export const useChatStore = create<ChatState>()(
         } else {
           lastTypingSentAt.delete(channelId);
         }
-        void safeInvoke('Typing', channelId, isTyping);
+        // Hub signature: Typing(channelId, displayName, isTyping, asUnitId).
+        void safeInvoke('Typing', channelId, currentDisplayName(), isTyping, null);
       },
 
       // ------------------------------------------------------------------
@@ -760,8 +802,10 @@ export const useChatStore = create<ChatState>()(
       },
 
       handleTyping: (raw: unknown) => {
-        const obj = (typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {}) as Record<string, unknown>;
-        const channelId = (obj.ChatChannelId ?? obj.chatChannelId ?? obj.ChannelId) as string | undefined;
+        // The hub payload uses ChannelId (not ChatChannelId) and its casing depends on the
+        // server's JSON naming policy, so accept both spellings of every field.
+        const obj = (parseEventData<Record<string, unknown>>(raw) ?? {}) as Record<string, unknown>;
+        const channelId = (obj.ChatChannelId ?? obj.chatChannelId ?? obj.ChannelId ?? obj.channelId) as string | undefined;
         const userId = (obj.UserId ?? obj.userId) as string | undefined;
         const displayName = (obj.DisplayName ?? obj.displayName) as string | undefined;
         const isTyping = (obj.IsTyping ?? obj.isTyping) as boolean | undefined;
@@ -775,10 +819,12 @@ export const useChatStore = create<ChatState>()(
         addTyping(set, channelId, { userId, displayName, expiresAt: Date.now() + TYPING_EXPIRY_MS });
       },
 
-      handlePresenceChanged: (raw: unknown) => {
+      handlePresenceChanged: (raw: unknown, isOnlineArg?: unknown) => {
+        // The hub sends `chatPresenceChanged` as two positional args (userId, isOnline);
+        // keep the object form working in case a future producer sends a DTO.
         const obj = (typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {}) as Record<string, unknown>;
-        const userId = (obj.UserId ?? obj.userId) as string | undefined;
-        const isOnline = (obj.IsOnline ?? obj.isOnline) as boolean | undefined;
+        const userId = typeof raw === 'string' ? raw : ((obj.UserId ?? obj.userId) as string | undefined);
+        const isOnline = typeof raw === 'string' ? Boolean(isOnlineArg) : ((obj.IsOnline ?? obj.isOnline) as boolean | undefined);
         if (!userId) return;
         set((s) => {
           const presence = new Set(s.presence);

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { useAuthStore } from '@/lib';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
-import { signalRService } from '@/services/signalr.service';
+import { HUB_CONNECTED_EVENT, HUB_DISCONNECTED_EVENT, type HubLifecycleEvent, signalRService } from '@/services/signalr.service';
 
 import { useCoreStore } from '../app/core-store';
 import { useChatStore } from '../chat/store';
@@ -28,13 +28,14 @@ interface SignalRState {
   disconnectChatHub: () => Promise<void>;
 }
 
-type SignalRHandler = (message: unknown) => void;
+// Hub methods can send several positional arguments, so handlers are variadic.
+type SignalRHandler = (...args: unknown[]) => void;
 
 export const useSignalRStore = create<SignalRState>((set, get) => {
   const createSafeHandler = (event: string, handler: SignalRHandler): SignalRHandler => {
-    return (message) => {
+    return (...args) => {
       try {
-        handler(message);
+        handler(...args);
       } catch (error) {
         logger.error({
           message: `Failed to handle SignalR event: ${event}`,
@@ -203,6 +204,13 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     'onChatConnected',
   ];
   const CHAT_HEARTBEAT_INTERVAL_MS = 45000;
+  const CHAT_ARM_RETRY_MS = 5000;
+  const CHAT_ARM_MAX_ATTEMPTS = 3;
+  // The hub replays a full resync on arm; collapse the duplicate that arrives when
+  // the server echoes its own onChatConnected right after ours.
+  const CHAT_RESYNC_DEBOUNCE_MS = 2000;
+
+  const readHubName = (message: unknown): string | undefined => (message as HubLifecycleEvent | undefined)?.hubName;
 
   const chatHubHandlers = new Map<string, SignalRHandler>([
     ['chatMessageReceived', createSafeHandler('chatMessageReceived', (message) => useChatStore.getState().handleMessageReceived(message))],
@@ -218,7 +226,8 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     ['chatbotMessageReceived', createSafeHandler('chatbotMessageReceived', (message) => useChatStore.getState().handleChatbotMessageReceived(message))],
     ['chatbotTyping', createSafeHandler('chatbotTyping', (message) => useChatStore.getState().handleChatbotTyping(message))],
     ['chatTyping', createSafeHandler('chatTyping', (message) => useChatStore.getState().handleTyping(message))],
-    ['chatPresenceChanged', createSafeHandler('chatPresenceChanged', (message) => useChatStore.getState().handlePresenceChanged(message))],
+    // The hub sends presence as two positional args (`userId, isOnline`), not an object.
+    ['chatPresenceChanged', createSafeHandler('chatPresenceChanged', (message, isOnline) => useChatStore.getState().handlePresenceChanged(message, isOnline))],
     [
       'onChatConnected',
       createSafeHandler('onChatConnected', () => {
@@ -226,7 +235,25 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           message: 'Connected to chat SignalR hub',
         });
         set({ isChatHubConnected: true, error: null });
-        useChatStore.getState().handleChatConnected();
+        resyncChat();
+      }),
+    ],
+    [
+      HUB_CONNECTED_EVENT,
+      createSafeHandler(HUB_CONNECTED_EVENT, (message) => {
+        if (readHubName(message) !== Env.CHAT_HUB_NAME) return;
+        void armChatSession();
+      }),
+    ],
+    [
+      HUB_DISCONNECTED_EVENT,
+      createSafeHandler(HUB_DISCONNECTED_EVENT, (message) => {
+        if (readHubName(message) !== Env.CHAT_HUB_NAME) return;
+        stopChatHeartbeat();
+        stopChatArmRetry();
+        // Clearing the flag is what lets connectChatHub repair the session later;
+        // while it stayed true the hub could never be re-announced.
+        set({ isChatHubConnected: false });
       }),
     ],
   ]);
@@ -235,6 +262,9 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
   let geolocationHubHandlersSubscribed = false;
   let chatHubHandlersSubscribed = false;
   let chatHeartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let chatArmRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  let chatArmAttempts = 0;
+  let lastChatResyncAt = 0;
 
   const subscribeHandlers = (handlers: Map<string, SignalRHandler>) => {
     handlers.forEach((handler, event) => signalRService.on(event, handler));
@@ -285,6 +315,62 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
       clearInterval(chatHeartbeatTimer);
       chatHeartbeatTimer = null;
     }
+  };
+
+  const stopChatArmRetry = () => {
+    if (chatArmRetryTimer) {
+      clearTimeout(chatArmRetryTimer);
+      chatArmRetryTimer = null;
+    }
+  };
+
+  const resyncChat = () => {
+    const now = Date.now();
+    if (now - lastChatResyncAt < CHAT_RESYNC_DEBOUNCE_MS) return;
+    lastChatResyncAt = now;
+    useChatStore.getState().handleChatConnected();
+  };
+
+  /**
+   * Announce this connection to the chat hub and restart the heartbeat.
+   *
+   * The hub only places a connection into its channel groups in response to
+   * `Connect`, and every reconnect issues a fresh connection id. Without
+   * re-arming, the websocket stays open but the client receives nothing.
+   */
+  const armChatSession = async (): Promise<void> => {
+    stopChatArmRetry();
+
+    try {
+      await signalRService.invoke(Env.CHAT_HUB_NAME, 'Connect');
+    } catch (error) {
+      chatArmAttempts += 1;
+      logger.warn({
+        message: 'Failed to announce presence to chat hub',
+        context: { error, attempt: chatArmAttempts, maxAttempts: CHAT_ARM_MAX_ATTEMPTS },
+      });
+      if (chatArmAttempts < CHAT_ARM_MAX_ATTEMPTS && chatHubHandlersSubscribed) {
+        chatArmRetryTimer = setTimeout(() => {
+          void armChatSession();
+        }, CHAT_ARM_RETRY_MS);
+      }
+      return;
+    }
+
+    chatArmAttempts = 0;
+    set({ isChatHubConnected: true, error: null });
+
+    stopChatHeartbeat();
+    chatHeartbeatTimer = setInterval(() => {
+      signalRService.invoke(Env.CHAT_HUB_NAME, 'Heartbeat').catch((error) => {
+        logger.debug({
+          message: 'Chat hub heartbeat failed',
+          context: { error },
+        });
+      });
+    }, CHAT_HEARTBEAT_INTERVAL_MS);
+
+    resyncChat();
   };
 
   return {
@@ -441,6 +527,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         }
 
         // Register the chat event handlers, then connect the chat hub via the eventing URL.
+        chatArmAttempts = 0;
         subscribeChatHubHandlers();
         await signalRService.connectToHubWithEventingUrl({
           name: Env.CHAT_HUB_NAME,
@@ -449,16 +536,11 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           methods: CHAT_HUB_METHODS,
         });
 
-        // Announce chat presence to the hub, then begin the periodic heartbeat.
-        await signalRService.invoke(Env.CHAT_HUB_NAME, 'Connect');
-        set({ isChatHubConnected: true });
-
-        stopChatHeartbeat();
-        chatHeartbeatTimer = setInterval(() => {
-          signalRService.invoke(Env.CHAT_HUB_NAME, 'Heartbeat').catch(() => {
-            // Heartbeat is best-effort; ignore transient failures.
-          });
-        }, CHAT_HEARTBEAT_INTERVAL_MS);
+        // A fresh connection arms itself from the hubConnected event above. Cover the
+        // case where the socket was already open and no event was emitted.
+        if (!get().isChatHubConnected) {
+          await armChatSession();
+        }
 
         logger.info({
           message: 'Chat hub handlers registered successfully',
@@ -470,13 +552,19 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           context: { error: err },
         });
         stopChatHeartbeat();
-        unsubscribeChatHubHandlers();
+        stopChatArmRetry();
+        // Only drop the handlers when there is no socket left. Unsubscribing while the
+        // hub is alive strands every incoming frame with no listener and no recovery.
+        if (!signalRService.isHubAvailable(Env.CHAT_HUB_NAME)) {
+          unsubscribeChatHubHandlers();
+        }
         set({ error: err });
       }
     },
     disconnectChatHub: async () => {
       try {
         stopChatHeartbeat();
+        stopChatArmRetry();
         await signalRService.disconnectFromHub(Env.CHAT_HUB_NAME);
       } catch (error) {
         const err = error instanceof Error ? error : new Error('Unknown error occurred');

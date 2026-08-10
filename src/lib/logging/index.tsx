@@ -12,14 +12,10 @@ const config = {
   },
   severity: __DEV__ ? 'debug' : 'warn',
   transport: consoleTransport,
-  transportOptions: {
-    colors: {
-      debug: 'gray',
-      info: 'blueBright',
-      warn: 'yellowBright',
-      error: 'redBright',
-    },
-  },
+  // No `colors` here on purpose: ANSI escape codes (0x1B) end up in the console
+  // string that Sentry captures as a breadcrumb, and the native SentryCrash JSON
+  // codec rejects control characters ("Invalid character in ...") on every log line.
+  transportOptions: {},
   async: true,
   dateFormat: 'time',
   printLevel: true,

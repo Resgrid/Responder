@@ -17,6 +17,9 @@ import { useLocationStore } from '@/stores/app/location-store';
 
 const LOCATION_TASK_NAME = 'location-updates';
 
+// Minimum gap between foreground location log lines (updates can fire every second).
+const FOREGROUND_LOCATION_LOG_INTERVAL_MS = 30000;
+
 // Helper to safely convert numeric values to strings, guarding against invalid numbers.
 const safeNumericString = (value: number | null | undefined, field: string): string => {
   // Treat null, undefined, NaN, and Infinity as invalid
@@ -123,6 +126,7 @@ class LocationService {
   private appStateSubscription: { remove: () => void } | null = null;
   private isBackgroundGeolocationEnabled = false;
   private isRealtimeGeolocationEnabled = false;
+  private lastForegroundLocationLogAt = 0;
 
   private constructor() {
     this.initializeAppStateListener();
@@ -225,6 +229,7 @@ class LocationService {
       this.locationSubscription.remove();
       this.locationSubscription = null;
     }
+    this.lastForegroundLocationLogAt = 0;
 
     // Start foreground updates
     this.locationSubscription = await Location.watchPositionAsync(
@@ -234,14 +239,20 @@ class LocationService {
         distanceInterval: 10,
       },
       async (location) => {
-        logger.info({
-          message: 'Foreground location update received',
-          context: {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            heading: location.coords.heading,
-          },
-        });
+        // Fixes can arrive every second while moving; log at most once per
+        // FOREGROUND_LOCATION_LOG_INTERVAL_MS to keep the console usable.
+        const now = Date.now();
+        if (now - this.lastForegroundLocationLogAt >= FOREGROUND_LOCATION_LOG_INTERVAL_MS) {
+          this.lastForegroundLocationLogAt = now;
+          logger.info({
+            message: 'Foreground location update received',
+            context: {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              heading: location.coords.heading,
+            },
+          });
+        }
         // Location sending is handled by TaskManager, so we only update the local store
         useLocationStore.getState().setLocation(location);
       }

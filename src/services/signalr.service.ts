@@ -28,6 +28,17 @@ export enum HubConnectingState {
   DIRECT_CONNECTING = 'direct-connecting',
 }
 
+/** Emitted with `{ hubName }` whenever a hub connection is (re)established or lost. */
+export const HUB_CONNECTED_EVENT = 'hubConnected';
+export const HUB_DISCONNECTED_EVENT = 'hubDisconnected';
+
+export interface HubLifecycleEvent {
+  hubName: string;
+}
+
+/** Hub events can carry multiple positional arguments; listeners receive all of them. */
+export type SignalREventListener = (...data: unknown[]) => void;
+
 class SignalRService {
   private connections: Map<string, HubConnection> = new Map();
   private reconnectAttempts: Map<string, number> = new Map();
@@ -237,6 +248,7 @@ class SignalRService {
           message: `Reconnecting to hub: ${config.name}`,
           context: { error },
         });
+        this.emit(HUB_DISCONNECTED_EVENT, { hubName: config.name });
       });
 
       connection.onreconnected((connectionId) => {
@@ -245,6 +257,9 @@ class SignalRService {
           context: { connectionId },
         });
         this.reconnectAttempts.set(config.name, 0);
+        // A reconnect issues a new connection id, so any server-side group this
+        // connection belonged to is gone. Subscribers must re-announce themselves.
+        this.emit(HUB_CONNECTED_EVENT, { hubName: config.name });
       });
 
       // Register all methods
@@ -254,12 +269,12 @@ class SignalRService {
           context: { method },
         });
 
-        connection.on(method, (data) => {
+        connection.on(method, (...args: unknown[]) => {
           logger.info({
             message: `Received ${method} message from hub: ${config.name}`,
-            context: { method, data },
+            context: { method, args },
           });
-          this.handleMessage(config.name, method, data);
+          this.handleMessage(config.name, method, args);
         });
       });
 
@@ -273,6 +288,7 @@ class SignalRService {
       logger.info({
         message: `Connected to hub: ${config.name}`,
       });
+      this.emit(HUB_CONNECTED_EVENT, { hubName: config.name });
     } catch (error) {
       // Clear the direct-connecting state on failed connection
       this.setHubState(config.name, HubConnectingState.IDLE);
@@ -381,6 +397,7 @@ class SignalRService {
           message: `Reconnecting to hub: ${config.name}`,
           context: { error },
         });
+        this.emit(HUB_DISCONNECTED_EVENT, { hubName: config.name });
       });
 
       connection.onreconnected((connectionId) => {
@@ -389,6 +406,7 @@ class SignalRService {
           context: { connectionId },
         });
         this.reconnectAttempts.set(config.name, 0);
+        this.emit(HUB_CONNECTED_EVENT, { hubName: config.name });
       });
 
       // Register all methods
@@ -398,12 +416,12 @@ class SignalRService {
           context: { method },
         });
 
-        connection.on(method, (data) => {
+        connection.on(method, (...args: unknown[]) => {
           logger.info({
             message: `Received ${method} message from hub: ${config.name}`,
-            context: { method, data },
+            context: { method, args },
           });
-          this.handleMessage(config.name, method, data);
+          this.handleMessage(config.name, method, args);
         });
       });
 
@@ -420,6 +438,7 @@ class SignalRService {
       logger.info({
         message: `Connected to hub: ${config.name}`,
       });
+      this.emit(HUB_CONNECTED_EVENT, { hubName: config.name });
     } catch (error) {
       // Clear the direct-connecting state on failed connection
       this.setHubState(config.name, HubConnectingState.IDLE);
@@ -433,6 +452,8 @@ class SignalRService {
   }
 
   private handleConnectionClose(hubName: string): void {
+    this.emit(HUB_DISCONNECTED_EVENT, { hubName });
+
     if (this.consumeIntentionalDisconnect(hubName)) {
       logger.debug({
         message: `Hub ${hubName} closed due to intentional disconnect, skipping reconnection`,
@@ -599,13 +620,15 @@ class SignalRService {
     this.reconnectTimers.set(hubName, timer);
   }
 
-  private handleMessage(hubName: string, method: string, data: unknown): void {
+  private handleMessage(hubName: string, method: string, args: unknown[]): void {
     logger.debug({
       message: `Received message from hub: ${hubName}`,
-      context: { method, data },
+      context: { method, args },
     });
-    // Emit event for subscribers using the method name as the event name
-    this.emit(method, data);
+    // Emit event for subscribers using the method name as the event name. Hub
+    // methods can send more than one argument (chatPresenceChanged sends
+    // `userId, isOnline`), so forward every argument to the listeners.
+    this.emit(method, ...args);
   }
 
   public async disconnectFromHub(hubName: string): Promise<void> {
@@ -720,21 +743,21 @@ class SignalRService {
   }
 
   // Event emitter methods
-  private eventListeners: Map<string, Set<(data: unknown) => void>> = new Map();
+  private eventListeners: Map<string, Set<SignalREventListener>> = new Map();
 
-  public on(event: string, callback: (data: unknown) => void): void {
+  public on(event: string, callback: SignalREventListener): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
     }
     this.eventListeners.get(event)?.add(callback);
   }
 
-  public off(event: string, callback: (data: unknown) => void): void {
+  public off(event: string, callback: SignalREventListener): void {
     this.eventListeners.get(event)?.delete(callback);
   }
 
-  private emit(event: string, data: unknown): void {
-    this.eventListeners.get(event)?.forEach((callback) => callback(data));
+  private emit(event: string, ...data: unknown[]): void {
+    this.eventListeners.get(event)?.forEach((callback) => callback(...data));
   }
 }
 

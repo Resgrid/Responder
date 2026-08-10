@@ -1,9 +1,9 @@
 import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform } from 'react-native';
 
 import { getThread } from '@/api/chat/chat';
+import { buildLocationMetadata } from '@/components/chat/chat-utils';
 import { MessageBubble } from '@/components/chat/message-bubble';
 import { MessageComposer } from '@/components/chat/message-composer';
 import { Box } from '@/components/ui/box';
@@ -72,7 +72,7 @@ export default function ThreadScreen() {
         channelId,
         body: t('chat.shared_location'),
         messageType: ChatMessageType.Location,
-        metadataJson: JSON.stringify({ Latitude: latitude, Longitude: longitude }),
+        metadataJson: buildLocationMetadata(latitude, longitude),
         threadRootMessageId: messageId,
         priority: urgent ? ChatMessagePriority.Urgent : ChatMessagePriority.Normal,
       });
@@ -117,7 +117,7 @@ export default function ThreadScreen() {
     <Box className="size-full flex-1 bg-background-0">
       <Stack.Screen options={{ title: t('chat.thread'), headerShown: true, headerBackTitle: '' }} />
 
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView className="flex-1" behavior="padding" automaticOffset>
         {root ? (
           <VStack className="border-b border-outline-200 bg-background-50 py-2">
             <Text className="px-4 text-xs font-semibold uppercase text-typography-400">{t('chat.original_message')}</Text>
@@ -129,13 +129,23 @@ export default function ThreadScreen() {
 
         <FlatList
           data={replies}
-          maintainVisibleContentPosition={{ startRenderingFromBottom: true }}
+          // autoscrollToBottomThreshold is off by default in FlashList v2; without it a
+          // new reply lands below the viewport, hidden behind the composer.
+          maintainVisibleContentPosition={{ startRenderingFromBottom: true, autoscrollToBottomThreshold: 0.2 }}
           keyExtractor={(item: ChatMessageResultData) => item.ChatMessageId}
           renderItem={renderItem}
           contentContainerStyle={{ paddingVertical: 8 }}
         />
 
-        <MessageComposer onSendText={handleSendText} onSendImage={() => undefined} onSendLocation={handleSendLocation} onOpenGif={handleSendGif} onTyping={() => undefined} placeholder={t('chat.reply_placeholder')} allowUrgent={false} />
+        <MessageComposer
+          onSendText={handleSendText}
+          onSendImage={() => undefined}
+          onSendLocation={handleSendLocation}
+          onOpenGif={handleSendGif}
+          onTyping={() => undefined}
+          placeholder={t('chat.reply_placeholder')}
+          allowUrgent={false}
+        />
       </KeyboardAvoidingView>
     </Box>
   );

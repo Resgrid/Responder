@@ -2,7 +2,8 @@ import { Redirect, Stack, useFocusEffect } from 'expo-router';
 import { RefreshCw, Send, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform } from 'react-native';
+import { useKeyboardState } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { copyToClipboard } from '@/components/chat/chat-utils';
 import { MessageActionsSheet } from '@/components/chat/message-actions-sheet';
@@ -28,6 +29,8 @@ import { useToastStore } from '@/stores/toast/store';
 
 export default function ChatbotScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
   const currentUserId = useAuthStore((s) => s.userId);
   const chatStatus = useChatSystemStatus();
   const isChatEnabled = chatStatus === 'enabled';
@@ -67,7 +70,14 @@ export default function ChatbotScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: ChatMessageResultData }) => (
-      <MessageBubble message={item} isOwn={!!item.SenderUserId && item.SenderUserId === currentUserId} showSender={false} currentUserId={currentUserId} onLongPress={setActionsMessage} onToggleReaction={() => undefined} />
+      <MessageBubble
+        message={item}
+        isOwn={!!item.SenderUserId && item.SenderUserId === currentUserId}
+        showSender={false}
+        currentUserId={currentUserId}
+        onLongPress={setActionsMessage}
+        onToggleReaction={() => undefined}
+      />
     ),
     [currentUserId]
   );
@@ -110,7 +120,7 @@ export default function ChatbotScreen() {
         </Pressable>
       </HStack>
 
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView className="flex-1" behavior="padding" automaticOffset>
         {ordered.length === 0 ? (
           <Center className="flex-1 px-8">
             <Sparkles size={48} color="#a78bfa" />
@@ -119,7 +129,9 @@ export default function ChatbotScreen() {
         ) : (
           <FlatList
             data={ordered}
-            maintainVisibleContentPosition={{ startRenderingFromBottom: true }}
+            // autoscrollToBottomThreshold is off by default in FlashList v2; without it a
+            // new answer lands below the viewport, hidden behind the input row.
+            maintainVisibleContentPosition={{ startRenderingFromBottom: true, autoscrollToBottomThreshold: 0.2 }}
             keyExtractor={(item: ChatMessageResultData) => item.ChatMessageId}
             renderItem={renderItem}
             contentContainerStyle={{ paddingVertical: 8 }}
@@ -135,13 +147,13 @@ export default function ChatbotScreen() {
           </HStack>
         ) : null}
 
-        <HStack className="items-end border-t border-outline-200 bg-background-0 p-2" space="sm">
+        <HStack className="items-end border-t border-outline-200 bg-background-0 px-2 pt-2" space="sm" style={{ paddingBottom: isKeyboardVisible ? 8 : Math.max(insets.bottom, 8) }}>
           <Box className="flex-1">
-            <Input className="rounded-2xl bg-background-100">
+            <Input className="rounded-2xl border-0 bg-background-100">
               <InputField placeholder={t('chatbot.ask_placeholder')} value={text} onChangeText={setText} onSubmitEditing={send} returnKeyType="send" />
             </Input>
           </Box>
-          <Pressable className={`rounded-full p-2 ${text.trim() ? 'bg-purple-600' : 'bg-background-300'}`} onPress={send} disabled={!text.trim()} accessibilityLabel={t('chat.send')}>
+          <Pressable className={`rounded-full p-2 ${text.trim() ? 'bg-purple-600' : 'bg-background-300'}`} onPress={send} disabled={!text.trim()} accessibilityRole="button" accessibilityLabel={t('chat.send')}>
             <Send size={20} color="#ffffff" />
           </Pressable>
         </HStack>
