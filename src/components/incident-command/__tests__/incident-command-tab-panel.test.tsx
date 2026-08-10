@@ -22,6 +22,11 @@ jest.mock('nativewind', () => ({
 jest.mock('lucide-react-native', () => ({
   MailIcon: () => 'MailIcon',
   PhoneIcon: () => 'PhoneIcon',
+  // Icons used by the incident chat section rendered inside the panel.
+  MessageCircle: () => 'MessageCircle',
+  MessagesSquare: () => 'MessagesSquare',
+  ShieldCheck: () => 'ShieldCheck',
+  Users: () => 'Users',
 }));
 
 jest.mock('@/lib/logging', () => ({

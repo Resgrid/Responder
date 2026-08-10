@@ -90,6 +90,31 @@ export interface ResourceLaneAssignmentView {
   LinkedNeed?: IncidentNeed | null;
 }
 
+/** Who holds an ICS position on the incident, with the contact details to reach them. */
+export interface IncidentRoleContactInfo {
+  /** Maps to IncidentRoleType. */
+  RoleType: number;
+  Contact?: IncidentContactInfo | null;
+}
+
+/**
+ * The incident's chat channels, already filtered by the server to the ones this caller may open.
+ * A null id means "not available to you" — not command staff, not a lane lead, or not provisioned.
+ * Never infer access from anything else: if the id isn't here, the channel will reject you.
+ */
+export interface IncidentChatChannels {
+  /** Call-wide incident channel (everyone on the call). */
+  IncidentChannelId?: string | null;
+  /** Private command channel — command staff (IC or an ICS role holder) only. */
+  CommandChannelId?: string | null;
+  /** "All Leads" channel — the IC and lane primary/secondary leads only. */
+  LeadsChannelId?: string | null;
+  /** The caller's own lane channel, when they are assigned to a lane. */
+  LaneChannelId?: string | null;
+  /** True once the incident is closed: readable, but frozen as a point-in-time record. */
+  IsFrozen: boolean;
+}
+
 export interface ResourceIncidentView {
   IncidentCommandId: string;
   CallId: number;
@@ -105,4 +130,8 @@ export interface ResourceIncidentView {
   Notes: IncidentNote[];
   Attachments: IncidentAttachment[];
   MyAssignment?: ResourceLaneAssignmentView | null;
+  /** ICS positions filled on this incident, so a responder can reach the right person directly. */
+  Roles?: IncidentRoleContactInfo[];
+  /** Chat channels this caller may open. */
+  Chat?: IncidentChatChannels | null;
 }
