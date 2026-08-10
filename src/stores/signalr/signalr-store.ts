@@ -207,7 +207,8 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
   const CHAT_ARM_RETRY_MS = 5000;
   const CHAT_ARM_MAX_ATTEMPTS = 3;
   // The hub replays a full resync on arm; collapse the duplicate that arrives when
-  // the server echoes its own onChatConnected right after ours.
+  // the server echoes its own onChatConnected right after ours. Scoped to a single
+  // connection — the disconnect handler clears the marker so the next one resyncs.
   const CHAT_RESYNC_DEBOUNCE_MS = 2000;
 
   const readHubName = (message: unknown): string | undefined => (message as HubLifecycleEvent | undefined)?.hubName;
@@ -242,7 +243,8 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
       HUB_CONNECTED_EVENT,
       createSafeHandler(HUB_CONNECTED_EVENT, (message) => {
         if (readHubName(message) !== Env.CHAT_HUB_NAME) return;
-        void armChatSession();
+        // A reconnect issues a new connection id, so the retry budget starts over.
+        void armChatSession({ resetAttempts: true });
       }),
     ],
     [
@@ -251,6 +253,11 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         if (readHubName(message) !== Env.CHAT_HUB_NAME) return;
         stopChatHeartbeat();
         stopChatArmRetry();
+        // The debounce only ever guards duplicates within one connection. A dropped
+        // transport reconnects in as little as no time at all, so carrying the marker
+        // across the gap would swallow the resync that backfills whatever was missed
+        // while the socket was down.
+        lastChatResyncAt = 0;
         // Clearing the flag is what lets connectChatHub repair the session later;
         // while it stayed true the hub could never be re-announced.
         set({ isChatHubConnected: false });
@@ -264,6 +271,9 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
   let chatHeartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let chatArmRetryTimer: ReturnType<typeof setTimeout> | null = null;
   let chatArmAttempts = 0;
+  // The arm in flight, shared by the lifecycle event and the connectChatHub fallback so a
+  // fresh connection announces itself exactly once.
+  let chatArmOperation: Promise<void> | null = null;
   let lastChatResyncAt = 0;
 
   const subscribeHandlers = (handlers: Map<string, SignalRHandler>) => {
@@ -338,7 +348,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
    * `Connect`, and every reconnect issues a fresh connection id. Without
    * re-arming, the websocket stays open but the client receives nothing.
    */
-  const armChatSession = async (): Promise<void> => {
+  const runChatArm = async (): Promise<void> => {
     stopChatArmRetry();
 
     try {
@@ -371,6 +381,34 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     }, CHAT_HEARTBEAT_INTERVAL_MS);
 
     resyncChat();
+  };
+
+  /**
+   * Serializes arming per connection. The hubConnected event and the connectChatHub
+   * fallback both fire for a single fresh socket — the event's arm parks on the
+   * connection lock, so without sharing the operation the fallback sees an unarmed
+   * session and issues a second `Connect`, with the two runs racing each other's retry
+   * timer and spending the attempt budget twice as fast.
+   *
+   * `resetAttempts` accompanies a new connection id, which always deserves a full budget
+   * no matter how a previous connection's arming went.
+   */
+  const armChatSession = (options?: { resetAttempts?: boolean }): Promise<void> => {
+    if (options?.resetAttempts) {
+      chatArmAttempts = 0;
+    }
+
+    if (chatArmOperation) {
+      return chatArmOperation;
+    }
+
+    const operation = runChatArm().finally(() => {
+      if (chatArmOperation === operation) {
+        chatArmOperation = null;
+      }
+    });
+    chatArmOperation = operation;
+    return operation;
   };
 
   return {
@@ -527,7 +565,6 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         }
 
         // Register the chat event handlers, then connect the chat hub via the eventing URL.
-        chatArmAttempts = 0;
         subscribeChatHubHandlers();
         await signalRService.connectToHubWithEventingUrl({
           name: Env.CHAT_HUB_NAME,
@@ -536,10 +573,11 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           methods: CHAT_HUB_METHODS,
         });
 
-        // A fresh connection arms itself from the hubConnected event above. Cover the
-        // case where the socket was already open and no event was emitted.
+        // A fresh connection arms itself from the hubConnected event above; awaiting the
+        // shared operation joins that arm instead of starting a competing one. When the
+        // socket was already open no event fired, so this starts the only arm there is.
         if (!get().isChatHubConnected) {
-          await armChatSession();
+          await armChatSession({ resetAttempts: true });
         }
 
         logger.info({

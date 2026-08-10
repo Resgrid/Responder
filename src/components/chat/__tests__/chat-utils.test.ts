@@ -181,6 +181,20 @@ describe('chat-utils', () => {
       expect(parseLocationMetadata('{"Latitude":1.5,"Longitude":2.5}')).toEqual({ Latitude: 1.5, Longitude: 2.5, Label: undefined });
     });
 
+    it('accepts coordinates at the WGS84 limits', () => {
+      expect(parseLocationMetadata('{"location":{"latitude":90,"longitude":180}}')).toEqual({ Latitude: 90, Longitude: 180, Label: undefined });
+      expect(parseLocationMetadata('{"location":{"latitude":-90,"longitude":-180}}')).toEqual({ Latitude: -90, Longitude: -180, Label: undefined });
+    });
+
+    it('rejects coordinates outside the WGS84 range', () => {
+      expect(parseLocationMetadata('{"location":{"latitude":90.1,"longitude":0}}')).toBeNull();
+      expect(parseLocationMetadata('{"location":{"latitude":-90.1,"longitude":0}}')).toBeNull();
+      expect(parseLocationMetadata('{"location":{"latitude":0,"longitude":180.1}}')).toBeNull();
+      expect(parseLocationMetadata('{"location":{"latitude":0,"longitude":-180.1}}')).toBeNull();
+      // The flat shape older builds stored is held to the same bounds.
+      expect(parseLocationMetadata('{"Latitude":999,"Longitude":9999}')).toBeNull();
+    });
+
     it('returns null when the payload carries no usable coordinates or url', () => {
       expect(parseGifMetadata('{"gif":{"previewUrl":"https://cdn.example/p.gif"}}')).toBeNull();
       expect(parseLocationMetadata('{"location":{"label":"nowhere"}}')).toBeNull();

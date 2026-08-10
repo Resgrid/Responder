@@ -26,9 +26,12 @@ const INPUT_VERTICAL_PADDING = 16;
 
 interface MessageComposerProps {
   onSendText: (body: string, urgent: boolean) => void;
-  onSendImage: (uri: string, urgent: boolean, mimeType?: string) => void;
+  /** Omit to hide the image action; a surface that cannot send images (thread replies)
+   * would otherwise open the picker and silently discard the chosen photo. */
+  onSendImage?: (uri: string, urgent: boolean, mimeType?: string) => void;
   onSendLocation: (latitude: number, longitude: number, urgent: boolean) => void;
-  onOpenGif: () => void;
+  /** Omit to hide the GIF action on surfaces that cannot send GIFs. */
+  onOpenGif?: () => void;
   onTyping: (isTyping: boolean) => void;
   disabled?: boolean;
   placeholder?: string;
@@ -100,6 +103,7 @@ export function MessageComposer({ onSendText, onSendImage, onSendLocation, onOpe
 
   const handlePickImage = useCallback(async () => {
     setAttachOpen(false);
+    if (!onSendImage) return;
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
@@ -134,7 +138,7 @@ export function MessageComposer({ onSendText, onSendImage, onSendLocation, onOpe
 
   const handleOpenGif = useCallback(() => {
     setAttachOpen(false);
-    onOpenGif();
+    onOpenGif?.();
   }, [onOpenGif]);
 
   const handleOpenEmoji = useCallback(() => {
@@ -193,14 +197,18 @@ export function MessageComposer({ onSendText, onSendImage, onSendLocation, onOpe
             <Smile size={18} color="#6b7280" />
             <ActionsheetItemText>{t('chat.emoji')}</ActionsheetItemText>
           </ActionsheetItem>
-          <ActionsheetItem onPress={handlePickImage}>
-            <ImagePlus size={18} color="#6b7280" />
-            <ActionsheetItemText>{t('chat.add_image')}</ActionsheetItemText>
-          </ActionsheetItem>
-          <ActionsheetItem onPress={handleOpenGif}>
-            <Sparkles size={18} color="#6b7280" />
-            <ActionsheetItemText>{t('chat.add_gif')}</ActionsheetItemText>
-          </ActionsheetItem>
+          {onSendImage ? (
+            <ActionsheetItem onPress={handlePickImage}>
+              <ImagePlus size={18} color="#6b7280" />
+              <ActionsheetItemText>{t('chat.add_image')}</ActionsheetItemText>
+            </ActionsheetItem>
+          ) : null}
+          {onOpenGif ? (
+            <ActionsheetItem onPress={handleOpenGif}>
+              <Sparkles size={18} color="#6b7280" />
+              <ActionsheetItemText>{t('chat.add_gif')}</ActionsheetItemText>
+            </ActionsheetItem>
+          ) : null}
           <ActionsheetItem onPress={handleShareLocation}>
             <MapPin size={18} color="#6b7280" />
             <ActionsheetItemText>{t('chat.share_location')}</ActionsheetItemText>

@@ -96,6 +96,9 @@ export function parseLocationMetadata(metadataJson?: string | null): ChatLocatio
   const latitude = readNumber(source.latitude ?? source.Latitude);
   const longitude = readNumber(source.longitude ?? source.Longitude);
   if (latitude === undefined || longitude === undefined) return null;
+  // Coordinates outside the WGS84 range cannot name a real place, so they are treated as
+  // missing rather than rendered as a map link that would open nowhere.
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
   return { Latitude: latitude, Longitude: longitude, Label: readString(source.label ?? source.Label) };
 }
 

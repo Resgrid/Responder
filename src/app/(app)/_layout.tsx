@@ -81,6 +81,10 @@ export default function TabLayout() {
   const parentRef = useRef(null);
   const hasAttemptedInit = useRef(false);
   const initializeAppRef = useRef<(() => Promise<void>) | null>(null);
+  // Bumped on every initialization start and on sign-out. An in-flight run compares its
+  // captured value after each await, so a run belonging to a session that ended can no
+  // longer mark the app initialized, connect hubs, or restart location tracking.
+  const initGeneration = useRef(0);
   const initRetry = useAppInitRetry();
 
   // Initialize push notifications
@@ -103,6 +107,8 @@ export default function TabLayout() {
     }
 
     isInitializing.current = true;
+    const generation = (initGeneration.current += 1);
+    const isCurrentRun = () => initGeneration.current === generation;
     const attempt = initRetry.recordAttempt();
     logger.info({
       message: 'Starting app initialization',
@@ -120,6 +126,7 @@ export default function TabLayout() {
       //await usePersonnelStore.getState().init();
       await securityStore.getState().getRights();
       await featureFlagsStore.getState().fetchFlags();
+      if (!isCurrentRun()) return;
 
       //await useSignalRStore.getState().connectUpdateHub();
       //await useSignalRStore.getState().connectGeolocationHub();
@@ -143,6 +150,8 @@ export default function TabLayout() {
           message: 'Chat disabled by feature flag; skipping chat hub connection',
         });
       }
+
+      if (!isCurrentRun()) return;
 
       hasInitialized.current = true;
       setIsInitialized(true);
@@ -173,6 +182,8 @@ export default function TabLayout() {
         }
       });
 
+      if (!isCurrentRun()) return;
+
       // Start location tracking when user is logged in
       try {
         await locationService.startLocationUpdates();
@@ -187,6 +198,8 @@ export default function TabLayout() {
         // Don't fail initialization if location tracking fails
       }
 
+      if (!isCurrentRun()) return;
+
       initRetry.reset();
       logger.info({
         message: 'App initialization completed successfully',
@@ -196,6 +209,10 @@ export default function TabLayout() {
         message: 'Failed to initialize app',
         context: { error, attempt },
       });
+      // A run whose session already ended must not retry itself or clobber the state the
+      // sign-out cleanup (or a newer run) has since established.
+      if (!isCurrentRun()) return;
+
       // Reset initialization state on error so it can be retried
       hasInitialized.current = false;
       setIsInitialized(false);
@@ -203,7 +220,11 @@ export default function TabLayout() {
         void initializeAppRef.current?.();
       });
     } finally {
-      isInitializing.current = false;
+      // Only the current run owns the guard; a superseded run leaving it false would let
+      // two initializations overlap.
+      if (isCurrentRun()) {
+        isInitializing.current = false;
+      }
     }
   }, [status, initRetry]);
 
@@ -261,7 +282,12 @@ export default function TabLayout() {
       });
 
       // Always clear init state on sign-out, even if stopping location fails, so the
-      // next sign-in starts a fresh attempt with a fresh retry budget.
+      // next sign-in starts a fresh attempt with a fresh retry budget. Bumping the
+      // generation retires any initialization still in flight, and clearing the guard
+      // it no longer owns keeps the next sign-in from being skipped as "already
+      // initializing".
+      initGeneration.current += 1;
+      isInitializing.current = false;
       initRetry.reset();
       hasAttemptedInit.current = false;
       hasInitialized.current = false;

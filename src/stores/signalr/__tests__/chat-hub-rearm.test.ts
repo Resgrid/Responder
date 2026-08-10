@@ -126,6 +126,38 @@ describe('chat hub re-arming', () => {
     expect(mockHandleChatConnected).toHaveBeenCalledTimes(1);
   });
 
+  it('announces once when the connection also raises hubConnected', async () => {
+    const useSignalRStore = loadStore();
+
+    // The real service emits hubConnected from inside connectToHubWithEventingUrl, and its
+    // invoke() waits on the same connection lock — so the lifecycle handler's arm is still
+    // parked when connectChatHub resumes and checks whether the session is armed. Holding
+    // Connect open reproduces that ordering; resolving it immediately would not.
+    let releaseConnect: () => void = () => undefined;
+    mockSignalRService.invoke.mockImplementation((_hub: string, method: string) => {
+      if (method === 'Connect') {
+        return new Promise<void>((resolve) => {
+          releaseConnect = resolve;
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+    mockSignalRService.connectToHubWithEventingUrl.mockImplementation(async () => {
+      emit('hubConnected', { hubName: CHAT_HUB });
+    });
+
+    const pending = useSignalRStore.getState().connectChatHub();
+    // Let connectChatHub reach its fallback check while the first arm is still in flight.
+    await Promise.resolve();
+    releaseConnect();
+    await pending;
+
+    // Two arms for one connection id would announce twice and halve the retry budget.
+    expect(connectInvocations()).toHaveLength(1);
+    expect(useSignalRStore.getState().isChatHubConnected).toBe(true);
+    expect(mockHandleChatConnected).toHaveBeenCalledTimes(1);
+  });
+
   it('re-announces presence when the hub reconnects', async () => {
     const useSignalRStore = loadStore();
     await useSignalRStore.getState().connectChatHub();
@@ -144,6 +176,37 @@ describe('chat hub re-arming', () => {
     expect(connectInvocations()).toHaveLength(2);
     expect(useSignalRStore.getState().isChatHubConnected).toBe(true);
     expect(mockHandleChatConnected).toHaveBeenCalledTimes(2);
+  });
+
+  it('resyncs a reconnect that lands inside the debounce window', async () => {
+    const useSignalRStore = loadStore();
+    await useSignalRStore.getState().connectChatHub();
+    expect(mockHandleChatConnected).toHaveBeenCalledTimes(1);
+
+    // A blip: withAutomaticReconnect retries immediately, so the new connection routinely
+    // arrives well inside CHAT_RESYNC_DEBOUNCE_MS. Debouncing across it would skip the
+    // backfill of everything missed while the socket was down.
+    emit('hubDisconnected', { hubName: CHAT_HUB });
+    now += 200;
+    emit('hubConnected', { hubName: CHAT_HUB });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(connectInvocations()).toHaveLength(2);
+    expect(mockHandleChatConnected).toHaveBeenCalledTimes(2);
+  });
+
+  it('still collapses duplicate resync signals within one connection', async () => {
+    const useSignalRStore = loadStore();
+    await useSignalRStore.getState().connectChatHub();
+    expect(mockHandleChatConnected).toHaveBeenCalledTimes(1);
+
+    // The server echoes its own onChatConnected right after ours; that is a duplicate for
+    // the same connection id and must not fan out a second resync.
+    now += 200;
+    emit('onChatConnected', undefined);
+
+    expect(mockHandleChatConnected).toHaveBeenCalledTimes(1);
   });
 
   it('ignores lifecycle events from other hubs', async () => {
@@ -171,6 +234,39 @@ describe('chat hub re-arming', () => {
     expect(mockSignalRService.off).not.toHaveBeenCalled();
     expect(registeredHandlers.get('chatMessageReceived')?.size).toBe(1);
     expect(useSignalRStore.getState().isChatHubConnected).toBe(false);
+  });
+
+  it('restores the retry budget when a new connection id arrives', async () => {
+    jest.useFakeTimers();
+    try {
+      const useSignalRStore = loadStore();
+      mockSignalRService.invoke.mockRejectedValue(new Error('hub is currently reconnecting'));
+
+      // Spend the whole budget on this connection: the initial arm plus its retries.
+      await useSignalRStore.getState().connectChatHub();
+      for (let attempt = 1; attempt < 3; attempt += 1) {
+        await jest.advanceTimersByTimeAsync(5000);
+      }
+      expect(connectInvocations()).toHaveLength(3);
+
+      // Exhausted — no further retry is pending on this connection.
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(connectInvocations()).toHaveLength(3);
+
+      emit('hubDisconnected', { hubName: CHAT_HUB });
+      now += 10_000;
+      emit('hubConnected', { hubName: CHAT_HUB });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // The new connection id arms with a full budget, so its failure retries again
+      // rather than inheriting the previous connection's spent attempts.
+      expect(connectInvocations()).toHaveLength(4);
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(connectInvocations()).toHaveLength(5);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('does not connect when the chat feature flag is off', async () => {
