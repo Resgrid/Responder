@@ -59,9 +59,15 @@ if (!Env.SENTRY_DSN) {
   console.warn('[Sentry] DSN is empty — errors and profiles will NOT be sent. Set RESPOND_SENTRY_DSN in your environment.');
 }
 
+// Sentry's own logger is off by default: watchdog-termination tracking rewrites the
+// native scope on every RNSentry turbo-module call, so `debug` floods the Metro
+// console with hundreds of "Writing tags to disk" lines a second. Flip to `__DEV__`
+// temporarily when diagnosing Sentry itself.
+const SENTRY_DEBUG = false;
+
 Sentry.init({
   dsn: Env.SENTRY_DSN,
-  debug: __DEV__, // Only debug in development, not production
+  debug: SENTRY_DEBUG,
   // tracesSampleRate: percentage of transactions sent (1.0 = 100%, 0.2 = 20%)
   tracesSampleRate: __DEV__ ? 1.0 : 0.2,
   // profilesSampleRate: relative to tracesSampleRate!
@@ -77,6 +83,15 @@ Sentry.init({
     navigationIntegration,
   ],
   enableNativeFramesTracking: true, // Tracks slow and frozen frames
+  beforeBreadcrumb(breadcrumb) {
+    // Drop console breadcrumbs in development: every dev log would otherwise be
+    // synced to the native scope, and LogService already emits explicit `log`
+    // breadcrumbs for warn/error, so nothing of value is lost.
+    if (__DEV__ && breadcrumb.category === 'console') {
+      return null;
+    }
+    return breadcrumb;
+  },
   // Add additional options to prevent timing issues
   beforeSend(event) {
     // Filter out problematic navigation transactions that might cause timestamp errors

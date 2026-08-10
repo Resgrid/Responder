@@ -2,9 +2,9 @@
 
 import { NovuProvider } from '@novu/react-native';
 import Mapbox from '@rnmapbox/maps';
-import { Redirect, Slot, SplashScreen } from 'expo-router';
+import { type Href, Redirect, Slot, SplashScreen, usePathname, useRouter } from 'expo-router';
 import { size } from 'lodash';
-import { Menu } from 'lucide-react-native';
+import { ArrowLeft, Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -19,6 +19,7 @@ import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from 
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
+import { useAppInitRetry } from '@/hooks/use-app-init-retry';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { useSignalRLifecycle } from '@/hooks/use-signalr-lifecycle';
 import { useAuthStore } from '@/lib/auth';
@@ -46,6 +47,8 @@ Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
 
 export default function TabLayout() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const pathname = usePathname();
   const status = useAuthStore((state) => state.status);
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -55,6 +58,13 @@ export default function TabLayout() {
   const handleNavigate = useCallback(() => {
     setIsOpen(false);
   }, []);
+
+  // The assistant is a leaf of the chat list, so its nav button returns there
+  // instead of opening the drawer. `replace` keeps the assistant off the history.
+  const handleBackToChats = useCallback(() => {
+    router.replace('/chat' as Href);
+  }, [router]);
+  const backHandler = pathname === '/chatbot' ? handleBackToChats : undefined;
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const { isActive, appState } = useAppLifecycle();
@@ -62,10 +72,20 @@ export default function TabLayout() {
 
   // Refs to track initialization state
   const hasInitialized = useRef(false);
+  // Mirrored into state because useSignalRLifecycle reads it during render; a ref
+  // mutated after the last re-render left the hub lifecycle permanently disabled.
+  const [isInitialized, setIsInitialized] = React.useState(false);
   const isInitializing = useRef(false);
   const hasHiddenSplash = useRef(false);
   const lastSignedInStatus = useRef<string | null>(null);
   const parentRef = useRef(null);
+  const hasAttemptedInit = useRef(false);
+  const initializeAppRef = useRef<(() => Promise<void>) | null>(null);
+  // Bumped on every initialization start and on sign-out. An in-flight run compares its
+  // captured value after each await, so a run belonging to a session that ended can no
+  // longer mark the app initialized, connect hubs, or restart location tracking.
+  const initGeneration = useRef(0);
+  const initRetry = useAppInitRetry();
 
   // Initialize push notifications
   usePushNotifications();
@@ -87,10 +107,14 @@ export default function TabLayout() {
     }
 
     isInitializing.current = true;
+    const generation = (initGeneration.current += 1);
+    const isCurrentRun = () => initGeneration.current === generation;
+    const attempt = initRetry.recordAttempt();
     logger.info({
       message: 'Starting app initialization',
       context: {
         hasInitialized: hasInitialized.current,
+        attempt,
       },
     });
 
@@ -102,6 +126,7 @@ export default function TabLayout() {
       //await usePersonnelStore.getState().init();
       await securityStore.getState().getRights();
       await featureFlagsStore.getState().fetchFlags();
+      if (!isCurrentRun()) return;
 
       //await useSignalRStore.getState().connectUpdateHub();
       //await useSignalRStore.getState().connectGeolocationHub();
@@ -126,7 +151,10 @@ export default function TabLayout() {
         });
       }
 
+      if (!isCurrentRun()) return;
+
       hasInitialized.current = true;
+      setIsInitialized(true);
 
       const independentInits: [string, () => Promise<unknown>][] = [
         [
@@ -154,6 +182,8 @@ export default function TabLayout() {
         }
       });
 
+      if (!isCurrentRun()) return;
+
       // Start location tracking when user is logged in
       try {
         await locationService.startLocationUpdates();
@@ -168,20 +198,41 @@ export default function TabLayout() {
         // Don't fail initialization if location tracking fails
       }
 
+      if (!isCurrentRun()) return;
+
+      initRetry.reset();
       logger.info({
         message: 'App initialization completed successfully',
       });
     } catch (error) {
       logger.error({
         message: 'Failed to initialize app',
-        context: { error },
+        context: { error, attempt },
       });
+      // A run whose session already ended must not retry itself or clobber the state the
+      // sign-out cleanup (or a newer run) has since established.
+      if (!isCurrentRun()) return;
+
       // Reset initialization state on error so it can be retried
       hasInitialized.current = false;
+      setIsInitialized(false);
+      initRetry.scheduleRetry(() => {
+        void initializeAppRef.current?.();
+      });
     } finally {
-      isInitializing.current = false;
+      // Only the current run owns the guard; a superseded run leaving it false would let
+      // two initializations overlap.
+      if (isCurrentRun()) {
+        isInitializing.current = false;
+      }
     }
-  }, [status]);
+  }, [status, initRetry]);
+
+  // The retry timer fires outside React's render cycle, so it reaches the callback
+  // through a ref rather than capturing a stale closure.
+  useEffect(() => {
+    initializeAppRef.current = initializeApp;
+  }, [initializeApp]);
 
   const refreshDataFromBackground = useCallback(async () => {
     if (status !== 'signedIn' || !hasInitialized.current) return;
@@ -204,12 +255,14 @@ export default function TabLayout() {
   // Handle SignalR lifecycle management
   useSignalRLifecycle({
     isSignedIn: status === 'signedIn',
-    hasInitialized: hasInitialized.current,
+    hasInitialized: isInitialized,
   });
 
   // Handle app initialization - simplified logic
   useEffect(() => {
-    const shouldInitialize = status === 'signedIn' && !hasInitialized.current && !isInitializing.current && lastSignedInStatus.current !== 'signedIn';
+    // Gated on its own ref rather than the previous status: keying off the status
+    // meant a startup that threw could never be retried for the rest of the session.
+    const shouldInitialize = status === 'signedIn' && !hasInitialized.current && !isInitializing.current && !hasAttemptedInit.current;
 
     if (shouldInitialize) {
       logger.info({
@@ -218,6 +271,7 @@ export default function TabLayout() {
           statusChanged: lastSignedInStatus.current !== status,
         },
       });
+      hasAttemptedInit.current = true;
       initializeApp();
     }
 
@@ -227,6 +281,18 @@ export default function TabLayout() {
         message: 'User signed out, stopping location tracking',
       });
 
+      // Always clear init state on sign-out, even if stopping location fails, so the
+      // next sign-in starts a fresh attempt with a fresh retry budget. Bumping the
+      // generation retires any initialization still in flight, and clearing the guard
+      // it no longer owns keeps the next sign-in from being skipped as "already
+      // initializing".
+      initGeneration.current += 1;
+      isInitializing.current = false;
+      initRetry.reset();
+      hasAttemptedInit.current = false;
+      hasInitialized.current = false;
+      setIsInitialized(false);
+
       (async () => {
         try {
           await locationService.stopLocationUpdates();
@@ -234,7 +300,6 @@ export default function TabLayout() {
             message: 'Location tracking stopped successfully',
             context: { reason: 'user_signed_out' },
           });
-          hasInitialized.current = false;
         } catch (error) {
           logger.error({
             message: 'Failed to stop location tracking on sign out',
@@ -246,7 +311,7 @@ export default function TabLayout() {
 
     // Update last known status
     lastSignedInStatus.current = status;
-  }, [status, initializeApp]);
+  }, [status, initializeApp, initRetry]);
 
   // Handle app resuming from background - separate from initialization
   useEffect(() => {
@@ -290,7 +355,7 @@ export default function TabLayout() {
     <View style={styles.container}>
       {/* Top Navigation Bar */}
       <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
-        <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />
+        <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} onBack={backHandler} />
         <View className="flex-1 items-center">
           <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
         </View>
@@ -345,9 +410,21 @@ export default function TabLayout() {
 interface CreateDrawerMenuButtonProps {
   setIsOpen: (isOpen: boolean) => void;
   isLandscape: boolean;
+  /** When set, the button navigates back instead of opening the drawer. */
+  onBack?: () => void;
 }
 
-const CreateDrawerMenuButton = ({ setIsOpen, isLandscape }: CreateDrawerMenuButtonProps) => {
+const CreateDrawerMenuButton = ({ setIsOpen, isLandscape, onBack }: CreateDrawerMenuButtonProps) => {
+  const { t } = useTranslation();
+
+  if (onBack) {
+    return (
+      <Pressable className="p-2" onPress={onBack} accessibilityRole="button" accessibilityLabel={t('chat.back_to_chats')}>
+        <ArrowLeft size={24} color="white" />
+      </Pressable>
+    );
+  }
+
   if (isLandscape) {
     return <View className="w-8" />; // Spacer to maintain layout balance
   }

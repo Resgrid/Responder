@@ -3,7 +3,7 @@ import { type TFunction } from 'i18next';
 
 import { ChatChannelType, type ChatChannelResultData } from '@/models/v4/chat';
 
-import { copyToClipboard, getChannelDisplayName, getImageMimeType, hasLink, linkifySegments } from '../chat-utils';
+import { buildGifMetadata, buildLocationMetadata, copyToClipboard, getChannelDisplayName, getImageMimeType, hasLink, linkifySegments, parseGifMetadata, parseLocationMetadata } from '../chat-utils';
 
 jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn(),
@@ -147,6 +147,58 @@ describe('chat-utils', () => {
 
     it('returns an empty array for empty input', () => {
       expect(linkifySegments('')).toEqual([]);
+    });
+  });
+  // The web client reads a nested camelCase envelope ({ gif: { url } } /
+  // { location: { latitude } }). Emitting the old flat PascalCase shape made web render
+  // the message body instead of the GIF/map, so builders emit nested and parsers accept both.
+  describe('metadata contract', () => {
+    it('builds the nested gif envelope the web client reads', () => {
+      const json = buildGifMetadata({ GifUrl: 'https://cdn.example/a.gif', PreviewUrl: 'https://cdn.example/p.gif', Width: 200, Height: 150 });
+
+      expect(JSON.parse(json)).toEqual({ gif: { url: 'https://cdn.example/a.gif', previewUrl: 'https://cdn.example/p.gif', width: 200, height: 150 } });
+    });
+
+    it('builds the nested location envelope the web client reads', () => {
+      expect(JSON.parse(buildLocationMetadata(37.7, -122.4))).toEqual({ location: { latitude: 37.7, longitude: -122.4 } });
+    });
+
+    it('round-trips its own gif metadata', () => {
+      const parsed = parseGifMetadata(buildGifMetadata({ GifUrl: 'https://cdn.example/a.gif', Width: 200 }));
+
+      expect(parsed?.GifUrl).toBe('https://cdn.example/a.gif');
+      expect(parsed?.Width).toBe(200);
+    });
+
+    it('round-trips its own location metadata', () => {
+      const parsed = parseLocationMetadata(buildLocationMetadata(37.7, -122.4, 'Station 1'));
+
+      expect(parsed).toEqual({ Latitude: 37.7, Longitude: -122.4, Label: 'Station 1' });
+    });
+
+    it('reads the flat PascalCase shape older builds stored', () => {
+      expect(parseGifMetadata('{"GifUrl":"https://cdn.example/a.gif","Title":"party"}')?.GifUrl).toBe('https://cdn.example/a.gif');
+      expect(parseLocationMetadata('{"Latitude":1.5,"Longitude":2.5}')).toEqual({ Latitude: 1.5, Longitude: 2.5, Label: undefined });
+    });
+
+    it('accepts coordinates at the WGS84 limits', () => {
+      expect(parseLocationMetadata('{"location":{"latitude":90,"longitude":180}}')).toEqual({ Latitude: 90, Longitude: 180, Label: undefined });
+      expect(parseLocationMetadata('{"location":{"latitude":-90,"longitude":-180}}')).toEqual({ Latitude: -90, Longitude: -180, Label: undefined });
+    });
+
+    it('rejects coordinates outside the WGS84 range', () => {
+      expect(parseLocationMetadata('{"location":{"latitude":90.1,"longitude":0}}')).toBeNull();
+      expect(parseLocationMetadata('{"location":{"latitude":-90.1,"longitude":0}}')).toBeNull();
+      expect(parseLocationMetadata('{"location":{"latitude":0,"longitude":180.1}}')).toBeNull();
+      expect(parseLocationMetadata('{"location":{"latitude":0,"longitude":-180.1}}')).toBeNull();
+      // The flat shape older builds stored is held to the same bounds.
+      expect(parseLocationMetadata('{"Latitude":999,"Longitude":9999}')).toBeNull();
+    });
+
+    it('returns null when the payload carries no usable coordinates or url', () => {
+      expect(parseGifMetadata('{"gif":{"previewUrl":"https://cdn.example/p.gif"}}')).toBeNull();
+      expect(parseLocationMetadata('{"location":{"label":"nowhere"}}')).toBeNull();
+      expect(parseGifMetadata('not json')).toBeNull();
     });
   });
 });
