@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { MessageCircle, MessagesSquare, ShieldCheck, Users } from 'lucide-react-native';
+import { MessageCircle, MessagesSquare, Radio, ShieldCheck, Users } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -87,7 +87,7 @@ export const IncidentChatSection: React.FC<IncidentChatSectionProps> = ({ view, 
 
   const handleMessage = useCallback((userId?: string | null) => void openDirectMessage(userId), [openDirectMessage]);
 
-  const hasChannels = !!(chat?.IncidentChannelId || chat?.LaneChannelId || chat?.CommandChannelId || chat?.LeadsChannelId);
+  const hasChannels = !!(chat?.IncidentChannelId || chat?.LaneChannelId || chat?.CommandChannelId || chat?.LeadsChannelId || chat?.DispatchChannelId);
   // Only ICS role holders live here — the commander and this resource's lane leads already have
   // contact cards higher up the panel, and listing them twice just made the screen noisy.
   const hasContacts = roles.length > 0;
@@ -114,6 +114,7 @@ export const IncidentChatSection: React.FC<IncidentChatSectionProps> = ({ view, 
           <ChannelRow label={t('incident_command.lane_channel')} hint={assignment?.LaneName} icon={MessagesSquare} channelId={chat?.LaneChannelId} testID={`${testID}-lane`} />
           <ChannelRow label={t('incident_command.command_channel')} hint={t('incident_command.command_channel_hint')} icon={ShieldCheck} channelId={chat?.CommandChannelId} testID={`${testID}-command`} />
           <ChannelRow label={t('incident_command.leads_channel')} hint={t('incident_command.leads_channel_hint')} icon={Users} channelId={chat?.LeadsChannelId} testID={`${testID}-leads`} />
+          <ChannelRow label={t('incident_command.dispatch_channel')} hint={t('incident_command.dispatch_channel_hint')} icon={Radio} channelId={chat?.DispatchChannelId} testID={`${testID}-dispatch`} />
         </VStack>
       ) : null}
 

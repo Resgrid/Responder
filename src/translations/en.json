@@ -669,6 +669,8 @@
     "command_channel": "Command chat",
     "command_channel_hint": "Command staff only",
     "commander": "Commander",
+    "dispatch_channel": "Dispatch",
+    "dispatch_channel_hint": "Reach the dispatch desk",
     "dm_failed": "Couldn't open that conversation.",
     "dm_unavailable": "That contact has no Resgrid account to message.",
     "empty_state": "No incident command is active for this call",

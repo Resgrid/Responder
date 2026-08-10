@@ -15,6 +15,8 @@ export enum ChatChannelType {
   Chatbot = 8,
   /** IC plus every lane's primary/secondary lead — command talking to the people running the lanes. */
   IncidentLeads = 9,
+  /** The incident's line to the dispatch desk: everyone on the incident, plus every authorized dispatcher. */
+  IncidentDispatch = 10,
 }
 
 /** Message type (ChatMessageResultData.MessageType). */
