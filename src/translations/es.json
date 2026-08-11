@@ -383,7 +383,7 @@
     "flag_reason": "¿Por qué lo denuncias?",
     "flag_sensitive": "Información sensible",
     "flag_spam": "Spam",
-    "group_name": "Nombre del grupo",
+    "group_name": "Nombre del grupo (Opcional)",
     "is_typing": "{{name}} está escribiendo...",
     "load_people_failed": "No se pudieron cargar las personas",
     "message_deleted": "Este mensaje fue eliminado",

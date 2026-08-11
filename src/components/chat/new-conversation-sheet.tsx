@@ -110,9 +110,10 @@ export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewCo
   );
 
   const createGroup = useCallback(async () => {
-    if (!groupName.trim() || selected.size === 0) return;
+    if (selected.size === 0) return;
     setSubmitting(true);
     try {
+      // Name may be empty; the server auto-names the group after its members.
       const response = await createAdHocChannel({ Name: groupName.trim(), MemberUserIds: Array.from(selected) });
       if (response.Data?.ChatChannelId) {
         onCreated(response.Data.ChatChannelId);
@@ -191,7 +192,7 @@ export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewCo
           )}
 
           {mode === 'group' ? (
-            <Button className="mb-2 w-full bg-primary-600" onPress={createGroup} isDisabled={submitting || !groupName.trim() || selected.size === 0}>
+            <Button className="mb-2 w-full bg-primary-600" onPress={createGroup} isDisabled={submitting || selected.size === 0}>
               <Users size={18} color="#ffffff" />
               <ButtonText className="ml-2">{t('chat.create_group_with', { count: selected.size })}</ButtonText>
             </Button>

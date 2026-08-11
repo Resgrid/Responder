@@ -266,6 +266,9 @@ export const useChatStore = create<ChatState>()(
 
       setActiveChannel: (channelId: string | null) => {
         set({ activeChannelId: channelId });
+        // Tell the hub which conversation is on screen so it can suppress push
+        // notifications for it; null clears the marker when the screen closes.
+        void safeInvoke('SetActiveChannel', channelId ?? null, null);
       },
 
       // ------------------------------------------------------------------
@@ -842,6 +845,8 @@ export const useChatStore = create<ChatState>()(
         if (activeChannelId) {
           void get().joinChannel(activeChannelId);
           void get().loadNewerMessages(activeChannelId);
+          // Re-assert the active-channel marker; the server forgot it with the old connection.
+          void safeInvoke('SetActiveChannel', activeChannelId, null);
         }
       },
 

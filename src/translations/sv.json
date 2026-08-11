@@ -383,7 +383,7 @@
     "flag_reason": "Varför rapporterar du detta?",
     "flag_sensitive": "Känslig information",
     "flag_spam": "Skräppost",
-    "group_name": "Gruppnamn",
+    "group_name": "Gruppnamn (valfritt)",
     "is_typing": "{{name}} skriver...",
     "load_people_failed": "Det gick inte att ladda personer",
     "message_deleted": "Det här meddelandet har raderats",
