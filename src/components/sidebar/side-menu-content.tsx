@@ -69,93 +69,94 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const isChatEnabled = useIsChatEnabled();
 
   const menuItems: MenuItem[] = useMemo(
-    () => [
-      {
-        id: 'home',
-        title: t('tabs.home'),
-        icon: Home,
-        route: '/(app)/home',
-        testID: 'side-menu-home',
-      },
-      {
-        id: 'messages',
-        title: t('tabs.messages'),
-        icon: Mail,
-        route: '/(app)/messages',
-        testID: 'side-menu-messages',
-      },
-      {
-        id: 'contacts',
-        title: t('tabs.contacts'),
-        icon: Contact,
-        route: '/(app)/contacts',
-        testID: 'side-menu-contacts',
-      },
-      {
-        id: 'map',
-        title: t('tabs.map'),
-        icon: MapIcon,
-        route: '/(app)/map',
-        testID: 'side-menu-map',
-      },
-      {
-        id: 'notes',
-        title: t('tabs.notes'),
-        icon: Notebook,
-        route: '/(app)/notes',
-        testID: 'side-menu-notes',
-      },
-      {
-        id: 'protocols',
-        title: t('tabs.protocols'),
-        icon: ListTree,
-        route: '/(app)/protocols',
-        testID: 'side-menu-protocols',
-      },
-      {
-        id: 'calendar',
-        title: t('tabs.calendar'),
-        icon: Calendar,
-        route: '/calendar',
-        testID: 'side-menu-calendar',
-      },
-      {
-        id: 'shifts',
-        title: t('tabs.shifts'),
-        icon: CalendarCheck,
-        route: '/(app)/shifts',
-        testID: 'side-menu-shifts',
-      },
-      {
-        id: 'weatherAlerts',
-        title: t('tabs.weatherAlerts'),
-        icon: CloudAlert,
-        route: '/(app)/weather-alerts',
-        testID: 'side-menu-weather-alerts',
-      },
-      {
-        id: 'chat',
-        title: t('tabs.chat'),
-        icon: MessagesSquare,
-        route: '/(app)/chat',
-        testID: 'side-menu-chat',
-      },
-      {
-        id: 'assistant',
-        title: t('tabs.assistant'),
-        icon: Sparkles,
-        route: '/(app)/chatbot',
-        testID: 'side-menu-assistant',
-      },
-      {
-        id: 'settings',
-        title: t('tabs.settings'),
-        icon: Settings,
-        route: '/(app)/settings',
-        testID: 'side-menu-settings',
-      },
-      // Chat and the assistant are gated by the Chat.System feature flag.
-    ].filter((item) => (item.id === 'chat' || item.id === 'assistant' ? isChatEnabled : true)),
+    () =>
+      [
+        {
+          id: 'home',
+          title: t('tabs.home'),
+          icon: Home,
+          route: '/(app)/home',
+          testID: 'side-menu-home',
+        },
+        {
+          id: 'messages',
+          title: t('tabs.messages'),
+          icon: Mail,
+          route: '/(app)/messages',
+          testID: 'side-menu-messages',
+        },
+        {
+          id: 'contacts',
+          title: t('tabs.contacts'),
+          icon: Contact,
+          route: '/(app)/contacts',
+          testID: 'side-menu-contacts',
+        },
+        {
+          id: 'map',
+          title: t('tabs.map'),
+          icon: MapIcon,
+          route: '/(app)/map',
+          testID: 'side-menu-map',
+        },
+        {
+          id: 'notes',
+          title: t('tabs.notes'),
+          icon: Notebook,
+          route: '/(app)/notes',
+          testID: 'side-menu-notes',
+        },
+        {
+          id: 'protocols',
+          title: t('tabs.protocols'),
+          icon: ListTree,
+          route: '/(app)/protocols',
+          testID: 'side-menu-protocols',
+        },
+        {
+          id: 'calendar',
+          title: t('tabs.calendar'),
+          icon: Calendar,
+          route: '/calendar',
+          testID: 'side-menu-calendar',
+        },
+        {
+          id: 'shifts',
+          title: t('tabs.shifts'),
+          icon: CalendarCheck,
+          route: '/(app)/shifts',
+          testID: 'side-menu-shifts',
+        },
+        {
+          id: 'weatherAlerts',
+          title: t('tabs.weatherAlerts'),
+          icon: CloudAlert,
+          route: '/(app)/weather-alerts',
+          testID: 'side-menu-weather-alerts',
+        },
+        {
+          id: 'chat',
+          title: t('tabs.chat'),
+          icon: MessagesSquare,
+          route: '/(app)/chat',
+          testID: 'side-menu-chat',
+        },
+        {
+          id: 'assistant',
+          title: t('tabs.assistant'),
+          icon: Sparkles,
+          route: '/(app)/chatbot',
+          testID: 'side-menu-assistant',
+        },
+        {
+          id: 'settings',
+          title: t('tabs.settings'),
+          icon: Settings,
+          route: '/(app)/settings',
+          testID: 'side-menu-settings',
+        },
+        // Chat and the assistant are gated by the Chat.System feature flag.
+      ].filter((item) => (item.id === 'chat' || item.id === 'assistant' ? isChatEnabled : true)),
     [t, isChatEnabled]
   );
 
