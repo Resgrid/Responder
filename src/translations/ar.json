@@ -383,7 +383,7 @@
     "flag_reason": "لماذا تبلغ عن هذا؟",
     "flag_sensitive": "معلومات حساسة",
     "flag_spam": "رسائل مزعجة",
-    "group_name": "اسم المجموعة",
+    "group_name": "اسم المجموعة (اختياري)",
     "is_typing": "{{name}} يكتب...",
     "load_people_failed": "تعذّر تحميل الأشخاص",
     "message_deleted": "تم حذف هذه الرسالة",
