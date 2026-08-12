@@ -233,6 +233,23 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Active-channel marker the hub has not confirmed yet. Kept — null included, since
+ * null means "clear the marker" — until an invoke succeeds, so a send that failed
+ * while offline can be replayed on reconnect. */
+let pendingActiveChannelSync: { channelId: string | null } | null = null;
+
+async function syncActiveChannelMarker(channelId: string | null): Promise<void> {
+  const marker = { channelId };
+  pendingActiveChannelSync = marker;
+  try {
+    await signalRService.invoke(Env.CHAT_HUB_NAME, 'SetActiveChannel', channelId, null);
+    // Only clear if no newer marker superseded this one while in flight.
+    if (pendingActiveChannelSync === marker) pendingActiveChannelSync = null;
+  } catch (error) {
+    logger.debug({ message: 'chat: invoke SetActiveChannel skipped', context: { error } });
+  }
+}
+
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
@@ -268,7 +285,7 @@ export const useChatStore = create<ChatState>()(
         set({ activeChannelId: channelId });
         // Tell the hub which conversation is on screen so it can suppress push
         // notifications for it; null clears the marker when the screen closes.
-        void safeInvoke('SetActiveChannel', channelId ?? null, null);
+        void syncActiveChannelMarker(channelId ?? null);
       },
 
       // ------------------------------------------------------------------
@@ -845,8 +862,12 @@ export const useChatStore = create<ChatState>()(
         if (activeChannelId) {
           void get().joinChannel(activeChannelId);
           void get().loadNewerMessages(activeChannelId);
-          // Re-assert the active-channel marker; the server forgot it with the old connection.
-          void safeInvoke('SetActiveChannel', activeChannelId, null);
+        }
+        // Re-assert the active-channel marker; the server forgot it with the old
+        // connection. A pending null (screen closed while offline) is flushed too,
+        // so the server stops suppressing push for a channel no longer on screen.
+        if (activeChannelId !== null || pendingActiveChannelSync !== null) {
+          void syncActiveChannelMarker(activeChannelId);
         }
       },
 
@@ -856,6 +877,7 @@ export const useChatStore = create<ChatState>()(
         lastTypingSentAt.clear();
         lastMarkedSeq.clear();
         pendingChatbotMessages.clear();
+        pendingActiveChannelSync = null;
         clearChatbotTypingTimeout();
         if (outboxDrainTimer) {
           clearTimeout(outboxDrainTimer);
