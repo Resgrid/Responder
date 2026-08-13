@@ -28,6 +28,10 @@ jest.mock('@/services/signalr.service', () => {
   };
   return {
     signalRService: mockInstance,
+    // The store keys its hub lifecycle listeners by these; without them the handlers register under
+    // `undefined` and the subscription set cannot be asserted meaningfully.
+    HUB_CONNECTED_EVENT: 'hubConnected',
+    HUB_DISCONNECTED_EVENT: 'hubDisconnected',
     default: mockInstance,
   };
 });
@@ -213,7 +217,10 @@ describe('useSignalRStore', () => {
         await result.current.disconnectUpdateHub();
       });
 
-      expect(registrations).toHaveLength(10);
+      // Every update hub subscription must be torn down by its own reference; the set includes the
+      // incident command feed and the hub-connected listener that rejoins the department group.
+      expect(registrations).toHaveLength(12);
+      expect(registrations.map(([event]) => event)).toEqual(expect.arrayContaining(['incidentCommandUpdated', 'hubConnected']));
       registrations.forEach(([event, handler]) => {
         expect(signalRService.off).toHaveBeenCalledWith(event, handler);
       });
@@ -270,7 +277,7 @@ describe('useSignalRStore', () => {
       });
 
       expect(result.current.error).toEqual(disconnectError);
-      expect(signalRService.off).toHaveBeenCalledTimes(10);
+      expect(signalRService.off).toHaveBeenCalledTimes(12);
       expect(logger.error).toHaveBeenCalledWith({
         message: 'Failed to disconnect from SignalR hubs',
         context: { error: disconnectError },

@@ -6,6 +6,7 @@ import { logger } from '@/lib/logging';
 import { HUB_CONNECTED_EVENT, HUB_DISCONNECTED_EVENT, type HubLifecycleEvent, signalRService } from '@/services/signalr.service';
 
 import { useCoreStore } from '../app/core-store';
+import { useIncidentCommandStore } from '../calls/incident-command-store';
 import { useChatStore } from '../chat/store';
 import { FeatureFlagKeys, featureFlagsStore } from '../feature-flags/store';
 import { securityStore, useSecurityStore } from '../security/store';
@@ -148,6 +149,48 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           useWeatherAlertsStore.getState().handleAlertExpired(alertId);
         }
         set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      'incidentCommandUpdated',
+      createSafeHandler('incidentCommandUpdated', (message) => {
+        logger.info({
+          message: 'incidentCommandUpdated',
+          context: { message },
+        });
+        // Core sends the affected call id as a bare string (the eventing worker forwards the topic's
+        // ItemId, which is CallId.ToString()); object payloads are tolerated for safety.
+        const callId =
+          typeof message === 'string' ? message.trim() : typeof message === 'number' ? String(message) : String((message as Record<string, unknown>)?.CallId ?? (message as Record<string, unknown>)?.callId ?? '').trim();
+        if (callId) {
+          useIncidentCommandStore.getState().handleIncidentCommandUpdated(callId);
+        }
+        set({ lastUpdateMessage: message, lastUpdateTimestamp: Date.now() });
+      }),
+    ],
+    [
+      HUB_CONNECTED_EVENT,
+      createSafeHandler(HUB_CONNECTED_EVENT, (message) => {
+        if (readHubName(message) !== Env.CHANNEL_HUB_NAME) return;
+        /**
+         * A reconnect issues a new connection id, so the department group this connection joined is
+         * gone with the old one — without re-announcing, the app stays silently subscribed to
+         * nothing and stops seeing incident command changes. The hub replays nothing from the
+         * outage either, so the open incident view is refreshed once the group is rejoined.
+         */
+        const departmentId = parseInt(securityStore.getState().rights?.DepartmentId ?? '0');
+        void signalRService
+          .invoke(Env.CHANNEL_HUB_NAME, 'connect', departmentId)
+          .then(() => {
+            logger.info({ message: 'Re-announced to update hub after reconnect', context: { departmentId } });
+            const openCallId = useIncidentCommandStore.getState().callId;
+            if (openCallId) {
+              useIncidentCommandStore.getState().handleIncidentCommandUpdated(openCallId);
+            }
+          })
+          .catch((error) => {
+            logger.warn({ message: 'Failed to re-announce to update hub after reconnect', context: { error } });
+          });
       }),
     ],
     [
@@ -457,6 +500,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
             'weatherAlertReceived',
             'weatherAlertUpdated',
             'weatherAlertExpired',
+            'incidentCommandUpdated',
             'onConnected',
           ],
         });

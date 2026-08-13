@@ -134,6 +134,9 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
           });
         }
       });
+
+      // No refresh here: the signalR store's HUB_CONNECTED_EVENT handler owns the group rejoin
+      // and the open-incident backfill for every update hub connect, this path included.
     } catch (error) {
       logger.error({
         message: 'Unexpected error during SignalR reconnect on app resume',
