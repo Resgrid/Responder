@@ -344,7 +344,8 @@
     "what3words_invalid_format": "Formato what3words non valido. Utilizzare il formato: parola.parola.parola",
     "what3words_not_found": "Indirizzo what3words non trovato, provare con un indirizzo diverso",
     "what3words_placeholder": "Inserire l'indirizzo what3words (es.: filled.count.soap)",
-    "what3words_required": "Inserire un indirizzo what3words da cercare"
+    "what3words_required": "Inserire un indirizzo what3words da cercare",
+    "required_fields_missing": "Il tuo dipartimento richiede questi campi prima di poter creare una chiamata: {{fields}}"
   },
   "chat": {
     "ack_pending_count": "Hai {{count}} messaggi urgenti da confermare",
@@ -1083,6 +1084,7 @@
     "general": "Generale",
     "generale": "Generale",
     "german": "Tedesco",
+    "greek": "Greco",
     "github": "Github",
     "help_center": "Centro assistenza",
     "italian": "Italiano",

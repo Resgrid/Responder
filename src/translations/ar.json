@@ -344,7 +344,8 @@
     "what3words_invalid_format": "تنسيق what3words غير صحيح. استخدم التنسيق: كلمة.كلمة.كلمة",
     "what3words_not_found": "لم يتم العثور على عنوان what3words، جرب عنوان آخر",
     "what3words_placeholder": "أدخل عنوان what3words (مثال: filled.count.soap)",
-    "what3words_required": "يرجى إدخال عنوان what3words للبحث"
+    "what3words_required": "يرجى إدخال عنوان what3words للبحث",
+    "required_fields_missing": "يطلب قسمك هذه الحقول قبل إنشاء البلاغ: {{fields}}"
   },
   "chat": {
     "ack_pending_count": "لديك {{count}} رسائل عاجلة بحاجة إلى إقرار",
@@ -1083,6 +1084,7 @@
     "general": "عام",
     "generale": "عام",
     "german": "ألماني",
+    "greek": "اليونانية",
     "github": "جيثب",
     "help_center": "مركز المساعدة",
     "italian": "إيطالي",

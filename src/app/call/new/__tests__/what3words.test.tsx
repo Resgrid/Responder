@@ -24,7 +24,10 @@ const mockConfig: GetConfigResultData = {
   PersonnelLocationMinMeters: 0,
   UnitLocationMinMeters: 0,
   AnalyticsApiKey: '',
-  AnalyticsHost: ''
+  AnalyticsHost: '',
+  MapCenterLatitude: 0,
+  MapCenterLongitude: 0,
+  MapCenterZoomLevel: 9
 };
 
 // Mock the core store

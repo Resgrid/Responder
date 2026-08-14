@@ -344,7 +344,8 @@
     "what3words_invalid_format": "Ogiltigt what3words-format. Använd formatet: ord.ord.ord",
     "what3words_not_found": "what3words-adressen hittades inte, prova en annan adress",
     "what3words_placeholder": "Ange what3words-adress (t.ex. fylld.antal.tvål)",
-    "what3words_required": "Ange en what3words-adress att söka efter"
+    "what3words_required": "Ange en what3words-adress att söka efter",
+    "required_fields_missing": "Din avdelning kräver dessa fält innan ett ärende kan skapas: {{fields}}"
   },
   "chat": {
     "ack_pending_count": "Du har {{count}} brådskande meddelanden att bekräfta",
@@ -1083,6 +1084,7 @@
     "general": "Allmänt",
     "generale": "Allmänt",
     "german": "Tyska",
+    "greek": "Grekiska",
     "github": "Github",
     "help_center": "Hjälpcenter",
     "italian": "Italienska",

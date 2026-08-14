@@ -26,6 +26,7 @@ const LANGUAGES: { label: string; value: Language }[] = [
   { label: 'Español', value: 'es' },
   { label: 'Svenska', value: 'sv' },
   { label: 'Deutsch', value: 'de' },
+  { label: 'Ελληνικά', value: 'el' },
   { label: 'Français', value: 'fr' },
   { label: 'Italiano', value: 'it' },
   { label: 'Polski', value: 'pl' },

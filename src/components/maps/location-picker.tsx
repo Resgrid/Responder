@@ -9,6 +9,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Env } from '@/lib/env';
+import { getDepartmentMapCenter } from '@/lib/map-center';
 
 interface LocationPickerProps {
   initialLocation?:
@@ -172,7 +173,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
             setMapError(t('maps.failed_to_load', 'Failed to load map. Please check your internet connection.'));
           }}
         >
-          <Mapbox.Camera ref={cameraRef} zoomLevel={4} centerCoordinate={[-98.5795, 39.8283]} animationMode="flyTo" animationDuration={1000} />
+          <Mapbox.Camera ref={cameraRef} zoomLevel={4} centerCoordinate={[getDepartmentMapCenter().longitude, getDepartmentMapCenter().latitude]} animationMode="flyTo" animationDuration={1000} />
           {/* Overlay with location prompt */}
           <Box className="absolute inset-0 flex-1 items-center justify-center bg-black/20">
             <Box className="items-center rounded-lg bg-white/90 p-4 dark:bg-gray-800/90">

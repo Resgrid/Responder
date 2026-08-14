@@ -12,6 +12,8 @@ import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentia
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage';
+import { cacheManager } from '@/lib/cache/cache-manager';
+import { clearCacheScope, setCacheScope } from '@/lib/cache/cache-scope';
 
 export const PENDING_SAML_STATE_KEY = 'pending_saml_state';
 
@@ -622,5 +624,33 @@ const decodeJwtPayload = (tokenPayload: string): string => {
 
   return base64.decode(base64Str);
 };
+
+// Keep the API cache scoped to whoever is signed in. Cache keys embed this identity, so stamping it
+// here means a second user on the same device can never be served the first user's cached rosters,
+// units or contacts -- and signing out drops the scope so nothing leaks into an anonymous session.
+useAuthStore.subscribe((state, previousState) => {
+  if (state.userId === previousState.userId) {
+    return;
+  }
+
+  try {
+    // Drop everything the previous identity cached before the new scope goes live, so nothing from
+    // the old account can be read back even if a key were to collide.
+    cacheManager.clear();
+
+    if (state.userId) {
+      setCacheScope({ userId: state.userId });
+    } else {
+      clearCacheScope();
+    }
+  } catch (error) {
+    // Cache hygiene must never be able to break sign-in or sign-out. The scope is still correct
+    // in memory for this session, and a stale entry expires on its own.
+    logger.warn({
+      message: 'Failed to reset the API cache scope on identity change',
+      context: { error },
+    });
+  }
+});
 
 export default useAuthStore;

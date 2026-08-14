@@ -31,7 +31,7 @@ describe('CacheManager', () => {
     const result = cacheManager.get('/endpoint');
 
     expect(result).toBeNull();
-    expect(storage.delete).toHaveBeenCalledWith('api_cache_/endpoint');
+    expect(storage.delete).toHaveBeenCalledWith('api_cache_nodept_anon_/endpoint');
   });
 
   it.each([
@@ -48,9 +48,9 @@ describe('CacheManager', () => {
     expect(result).toBeNull();
     expect(logger.warn).toHaveBeenCalledWith({
       message: 'Corrupt cache entry, removing',
-      context: { key: 'api_cache_/endpoint', error: 'Invalid cache item shape' },
+      context: { key: 'api_cache_nodept_anon_/endpoint', error: 'Invalid cache item shape' },
     });
-    expect(storage.delete).toHaveBeenCalledWith('api_cache_/endpoint');
+    expect(storage.delete).toHaveBeenCalledWith('api_cache_nodept_anon_/endpoint');
   });
 
   it('should return cached data for a valid unexpired entry', () => {
@@ -79,7 +79,7 @@ describe('CacheManager', () => {
     const result = cacheManager.get('/endpoint');
 
     expect(result).toBeNull();
-    expect(storage.delete).toHaveBeenCalledWith('api_cache_/endpoint');
+    expect(storage.delete).toHaveBeenCalledWith('api_cache_nodept_anon_/endpoint');
   });
 
   it('should return null when no cache entry exists', () => {
