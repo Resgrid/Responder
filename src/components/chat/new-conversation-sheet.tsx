@@ -19,6 +19,7 @@ import { VStack } from '@/components/ui/vstack';
 import { logger } from '@/lib/logging';
 import { getAvatarUrl } from '@/lib/utils';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
+import useAuthStore from '@/stores/auth/store';
 import { useToastStore } from '@/stores/toast/store';
 
 interface NewConversationSheetProps {
@@ -38,8 +39,14 @@ function isPersonRecipient(recipient: RecipientsResultData): boolean {
   return type === 'personnel' || type === 'person' || type === 'user' || type === 'p' || type === '';
 }
 
+/** The server rejects self-DMs, so the current user never belongs in the picker. */
+function isSelfRecipient(recipient: RecipientsResultData, currentUserId: string | null): boolean {
+  return !!currentUserId && recipientUserId(recipient).toLowerCase() === currentUserId.toLowerCase();
+}
+
 export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewConversationSheetProps) {
   const { t } = useTranslation();
+  const currentUserId = useAuthStore((s) => s.userId);
   const [recipients, setRecipients] = useState<RecipientsResultData[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -59,7 +66,7 @@ export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewCo
     getRecipients(true, false)
       .then((result) => {
         if (cancelled) return;
-        setRecipients((result.Data ?? []).filter(isPersonRecipient));
+        setRecipients((result.Data ?? []).filter((r) => isPersonRecipient(r) && !isSelfRecipient(r, currentUserId)));
       })
       .catch((error) => {
         if (cancelled) return;
@@ -73,7 +80,7 @@ export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewCo
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, currentUserId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
