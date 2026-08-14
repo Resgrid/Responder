@@ -123,7 +123,7 @@ export default function ChatScreen() {
   // Chat.System flag not yet resolved: wait instead of redirecting away from a valid route.
   if (chatStatus === 'unknown') {
     return (
-      <Box className="size-full flex-1 items-center justify-center bg-background-0">
+      <Box className="size-full flex-1 items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Stack.Screen options={{ headerShown: false }} />
         <FocusAwareStatusBar />
         <Spinner />
@@ -137,12 +137,12 @@ export default function ChatScreen() {
   }
 
   return (
-    <Box className="size-full flex-1 bg-background-0">
+    <Box className="size-full flex-1 bg-gray-50 dark:bg-gray-900">
       <Stack.Screen options={{ headerShown: false }} />
       <FocusAwareStatusBar />
 
       {/* In-screen toolbar (the app drawer provides the top nav bar). */}
-      <HStack className="items-center justify-between border-b border-outline-100 px-4 py-2">
+      <HStack className="items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-700">
         <HStack className="items-center" space="sm">
           <MessagesSquare size={22} color="#2563eb" />
           <Text className="text-lg font-bold text-typography-900">{t('chat.title')}</Text>

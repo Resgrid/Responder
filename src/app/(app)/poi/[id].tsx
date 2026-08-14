@@ -41,10 +41,10 @@ export default function PoiDetail() {
   const isLoadingPoi = usePoiStore((state) => state.isLoadingPoi);
   const error = usePoiStore((state) => state.error);
   const showToast = useToastStore((state) => state.showToast);
-  const userLocation = useLocationStore((state) => ({
-    latitude: state.latitude,
-    longitude: state.longitude,
-  }));
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, so the screen re-rendered on each GPS fix.
+  const userLatitude = useLocationStore((state) => state.latitude);
+  const userLongitude = useLocationStore((state) => state.longitude);
 
   useEffect(() => {
     if (poiId != null) {
@@ -72,12 +72,12 @@ export default function PoiDetail() {
       return;
     }
 
-    const success = await openMapsWithDirections(poi.Latitude, poi.Longitude, getPoiDisplayName(poi), userLocation.latitude ?? undefined, userLocation.longitude ?? undefined);
+    const success = await openMapsWithDirections(poi.Latitude, poi.Longitude, getPoiDisplayName(poi), userLatitude ?? undefined, userLongitude ?? undefined);
 
     if (!success) {
       showToast('error', t('poi.route_error'));
     }
-  }, [poi, showToast, t, userLocation.latitude, userLocation.longitude]);
+  }, [poi, showToast, t, userLatitude, userLongitude]);
 
   const handleViewOnMap = useCallback(() => {
     if (!poi) {

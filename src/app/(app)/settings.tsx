@@ -186,12 +186,12 @@ export default function Settings() {
   }, [status, isAuthenticated]);
 
   return (
-    <Box className={`flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>
+    <Box className="flex-1 bg-gray-50 dark:bg-gray-900">
       <FocusAwareStatusBar />
       <ScrollView>
         <VStack className="md p-4">
           {/* App Info Section */}
-          <Card className={`mb-4 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+          <Card className="mb-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <Heading className="mb2 text-sm">{t('settings.app_info')}</Heading>
             <VStack space="sm">
               <Item text={t('settings.app_name')} value={Env.NAME} />
@@ -201,7 +201,7 @@ export default function Settings() {
           </Card>
 
           {/* Account Section */}
-          <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+          <Card className="mb-8 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <Heading className="mb2 text-sm">{t('settings.account')}</Heading>
             <VStack space="sm">
               <Item text={t('settings.server')} value={getBaseApiUrl()} onPress={handleServerUrlPress} textStyle="text-info-600" />
@@ -211,7 +211,7 @@ export default function Settings() {
           </Card>
 
           {/* Preferences Section */}
-          <Card className={`mb-4 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+          <Card className="mb-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <Heading className="mb2 text-sm">{t('settings.preferences')}</Heading>
             <VStack space="sm">
               <ThemeItem />
@@ -224,7 +224,7 @@ export default function Settings() {
           </Card>
 
           {/* Support Section */}
-          <Card className={`mb-4 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+          <Card className="mb-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <Heading className="mb2 text-sm">{t('settings.support')}</Heading>
             <VStack space="sm">
               <Item text={t('settings.help_center')} onPress={() => handleSupportLinkPress('help_center', 'https://resgrid.zohodesk.com/portal/en/home')} />

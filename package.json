@@ -59,7 +59,7 @@
     "@notifee/react-native": "^9.1.8",
     "@novu/react-native": "~2.6.6",
     "@react-native-community/netinfo": "12.0.1",
-    "@rnmapbox/maps": "10.2.10",
+    "@rnmapbox/maps": "10.3.5",
     "@semantic-release/git": "^10.0.1",
     "@sentry/react-native": "~8.20.0",
     "@shopify/flash-list": "2.0.2",

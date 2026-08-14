@@ -1,4 +1,5 @@
 import { EditIcon, MoreVerticalIcon, TimerIcon, XIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
@@ -17,6 +18,8 @@ interface HeaderRightMenuButtonProps {
 }
 
 export const HeaderRightMenuButton: React.FC<HeaderRightMenuButtonProps> = ({ canEdit, onPress }) => {
+  const { colorScheme } = useColorScheme();
+
   if (!canEdit) {
     return null;
   }
@@ -29,7 +32,9 @@ export const HeaderRightMenuButton: React.FC<HeaderRightMenuButtonProps> = ({ ca
     // collapsable={false} keeps the native view (and its frame) from being optimized away.
     <View style={styles.headerButton} collapsable={false}>
       <Pressable onPressIn={onPress} testID="kebab-menu-button" className="size-10 items-center justify-center rounded">
-        <MoreVerticalIcon size={24} className="text-gray-700 dark:text-gray-300" />
+        {/* lucide icons draw with `stroke="currentColor"`, which react-native-svg resolves
+            to black — a `className` text colour never reaches them. */}
+        <MoreVerticalIcon size={24} color={colorScheme === 'dark' ? '#d1d5db' : '#374151'} />
       </Pressable>
     </View>
   );

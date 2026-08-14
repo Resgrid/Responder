@@ -72,7 +72,7 @@ export const PoiFilterBottomSheet: React.FC<PoiFilterBottomSheetProps> = ({ isOp
         <Box className="w-full flex-1 pt-2">
           <HStack className="mb-4 items-center justify-between">
             <HStack className="items-center" space="sm">
-              <FilterIcon size={20} className="text-gray-600 dark:text-gray-400" />
+              <FilterIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#4b5563'} />
               <Heading size="md" className="text-gray-800 dark:text-gray-100">
                 {t('poi.filter_sort_title', 'Filter & Sort')}
               </Heading>
@@ -83,7 +83,7 @@ export const PoiFilterBottomSheet: React.FC<PoiFilterBottomSheetProps> = ({ isOp
               ) : null}
             </HStack>
             <Button variant="link" onPress={onClose} className="p-1">
-              <XIcon size={20} className="text-gray-600 dark:text-gray-400" />
+              <XIcon size={20} color={colorScheme === 'dark' ? '#9ca3af' : '#4b5563'} />
             </Button>
           </HStack>
 

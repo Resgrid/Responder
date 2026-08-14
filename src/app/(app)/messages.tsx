@@ -226,7 +226,7 @@ export default function MessagesScreen() {
         }}
       />
       <FocusAwareStatusBar />
-      <View className="flex-1 bg-gray-50 dark:bg-gray-950">
+      <View className="flex-1 bg-gray-50 dark:bg-gray-900">
         {/* Search and Filter Bar */}
         <VStack space="sm" className="border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
           <HStack space="sm" className="items-center">

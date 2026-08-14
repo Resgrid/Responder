@@ -85,7 +85,7 @@ export default function ChatbotScreen() {
   // Chat.System flag not yet resolved: wait instead of redirecting away from a valid route.
   if (chatStatus === 'unknown') {
     return (
-      <Box className="size-full flex-1 items-center justify-center bg-background-0">
+      <Box className="size-full flex-1 items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Stack.Screen options={{ headerShown: false }} />
         <FocusAwareStatusBar />
         <Spinner />
@@ -99,12 +99,12 @@ export default function ChatbotScreen() {
   }
 
   return (
-    <Box className="size-full flex-1 bg-background-0">
+    <Box className="size-full flex-1 bg-gray-50 dark:bg-gray-900">
       <Stack.Screen options={{ headerShown: false }} />
       <FocusAwareStatusBar />
 
       {/* Distinct assistant header */}
-      <HStack className="items-center justify-between border-b border-outline-100 bg-purple-50 px-4 py-2 dark:bg-purple-950">
+      <HStack className="items-center justify-between border-b border-gray-200 bg-purple-50 px-4 py-2 dark:border-gray-700 dark:bg-purple-950">
         <HStack className="items-center" space="sm">
           <Box className="size-8 items-center justify-center rounded-full bg-purple-600">
             <Sparkles size={18} color="#ffffff" />
@@ -147,13 +147,13 @@ export default function ChatbotScreen() {
           </HStack>
         ) : null}
 
-        <HStack className="items-end border-t border-outline-200 bg-background-0 px-2 pt-2" space="sm" style={{ paddingBottom: isKeyboardVisible ? 8 : Math.max(insets.bottom, 8) }}>
+        <HStack className="items-end border-t border-gray-200 bg-white px-2 pt-2 dark:border-gray-700 dark:bg-gray-800" space="sm" style={{ paddingBottom: isKeyboardVisible ? 8 : Math.max(insets.bottom, 8) }}>
           <Box className="flex-1">
-            <Input className="rounded-2xl border-0 bg-background-100">
+            <Input className="rounded-2xl border-0 bg-gray-100 dark:bg-gray-700">
               <InputField placeholder={t('chatbot.ask_placeholder')} value={text} onChangeText={setText} onSubmitEditing={send} returnKeyType="send" />
             </Input>
           </Box>
-          <Pressable className={`rounded-full p-2 ${text.trim() ? 'bg-purple-600' : 'bg-background-300'}`} onPress={send} disabled={!text.trim()} accessibilityRole="button" accessibilityLabel={t('chat.send')}>
+          <Pressable className={`rounded-full p-2 ${text.trim() ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'}`} onPress={send} disabled={!text.trim()} accessibilityRole="button" accessibilityLabel={t('chat.send')}>
             <Send size={20} color="#ffffff" />
           </Pressable>
         </HStack>

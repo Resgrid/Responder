@@ -3554,10 +3554,10 @@
     "@react-aria/switch" "^3.8.0"
     "@react-spectrum/switch" "^3.7.0"
 
-"@rnmapbox/maps@10.2.10":
-  version "10.2.10"
-  resolved "https://registry.yarnpkg.com/@rnmapbox/maps/-/maps-10.2.10.tgz#5ba121ffd1017e5a5550e9d4829f53701e87ce87"
-  integrity sha512-OfjW0rHp5bUWfzBo5fZ7qdKwAzGoocXYTsSssSPVMxZ2Y7axuhcbmsO5bV6gg+BJs5RwEsghzwTIoGydBNUClA==
+"@rnmapbox/maps@10.3.5":
+  version "10.3.5"
+  resolved "https://registry.yarnpkg.com/@rnmapbox/maps/-/maps-10.3.5.tgz#bbc57d910654d79d31f37122d4cb23e48c94bc52"
+  integrity sha512-ShQppktl1H4HHPp/aninsEVK7+tsHmN48ULxpB1rfmx7W3WogB21Q1NAEw7CzxERnLZveijyutszJG2y3EBn2Q==
   dependencies:
     "@turf/along" "6.5.0"
     "@turf/distance" "6.5.0"

@@ -78,7 +78,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#2484c4',
     },
-    softwareKeyboardLayoutMode: 'pan',
+    // 'pan' makes Android scroll the window under the IME on its own. That fights
+    // react-native-keyboard-controller: its KeyboardAvoidingView re-measures on every
+    // layout, so the OS pan feeds back into the computed padding and the composer
+    // settles *under* the keyboard. Edge-to-edge means the OS no longer resizes for us
+    // either, so 'resize' leaves keyboard avoidance entirely to the library.
+    softwareKeyboardLayoutMode: 'resize',
     package: Env.PACKAGE,
     googleServicesFile: 'google-services.json',
     intentFilters: [
@@ -207,7 +212,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       '@rnmapbox/maps',
       {
-        RNMapboxMapsVersion: '11.16.2',
+        // Keep in step with the `mapbox` field of the installed @rnmapbox/maps — the JS
+        // bindings are generated against a specific native SDK, and pinning an older one
+        // makes style props the bindings emit (symbolZOffset and friends) trap natively.
+        RNMapboxMapsVersion: '11.23.1',
       },
     ],
     [

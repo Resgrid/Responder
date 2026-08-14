@@ -154,14 +154,14 @@ export function MessageComposer({ onSendText, onSendImage, onSendLocation, onOpe
   const canSend = text.trim().length > 0 && !disabled;
 
   return (
-    <Box className="border-t border-outline-200 bg-background-0 px-2 pt-1" style={{ paddingBottom: isKeyboardVisible ? 8 : Math.max(insets.bottom, 8) }}>
+    <Box className="border-t border-gray-200 bg-white px-2 pt-1 dark:border-gray-700 dark:bg-gray-800" style={{ paddingBottom: isKeyboardVisible ? 8 : Math.max(insets.bottom, 8) }}>
       <HStack className="items-end" space="xs">
         <Pressable className="p-2" onPress={() => setAttachOpen(true)} disabled={disabled} accessibilityRole="button" accessibilityLabel={t('chat.attach')}>
           <Plus size={22} color={disabled ? '#d1d5db' : '#6b7280'} />
         </Pressable>
 
         <Box className="flex-1">
-          <Textarea size="md" className="h-auto max-h-[120px] min-h-[40px] rounded-2xl border-0 bg-background-100" style={{ height: inputHeight }}>
+          <Textarea size="md" className="h-auto max-h-[120px] min-h-[40px] rounded-2xl border-0 bg-gray-100 dark:bg-gray-700" style={{ height: inputHeight }}>
             <TextareaInput
               placeholder={placeholder ?? t('chat.type_a_message')}
               value={text}
@@ -174,7 +174,7 @@ export function MessageComposer({ onSendText, onSendImage, onSendLocation, onOpe
           </Textarea>
         </Box>
 
-        <Pressable className={`rounded-full p-2 ${canSend ? 'bg-primary-600' : 'bg-background-300'}`} onPress={handleSend} disabled={!canSend} accessibilityRole="button" accessibilityLabel={t('chat.send')}>
+        <Pressable className={`rounded-full p-2 ${canSend ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'}`} onPress={handleSend} disabled={!canSend} accessibilityRole="button" accessibilityLabel={t('chat.send')}>
           <Send size={20} color="#ffffff" />
         </Pressable>
       </HStack>

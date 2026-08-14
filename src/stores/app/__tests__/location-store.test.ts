@@ -209,4 +209,64 @@ describe('useLocationStore', () => {
     expect(typeof result.current.setBackgroundEnabled).toBe('function');
     expect(typeof result.current.setMapLocked).toBe('function');
   });
+
+  // iOS ignores watchPositionAsync's timeInterval, so a stationary device delivers the same
+  // fix many times a second. Notifying subscribers on each one drove React into "Maximum
+  // update depth exceeded".
+  describe('repeat fixes', () => {
+    const buildLocation = (overrides: { latitude?: number; timestamp?: number } = {}) => ({
+      coords: {
+        latitude: overrides.latitude ?? 40.7128,
+        longitude: -74.006,
+        heading: 180,
+        accuracy: 5,
+        speed: 0,
+        altitude: 10,
+        altitudeAccuracy: 3,
+      },
+      timestamp: overrides.timestamp ?? 1_700_000_000_000,
+    });
+
+    it('does not notify subscribers when the fix carries nothing new', () => {
+      const listener = jest.fn();
+      useLocationStore.getState().setLocation(buildLocation());
+
+      const unsubscribe = useLocationStore.subscribe(listener);
+      useLocationStore.getState().setLocation(buildLocation({ timestamp: 1_700_000_005_000 }));
+      unsubscribe();
+
+      expect(listener).not.toHaveBeenCalled();
+      expect(useLocationStore.getState().latitude).toBe(40.7128);
+    });
+
+    // persist's wrapped `set` writes storage after every call it sees, so the duplicate check
+    // has to happen before `set` is reached — otherwise a stationary device re-serializes and
+    // re-writes MMKV at the same many-times-a-second rate.
+    it('does not touch persisted storage when the fix carries nothing new', () => {
+      const { zustandStorage } = require('@/lib/storage');
+      useLocationStore.getState().setLocation(buildLocation());
+
+      const setItemSpy = jest.spyOn(zustandStorage, 'setItem');
+
+      useLocationStore.getState().setLocation(buildLocation({ timestamp: 1_700_000_005_000 }));
+      expect(setItemSpy).not.toHaveBeenCalled();
+
+      useLocationStore.getState().setLocation(buildLocation({ latitude: 40.73 }));
+      expect(setItemSpy).toHaveBeenCalledTimes(1);
+
+      setItemSpy.mockRestore();
+    });
+
+    it('still notifies subscribers when the device actually moves', () => {
+      const listener = jest.fn();
+      useLocationStore.getState().setLocation(buildLocation());
+
+      const unsubscribe = useLocationStore.subscribe(listener);
+      useLocationStore.getState().setLocation(buildLocation({ latitude: 40.72 }));
+      unsubscribe();
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(useLocationStore.getState().latitude).toBe(40.72);
+    });
+  });
 });
