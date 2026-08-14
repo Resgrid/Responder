@@ -239,6 +239,24 @@ describe('useLocationStore', () => {
       expect(useLocationStore.getState().latitude).toBe(40.7128);
     });
 
+    // persist's wrapped `set` writes storage after every call it sees, so the duplicate check
+    // has to happen before `set` is reached — otherwise a stationary device re-serializes and
+    // re-writes MMKV at the same many-times-a-second rate.
+    it('does not touch persisted storage when the fix carries nothing new', () => {
+      const { zustandStorage } = require('@/lib/storage');
+      useLocationStore.getState().setLocation(buildLocation());
+
+      const setItemSpy = jest.spyOn(zustandStorage, 'setItem');
+
+      useLocationStore.getState().setLocation(buildLocation({ timestamp: 1_700_000_005_000 }));
+      expect(setItemSpy).not.toHaveBeenCalled();
+
+      useLocationStore.getState().setLocation(buildLocation({ latitude: 40.73 }));
+      expect(setItemSpy).toHaveBeenCalledTimes(1);
+
+      setItemSpy.mockRestore();
+    });
+
     it('still notifies subscribers when the device actually moves', () => {
       const listener = jest.fn();
       useLocationStore.getState().setLocation(buildLocation());

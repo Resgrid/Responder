@@ -21,7 +21,7 @@ export interface LocationState {
 
 export const useLocationStore = create<LocationState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       latitude: null,
       longitude: null,
       heading: null,
@@ -34,20 +34,25 @@ export const useLocationStore = create<LocationState>()(
       // iOS ignores `timeInterval` on watchPositionAsync, so a stationary device still
       // delivers fixes many times a second. Writing every one of them notified every
       // subscriber at that rate and React eventually gave up with "Maximum update depth
-      // exceeded". Bail out when the fix carries nothing new — returning the current state
-      // makes zustand skip the notification entirely. `timestamp` is deliberately left out
-      // of the comparison: it changes on every fix and has no subscriber, so including it
-      // would defeat the guard.
-      setLocation: (location) =>
-        set((state) => {
-          const { latitude, longitude, heading, accuracy, speed, altitude } = location.coords;
+      // exceeded". Bail out when the fix carries nothing new.
+      //
+      // The comparison runs against `get()` *before* `set`, not inside the updater: persist
+      // hands the creator a wrapped `set` that calls its storage write after every
+      // invocation, whether or not the updater changed anything. Deduping inside the updater
+      // silences the subscribers but still serializes and writes MMKV on each repeat fix.
+      //
+      // `timestamp` is deliberately left out of the comparison: it changes on every fix and
+      // has no subscriber, so including it would defeat the guard.
+      setLocation: (location) => {
+        const { latitude, longitude, heading, accuracy, speed, altitude } = location.coords;
+        const state = get();
 
-          if (state.latitude === latitude && state.longitude === longitude && state.heading === heading && state.accuracy === accuracy && state.speed === speed && state.altitude === altitude) {
-            return state;
-          }
+        if (state.latitude === latitude && state.longitude === longitude && state.heading === heading && state.accuracy === accuracy && state.speed === speed && state.altitude === altitude) {
+          return;
+        }
 
-          return { latitude, longitude, heading, accuracy, speed, altitude, timestamp: location.timestamp };
-        }),
+        set({ latitude, longitude, heading, accuracy, speed, altitude, timestamp: location.timestamp });
+      },
       setBackgroundEnabled: (enabled) => set({ isBackgroundEnabled: enabled }),
       setMapLocked: (locked) => set({ isMapLocked: locked }),
     }),
