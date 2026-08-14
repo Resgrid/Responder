@@ -364,7 +364,7 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
 
     return (
       <VStack className="items-center py-8">
-        <BluetoothIcon size={48} className="text-neutral-400" />
+        <BluetoothIcon size={48} color="#a3a3a3" />
         <Text className="mt-4 text-center text-neutral-600 dark:text-neutral-400">{hasScanned ? t('bluetooth.no_devices_found') : t('bluetooth.tap_scan_to_find_devices')}</Text>
         <Button onPress={startScan} className="mt-4" variant="outline">
           <ButtonIcon as={RefreshCwIcon} />

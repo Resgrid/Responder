@@ -6,6 +6,7 @@ import { Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { arePoisAllowedForStatus, getCallDestinationDisplay, getPoiDestinationDisplay, getStationDestinationDisplay, type StatusDestinationTab } from '@/lib/status-destinations';
 import { invertColor } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -24,6 +25,7 @@ import { VStack } from '../ui/vstack';
 export const PersonnelStatusBottomSheet = () => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const keyboardHeight = useKeyboardHeight();
   const {
     isOpen,
     requiresStatusSelection = false,
@@ -473,7 +475,10 @@ export const PersonnelStatusBottomSheet = () => {
   return (
     <Actionsheet isOpen={isOpen} onClose={handleClose}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="bg-white dark:bg-gray-900">
+      {/* The sheet is bottom-anchored and sized by its content, so padding it by the
+          keyboard height grows it and slides the whole sheet up out from under the
+          keyboard. max-h keeps a tall step scrollable instead of overflowing the screen. */}
+      <ActionsheetContent className="max-h-[90%] bg-white dark:bg-gray-900" style={{ paddingBottom: keyboardHeight }}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>

@@ -547,24 +547,15 @@ describe('Settings Screen', () => {
     expect(screen.getByTestId('bluetooth-device-item')).toBeTruthy();
   });
 
-  it('applies correct styling for light theme', () => {
+  // Settings shares the page background used by Contacts, Notes, Protocols and the rest
+  // of the side-menu screens, and picks the dark variant through `dark:` rather than a
+  // colour-scheme branch — so one assertion covers both themes.
+  it('uses the shared page background', () => {
     render(<Settings />);
 
     const box = screen.getByTestId('box');
-    expect(box.props.accessibilityLabel).toContain('bg-neutral-50');
-  });
-
-  it('applies correct styling for dark theme', () => {
-    mockUseColorScheme.mockReturnValue({
-      colorScheme: 'dark',
-      setColorScheme: jest.fn(),
-      toggleColorScheme: jest.fn(),
-    });
-
-    render(<Settings />);
-
-    const box = screen.getByTestId('box');
-    expect(box.props.accessibilityLabel).toContain('bg-neutral-950');
+    expect(box.props.accessibilityLabel).toContain('bg-gray-50');
+    expect(box.props.accessibilityLabel).toContain('dark:bg-gray-900');
   });
 
   it('tracks analytics with correct timestamp format', () => {

@@ -74,11 +74,11 @@ export default function CallDetail() {
   const hasDestination = destinationDisplayName.length > 0;
   const hasDestinationCoordinates = isValidCoordinates(call?.DestinationLatitude ?? undefined, call?.DestinationLongitude ?? undefined);
 
-  // Get current user location from the location store
-  const userLocation = useLocationStore((state) => ({
-    latitude: state.latitude,
-    longitude: state.longitude,
-  }));
+  // Get current user location from the location store. Selected field by field: an object
+  // selector builds a new reference on every store write, so the whole screen re-rendered
+  // on each GPS fix.
+  const userLatitude = useLocationStore((state) => state.latitude);
+  const userLongitude = useLocationStore((state) => state.longitude);
 
   const handleBack = () => {
     router.back();
@@ -244,7 +244,7 @@ export default function CallDetail() {
       trackEvent('call_route_opened', {
         timestamp: new Date().toISOString(),
         callId: call?.CallId || callId || '',
-        hasUserLocation: !!(userLocation.latitude && userLocation.longitude),
+        hasUserLocation: !!(userLatitude && userLongitude),
         destinationAddress: call?.Address || '',
       });
 
@@ -274,7 +274,7 @@ export default function CallDetail() {
       }
 
       const destinationName = call?.Address || t('call_detail.call_location');
-      const success = await openMapsWithDirections(latitude as number, longitude as number, destinationName, userLocation.latitude ?? undefined, userLocation.longitude ?? undefined);
+      const success = await openMapsWithDirections(latitude as number, longitude as number, destinationName, userLatitude ?? undefined, userLongitude ?? undefined);
 
       if (!success) {
         showToast('error', t('call_detail.failed_to_open_maps'));
@@ -312,16 +312,10 @@ export default function CallDetail() {
         timestamp: new Date().toISOString(),
         callId: call.CallId,
         destinationTypeName: destinationTypeName || 'POI',
-        hasUserLocation: !!(userLocation.latitude && userLocation.longitude),
+        hasUserLocation: !!(userLatitude && userLongitude),
       });
 
-      const success = await openMapsWithDirections(
-        call.DestinationLatitude,
-        call.DestinationLongitude,
-        destinationDisplayName || t('call_detail.destination'),
-        userLocation.latitude ?? undefined,
-        userLocation.longitude ?? undefined
-      );
+      const success = await openMapsWithDirections(call.DestinationLatitude, call.DestinationLongitude, destinationDisplayName || t('call_detail.destination'), userLatitude ?? undefined, userLongitude ?? undefined);
 
       if (!success) {
         showToast('error', t('call_detail.failed_to_open_maps'));

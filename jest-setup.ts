@@ -294,9 +294,10 @@ jest.mock('react-native', () => {
       removeEventListener: jest.fn(),
     },
 
-    // Keyboard
+    // Keyboard — addListener must hand back an EmitterSubscription like the real
+    // module does, or every component that removes its listener on unmount throws.
     Keyboard: {
-      addListener: jest.fn(),
+      addListener: jest.fn(() => ({ remove: jest.fn() })),
       removeListener: jest.fn(),
       removeAllListeners: jest.fn(),
       dismiss: jest.fn(),

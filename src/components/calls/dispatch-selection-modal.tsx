@@ -274,7 +274,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
             <TouchableOpacity onPress={handleToggleEveryone}>
               <HStack className="items-center space-x-3">
                 <Box className={`size-6 items-center justify-center rounded border-2 ${selection.everyone ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'}`}>
-                  {selection.everyone && <CheckIcon size={16} className="text-white" />}
+                  {selection.everyone && <CheckIcon size={16} color="#ffffff" />}
                 </Box>
                 <VStack className="flex-1">
                   <Text className="pl-4 text-lg font-semibold">{t('calls.everyone')}</Text>
@@ -299,7 +299,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                           selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
                         }`}
                       >
-                        {selection.groups.includes(group.Id) && <CheckIcon size={12} className="text-white" />}
+                        {selection.groups.includes(group.Id) && <CheckIcon size={12} color="#ffffff" />}
                       </Box>
                       <VStack className="flex-1">
                         <Text className="pl-4 font-medium">{group.Name}</Text>
@@ -326,7 +326,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                           selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
                         }`}
                       >
-                        {selection.units.includes(unit.Id) && <CheckIcon size={12} className="text-white" />}
+                        {selection.units.includes(unit.Id) && <CheckIcon size={12} color="#ffffff" />}
                       </Box>
                       <VStack className="flex-1">
                         <Text className="pl-4 font-medium">{unit.Name}</Text>
@@ -353,7 +353,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                           selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
                         }`}
                       >
-                        {selection.roles.includes(role.Id) && <CheckIcon size={12} className="text-white" />}
+                        {selection.roles.includes(role.Id) && <CheckIcon size={12} color="#ffffff" />}
                       </Box>
                       <VStack className="flex-1">
                         <Text className="pl-4 font-medium">{role.Name}</Text>
@@ -380,7 +380,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
                           selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
                         }`}
                       >
-                        {selection.users.includes(user.Id) && <CheckIcon size={12} className="text-white" />}
+                        {selection.users.includes(user.Id) && <CheckIcon size={12} color="#ffffff" />}
                       </Box>
                       <VStack className="flex-1">
                         <Text className="pl-4 font-medium">{user.Name}</Text>

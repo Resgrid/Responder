@@ -1,5 +1,6 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { FilterIcon, MapIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -80,12 +81,13 @@ PoiListItem.displayName = 'PoiListItem';
 
 export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOnMap }) => {
   const { t } = useTranslation();
-  const { poiTypes, pois, isLoading, error } = usePoiStore((state) => ({
-    poiTypes: state.poiTypes,
-    pois: state.pois,
-    isLoading: state.isLoading,
-    error: state.error,
-  }));
+  const { colorScheme } = useColorScheme();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, re-rendering the list whether or not anything it reads actually changed.
+  const poiTypes = usePoiStore((state) => state.poiTypes);
+  const pois = usePoiStore((state) => state.pois);
+  const isLoading = usePoiStore((state) => state.isLoading);
+  const error = usePoiStore((state) => state.error);
   const [selectedPoiType, setSelectedPoiType] = useState(ALL_POI_TYPES_VALUE);
   const [sortBy, setSortBy] = useState<PoiSortOption>('name');
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,7 +150,7 @@ export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOn
         </Input>
         <Button onPress={openFilterSheet} className="h-10 rounded-lg bg-white dark:bg-neutral-800" variant="outline">
           <HStack className="items-center" space="xs">
-            <FilterIcon size={18} className="text-gray-600 dark:text-gray-400" />
+            <FilterIcon size={18} color={colorScheme === 'dark' ? '#9ca3af' : '#4b5563'} />
             {hasActiveFilters ? (
               <Badge size="sm" variant="solid" className="bg-primary-500">
                 <Text className="text-xs text-white">!</Text>
@@ -161,7 +163,7 @@ export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOn
       <HStack className="mb-3 items-center justify-between rounded-xl bg-neutral-100 px-3 py-2 dark:bg-neutral-950/70">
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('poi.results_count', { count: filteredPois.length })}</Text>
         <HStack space="xs" className="ml-2 flex-1 items-center">
-          <MapIcon size={14} className="text-primary-600 dark:text-primary-400" />
+          <MapIcon size={14} color={colorScheme === 'dark' ? '#475569' : '#334155'} />
           <Text className="flex-1 text-xs text-primary-600 dark:text-primary-400" numberOfLines={2}>
             {t('poi.view_on_map_hint')}
           </Text>

@@ -97,7 +97,7 @@ export default function ThreadScreen() {
   // Chat.System flag not yet resolved: wait instead of redirecting away from a valid deep link.
   if (chatStatus === 'unknown') {
     return (
-      <Box className="size-full flex-1 items-center justify-center bg-background-0">
+      <Box className="size-full flex-1 items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Stack.Screen options={{ title: t('chat.thread'), headerShown: true, headerBackTitle: '' }} />
         <Spinner />
       </Box>
@@ -110,12 +110,12 @@ export default function ThreadScreen() {
   }
 
   return (
-    <Box className="size-full flex-1 bg-background-0">
+    <Box className="size-full flex-1 bg-gray-50 dark:bg-gray-900">
       <Stack.Screen options={{ title: t('chat.thread'), headerShown: true, headerBackTitle: '' }} />
 
       <KeyboardAvoidingView className="flex-1" behavior="padding" automaticOffset>
         {root ? (
-          <VStack className="border-b border-outline-200 bg-background-50 py-2">
+          <VStack className="border-b border-gray-200 bg-white py-2 dark:border-gray-700 dark:bg-gray-800">
             <Text className="px-4 text-xs font-semibold uppercase text-typography-400">{t('chat.original_message')}</Text>
             <MessageBubble message={root} isOwn={!!root.SenderUserId && root.SenderUserId === currentUserId} showSender currentUserId={currentUserId} onLongPress={() => undefined} onToggleReaction={() => undefined} />
           </VStack>

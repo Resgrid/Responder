@@ -258,7 +258,7 @@ export default function ChannelConversationScreen() {
   // Chat.System flag not yet resolved: wait instead of redirecting away from a valid deep link.
   if (chatStatus === 'unknown') {
     return (
-      <Box className="size-full flex-1 items-center justify-center bg-background-0">
+      <Box className="size-full flex-1 items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Stack.Screen options={{ title, headerShown: true, headerBackTitle: t('chat.title') }} />
         <Spinner />
       </Box>
@@ -274,7 +274,7 @@ export default function ChannelConversationScreen() {
   // assistant conversations never mount the full-featured view.
   if (!isResolved) {
     return (
-      <Box className="size-full flex-1 items-center justify-center bg-background-0">
+      <Box className="size-full flex-1 items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Stack.Screen options={{ title, headerShown: true, headerBackTitle: t('chat.title') }} />
         <Spinner />
       </Box>
@@ -288,7 +288,7 @@ export default function ChannelConversationScreen() {
   }
 
   return (
-    <Box className="size-full flex-1 bg-background-0">
+    <Box className="size-full flex-1 bg-gray-50 dark:bg-gray-900">
       <Stack.Screen
         options={{
           title,

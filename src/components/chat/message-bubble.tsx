@@ -57,7 +57,7 @@ export function MessageBubble({ message, isOwn, showSender, currentUserId, onLon
   const isPending = message._localStatus === 'pending';
   const isFailed = message._localStatus === 'failed';
 
-  const bubbleTone = isOwn ? 'bg-primary-600' : 'bg-background-100';
+  const bubbleTone = isOwn ? 'bg-primary-600' : 'bg-white dark:bg-gray-800';
   const textTone = isOwn ? 'text-white' : 'text-typography-900';
   const urgentClasses = isUrgent && !isOwn ? 'border-2 border-error-500 bg-error-50' : isUrgent && isOwn ? 'border-2 border-error-300' : '';
 
@@ -146,7 +146,7 @@ export function MessageBubble({ message, isOwn, showSender, currentUserId, onLon
           <HStack className="flex-wrap" space="xs">
             {groupedReactions.map(([emoji, info]) => (
               <Pressable key={emoji} onPress={() => onToggleReaction(message, emoji, info.mine)}>
-                <Box className={`flex-row items-center rounded-full px-2 py-0.5 ${info.mine ? 'bg-primary-100' : 'bg-background-200'}`}>
+                <Box className={`flex-row items-center rounded-full px-2 py-0.5 ${info.mine ? 'bg-primary-100' : 'bg-gray-200 dark:bg-gray-700'}`}>
                   <Text className="text-xs">
                     {emoji} {info.count}
                   </Text>

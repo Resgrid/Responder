@@ -47,7 +47,7 @@ export const BluetoothDeviceItem = () => {
         <HStack className="flex-row items-center">
           <Text className="text-neutral-600 dark:text-neutral-300">{deviceDisplayName}</Text>
           <View className="pl-2">
-            <ChevronRightIcon size={16} className="text-neutral-400" />
+            <ChevronRightIcon size={16} color="#a3a3a3" />
           </View>
         </HStack>
       </Pressable>
