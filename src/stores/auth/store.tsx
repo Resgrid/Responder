@@ -625,6 +625,28 @@ const decodeJwtPayload = (tokenPayload: string): string => {
   return base64.decode(base64Str);
 };
 
+const applyCacheScope = (userId: string | null, failureMessage: string): void => {
+  try {
+    if (userId) {
+      setCacheScope({ userId });
+    } else {
+      clearCacheScope();
+    }
+  } catch (error) {
+    logger.warn({
+      message: failureMessage,
+      context: { error },
+    });
+  }
+};
+
+// zustandStorage is MMKV-backed and therefore synchronous, so persist rehydrates the saved identity
+// *inside* create() -- before the subscription below exists. A cold start would otherwise keep
+// whatever scope MMKV happened to hold (anonymous, if the scope key was ever lost while auth-storage
+// survived) and read the previous session's entries back under it. Stamping the persisted identity
+// here runs at module load, ahead of any cacheManager.get, so the first cache read is already scoped.
+applyCacheScope(useAuthStore.getState().userId, 'Failed to initialize the API cache scope from the persisted identity');
+
 // Keep the API cache scoped to whoever is signed in. Cache keys embed this identity, so stamping it
 // here means a second user on the same device can never be served the first user's cached rosters,
 // units or contacts -- and signing out drops the scope so nothing leaks into an anonymous session.
@@ -649,18 +671,7 @@ useAuthStore.subscribe((state, previousState) => {
   // Deliberately outside the clear() attempt: leaving the scope on the previous user is the one
   // failure that actually leaks, since cache keys embed it and the entries we just failed to drop
   // are still there. The new identity has to take over the scope whether or not the clear worked.
-  try {
-    if (state.userId) {
-      setCacheScope({ userId: state.userId });
-    } else {
-      clearCacheScope();
-    }
-  } catch (error) {
-    logger.warn({
-      message: 'Failed to reset the API cache scope on identity change',
-      context: { error },
-    });
-  }
+  applyCacheScope(state.userId, 'Failed to reset the API cache scope on identity change');
 });
 
 export default useAuthStore;
