@@ -4,6 +4,8 @@ import base64 from 'react-native-base64';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { cacheManager } from '@/lib/cache/cache-manager';
+import { clearCacheScope, setCacheScope } from '@/lib/cache/cache-scope';
 import { logger } from '@/lib/logging';
 import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/clear-all-data';
 
@@ -12,8 +14,6 @@ import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentia
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage';
-import { cacheManager } from '@/lib/cache/cache-manager';
-import { clearCacheScope, setCacheScope } from '@/lib/cache/cache-scope';
 
 export const PENDING_SAML_STATE_KEY = 'pending_saml_state';
 

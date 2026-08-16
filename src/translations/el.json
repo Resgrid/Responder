@@ -281,6 +281,7 @@
     "edit_call": "Επεξεργασία Κλήσης",
     "edit_call_description": "Ενημέρωση πληροφοριών κλήσης",
     "everyone": "Όλοι",
+    "field_policy_loading": "Οι ρυθμίσεις κλήσεων του τμήματός σας φορτώνονται ακόμη, δοκιμάστε ξανά σε λίγο",
     "files": {
       "no_files": "Δεν υπάρχουν διαθέσιμα αρχεία",
       "no_files_description": "Δεν έχουν προστεθεί ακόμη αρχεία σε αυτή την κλήση",
@@ -316,6 +317,7 @@
     "plus_code_required": "Εισαγάγετε ένα plus code για αναζήτηση",
     "priority": "Προτεραιότητα",
     "priority_placeholder": "Επιλέξτε την προτεραιότητα της κλήσης",
+    "required_fields_missing": "Το τμήμα σας απαιτεί αυτά τα πεδία πριν δημιουργηθεί κλήση: {{fields}}",
     "roles": "Ρόλοι",
     "search": "Αναζήτηση κλήσεων...",
     "select_active_call": "Επιλογή Ενεργής Κλήσης",
@@ -344,9 +346,7 @@
     "what3words_invalid_format": "Μη έγκυρη μορφή what3words. Χρησιμοποιήστε τη μορφή: λέξη.λέξη.λέξη",
     "what3words_not_found": "Η διεύθυνση what3words δεν βρέθηκε, δοκιμάστε διαφορετική διεύθυνση",
     "what3words_placeholder": "Εισαγάγετε διεύθυνση what3words (π.χ., filled.count.soap)",
-    "what3words_required": "Εισαγάγετε μια διεύθυνση what3words για αναζήτηση",
-    "required_fields_missing": "Το τμήμα σας απαιτεί αυτά τα πεδία πριν δημιουργηθεί κλήση: {{fields}}",
-    "field_policy_loading": "Οι ρυθμίσεις κλήσεων του τμήματός σας φορτώνονται ακόμη, δοκιμάστε ξανά σε λίγο"
+    "what3words_required": "Εισαγάγετε μια διεύθυνση what3words για αναζήτηση"
   },
   "chat": {
     "ack_pending_count": "Έχετε {{count}} επείγοντα μηνύματα προς επιβεβαίωση",
@@ -1085,8 +1085,8 @@
     "general": "Γενικά",
     "generale": "Γενικά",
     "german": "Γερμανικά",
-    "greek": "Ελληνικά",
     "github": "Github",
+    "greek": "Ελληνικά",
     "help_center": "Κέντρο Βοήθειας",
     "italian": "Ιταλικά",
     "keep_alive": "Διατήρηση Ενεργού",

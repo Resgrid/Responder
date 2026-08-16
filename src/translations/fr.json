@@ -281,6 +281,7 @@
     "edit_call": "Modifier l'appel",
     "edit_call_description": "Mettre à jour les informations de l'appel",
     "everyone": "Tout le monde",
+    "field_policy_loading": "Les paramètres d'appel de votre département sont encore en cours de chargement, veuillez réessayer dans un instant",
     "files": {
       "no_files": "Aucun fichier disponible",
       "no_files_description": "Aucun fichier n'a encore été ajouté à cet appel",
@@ -316,6 +317,7 @@
     "plus_code_required": "Veuillez saisir un Plus Code à rechercher",
     "priority": "Priorité",
     "priority_placeholder": "Sélectionner la priorité de l'appel",
+    "required_fields_missing": "Votre département exige ces champs avant qu'un appel puisse être créé : {{fields}}",
     "roles": "Rôles",
     "search": "Rechercher des appels...",
     "select_active_call": "Sélectionner l'appel actif",
@@ -344,9 +346,7 @@
     "what3words_invalid_format": "Format what3words invalide. Veuillez utiliser le format : mot.mot.mot",
     "what3words_not_found": "Adresse what3words introuvable, veuillez essayer une adresse différente",
     "what3words_placeholder": "Saisir l'adresse what3words (ex. : filled.count.soap)",
-    "what3words_required": "Veuillez saisir une adresse what3words à rechercher",
-    "required_fields_missing": "Votre département exige ces champs avant qu'un appel puisse être créé : {{fields}}",
-    "field_policy_loading": "Les paramètres d'appel de votre département sont encore en cours de chargement, veuillez réessayer dans un instant"
+    "what3words_required": "Veuillez saisir une adresse what3words à rechercher"
   },
   "chat": {
     "ack_pending_count": "Vous avez {{count}} messages urgents à confirmer",
@@ -1085,8 +1085,8 @@
     "general": "Général",
     "generale": "Général",
     "german": "Allemand",
-    "greek": "Grec",
     "github": "Github",
+    "greek": "Grec",
     "help_center": "Centre d'aide",
     "italian": "Italien",
     "keep_alive": "Maintien en activité",

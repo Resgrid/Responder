@@ -281,6 +281,7 @@
     "edit_call": "Redigera larm",
     "edit_call_description": "Uppdatera larminformation",
     "everyone": "Alla",
+    "field_policy_loading": "Din avdelnings larminställningar laddas fortfarande, försök igen om ett ögonblick",
     "files": {
       "no_files": "Inga filer tillgängliga",
       "no_files_description": "Inga filer har lagts till i detta larm ännu",
@@ -316,6 +317,7 @@
     "plus_code_required": "Ange en plus-kod att söka efter",
     "priority": "Prioritet",
     "priority_placeholder": "Välj larmets prioritet",
+    "required_fields_missing": "Din avdelning kräver dessa fält innan ett larm kan skapas: {{fields}}",
     "roles": "Roller",
     "search": "Sök larm...",
     "select_active_call": "Välj aktivt larm",
@@ -344,9 +346,7 @@
     "what3words_invalid_format": "Ogiltigt what3words-format. Använd formatet: ord.ord.ord",
     "what3words_not_found": "what3words-adressen hittades inte, prova en annan adress",
     "what3words_placeholder": "Ange what3words-adress (t.ex. fylld.antal.tvål)",
-    "what3words_required": "Ange en what3words-adress att söka efter",
-    "required_fields_missing": "Din avdelning kräver dessa fält innan ett larm kan skapas: {{fields}}",
-    "field_policy_loading": "Din avdelnings larminställningar laddas fortfarande, försök igen om ett ögonblick"
+    "what3words_required": "Ange en what3words-adress att söka efter"
   },
   "chat": {
     "ack_pending_count": "Du har {{count}} brådskande meddelanden att bekräfta",
@@ -1085,8 +1085,8 @@
     "general": "Allmänt",
     "generale": "Allmänt",
     "german": "Tyska",
-    "greek": "Grekiska",
     "github": "Github",
+    "greek": "Grekiska",
     "help_center": "Hjälpcenter",
     "italian": "Italienska",
     "keep_alive": "Håll aktiv",

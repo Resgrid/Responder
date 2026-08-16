@@ -10,9 +10,9 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Env } from '@/lib/env';
+import { useDepartmentMapCenter } from '@/lib/map-center';
 import { locationService } from '@/services/location';
 import { useLocationStore } from '@/stores/app/location-store';
-import { useDepartmentMapCenter } from '@/lib/map-center';
 
 /**
  * FullScreenLocationPicker Component

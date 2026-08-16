@@ -281,6 +281,7 @@
     "edit_call": "Modifica chiamata",
     "edit_call_description": "Aggiorna le informazioni della chiamata",
     "everyone": "Tutti",
+    "field_policy_loading": "Le impostazioni delle chiamate del tuo dipartimento sono ancora in caricamento, riprova tra un momento",
     "files": {
       "no_files": "Nessun file disponibile",
       "no_files_description": "Nessun file è ancora stato aggiunto a questa chiamata",
@@ -316,6 +317,7 @@
     "plus_code_required": "Inserire un Plus Code da cercare",
     "priority": "Priorità",
     "priority_placeholder": "Selezionare la priorità della chiamata",
+    "required_fields_missing": "Il tuo dipartimento richiede questi campi prima di poter creare una chiamata: {{fields}}",
     "roles": "Ruoli",
     "search": "Cerca chiamate...",
     "select_active_call": "Seleziona chiamata attiva",
@@ -344,9 +346,7 @@
     "what3words_invalid_format": "Formato what3words non valido. Utilizzare il formato: parola.parola.parola",
     "what3words_not_found": "Indirizzo what3words non trovato, provare con un indirizzo diverso",
     "what3words_placeholder": "Inserire l'indirizzo what3words (es.: filled.count.soap)",
-    "what3words_required": "Inserire un indirizzo what3words da cercare",
-    "required_fields_missing": "Il tuo dipartimento richiede questi campi prima di poter creare una chiamata: {{fields}}",
-    "field_policy_loading": "Le impostazioni delle chiamate del tuo dipartimento sono ancora in caricamento, riprova tra un momento"
+    "what3words_required": "Inserire un indirizzo what3words da cercare"
   },
   "chat": {
     "ack_pending_count": "Hai {{count}} messaggi urgenti da confermare",
@@ -1085,8 +1085,8 @@
     "general": "Generale",
     "generale": "Generale",
     "german": "Tedesco",
-    "greek": "Greco",
     "github": "Github",
+    "greek": "Greco",
     "help_center": "Centro assistenza",
     "italian": "Italiano",
     "keep_alive": "Mantieni attivo",

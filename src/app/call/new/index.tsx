@@ -28,16 +28,16 @@ import { Select, SelectBackdrop, SelectContent, SelectIcon, SelectInput, SelectI
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useNewCallFieldPolicy } from '@/hooks/use-new-call-field-policy';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logging';
 import { getDestinationPoiIdFromValue, getDestinationPoiSelectOptions, NO_DESTINATION_POI_VALUE } from '@/lib/poi';
+import { type NewCallFieldKey, NewCallFieldKeys } from '@/models/v4/calls/newCallFieldPolicyResultData';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { type DispatchSelection } from '@/stores/dispatch/store';
-import { useNewCallFieldPolicy } from '@/hooks/use-new-call-field-policy';
-import { type NewCallFieldKey, NewCallFieldKeys } from '@/models/v4/calls/newCallFieldPolicyResultData';
 
 // Utility to sanitize error messages for analytics
 const sanitizeErrorString = (error: unknown): string => {
@@ -1056,7 +1056,7 @@ export default function NewCall() {
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
               <Text className="mb-4 text-lg font-semibold">{t('calls.call_location')}</Text>
-                          
+
               {/* Address Field */}
               <FormControl className="mb-4">
                 <FormControlLabel>
@@ -1079,7 +1079,7 @@ export default function NewCall() {
                   )}
                 />
               </FormControl>
-                          
+
               {/* GPS Coordinates Field */}
               <FormControl className="mb-4">
                 <FormControlLabel>
@@ -1102,7 +1102,7 @@ export default function NewCall() {
                   )}
                 />
               </FormControl>
-                          
+
               {/* what3words Field */}
               <FormControl className="mb-4">
                 <FormControlLabel>
@@ -1125,7 +1125,7 @@ export default function NewCall() {
                   )}
                 />
               </FormControl>
-                          
+
               {/* Plus Code Field */}
               <FormControl className="mb-4">
                 <FormControlLabel>
@@ -1148,7 +1148,7 @@ export default function NewCall() {
                   )}
                 />
               </FormControl>
-                          
+
               {/* Map Preview */}
               <Box className="mb-4">
                 {selectedLocation ? (

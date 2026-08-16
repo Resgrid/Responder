@@ -281,6 +281,7 @@
     "edit_call": "Einsatz bearbeiten",
     "edit_call_description": "Einsatzinformationen aktualisieren",
     "everyone": "Alle",
+    "field_policy_loading": "Die Einsatzeinstellungen Ihrer Abteilung werden noch geladen, bitte versuchen Sie es gleich erneut",
     "files": {
       "no_files": "Keine Dateien verfügbar",
       "no_files_description": "Diesem Einsatz wurden noch keine Dateien hinzugefügt",
@@ -316,6 +317,7 @@
     "plus_code_required": "Bitte geben Sie einen Plus-Code zum Suchen ein",
     "priority": "Priorität",
     "priority_placeholder": "Einsatzpriorität auswählen",
+    "required_fields_missing": "Ihre Abteilung benötigt diese Felder, bevor ein Einsatz angelegt werden kann: {{fields}}",
     "roles": "Rollen",
     "search": "Einsätze suchen...",
     "select_active_call": "Aktiven Einsatz auswählen",
@@ -344,9 +346,7 @@
     "what3words_invalid_format": "Ungültiges what3words-Format. Bitte verwenden Sie das Format: wort.wort.wort",
     "what3words_not_found": "what3words-Adresse nicht gefunden, bitte versuchen Sie eine andere Adresse",
     "what3words_placeholder": "what3words-Adresse eingeben (z.B. gefüllt.anzahl.seife)",
-    "what3words_required": "Bitte geben Sie eine what3words-Adresse zum Suchen ein",
-    "required_fields_missing": "Ihre Abteilung benötigt diese Felder, bevor ein Einsatz angelegt werden kann: {{fields}}",
-    "field_policy_loading": "Die Einsatzeinstellungen Ihrer Abteilung werden noch geladen, bitte versuchen Sie es gleich erneut"
+    "what3words_required": "Bitte geben Sie eine what3words-Adresse zum Suchen ein"
   },
   "chat": {
     "ack_pending_count": "Sie haben {{count}} dringende Nachrichten zu bestätigen",
@@ -1085,8 +1085,8 @@
     "general": "Allgemein",
     "generale": "Allgemein",
     "german": "Deutsch",
-    "greek": "Griechisch",
     "github": "Github",
+    "greek": "Griechisch",
     "help_center": "Hilfecenter",
     "italian": "Italienisch",
     "keep_alive": "Aktiv halten",
