@@ -281,6 +281,7 @@
     "edit_call": "Editar llamada",
     "edit_call_description": "Actualizar información de la llamada",
     "everyone": "Todos",
+    "field_policy_loading": "Aún se están cargando los ajustes de avisos de tu departamento, inténtalo de nuevo en un momento",
     "files": {
       "no_files": "No hay archivos disponibles",
       "no_files_description": "No se han agregado archivos a esta llamada aún",
@@ -316,6 +317,7 @@
     "plus_code_required": "Por favor ingrese un código plus para buscar",
     "priority": "Prioridad",
     "priority_placeholder": "Selecciona la prioridad de la llamada",
+    "required_fields_missing": "Tu departamento exige estos campos antes de poder crear un aviso: {{fields}}",
     "roles": "Roles",
     "search": "Buscar llamadas...",
     "select_active_call": "Seleccionar llamada activa",
@@ -1084,6 +1086,7 @@
     "generale": "General",
     "german": "Alemán",
     "github": "Github",
+    "greek": "Griego",
     "help_center": "Centro de ayuda",
     "italian": "Italiano",
     "keep_alive": "Mantener Activo",

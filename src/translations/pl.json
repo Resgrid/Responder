@@ -281,6 +281,7 @@
     "edit_call": "Edytuj zgłoszenie",
     "edit_call_description": "Zaktualizuj informacje o zgłoszeniu",
     "everyone": "Wszyscy",
+    "field_policy_loading": "Ustawienia zgłoszeń Twojej jednostki są jeszcze wczytywane, spróbuj ponownie za chwilę",
     "files": {
       "no_files": "Brak dostępnych plików",
       "no_files_description": "Do tego zgłoszenia nie dodano jeszcze żadnych plików",
@@ -316,6 +317,7 @@
     "plus_code_required": "Proszę wprowadzić kod Plus do wyszukania",
     "priority": "Priorytet",
     "priority_placeholder": "Wybierz priorytet zgłoszenia",
+    "required_fields_missing": "Twoja jednostka wymaga tych pól przed utworzeniem zgłoszenia: {{fields}}",
     "roles": "Role",
     "search": "Szukaj zgłoszeń...",
     "select_active_call": "Wybierz aktywne zgłoszenie",
@@ -1084,6 +1086,7 @@
     "generale": "Ogólne",
     "german": "Niemiecki",
     "github": "Github",
+    "greek": "Grecki",
     "help_center": "Centrum pomocy",
     "italian": "Włoski",
     "keep_alive": "Utrzymuj aktywność",

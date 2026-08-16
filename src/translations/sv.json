@@ -281,6 +281,7 @@
     "edit_call": "Redigera larm",
     "edit_call_description": "Uppdatera larminformation",
     "everyone": "Alla",
+    "field_policy_loading": "Din avdelnings larminställningar laddas fortfarande, försök igen om ett ögonblick",
     "files": {
       "no_files": "Inga filer tillgängliga",
       "no_files_description": "Inga filer har lagts till i detta larm ännu",
@@ -316,6 +317,7 @@
     "plus_code_required": "Ange en plus-kod att söka efter",
     "priority": "Prioritet",
     "priority_placeholder": "Välj larmets prioritet",
+    "required_fields_missing": "Din avdelning kräver dessa fält innan ett larm kan skapas: {{fields}}",
     "roles": "Roller",
     "search": "Sök larm...",
     "select_active_call": "Välj aktivt larm",
@@ -1084,6 +1086,7 @@
     "generale": "Allmänt",
     "german": "Tyska",
     "github": "Github",
+    "greek": "Grekiska",
     "help_center": "Hjälpcenter",
     "italian": "Italienska",
     "keep_alive": "Håll aktiv",

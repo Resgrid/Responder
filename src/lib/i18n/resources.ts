@@ -1,5 +1,6 @@
 import ar from '@/translations/ar.json';
 import de from '@/translations/de.json';
+import el from '@/translations/el.json';
 import en from '@/translations/en.json';
 import es from '@/translations/es.json';
 import fr from '@/translations/fr.json';
@@ -18,6 +19,7 @@ export const resources = {
   pl: { translation: pl },
   uk: { translation: uk },
   ar: { translation: ar },
+  el: { translation: el },
 };
 
 export type Language = keyof typeof resources;

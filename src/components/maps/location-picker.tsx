@@ -9,6 +9,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Env } from '@/lib/env';
+import { useDepartmentMapCenter } from '@/lib/map-center';
 
 interface LocationPickerProps {
   initialLocation?:
@@ -26,6 +27,9 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
   const { t } = useTranslation();
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
+  // Read reactively: config often lands after this mounts, and a one-shot read would leave the map
+  // parked on the bootstrap fallback for the rest of the session.
+  const departmentMapCenter = useDepartmentMapCenter();
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -157,7 +161,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
           </Mapbox.PointAnnotation>
         </Mapbox.MapView>
       ) : (
-        // Default map view with fallback coordinates (center of USA)
+        // Default map view centered on the department until the user has a location
         <Mapbox.MapView
           ref={mapRef}
           style={styles.map}
@@ -172,7 +176,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
             setMapError(t('maps.failed_to_load', 'Failed to load map. Please check your internet connection.'));
           }}
         >
-          <Mapbox.Camera ref={cameraRef} zoomLevel={4} centerCoordinate={[-98.5795, 39.8283]} animationMode="flyTo" animationDuration={1000} />
+          <Mapbox.Camera ref={cameraRef} zoomLevel={departmentMapCenter.zoomLevel} centerCoordinate={[departmentMapCenter.longitude, departmentMapCenter.latitude]} animationMode="flyTo" animationDuration={1000} />
           {/* Overlay with location prompt */}
           <Box className="absolute inset-0 flex-1 items-center justify-center bg-black/20">
             <Box className="items-center rounded-lg bg-white/90 p-4 dark:bg-gray-800/90">

@@ -281,6 +281,7 @@
     "edit_call": "Modifica chiamata",
     "edit_call_description": "Aggiorna le informazioni della chiamata",
     "everyone": "Tutti",
+    "field_policy_loading": "Le impostazioni delle chiamate del tuo dipartimento sono ancora in caricamento, riprova tra un momento",
     "files": {
       "no_files": "Nessun file disponibile",
       "no_files_description": "Nessun file è ancora stato aggiunto a questa chiamata",
@@ -316,6 +317,7 @@
     "plus_code_required": "Inserire un Plus Code da cercare",
     "priority": "Priorità",
     "priority_placeholder": "Selezionare la priorità della chiamata",
+    "required_fields_missing": "Il tuo dipartimento richiede questi campi prima di poter creare una chiamata: {{fields}}",
     "roles": "Ruoli",
     "search": "Cerca chiamate...",
     "select_active_call": "Seleziona chiamata attiva",
@@ -1084,6 +1086,7 @@
     "generale": "Generale",
     "german": "Tedesco",
     "github": "Github",
+    "greek": "Greco",
     "help_center": "Centro assistenza",
     "italian": "Italiano",
     "keep_alive": "Mantieni attivo",

@@ -91,7 +91,10 @@ describe('Plus Code Search Logic', () => {
     PersonnelLocationMinMeters: 0,
     UnitLocationMinMeters: 0,
     AnalyticsApiKey: '',
-    AnalyticsHost: ''
+    AnalyticsHost: '',
+    MapCenterLatitude: 0,
+    MapCenterLongitude: 0,
+    MapCenterZoomLevel: 9
   };
 
   beforeEach(() => {
@@ -139,7 +142,10 @@ describe('Plus Code Search Logic', () => {
         PersonnelLocationMinMeters: 0,
         UnitLocationMinMeters: 0,
         AnalyticsApiKey: '',
-        AnalyticsHost: ''
+        AnalyticsHost: '',
+        MapCenterLatitude: 0,
+        MapCenterLongitude: 0,
+        MapCenterZoomLevel: 9
       };
 
       const result = await performPlusCodeSearch('849VCWC8+R9', configWithoutKey);

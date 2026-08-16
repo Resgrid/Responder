@@ -281,6 +281,7 @@
     "edit_call": "تعديل المكالمة",
     "edit_call_description": "تحديث معلومات المكالمة",
     "everyone": "الجميع",
+    "field_policy_loading": "لا يزال يتم تحميل إعدادات البلاغات في قسمك، يرجى المحاولة مرة أخرى بعد لحظات",
     "files": {
       "no_files": "لا توجد ملفات متاحة",
       "no_files_description": "لم تتم إضافة أي ملفات إلى هذه المكالمة بعد",
@@ -316,6 +317,7 @@
     "plus_code_required": "يرجى إدخال رمز Plus للبحث",
     "priority": "الأولوية",
     "priority_placeholder": "اختر أولوية المكالمة",
+    "required_fields_missing": "يطلب قسمك هذه الحقول قبل إنشاء البلاغ: {{fields}}",
     "roles": "الأدوار",
     "search": "البحث في المكالمات...",
     "select_active_call": "اختر مكالمة نشطة",
@@ -1084,6 +1086,7 @@
     "generale": "عام",
     "german": "ألماني",
     "github": "جيثب",
+    "greek": "اليونانية",
     "help_center": "مركز المساعدة",
     "italian": "إيطالي",
     "keep_alive": "إبقاء الجهاز نشطاً",

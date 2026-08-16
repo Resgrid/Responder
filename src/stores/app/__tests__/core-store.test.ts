@@ -126,7 +126,10 @@ describe('Core Store', () => {
         PersonnelLocationMinMeters: 0,
         UnitLocationMinMeters: 0,
         AnalyticsApiKey: '',
-        AnalyticsHost: ''
+        AnalyticsHost: '',
+        MapCenterLatitude: 0,
+        MapCenterLongitude: 0,
+        MapCenterZoomLevel: 9
       },
 			PageSize: 0,
 			Timestamp: '',
@@ -322,6 +325,9 @@ describe('Core Store', () => {
 				UnitLocationMinMeters: 0,
 				AnalyticsApiKey: '',
 				AnalyticsHost: '',
+				MapCenterLatitude: 0,
+				MapCenterLongitude: 0,
+				MapCenterZoomLevel: 9,
 			});
 			expect(result.current.activeStatuses).toEqual([
 				{
@@ -397,6 +403,9 @@ describe('Core Store', () => {
 				UnitLocationMinMeters: 0,
 				AnalyticsApiKey: '',
 				AnalyticsHost: '',
+				MapCenterLatitude: 0,
+				MapCenterLongitude: 0,
+				MapCenterZoomLevel: 9,
 			});
 			expect(result.current.currentStatus).toBe(null);
 			expect(result.current.currentStaffing).toBe(null);
@@ -474,6 +483,9 @@ describe('Core Store', () => {
 				UnitLocationMinMeters: 0,
 				AnalyticsApiKey: '',
 				AnalyticsHost: '',
+				MapCenterLatitude: 0,
+				MapCenterLongitude: 0,
+				MapCenterZoomLevel: 9,
 			});
 		});
 

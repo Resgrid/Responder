@@ -10,6 +10,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Env } from '@/lib/env';
+import { useDepartmentMapCenter } from '@/lib/map-center';
 import { locationService } from '@/services/location';
 import { useLocationStore } from '@/stores/app/location-store';
 
@@ -43,6 +44,9 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
   const insets = useSafeAreaInsets();
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
+  // Read reactively: config often lands after this mounts, and a one-shot read would leave the map
+  // parked on the bootstrap fallback for the rest of the session.
+  const departmentMapCenter = useDepartmentMapCenter();
   const latitude = useLocationStore((state) => state.latitude);
   const longitude = useLocationStore((state) => state.longitude);
   const setLocation = useLocationStore((state) => state.setLocation);
@@ -394,7 +398,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
           </Mapbox.PointAnnotation>
         </Mapbox.MapView>
       ) : (
-        // Default map view with fallback coordinates (center of USA) when no location is available
+        // Default map view centered on the department when no location is available
         <Mapbox.MapView
           ref={mapRef}
           style={styles.map}
@@ -410,7 +414,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
             setMapError('Map failed to load');
           }}
         >
-          <Mapbox.Camera ref={cameraRef} zoomLevel={4} centerCoordinate={[-98.5795, 39.8283]} animationMode="flyTo" animationDuration={1000} />
+          <Mapbox.Camera ref={cameraRef} zoomLevel={departmentMapCenter.zoomLevel} centerCoordinate={[departmentMapCenter.longitude, departmentMapCenter.latitude]} animationMode="flyTo" animationDuration={1000} />
           {/* Overlay with location prompt */}
           <Box className="absolute inset-0 flex-1 items-center justify-center bg-black/20">
             <Box className="items-center rounded-lg bg-white/90 p-4 dark:bg-gray-800/90">
