@@ -54,13 +54,17 @@ jest.mock('../../app/core-store', () => {
   };
 });
 
+// The factories run while the hoisted store imports are being required, before
+// `mockSecurityStore` above is initialized — snapshotting the variable here would
+// freeze `securityStore: undefined`. Deferring the access to call time keeps the
+// export wired to the live mock.
 jest.mock('@/stores/security/store', () => ({
-  securityStore: mockSecurityStore,
+  securityStore: { getState: () => mockSecurityStore.getState() },
 }));
 
 jest.mock('../../security/store', () => ({
-  securityStore: mockSecurityStore,
-  useSecurityStore: mockSecurityStore,
+  securityStore: { getState: () => mockSecurityStore.getState() },
+  useSecurityStore: { getState: () => mockSecurityStore.getState() },
 }));
 
 jest.mock('@/lib/logging', () => ({
@@ -282,6 +286,102 @@ describe('useSignalRStore', () => {
         message: 'Failed to disconnect from SignalR hubs',
         context: { error: disconnectError },
       });
+    });
+  });
+
+  describe('update hub rejoin', () => {
+    const connectInvokeCalls = () => (signalRService.invoke as jest.Mock).mock.calls.filter(([hub, method]) => hub === 'eventingHub' && method === 'connect');
+
+    it('ignores a rejoin that resolves after disconnectUpdateHub tore the session down', async () => {
+      const { result } = renderHook(() => useSignalRStore());
+
+      let resolveInvoke!: () => void;
+      (signalRService.invoke as jest.Mock).mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveInvoke = resolve;
+          })
+      );
+
+      let connectPromise!: Promise<void>;
+      await act(async () => {
+        connectPromise = result.current.connectUpdateHub();
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await result.current.disconnectUpdateHub();
+      });
+
+      // The announce from the torn-down connection resolves late; it must not resurrect the flag.
+      await act(async () => {
+        resolveInvoke();
+        await connectPromise;
+      });
+
+      expect(result.current.isUpdateHubConnected).toBe(false);
+    });
+
+    it('shares one announce between the hubConnected event and connectUpdateHub', async () => {
+      const { result } = renderHook(() => useSignalRStore());
+
+      // Simulate the service raising hubConnected for a fresh socket mid-connect, as the
+      // real transport does; the fallback announce in connectUpdateHub must join it.
+      (signalRService.connectToHubWithEventingUrl as jest.Mock).mockImplementation(async () => {
+        const handler = (signalRService.on as jest.Mock).mock.calls.find(([event]) => event === 'hubConnected')?.[1];
+        handler({ hubName: 'eventingHub' });
+      });
+
+      await act(async () => {
+        await result.current.connectUpdateHub();
+      });
+
+      expect(connectInvokeCalls()).toHaveLength(1);
+      expect(result.current.isUpdateHubConnected).toBe(true);
+
+      await act(async () => {
+        await result.current.disconnectUpdateHub();
+      });
+    });
+
+    it('does not schedule retries for a rejoin that fails after teardown', async () => {
+      jest.useFakeTimers();
+      try {
+        const { result } = renderHook(() => useSignalRStore());
+
+        let rejectInvoke!: (error: Error) => void;
+        (signalRService.invoke as jest.Mock).mockImplementation(
+          () =>
+            new Promise<void>((resolve, reject) => {
+              rejectInvoke = reject;
+            })
+        );
+
+        let connectPromise!: Promise<void>;
+        await act(async () => {
+          connectPromise = result.current.connectUpdateHub();
+          await Promise.resolve();
+        });
+
+        await act(async () => {
+          await result.current.disconnectUpdateHub();
+        });
+
+        (signalRService.invoke as jest.Mock).mockClear();
+        await act(async () => {
+          rejectInvoke(new Error('announce failed'));
+          await connectPromise;
+        });
+
+        await act(async () => {
+          jest.advanceTimersByTime(20000);
+        });
+
+        expect(connectInvokeCalls()).toHaveLength(0);
+        expect(result.current.isUpdateHubConnected).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
