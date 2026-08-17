@@ -247,7 +247,7 @@ export default function EditCall() {
           timestamp: new Date().toISOString(),
           callId: callId || '',
           priority: callPriorities.find((p) => p.Id === call.Priority)?.Name || 'Unknown',
-          type: callTypes.find((t) => t.Id === call.Type)?.Name || 'Unknown',
+          type: callTypes.find((t) => t.Name === call.Type)?.Name || 'Unknown',
           priorityCount: callPriorities.length,
           typeCount: callTypes.length,
           hasGoogleMapsKey: !!config?.GoogleMapsKey,
@@ -269,7 +269,8 @@ export default function EditCall() {
       }
 
       const priority = callPriorities.find((p) => p.Id === call.Priority);
-      const type = callTypes.find((t) => t.Id === call.Type);
+      // Call.Type is the type's text, not its id -- matching on Id left the picker blank on every edit.
+      const type = callTypes.find((t) => t.Name === call.Type);
 
       if (__DEV__) {
         console.log('Found priority ID:', priority?.Id, 'type ID:', type?.Id);
@@ -404,7 +405,8 @@ export default function EditCall() {
           name: data.name,
           nature: data.nature,
           priority: priority?.Id || 0,
-          type: type?.Id || '',
+          // The API matches the call type by its text, not its id.
+          type: type?.Name || '',
           note: data.note || '',
           address: data.address || '',
           destinationPoiId: destinationPoiId,

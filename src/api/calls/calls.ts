@@ -89,20 +89,16 @@ export const createCall = async (callData: CreateCallRequest) => {
     const dispatchEntries: string[] = [];
 
     if (callData.dispatchUsers) {
-      ///dispatchEntries.push(...callData.dispatchUsers.map((user) => `U:${user}`));
-      dispatchEntries.push(...callData.dispatchUsers);
+      dispatchEntries.push(...callData.dispatchUsers.map((user) => `P:${user}`));
     }
     if (callData.dispatchGroups) {
-      //dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
-      dispatchEntries.push(...callData.dispatchGroups);
+      dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
     }
     if (callData.dispatchRoles) {
-      //dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
-      dispatchEntries.push(...callData.dispatchRoles);
+      dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
     }
     if (callData.dispatchUnits) {
-      //dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
-      dispatchEntries.push(...callData.dispatchUnits);
+      dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
     }
 
     dispatchList = dispatchEntries.join('|');
@@ -137,16 +133,16 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     const dispatchEntries: string[] = [];
 
     if (callData.dispatchUsers) {
-      dispatchEntries.push(...callData.dispatchUsers);
+      dispatchEntries.push(...callData.dispatchUsers.map((user) => `P:${user}`));
     }
     if (callData.dispatchGroups) {
-      dispatchEntries.push(...callData.dispatchGroups);
+      dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
     }
     if (callData.dispatchRoles) {
-      dispatchEntries.push(...callData.dispatchRoles);
+      dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
     }
     if (callData.dispatchUnits) {
-      dispatchEntries.push(...callData.dispatchUnits);
+      dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
     }
 
     dispatchList = dispatchEntries.join('|');

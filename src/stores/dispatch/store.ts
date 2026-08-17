@@ -92,6 +92,11 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
       const categorizedRoles: RecipientsResultData[] = [];
       const categorizedUnits: RecipientsResultData[] = [];
 
+      // The recipients endpoint hands back wire ids ("P:<userId>", "R:12"). The selection is keyed on
+      // bare ids so it lines up with the ids a call's existing dispatches come back as, and the
+      // prefixes are put back on in the calls API when the dispatch list is built.
+      const stripPrefix = (id: string) => id.replace(/^[PGRU]:/, '');
+
       // Categorize recipients based on Type field with both exact and flexible matching
       recipients.Data.forEach((recipient) => {
         if (!recipient || !recipient.Type || !recipient.Name || !recipient.Id) {
@@ -101,26 +106,28 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
           return;
         }
 
+        const entry = { ...recipient, Id: stripPrefix(recipient.Id) };
+
         // First try exact matching (as per the test data)
         if (recipient.Type === 'Personnel') {
-          categorizedUsers.push(recipient);
+          categorizedUsers.push(entry);
         } else if (recipient.Type === 'Groups') {
-          categorizedGroups.push(recipient);
+          categorizedGroups.push(entry);
         } else if (recipient.Type === 'Roles') {
-          categorizedRoles.push(recipient);
+          categorizedRoles.push(entry);
         } else if (recipient.Type === 'Unit') {
-          categorizedUnits.push(recipient);
+          categorizedUnits.push(entry);
         } else {
           // Fallback to case-insensitive matching
           const type = recipient.Type.toLowerCase().trim();
           if (type === 'personnel' || type === 'user' || type === 'users') {
-            categorizedUsers.push(recipient);
+            categorizedUsers.push(entry);
           } else if (type === 'groups' || type === 'group') {
-            categorizedGroups.push(recipient);
+            categorizedGroups.push(entry);
           } else if (type === 'roles' || type === 'role') {
-            categorizedRoles.push(recipient);
+            categorizedRoles.push(entry);
           } else if (type === 'unit' || type === 'units') {
-            categorizedUnits.push(recipient);
+            categorizedUnits.push(entry);
           } else {
             // Log unknown types for debugging
             if (__DEV__) {
