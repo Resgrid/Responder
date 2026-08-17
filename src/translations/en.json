@@ -1027,12 +1027,18 @@
     "title": "Protocols"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Receipt confirmed. Thank you.",
+    "communication_test_failed": "Couldn't confirm receipt. Please try again.",
+    "communication_test_prompt": "This is only a test. Confirm you received it so your department knows it can reach you.",
+    "confirm_receipt": "Confirm Receipt",
+    "confirming_receipt": "Confirming...",
     "message": "Message",
     "new_notification": "New Notification",
     "title": "Title",
     "types": {
       "call": "Call",
       "chat": "Chat",
+      "communication_test": "Communication Test",
       "group_chat": "Group Chat",
       "message": "Message",
       "notification": "Notification",

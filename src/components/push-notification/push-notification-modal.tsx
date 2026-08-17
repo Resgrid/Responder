@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { AlertCircle, Bell, CloudLightning, MailIcon, MessageCircle, Phone, Users } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef } from 'react';
+import { AlertCircle, Bell, CloudLightning, MailIcon, MessageCircle, Phone, RadioTower, Users } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { recordCommunicationTestPushResponse } from '@/api/communication-tests/communication-tests';
 import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
@@ -12,6 +13,7 @@ import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-aler
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { type NotificationType, usePushNotificationModalStore } from '@/stores/push-notification/store';
+import { useToastStore } from '@/stores/toast/store';
 
 interface NotificationIconProps {
   type: NotificationType;
@@ -37,6 +39,8 @@ const NotificationIcon = ({ type }: { type: NotificationType }) => {
       return <Users {...iconProps} />;
     case 'weather':
       return <CloudLightning {...iconProps} />;
+    case 'communication-test':
+      return <RadioTower {...iconProps} />;
     default:
       return <Bell {...iconProps} />;
   }
@@ -47,6 +51,7 @@ export const PushNotificationModal: React.FC = () => {
   const { trackEvent } = useAnalytics();
   const { isOpen, notification, hideNotificationModal } = usePushNotificationModalStore();
   const wasModalOpenRef = useRef(false);
+  const [isConfirmingReceipt, setIsConfirmingReceipt] = useState(false);
 
   // Track analytics when modal becomes visible
   const trackViewAnalytics = useCallback(() => {
@@ -73,6 +78,9 @@ export const PushNotificationModal: React.FC = () => {
       trackViewAnalytics();
     } else if (!isOpen) {
       wasModalOpenRef.current = false;
+      // A reopened modal must offer the confirm button again rather than staying stuck in the
+      // pending state left over from the previous notification.
+      setIsConfirmingReceipt(false);
     }
   }, [isOpen, notification, trackViewAnalytics]);
 
@@ -123,6 +131,35 @@ export const PushNotificationModal: React.FC = () => {
     }
   };
 
+  const handleConfirmReceipt = async () => {
+    if (notification?.type !== 'communication-test' || !notification.id || isConfirmingReceipt) {
+      return;
+    }
+
+    const responseToken = notification.id;
+
+    trackEvent('push_notification_communication_test_confirmed', {
+      eventCode: notification.eventCode,
+    });
+
+    setIsConfirmingReceipt(true);
+
+    try {
+      await recordCommunicationTestPushResponse(responseToken);
+      useToastStore.getState().showToast('success', t('push_notifications.communication_test_confirmed'));
+      hideNotificationModal();
+    } catch (error) {
+      logger.error({
+        message: 'Failed to confirm communication test receipt',
+        context: { error, eventCode: notification.eventCode },
+      });
+      // Keep the modal open so the responder can retry — dismissing it would strand them with no
+      // way back to the token, and the test would record them as unreachable on push.
+      useToastStore.getState().showToast('error', t('push_notifications.communication_test_failed'));
+      setIsConfirmingReceipt(false);
+    }
+  };
+
   const getNotificationTypeText = (type: NotificationType): string => {
     switch (type) {
       case 'call':
@@ -135,6 +172,8 @@ export const PushNotificationModal: React.FC = () => {
         return t('push_notifications.types.group_chat');
       case 'weather':
         return t('push_notifications.types.weather');
+      case 'communication-test':
+        return t('push_notifications.types.communication_test');
       default:
         return t('push_notifications.types.notification');
     }
@@ -152,6 +191,8 @@ export const PushNotificationModal: React.FC = () => {
         return '#8B5CF6'; // Purple for group chat
       case 'weather':
         return '#F59E0B'; // Amber for weather alerts
+      case 'communication-test':
+        return '#0EA5E9'; // Sky blue for communication tests
       default:
         return '#6B7280'; // Gray for unknown
     }
@@ -194,6 +235,13 @@ export const PushNotificationModal: React.FC = () => {
               </VStack>
             ) : null}
 
+            {notification.type === 'communication-test' ? (
+              <HStack className="mt-2 items-center space-x-2 rounded-lg bg-sky-50 p-3 dark:bg-sky-900" testID="communication-test-prompt">
+                <AlertCircle size={20} color="#0EA5E9" />
+                <Text className="flex-1 text-sm text-sky-800 dark:text-sky-200">{t('push_notifications.communication_test_prompt')}</Text>
+              </HStack>
+            ) : null}
+
             {notification.type === 'unknown' ? (
               <HStack className="mt-2 items-center space-x-2 rounded-lg bg-yellow-50 p-3 dark:bg-yellow-900">
                 <AlertCircle size={20} color="#F59E0B" />
@@ -218,6 +266,12 @@ export const PushNotificationModal: React.FC = () => {
             {notification.type === 'weather' && notification.id ? (
               <Button className="flex-1" onPress={handleViewWeatherAlert}>
                 <ButtonText>{t('push_notifications.view_alert')}</ButtonText>
+              </Button>
+            ) : null}
+
+            {notification.type === 'communication-test' && notification.id ? (
+              <Button className="flex-1" isDisabled={isConfirmingReceipt} onPress={handleConfirmReceipt} testID="confirm-receipt-button">
+                <ButtonText>{isConfirmingReceipt ? t('push_notifications.confirming_receipt') : t('push_notifications.confirm_receipt')}</ButtonText>
               </Button>
             ) : null}
           </HStack>

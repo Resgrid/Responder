@@ -1027,12 +1027,18 @@
     "title": "Protocoles"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Réception confirmée. Merci.",
+    "communication_test_failed": "Impossible de confirmer la réception. Veuillez réessayer.",
+    "communication_test_prompt": "Ceci n'est qu'un test. Confirmez la réception afin que votre service sache qu'il peut vous joindre.",
+    "confirm_receipt": "Confirmer la réception",
+    "confirming_receipt": "Confirmation...",
     "message": "Message",
     "new_notification": "Nouvelle notification",
     "title": "Titre",
     "types": {
       "call": "Appel",
       "chat": "Discussion",
+      "communication_test": "Test de communication",
       "group_chat": "Discussion de groupe",
       "message": "Message",
       "notification": "Notification",

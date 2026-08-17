@@ -9,7 +9,7 @@ export interface PushNotificationData {
   data?: Record<string, unknown>;
 }
 
-export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'weather' | 'unknown';
+export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'weather' | 'communication-test' | 'unknown';
 
 export interface ParsedNotification {
   type: NotificationType;
@@ -28,6 +28,13 @@ interface PushNotificationModalState {
   parseNotification: (notificationData: PushNotificationData) => ParsedNotification;
 }
 
+// Whole event code prefixes. Checked before EVENT_CODE_PREFIXES below so a multi-letter code is
+// not collapsed to its first character — "CT:" (communication test) would otherwise read as "C"
+// and be handled as a call.
+const EVENT_CODE_TYPES: Record<string, NotificationType> = {
+  ct: 'communication-test',
+};
+
 // First character of the event code prefix sent by the Resgrid backend, e.g.
 // "C:1234" call, "M:5678" message, "T:9012" chat, "G:3456" group chat, "W:9012" weather alert.
 const EVENT_CODE_PREFIXES: Record<string, NotificationType> = {
@@ -43,11 +50,14 @@ export const parseNotificationData = (notificationData: PushNotificationData): P
   let type: NotificationType = 'unknown';
   let id = '';
 
-  if (eventCode && eventCode.includes(':')) {
-    const [prefix, notificationId] = eventCode.split(':');
-    const lowerPrefix = prefix?.toLowerCase() ?? '';
+  const separatorIndex = eventCode.indexOf(':');
 
-    type = EVENT_CODE_PREFIXES[lowerPrefix.charAt(0)] ?? 'unknown';
+  if (separatorIndex > 0) {
+    const lowerPrefix = eventCode.slice(0, separatorIndex).toLowerCase();
+    // Split on the FIRST colon only, so an id that itself contains one survives intact.
+    const notificationId = eventCode.slice(separatorIndex + 1);
+
+    type = EVENT_CODE_TYPES[lowerPrefix] ?? EVENT_CODE_PREFIXES[lowerPrefix.charAt(0)] ?? 'unknown';
     id = notificationId || '';
   }
 

@@ -1027,12 +1027,18 @@
     "title": "Protocolli"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Ricezione confermata. Grazie.",
+    "communication_test_failed": "Impossibile confermare la ricezione. Riprova.",
+    "communication_test_prompt": "Questo è solo un test. Conferma la ricezione affinché il tuo dipartimento sappia di poterti raggiungere.",
+    "confirm_receipt": "Conferma ricezione",
+    "confirming_receipt": "Conferma in corso...",
     "message": "Messaggio",
     "new_notification": "Nuova notifica",
     "title": "Titolo",
     "types": {
       "call": "Chiamata",
       "chat": "Chat",
+      "communication_test": "Test di comunicazione",
       "group_chat": "Chat di gruppo",
       "message": "Messaggio",
       "notification": "Notifica",

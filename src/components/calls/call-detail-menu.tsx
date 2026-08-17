@@ -58,6 +58,10 @@ interface CallDetailActionSheetPanelProps {
 export const CallDetailActionSheetPanel: React.FC<CallDetailActionSheetPanelProps> = ({ isOpen, onClose, onEditCall, onCloseCall, onSetActiveCall }) => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { colorScheme } = useColorScheme();
+  // Same currentColor caveat as HeaderRightMenuButton above — the icons need an
+  // explicit color or they render black in dark mode.
+  const menuIconColor = colorScheme === 'dark' ? '#d1d5db' : '#374151';
 
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose} testID="call-detail-actionsheet">
@@ -82,7 +86,7 @@ export const CallDetailActionSheetPanel: React.FC<CallDetailActionSheetPanelProp
           testID="edit-call-button"
         >
           <HStack className="items-center">
-            <EditIcon size={16} className="mr-3 text-gray-700 dark:text-gray-300" />
+            <EditIcon size={16} color={menuIconColor} className="mr-3" />
             <ActionsheetItemText>{t('call_detail.edit_call')}</ActionsheetItemText>
           </HStack>
         </ActionsheetItem>
@@ -102,7 +106,7 @@ export const CallDetailActionSheetPanel: React.FC<CallDetailActionSheetPanelProp
           testID="close-call-button"
         >
           <HStack className="items-center">
-            <XIcon size={16} className="mr-3 text-gray-700 dark:text-gray-300" />
+            <XIcon size={16} color={menuIconColor} className="mr-3" />
             <ActionsheetItemText>{t('call_detail.close_call')}</ActionsheetItemText>
           </HStack>
         </ActionsheetItem>
@@ -116,7 +120,7 @@ export const CallDetailActionSheetPanel: React.FC<CallDetailActionSheetPanelProp
             testID="set-active-call-button"
           >
             <HStack className="items-center">
-              <TimerIcon size={16} className="mr-3 text-gray-700 dark:text-gray-300" />
+              <TimerIcon size={16} color={menuIconColor} className="mr-3" />
               <ActionsheetItemText>{t('home.active_call.set_active')}</ActionsheetItemText>
             </HStack>
           </ActionsheetItem>

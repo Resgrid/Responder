@@ -39,7 +39,7 @@ import { useCheckInStore } from '@/stores/calls/check-in-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
-import { sanitizeHtmlContent } from '@/utils/webview-html';
+import { generateWebViewHtml, sanitizeHtmlContent } from '@/utils/webview-html';
 
 export default function CallDetail() {
   const { id } = useLocalSearchParams();
@@ -516,9 +516,9 @@ export default function CallDetail() {
             {callExtraData?.Protocols && callExtraData.Protocols.length > 0 ? (
               <VStack className="space-y-3">
                 {callExtraData.Protocols.map((protocol, index) => (
-                  <Box key={index} className="rounded-lg bg-gray-50 p-3">
+                  <Box key={index} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                     <Text className="font-semibold">{protocol.Name}</Text>
-                    <Text className="text-sm text-gray-600">{protocol.Description}</Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400">{protocol.Description}</Text>
                     <Box>
                       <WebView
                         style={[styles.container, { height: 200 }]}
@@ -527,28 +527,12 @@ export default function CallDetail() {
                         scrollEnabled={false}
                         showsVerticalScrollIndicator={false}
                         source={{
-                          html: `
-                                <!DOCTYPE html>
-                                <html>
-                                  <head>
-                                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-                                    <style>
-                                      body {
-                                        color: ${textColor};
-                                        font-family: system-ui, -apple-system, sans-serif;
-                                        margin: 0;
-                                        padding: 0;
-                                        font-size: 16px;
-                                        line-height: 1.5;
-                                      }
-                                      * {
-                                        max-width: 100%;
-                                      }
-                                    </style>
-                                  </head>
-                                  <body>${sanitizeHtmlContent(protocol.ProtocolText)}</body>
-                                </html>
-                              `,
+                          html: generateWebViewHtml({
+                            content: protocol.ProtocolText,
+                            isDarkMode: colorScheme === 'dark',
+                            backgroundColor: 'transparent',
+                            padding: 0,
+                          }),
                         }}
                         androidLayerType="software"
                       />

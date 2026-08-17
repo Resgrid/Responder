@@ -1027,12 +1027,18 @@
     "title": "Πρωτόκολλα"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Η λήψη επιβεβαιώθηκε. Ευχαριστούμε.",
+    "communication_test_failed": "Δεν ήταν δυνατή η επιβεβαίωση λήψης. Δοκιμάστε ξανά.",
+    "communication_test_prompt": "Αυτό είναι μόνο μια δοκιμή. Επιβεβαιώστε τη λήψη ώστε η υπηρεσία σας να γνωρίζει ότι μπορεί να σας βρει.",
+    "confirm_receipt": "Επιβεβαίωση λήψης",
+    "confirming_receipt": "Επιβεβαίωση...",
     "message": "Μήνυμα",
     "new_notification": "Νέα Ειδοποίηση",
     "title": "Τίτλος",
     "types": {
       "call": "Κλήση",
       "chat": "Συνομιλία",
+      "communication_test": "Δοκιμή επικοινωνίας",
       "group_chat": "Ομαδική Συνομιλία",
       "message": "Μήνυμα",
       "notification": "Ειδοποίηση",
