@@ -219,8 +219,8 @@ describe('useSignalRStore', () => {
 
       // Every update hub subscription must be torn down by its own reference; the set includes the
       // incident command feed and the hub-connected listener that rejoins the department group.
-      expect(registrations).toHaveLength(12);
-      expect(registrations.map(([event]) => event)).toEqual(expect.arrayContaining(['incidentCommandUpdated', 'hubConnected']));
+      expect(registrations).toHaveLength(13);
+      expect(registrations.map(([event]) => event)).toEqual(expect.arrayContaining(['incidentCommandUpdated', 'hubConnected', 'hubDisconnected']));
       registrations.forEach(([event, handler]) => {
         expect(signalRService.off).toHaveBeenCalledWith(event, handler);
       });
@@ -277,7 +277,7 @@ describe('useSignalRStore', () => {
       });
 
       expect(result.current.error).toEqual(disconnectError);
-      expect(signalRService.off).toHaveBeenCalledTimes(12);
+      expect(signalRService.off).toHaveBeenCalledTimes(13);
       expect(logger.error).toHaveBeenCalledWith({
         message: 'Failed to disconnect from SignalR hubs',
         context: { error: disconnectError },
