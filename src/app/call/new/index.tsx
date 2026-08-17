@@ -15,6 +15,7 @@ import * as z from 'zod';
 import { createCall } from '@/api/calls/calls';
 import { getNewCallData } from '@/api/dispatch';
 import { DispatchSelectionModal } from '@/components/calls/dispatch-selection-modal';
+import { HeaderBackButton } from '@/components/common/header-back-button';
 import { Loading } from '@/components/common/loading';
 import FullScreenLocationPicker from '@/components/maps/full-screen-location-picker';
 import LocationPicker from '@/components/maps/location-picker';
@@ -885,14 +886,15 @@ export default function NewCall() {
         options={{
           title: t('calls.new_call'),
           headerShown: true,
+          headerLeft: () => <HeaderBackButton onPress={() => router.back()} />,
         }}
       />
       <View className="size-full flex-1">
-        <Box className={`size-full w-full flex-1 ${colorScheme === 'dark' ? 'bg-neutral-950' : 'bg-neutral-50'}`}>
+        <Box className="size-full w-full flex-1 bg-gray-50 dark:bg-gray-900">
           <ScrollView className="flex-1 px-4 py-6" contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 20, 40) }} showsVerticalScrollIndicator={false}>
             <Text className="mb-6 text-2xl font-bold">{t('calls.create_new_call')}</Text>
 
-            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
               <FormControl isInvalid={!!errors.name}>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.name')}</FormControlLabelText>
@@ -914,7 +916,7 @@ export default function NewCall() {
               </FormControl>
             </Card>
 
-            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
               <FormControl isInvalid={!!errors.nature}>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.nature')}</FormControlLabelText>
@@ -936,7 +938,7 @@ export default function NewCall() {
               </FormControl>
             </Card>
 
-            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
               <FormControl isInvalid={!!errors.priority}>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.priority')}</FormControlLabelText>
@@ -969,7 +971,7 @@ export default function NewCall() {
               </FormControl>
             </Card>
 
-            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
               <FormControl isInvalid={!!errors.type}>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.type')}</FormControlLabelText>
@@ -1002,7 +1004,7 @@ export default function NewCall() {
               </FormControl>
             </Card>
 
-            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
               <FormControl>
                 <FormControlLabel>
                   <FormControlLabelText>{t('calls.destination')}</FormControlLabelText>
@@ -1036,7 +1038,7 @@ export default function NewCall() {
             </Card>
 
             {fieldPolicy.isVisible(NewCallFieldKeys.Note) ? (
-              <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+              <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
                 <FormControl>
                   <FormControlLabel>
                     <FormControlLabelText>{t('calls.note')}</FormControlLabelText>
@@ -1054,7 +1056,7 @@ export default function NewCall() {
               </Card>
             ) : null}
 
-            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
               <Text className="mb-4 text-lg font-semibold">{t('calls.call_location')}</Text>
 
               {/* Address Field */}
@@ -1162,7 +1164,7 @@ export default function NewCall() {
             </Card>
 
             {fieldPolicy.isVisible(NewCallFieldKeys.ContactName) ? (
-              <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+              <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
                 <FormControl>
                   <FormControlLabel>
                     <FormControlLabelText>{t('calls.contact_name')}</FormControlLabelText>
@@ -1181,7 +1183,7 @@ export default function NewCall() {
             ) : null}
 
             {fieldPolicy.isVisible(NewCallFieldKeys.ContactInfo) ? (
-              <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+              <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
                 <FormControl>
                   <FormControlLabel>
                     <FormControlLabelText>{t('calls.contact_info')}</FormControlLabelText>
@@ -1199,7 +1201,7 @@ export default function NewCall() {
               </Card>
             ) : null}
 
-            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <Card className="mb-4 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
               <Text className="mb-4 text-lg font-semibold">{t('calls.dispatch_to')}</Text>
               <Button testID="open-dispatch-modal-button" onPress={() => setShowDispatchModal(true)} className="w-full">
                 <ButtonText>{getDispatchSummary()}</ButtonText>
