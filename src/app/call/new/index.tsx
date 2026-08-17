@@ -344,7 +344,8 @@ export default function NewCall() {
         name: data.name,
         nature: data.nature,
         priority: priority?.Id || 0,
-        type: type?.Id || '',
+        // The API matches the call type by its text, not its id.
+        type: type?.Name || '',
         note: data.note || '',
         address: data.address || '',
         destinationPoiId: destinationPoiId,
