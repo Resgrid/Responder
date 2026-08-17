@@ -133,6 +133,32 @@ describe('WebView HTML Utility', () => {
       expect(sanitized).toContain('&amp;');
       expect(sanitized).toContain('<p>');
     });
+
+    // A numeric entity above U+10FFFF makes String.fromCodePoint throw, which would
+    // take down the whole render for one malformed field.
+    it('does not throw on numeric entities outside the Unicode range', () => {
+      expect(() => sanitizeHtmlContent('&lt;p&gt;&#1114112;&#x110000;&#99999999999999999999999;&lt;/p&gt;')).not.toThrow();
+
+      const sanitized = sanitizeHtmlContent('&lt;p&gt;bad &#1114112; tail&lt;/p&gt;');
+
+      expect(sanitized).toContain('bad');
+      expect(sanitized).toContain('tail');
+    });
+
+    it('leaves surrogate-range numeric entities undecoded', () => {
+      const sanitized = sanitizeHtmlContent('&lt;p&gt;&#xD800;&#55296;&lt;/p&gt;');
+
+      // Lone surrogates are malformed UTF-16; the raw entity text is the safe result.
+      expect(sanitized).not.toMatch(/[\uD800-\uDFFF]/);
+    });
+
+    it('still decodes valid decimal and hexadecimal entities', () => {
+      const sanitized = sanitizeHtmlContent('&lt;p&gt;&#65;&#x42;&#128664;&lt;/p&gt;');
+
+      expect(sanitized).toContain('A');
+      expect(sanitized).toContain('B');
+      expect(sanitized).toContain('\u{1F698}');
+    });
   });
 
   describe('generateWebViewHtml', () => {
