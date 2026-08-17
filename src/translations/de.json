@@ -1027,12 +1027,18 @@
     "title": "Protokolle"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Empfang bestätigt. Vielen Dank.",
+    "communication_test_failed": "Empfang konnte nicht bestätigt werden. Bitte erneut versuchen.",
+    "communication_test_prompt": "Dies ist nur ein Test. Bestätigen Sie den Empfang, damit Ihre Abteilung weiß, dass sie Sie erreichen kann.",
+    "confirm_receipt": "Empfang bestätigen",
+    "confirming_receipt": "Wird bestätigt...",
     "message": "Nachricht",
     "new_notification": "Neue Benachrichtigung",
     "title": "Titel",
     "types": {
       "call": "Einsatz",
       "chat": "Chat",
+      "communication_test": "Kommunikationstest",
       "group_chat": "Gruppenchat",
       "message": "Nachricht",
       "notification": "Benachrichtigung",

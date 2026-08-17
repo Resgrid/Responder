@@ -1027,12 +1027,18 @@
     "title": "البروتوكولات"
   },
   "push_notifications": {
+    "communication_test_confirmed": "تم تأكيد الاستلام. شكرًا لك.",
+    "communication_test_failed": "تعذّر تأكيد الاستلام. يرجى المحاولة مرة أخرى.",
+    "communication_test_prompt": "هذا اختبار فقط. أكِّد الاستلام ليعرف قسمك أنه يستطيع الوصول إليك.",
+    "confirm_receipt": "تأكيد الاستلام",
+    "confirming_receipt": "جارٍ التأكيد...",
     "message": "الرسالة",
     "new_notification": "إشعار جديد",
     "title": "العنوان",
     "types": {
       "call": "مكالمة",
       "chat": "دردشة",
+      "communication_test": "اختبار الاتصال",
       "group_chat": "دردشة جماعية",
       "message": "رسالة",
       "notification": "إشعار",

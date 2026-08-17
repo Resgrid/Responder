@@ -102,6 +102,63 @@ describe('WebView HTML Utility', () => {
       expect(sanitized).toContain('<ol>');
       expect(sanitized).toContain('<li>Numbered 1</li>');
     });
+
+    it('returns an empty string for empty input', () => {
+      expect(sanitizeHtmlContent('')).toBe('');
+    });
+
+    it('renders entity-encoded markup as real tags', () => {
+      const encoded = '&lt;p&gt;Structure fire&lt;/p&gt;';
+      const sanitized = sanitizeHtmlContent(encoded);
+
+      expect(sanitized).toContain('<p>');
+      expect(sanitized).toContain('Structure fire');
+    });
+
+    // Decoding has to happen before sanitizing, otherwise an entity-encoded payload
+    // passes through untouched and the WebView revives it as live markup.
+    it('sanitizes payloads that arrive HTML-entity-encoded', () => {
+      const encoded = '&lt;img src=x onerror=alert(1)&gt;&lt;script&gt;alert(2)&lt;/script&gt;';
+      const sanitized = sanitizeHtmlContent(encoded);
+
+      expect(sanitized).not.toContain('onerror');
+      expect(sanitized).not.toContain('alert(1)');
+      expect(sanitized).not.toContain('alert(2)');
+      expect(sanitized).not.toContain('<script');
+    });
+
+    it('leaves entities alone when the value already contains real markup', () => {
+      const sanitized = sanitizeHtmlContent('<p>Smith &amp; Sons</p>');
+
+      expect(sanitized).toContain('&amp;');
+      expect(sanitized).toContain('<p>');
+    });
+
+    // A numeric entity above U+10FFFF makes String.fromCodePoint throw, which would
+    // take down the whole render for one malformed field.
+    it('does not throw on numeric entities outside the Unicode range', () => {
+      expect(() => sanitizeHtmlContent('&lt;p&gt;&#1114112;&#x110000;&#99999999999999999999999;&lt;/p&gt;')).not.toThrow();
+
+      const sanitized = sanitizeHtmlContent('&lt;p&gt;bad &#1114112; tail&lt;/p&gt;');
+
+      expect(sanitized).toContain('bad');
+      expect(sanitized).toContain('tail');
+    });
+
+    it('leaves surrogate-range numeric entities undecoded', () => {
+      const sanitized = sanitizeHtmlContent('&lt;p&gt;&#xD800;&#55296;&lt;/p&gt;');
+
+      // Lone surrogates are malformed UTF-16; the raw entity text is the safe result.
+      expect(sanitized).not.toMatch(/[\uD800-\uDFFF]/);
+    });
+
+    it('still decodes valid decimal and hexadecimal entities', () => {
+      const sanitized = sanitizeHtmlContent('&lt;p&gt;&#65;&#x42;&#128664;&lt;/p&gt;');
+
+      expect(sanitized).toContain('A');
+      expect(sanitized).toContain('B');
+      expect(sanitized).toContain('\u{1F698}');
+    });
   });
 
   describe('generateWebViewHtml', () => {

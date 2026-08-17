@@ -1,19 +1,21 @@
 import { useFocusEffect } from 'expo-router';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Keyboard, Platform, useWindowDimensions } from 'react-native';
-import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
+import { Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
-import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
+import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Button, ButtonText } from '@/components/ui/button';
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
+import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { Select, SelectBackdrop, SelectContent, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useToastStore } from '@/stores/toast/store';
@@ -29,8 +31,7 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const router = useRouter();
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
+  const keyboardHeight = useKeyboardHeight();
   const showToast = useToastStore((state) => state.showToast);
   const { closeCall } = useCallDetailStore();
   const { fetchCalls } = useCallsStore();
@@ -40,46 +41,6 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
 
   // Track if modal was actually opened to avoid false close events
   const wasModalOpenRef = useRef(false);
-
-  // The actionsheet renders inside a native Modal window, which the Android
-  // soft keyboard overlays without resizing (softwareKeyboardLayoutMode 'pan'
-  // does not apply to dialog windows), so keyboard-controller's inset
-  // animations never reach it. Pad the scroll content by the keyboard height
-  // and scroll the note input back into view manually.
-  const scrollViewRef = useRef<KeyboardAwareScrollViewRef>(null);
-  const scrollToEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [keyboardPadding, setKeyboardPadding] = useState(0);
-
-  useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    const clearScrollToEndTimer = () => {
-      if (scrollToEndTimerRef.current !== null) {
-        clearTimeout(scrollToEndTimerRef.current);
-        scrollToEndTimerRef.current = null;
-      }
-    };
-
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      setKeyboardPadding(event.endCoordinates.height);
-      clearScrollToEndTimer();
-      scrollToEndTimerRef.current = setTimeout(() => {
-        scrollToEndTimerRef.current = null;
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      clearScrollToEndTimer();
-      setKeyboardPadding(0);
-    });
-    return () => {
-      clearScrollToEndTimer();
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   // Track analytics when modal becomes visible
   useFocusEffect(
@@ -219,63 +180,75 @@ export const CloseCallBottomSheet: React.FC<CloseCallBottomSheetProps> = ({ isOp
   const isButtonDisabled = isLoading || isSubmitting;
 
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} isLoading={isButtonDisabled}>
-      <KeyboardAwareScrollView
-        ref={scrollViewRef}
-        keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'}
-        showsVerticalScrollIndicator={false}
-        bottomOffset={120}
-        extraKeyboardSpace={40}
-        style={{ flexGrow: 0, width: '100%' }}
-        contentContainerStyle={{ paddingBottom: keyboardPadding }}
-        testID="close-call-scroll-view"
-      >
-        <VStack space="md" className="w-full p-4">
-          <Text className="mb-4 text-center text-lg font-semibold text-gray-900 dark:text-white">{t('call_detail.close_call')}</Text>
+    <Actionsheet isOpen={isOpen} onClose={handleClose} testID="close-call-actionsheet">
+      <ActionsheetBackdrop />
+      {/* Same keyboard treatment as the status/staffing sheets: the sheet is
+          bottom-anchored and content-sized, so padding it by the keyboard height
+          slides it up out from under the keyboard, max-h caps it, and shrink lets
+          the scrollview compress and scroll instead of Yoga clipping the overflow. */}
+      <ActionsheetContent className="max-h-[90%] bg-white dark:bg-gray-900" style={{ paddingBottom: keyboardHeight }}>
+        <ActionsheetDragIndicatorWrapper>
+          <ActionsheetDragIndicator />
+        </ActionsheetDragIndicatorWrapper>
 
-          <FormControl>
-            <FormControlLabel>
-              <FormControlLabelText className="font-medium text-gray-900 dark:text-gray-100">{t('call_detail.close_call_type')}</FormControlLabelText>
-            </FormControlLabel>
-            <Select selectedValue={closeCallType} onValueChange={handleCloseCallTypeChange} testID="close-call-type-select">
-              <SelectTrigger className="border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-                <SelectInput placeholder={t('call_detail.close_call_type_placeholder')} className="text-gray-900 dark:text-white" />
-                <SelectIcon />
-              </SelectTrigger>
-              <SelectPortal>
-                <SelectBackdrop />
-                <SelectContent className="max-h-[60vh] bg-white pb-20 dark:bg-gray-900">
-                  <SelectItem label={t('call_detail.close_call_types.closed')} value="1" />
-                  <SelectItem label={t('call_detail.close_call_types.cancelled')} value="2" />
-                  <SelectItem label={t('call_detail.close_call_types.unfounded')} value="3" />
-                  <SelectItem label={t('call_detail.close_call_types.founded')} value="4" />
-                  <SelectItem label={t('call_detail.close_call_types.minor')} value="5" />
-                  <SelectItem label={t('call_detail.close_call_types.transferred')} value="6" />
-                  <SelectItem label={t('call_detail.close_call_types.false_alarm')} value="7" />
-                </SelectContent>
-              </SelectPortal>
-            </Select>
-          </FormControl>
+        <VStack space="md" className="w-full shrink p-4">
+          <Heading size="lg" className="mb-4 text-center">
+            {t('call_detail.close_call')}
+          </Heading>
 
-          <VStack space="sm">
-            <Text className="font-medium text-gray-900 dark:text-gray-100">
-              {t('call_detail.close_call_note')} ({t('common.optional')}):
-            </Text>
-            <Textarea size="md" className="min-h-[100px] w-full border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-              <TextareaInput placeholder={t('call_detail.close_call_note_placeholder')} value={closeCallNote} onChangeText={setCloseCallNote} className="text-gray-900 dark:text-white" testID="close-call-note-input" />
-            </Textarea>
-          </VStack>
+          <KeyboardAwareScrollView
+            keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'}
+            showsVerticalScrollIndicator={false}
+            bottomOffset={20}
+            style={{ flexGrow: 0, flexShrink: 1, width: '100%' }}
+            testID="close-call-scroll-view"
+          >
+            <VStack space="md" className="w-full">
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText className="font-medium text-gray-900 dark:text-gray-100">{t('call_detail.close_call_type')}</FormControlLabelText>
+                </FormControlLabel>
+                <Select selectedValue={closeCallType} onValueChange={handleCloseCallTypeChange} testID="close-call-type-select">
+                  <SelectTrigger className="border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+                    <SelectInput placeholder={t('call_detail.close_call_type_placeholder')} className="text-gray-900 dark:text-white" />
+                    <SelectIcon />
+                  </SelectTrigger>
+                  <SelectPortal>
+                    <SelectBackdrop />
+                    <SelectContent className="max-h-[60vh] bg-white pb-20 dark:bg-gray-900">
+                      <SelectItem label={t('call_detail.close_call_types.closed')} value="1" />
+                      <SelectItem label={t('call_detail.close_call_types.cancelled')} value="2" />
+                      <SelectItem label={t('call_detail.close_call_types.unfounded')} value="3" />
+                      <SelectItem label={t('call_detail.close_call_types.founded')} value="4" />
+                      <SelectItem label={t('call_detail.close_call_types.minor')} value="5" />
+                      <SelectItem label={t('call_detail.close_call_types.transferred')} value="6" />
+                      <SelectItem label={t('call_detail.close_call_types.false_alarm')} value="7" />
+                    </SelectContent>
+                  </SelectPortal>
+                </Select>
+              </FormControl>
 
-          <HStack space="sm" className="mt-4 justify-between">
-            <Button variant="outline" className="flex-1" onPress={handleClose} disabled={isButtonDisabled} size={isLandscape ? 'md' : 'sm'}>
-              <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.cancel')}</ButtonText>
-            </Button>
-            <Button className="flex-1 bg-blue-600" onPress={handleSubmit} disabled={isButtonDisabled} size={isLandscape ? 'md' : 'sm'}>
-              <ButtonText className={`text-white ${isLandscape ? '' : 'text-xs'}`}>{t('call_detail.close_call')}</ButtonText>
-            </Button>
-          </HStack>
+              <VStack space="sm">
+                <Text className="font-medium">
+                  {t('call_detail.close_call_note')} ({t('common.optional')}):
+                </Text>
+                <Textarea size="md" className="min-h-[100px] w-full">
+                  <TextareaInput placeholder={t('call_detail.close_call_note_placeholder')} value={closeCallNote} onChangeText={setCloseCallNote} testID="close-call-note-input" />
+                </Textarea>
+              </VStack>
+
+              <HStack space="sm" className="mt-4 justify-between">
+                <Button variant="outline" className="flex-1" onPress={handleClose} isDisabled={isButtonDisabled}>
+                  <ButtonText>{t('common.cancel')}</ButtonText>
+                </Button>
+                <Button className="flex-1 bg-green-600" onPress={handleSubmit} isDisabled={isButtonDisabled}>
+                  <ButtonText>{isSubmitting ? t('common.submitting') : t('call_detail.close_call')}</ButtonText>
+                </Button>
+              </HStack>
+            </VStack>
+          </KeyboardAwareScrollView>
         </VStack>
-      </KeyboardAwareScrollView>
-    </CustomBottomSheet>
+      </ActionsheetContent>
+    </Actionsheet>
   );
 };

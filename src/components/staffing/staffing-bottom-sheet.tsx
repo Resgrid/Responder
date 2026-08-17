@@ -207,7 +207,9 @@ export const StaffingBottomSheet = () => {
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
 
-        <VStack space="md" className="w-full p-4">
+        {/* shrink lets this column compress under the sheet's max-h when the keyboard
+            padding eats vertical space; without it Yoga clips the overflow instead. */}
+        <VStack space="md" className="w-full shrink p-4">
           {/* Step indicator */}
           <HStack space="sm" className="mb-2 justify-center">
             <Text className="text-sm text-gray-500 dark:text-gray-400">
@@ -258,7 +260,12 @@ export const StaffingBottomSheet = () => {
           )}
 
           {currentStep === 'add-note' && (
-            <KeyboardAwareScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} bottomOffset={20} style={{ flexGrow: 0, width: '100%' }}>
+            <KeyboardAwareScrollView
+              keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'}
+              showsVerticalScrollIndicator={false}
+              bottomOffset={20}
+              style={{ flexGrow: 0, flexShrink: 1, width: '100%' }}
+            >
               <VStack space="md" className="w-full">
                 <VStack space="sm">
                   <Text className="font-medium">{safeT('home.staffing.selected_staffing')}:</Text>

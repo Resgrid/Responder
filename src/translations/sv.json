@@ -1027,12 +1027,18 @@
     "title": "Protokoll"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Mottagande bekräftat. Tack.",
+    "communication_test_failed": "Kunde inte bekräfta mottagandet. Försök igen.",
+    "communication_test_prompt": "Detta är bara ett test. Bekräfta att du tagit emot det så att din avdelning vet att de kan nå dig.",
+    "confirm_receipt": "Bekräfta mottagande",
+    "confirming_receipt": "Bekräftar...",
     "message": "Meddelande",
     "new_notification": "Ny avisering",
     "title": "Titel",
     "types": {
       "call": "Larm",
       "chat": "Chatt",
+      "communication_test": "Kommunikationstest",
       "group_chat": "Gruppchatt",
       "message": "Meddelande",
       "notification": "Avisering",

@@ -51,22 +51,31 @@ jest.mock('nativewind', () => ({
 (global as any).cssInterop = jest.fn();
 
 // Mock UI components
-jest.mock('@/components/ui/bottom-sheet', () => ({
-  CustomBottomSheet: ({ children, isOpen }: any) => {
-    const { View } = require('react-native');
-    return isOpen ? <View testID="bottom-sheet">{children}</View> : null;
-  },
-}));
+jest.mock('@/components/ui/actionsheet', () => {
+  const { View } = require('react-native');
+  return {
+    Actionsheet: ({ isOpen, children }: any) => (isOpen ? <View testID="actionsheet">{children}</View> : null),
+    ActionsheetBackdrop: ({ children }: any) => <View testID="actionsheet-backdrop">{children}</View>,
+    ActionsheetContent: ({ children, style }: any) => (
+      <View testID="actionsheet-content" style={style}>
+        {children}
+      </View>
+    ),
+    ActionsheetDragIndicator: () => <View testID="actionsheet-drag-indicator" />,
+    ActionsheetDragIndicatorWrapper: ({ children }: any) => <View testID="actionsheet-drag-indicator-wrapper">{children}</View>,
+  };
+});
 
 jest.mock('@/components/ui/button', () => ({
-  Button: ({ children, onPress, testID, disabled, ...props }: any) => {
+  Button: ({ children, onPress, testID, disabled, isDisabled, ...props }: any) => {
     const { TouchableOpacity } = require('react-native');
+    const resolvedDisabled = disabled ?? isDisabled;
     return (
       <TouchableOpacity
         onPress={onPress}
         testID={testID}
-        disabled={disabled}
-        accessibilityState={{ disabled: !!disabled }}
+        disabled={resolvedDisabled}
+        accessibilityState={{ disabled: !!resolvedDisabled }}
         {...props}
       >
         {children}
@@ -735,7 +744,7 @@ describe('CloseCallBottomSheet', () => {
     });
   });
 
-  describe('Android keyboard handling', () => {
+  describe('keyboard handling', () => {
     const originalOS = Platform.OS;
     let keyboardListeners: Record<string, (event?: unknown) => void>;
     let addListenerSpy: jest.SpyInstance;
@@ -751,52 +760,38 @@ describe('CloseCallBottomSheet', () => {
     afterEach(() => {
       addListenerSpy.mockRestore();
       Platform.OS = originalOS;
-      jest.useRealTimers();
     });
 
-    it('pads the scroll content by the keyboard height while the keyboard is shown', () => {
+    it('pads the sheet by the keyboard height on Android while the keyboard is shown', () => {
       Platform.OS = 'android';
       render(<CloseCallBottomSheet isOpen={true} onClose={jest.fn()} callId="test-call-1" />);
 
-      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 0 });
+      expect(screen.getByTestId('actionsheet-content').props.style).toEqual({ paddingBottom: 0 });
 
       act(() => {
         keyboardListeners.keyboardDidShow({ endCoordinates: { height: 300 } });
       });
-      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 300 });
+      expect(screen.getByTestId('actionsheet-content').props.style).toEqual({ paddingBottom: 300 });
 
       act(() => {
         keyboardListeners.keyboardDidHide();
       });
-      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 0 });
+      expect(screen.getByTestId('actionsheet-content').props.style).toEqual({ paddingBottom: 0 });
     });
 
-    it('does not subscribe to keyboard events on iOS', () => {
+    it('pads the sheet using the will events on iOS', () => {
       Platform.OS = 'ios';
       render(<CloseCallBottomSheet isOpen={true} onClose={jest.fn()} callId="test-call-1" />);
 
-      expect(keyboardListeners.keyboardDidShow).toBeUndefined();
-      expect(screen.getByTestId('close-call-scroll-view').props.contentContainerStyle).toEqual({ paddingBottom: 0 });
-    });
-
-    it('clears the pending scroll timer when the component unmounts', () => {
-      Platform.OS = 'android';
-      jest.useFakeTimers();
-      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
-      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
-      const { unmount } = render(<CloseCallBottomSheet isOpen={true} onClose={jest.fn()} callId="test-call-1" />);
+      act(() => {
+        keyboardListeners.keyboardWillShow({ endCoordinates: { height: 336 } });
+      });
+      expect(screen.getByTestId('actionsheet-content').props.style).toEqual({ paddingBottom: 336 });
 
       act(() => {
-        keyboardListeners.keyboardDidShow({ endCoordinates: { height: 300 } });
+        keyboardListeners.keyboardWillHide();
       });
-      const timerId = setTimeoutSpy.mock.results[setTimeoutSpy.mock.results.length - 1]?.value;
-
-      unmount();
-
-      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 100);
-      expect(clearTimeoutSpy).toHaveBeenCalledWith(timerId);
-      setTimeoutSpy.mockRestore();
-      clearTimeoutSpy.mockRestore();
+      expect(screen.getByTestId('actionsheet-content').props.style).toEqual({ paddingBottom: 0 });
     });
   });
 });

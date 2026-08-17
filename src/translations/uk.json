@@ -1027,12 +1027,18 @@
     "title": "Протоколи"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Отримання підтверджено. Дякуємо.",
+    "communication_test_failed": "Не вдалося підтвердити отримання. Спробуйте ще раз.",
+    "communication_test_prompt": "Це лише тест. Підтвердьте отримання, щоб ваш підрозділ знав, що може з вами зв’язатися.",
+    "confirm_receipt": "Підтвердити отримання",
+    "confirming_receipt": "Підтвердження...",
     "message": "Повідомлення",
     "new_notification": "Нове сповіщення",
     "title": "Заголовок",
     "types": {
       "call": "Виклик",
       "chat": "Чат",
+      "communication_test": "Тест зв’язку",
       "group_chat": "Груповий чат",
       "message": "Повідомлення",
       "notification": "Сповіщення",

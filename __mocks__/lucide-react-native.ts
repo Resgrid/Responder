@@ -38,6 +38,7 @@ export const MoreVertical = mockIcon;
 export const PaperclipIcon = mockIcon;
 export const Phone = mockIcon;
 export const PhoneIcon = mockIcon;
+export const RadioTower = mockIcon;
 export const RouteIcon = mockIcon;
 export const SettingsIcon = mockIcon;
 export const SmartphoneIcon = mockIcon;

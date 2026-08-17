@@ -1027,12 +1027,18 @@
     "title": "Protokoły"
   },
   "push_notifications": {
+    "communication_test_confirmed": "Odbiór potwierdzony. Dziękujemy.",
+    "communication_test_failed": "Nie udało się potwierdzić odbioru. Spróbuj ponownie.",
+    "communication_test_prompt": "To tylko test. Potwierdź odbiór, aby Twoja jednostka wiedziała, że może się z Tobą skontaktować.",
+    "confirm_receipt": "Potwierdź odbiór",
+    "confirming_receipt": "Potwierdzanie...",
     "message": "Wiadomość",
     "new_notification": "Nowe powiadomienie",
     "title": "Tytuł",
     "types": {
       "call": "Zgłoszenie",
       "chat": "Czat",
+      "communication_test": "Test łączności",
       "group_chat": "Czat grupowy",
       "message": "Wiadomość",
       "notification": "Powiadomienie",
