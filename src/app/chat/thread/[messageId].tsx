@@ -9,7 +9,7 @@ import { MessageComposer } from '@/components/chat/message-composer';
 import { Box } from '@/components/ui/box';
 import { Divider } from '@/components/ui/divider';
 import { FlatList } from '@/components/ui/flat-list';
-import { KeyboardAvoidingView } from '@/components/ui/keyboard-avoiding-view';
+import { BottomAnchoredKeyboardView } from '@/components/ui/keyboard-avoiding-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
@@ -113,7 +113,7 @@ export default function ThreadScreen() {
     <Box className="size-full flex-1 bg-gray-50 dark:bg-gray-900">
       <Stack.Screen options={{ title: t('chat.thread'), headerShown: true, headerBackTitle: '' }} />
 
-      <KeyboardAvoidingView className="flex-1" behavior="padding" automaticOffset>
+      <BottomAnchoredKeyboardView>
         {root ? (
           <VStack className="border-b border-gray-200 bg-white py-2 dark:border-gray-700 dark:bg-gray-800">
             <Text className="px-4 text-xs font-semibold uppercase text-typography-400">{t('chat.original_message')}</Text>
@@ -136,7 +136,7 @@ export default function ThreadScreen() {
         {/* Threads carry text and location only; omitting the image/GIF callbacks keeps
             those actions out of the attachment sheet instead of showing dead entries. */}
         <MessageComposer onSendText={handleSendText} onSendLocation={handleSendLocation} onTyping={() => undefined} placeholder={t('chat.reply_placeholder')} allowUrgent={false} />
-      </KeyboardAvoidingView>
+      </BottomAnchoredKeyboardView>
     </Box>
   );
 }
