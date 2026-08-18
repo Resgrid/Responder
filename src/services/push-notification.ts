@@ -29,7 +29,17 @@ export function handleChatDeepLink(eventCode: string): boolean {
   if (!match) return false;
   const channelId = match[2];
   if (/[/\\?#]/.test(channelId)) return false;
-  void routerPushWithRetry({ pathname: '/chat/[channelId]', params: { channelId } }, { maxAttempts: 20, retryDelayMs: 250 }).catch((error) => {
+  void routerPushWithRetry(
+    { pathname: '/chat/[channelId]', params: { channelId } },
+    {
+      maxAttempts: 40,
+      retryDelayMs: 250,
+      // On a cold start the session is still hydrating. Pushing a protected route before
+      // it settles gets the route replaced by the auth guard, which is indistinguishable
+      // from the tap doing nothing at all.
+      waitUntil: () => useAuthStore.getState().status === 'signedIn',
+    }
+  ).catch((error) => {
     logger.error({ message: 'Failed to deep-link to chat channel', context: { error, eventCode } });
   });
   return true;
