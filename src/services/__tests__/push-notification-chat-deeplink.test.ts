@@ -29,9 +29,14 @@ jest.mock('@/components/weather-alerts/weather-alert-navigation', () => ({
   openWeatherAlertDetail: jest.fn(() => Promise.resolve()),
 }));
 
-jest.mock('@/lib/auth', () => ({
-  useAuthStore: jest.fn(),
-}));
+jest.mock('@/lib/auth', () => {
+  // handleChatDeepLink gates the cold-start push on a hydrated session, so the mock has to
+  // answer getState() as well as being callable as a selector hook.
+  const state = { status: 'signedIn', userId: 'test-user' };
+  const store: any = jest.fn((selector: any) => (selector ? selector(state) : state));
+  store.getState = () => state;
+  return { useAuthStore: store };
+});
 
 jest.mock('@/lib/logging', () => ({
   logger: {
@@ -98,9 +103,10 @@ describe('handleChatDeepLink', () => {
 
     expect(handleChatDeepLink('t:channel-1')).toBe(true);
 
-    await jest.advanceTimersByTimeAsync(250 * 20);
+    // Budget is 40 attempts x 250ms so a cold start has ~10s to mount and hydrate.
+    await jest.advanceTimersByTimeAsync(250 * 40);
 
-    expect(push).toHaveBeenCalledTimes(20);
+    expect(push).toHaveBeenCalledTimes(40);
     expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Failed to deep-link to chat channel' }));
   });
 });

@@ -8,9 +8,14 @@ jest.mock('expo-device', () => ({
 }));
 
 // Mock auth module to prevent side effects and getBaseApiUrl errors
-jest.mock('@/lib/auth', () => ({
-  useAuthStore: jest.fn(),
-}));
+jest.mock('@/lib/auth', () => {
+  // handleChatDeepLink gates the cold-start push on a hydrated session, so the mock has to
+  // answer getState() as well as being callable as a selector hook.
+  const state = { status: 'signedIn', userId: 'test-user' };
+  const store: any = jest.fn((selector: any) => (selector ? selector(state) : state));
+  store.getState = () => state;
+  return { useAuthStore: store };
+});
 // Mock the store, keeping the real parseNotificationData so eventCode routing stays realistic
 jest.mock('@/stores/push-notification/store', () => ({
   ...jest.requireActual('@/stores/push-notification/store'),
