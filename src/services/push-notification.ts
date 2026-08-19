@@ -1,5 +1,6 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import type { Href } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
@@ -7,9 +8,9 @@ import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
-import { routerPushWithRetry } from '@/lib/navigation';
+import { type RouterPushRetryOptions, routerPushWithRetry } from '@/lib/navigation';
 import { getDeviceUuid } from '@/lib/storage/app';
-import { parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
+import { isSafeRouteId, parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
 
 // Define notification response types
@@ -51,30 +52,49 @@ export function extractPushNotificationData(request: Notifications.NotificationR
 }
 
 /**
- * Handles chat push deep-links. Chat notifications carry an eventCode of
+ * Recognises chat push deep-links. Chat notifications carry an eventCode of
  * "t:{channelId}" (direct message) or "g:{channelId}" (group/channel); both
  * navigate to the chat conversation route. Case-insensitive so the legacy
- * uppercase prefixes deep-link too.
+ * uppercase prefixes deep-link too. Returns the channel id, or null when the
+ * eventCode is not a chat deep-link.
  */
-export function handleChatDeepLink(eventCode: string): boolean {
+export function parseChatDeepLink(eventCode: string): string | null {
   const match = /^([tg]):(.+)$/i.exec(eventCode);
-  if (!match) return false;
+  if (!match) return null;
   const channelId = match[2];
-  if (/[/\\?#]/.test(channelId)) return false;
-  void routerPushWithRetry(
-    { pathname: '/chat/[channelId]', params: { channelId } },
-    {
-      maxAttempts: 40,
-      retryDelayMs: 250,
-      // On a cold start the session is still hydrating. Pushing a protected route before
-      // it settles gets the route replaced by the auth guard, which is indistinguishable
-      // from the tap doing nothing at all.
-      waitUntil: () => useAuthStore.getState().status === 'signedIn',
-    }
-  ).catch((error) => {
+  if (!isSafeRouteId(channelId)) return null;
+  return channelId;
+}
+
+/**
+ * Retry budget for every push deep-link: 40 x 250ms gives a cold start ~10s to mount the
+ * root layout and hydrate the session before the push is given up on.
+ *
+ * On a cold start the session is still hydrating. Pushing a protected route before
+ * it settles gets the route replaced by the auth guard, which is indistinguishable
+ * from the tap doing nothing at all.
+ */
+const DEEP_LINK_RETRY_OPTIONS: RouterPushRetryOptions = {
+  maxAttempts: 40,
+  retryDelayMs: 250,
+  waitUntil: () => useAuthStore.getState().status === 'signedIn',
+};
+
+/**
+ * Resolves true when the tap was navigated, false when it was not a chat deep-link or the
+ * navigation never landed. A false result means the caller still owes the user a fallback —
+ * silently giving up leaves the app sitting on whatever screen it opened to.
+ */
+export async function handleChatDeepLink(eventCode: string): Promise<boolean> {
+  const channelId = parseChatDeepLink(eventCode);
+  if (!channelId) return false;
+  try {
+    await routerPushWithRetry({ pathname: '/chat/[channelId]', params: { channelId } }, DEEP_LINK_RETRY_OPTIONS);
+    return true;
+  } catch (error) {
     logger.error({ message: 'Failed to deep-link to chat channel', context: { error, eventCode } });
-  });
-  return true;
+    return false;
+  }
 }
 
 // Configure notifications behavior
@@ -215,7 +235,7 @@ class PushNotificationService {
     try {
       const lastResponse = await Notifications.getLastNotificationResponseAsync();
       if (lastResponse) {
-        this.handleNotificationResponse(lastResponse);
+        await this.handleNotificationResponse(lastResponse);
       }
     } catch (error) {
       logger.error({
@@ -261,7 +281,7 @@ class PushNotificationService {
     this.presentNotificationModal(notification.request);
   };
 
-  private handleNotificationResponse = (response: Notifications.NotificationResponse): void => {
+  private handleNotificationResponse = async (response: Notifications.NotificationResponse): Promise<void> => {
     const identifier = response.notification.request.identifier;
 
     // Skip if we already surfaced this exact response — guards against the cold-start replay and
@@ -279,53 +299,60 @@ class PushNotificationService {
     });
 
     // Tapping a push deep-links straight to the relevant screen: weather alerts, chat
-    // channels, calls, and messages all navigate directly. Anything else falls back to
+    // channels, calls, and messages all navigate directly. Anything else — and any deep-link
+    // that never lands, e.g. a cold start where the session never hydrates — falls back to
     // the persistent modal so the notification stays visible instead of the app opening
     // to nothing.
     if (eventCode) {
       const parsed = parseNotificationData({ eventCode, data });
 
       if (parsed.type === 'weather' && parsed.id) {
-        void this.navigateToWeatherAlert(parsed.id);
-        return;
-      }
-
-      // Deep-link chat notifications: eventCode "t:{channelId}" (DM) / "g:{channelId}" (group)
-      if (handleChatDeepLink(eventCode)) {
-        return;
-      }
-
-      if (parsed.type === 'call' && parsed.id && !/[/\\?#]/.test(parsed.id)) {
-        void routerPushWithRetry(
-          { pathname: '/call/[id]', params: { id: parsed.id } },
-          { maxAttempts: 40, retryDelayMs: 250, waitUntil: () => useAuthStore.getState().status === 'signedIn' }
-        ).catch((error) => {
-          logger.error({ message: 'Failed to deep-link to call from push notification', context: { error, eventCode } });
-        });
-        return;
-      }
-
-      if (parsed.type === 'message') {
-        void routerPushWithRetry('/(app)/messages', { maxAttempts: 40, retryDelayMs: 250, waitUntil: () => useAuthStore.getState().status === 'signedIn' }).catch((error) => {
-          logger.error({ message: 'Failed to deep-link to messages from push notification', context: { error, eventCode } });
-        });
-        return;
+        if (await this.navigateToWeatherAlert(parsed.id)) {
+          return;
+        }
+      } else if (parseChatDeepLink(eventCode)) {
+        // Deep-link chat notifications: eventCode "t:{channelId}" (DM) / "g:{channelId}" (group)
+        if (await handleChatDeepLink(eventCode)) {
+          return;
+        }
+      } else if (parsed.type === 'call' && isSafeRouteId(parsed.id)) {
+        if (await PushNotificationService.deepLink({ pathname: '/call/[id]', params: { id: parsed.id } }, 'Failed to deep-link to call from push notification', eventCode)) {
+          return;
+        }
+      } else if (parsed.type === 'message') {
+        if (await PushNotificationService.deepLink('/(app)/messages', 'Failed to deep-link to messages from push notification', eventCode)) {
+          return;
+        }
       }
     }
 
     this.presentNotificationModal(response.notification.request);
   };
 
+  // Resolves true when the push landed on its route, false once the retry budget is spent so
+  // the caller can fall back to the modal.
+  private static deepLink = async (href: Href, failureMessage: string, eventCode: string): Promise<boolean> => {
+    try {
+      await routerPushWithRetry(href, DEEP_LINK_RETRY_OPTIONS);
+      return true;
+    } catch (error) {
+      logger.error({ message: failureMessage, context: { error, eventCode } });
+      return false;
+    }
+  };
+
   // On a cold start the launch notification tap is replayed before the root layout has mounted,
   // where router.push throws — keep retrying until the router is ready.
-  private navigateToWeatherAlert = async (alertId: string): Promise<void> => {
+  private navigateToWeatherAlert = async (alertId: string): Promise<boolean> => {
     try {
       await openWeatherAlertDetail(alertId, { maxAttempts: 20, retryDelayMs: 250 });
+      return true;
     } catch (error) {
       logger.error({
         message: 'Failed to navigate to weather alert from push notification',
         context: { ...PushNotificationService.toErrorContext(error), alertId },
       });
+      return false;
     }
   };
 

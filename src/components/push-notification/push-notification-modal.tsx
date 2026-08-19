@@ -12,7 +12,7 @@ import { VStack } from '@/components/ui/vstack';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
-import { type NotificationType, usePushNotificationModalStore } from '@/stores/push-notification/store';
+import { isSafeRouteId, type NotificationType, usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { useToastStore } from '@/stores/toast/store';
 
 interface NotificationIconProps {
@@ -96,7 +96,7 @@ export const PushNotificationModal: React.FC = () => {
   };
 
   const handleViewCall = () => {
-    if (notification?.type === 'call' && notification.id) {
+    if (notification?.type === 'call' && isSafeRouteId(notification.id)) {
       trackEvent('push_notification_view_call_pressed', {
         id: notification.id,
         eventCode: notification.eventCode,
@@ -108,7 +108,7 @@ export const PushNotificationModal: React.FC = () => {
   };
 
   const handleViewChat = () => {
-    if ((notification?.type === 'chat' || notification?.type === 'group-chat') && notification.id) {
+    if ((notification?.type === 'chat' || notification?.type === 'group-chat') && isSafeRouteId(notification.id)) {
       trackEvent('push_notification_view_chat_pressed', {
         id: notification.id,
         eventCode: notification.eventCode,
@@ -281,13 +281,13 @@ export const PushNotificationModal: React.FC = () => {
               <ButtonText>{t('common.dismiss')}</ButtonText>
             </Button>
 
-            {notification.type === 'call' && notification.id ? (
+            {notification.type === 'call' && isSafeRouteId(notification.id) ? (
               <Button className="flex-1" onPress={handleViewCall}>
                 <ButtonText>{t('push_notifications.view_call')}</ButtonText>
               </Button>
             ) : null}
 
-            {(notification.type === 'chat' || notification.type === 'group-chat') && notification.id ? (
+            {(notification.type === 'chat' || notification.type === 'group-chat') && isSafeRouteId(notification.id) ? (
               <Button className="flex-1" onPress={handleViewChat} testID="view-chat-button">
                 <ButtonText>{t('push_notifications.view_chat')}</ButtonText>
               </Button>

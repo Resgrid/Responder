@@ -84,7 +84,9 @@ describe('Push Notification Service Integration', () => {
   const mockShowNotificationModal = jest.fn();
   const mockGetState = usePushNotificationModalStore.getState as jest.Mock;
   let notificationReceivedHandler: (notification: Notifications.Notification) => void;
-  let notificationResponseHandler: (response: Notifications.NotificationResponse) => void;
+  // The tap handler awaits its deep-link before deciding whether to fall back to the modal,
+  // so tests that assert the fallback have to await it too.
+  let notificationResponseHandler: (response: Notifications.NotificationResponse) => void | Promise<void>;
 
   beforeAll(() => {
     // Setup mocks first
@@ -485,6 +487,103 @@ describe('Push Notification Service Integration', () => {
 
     it('should register response listener on initialization', () => {
       expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled();
+    });
+
+    // A deep-link that never lands (cold start where the session never hydrates, router never
+    // mounts) must not degrade into a logged no-op — the modal is the fallback that keeps the
+    // notification reachable instead of the app opening to nothing.
+    describe('deep-link failure falls back to the modal', () => {
+      it('falls back when the call deep-link exhausts its retries', async () => {
+        (routerPushWithRetry as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'Emergency Call',
+          body: 'Structure fire at Main St',
+          data: { eventCode: 'C:1234' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/call/[id]', params: { id: '1234' } }, expect.objectContaining({ maxAttempts: 40 }));
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'C:1234',
+          title: 'Emergency Call',
+          body: 'Structure fire at Main St',
+          data: { eventCode: 'C:1234' },
+        });
+      });
+
+      it('falls back when the chat deep-link exhausts its retries', async () => {
+        (routerPushWithRetry as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'New Message',
+          body: 'Hello there',
+          data: { eventCode: 'g:9101' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/chat/[channelId]', params: { channelId: '9101' } }, expect.objectContaining({ maxAttempts: 40 }));
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'g:9101',
+          title: 'New Message',
+          body: 'Hello there',
+          data: { eventCode: 'g:9101' },
+        });
+      });
+
+      it('falls back when the messages deep-link exhausts its retries', async () => {
+        (routerPushWithRetry as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'New Message',
+          body: 'You have a new message',
+          data: { eventCode: 'M:5678' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(routerPushWithRetry).toHaveBeenCalledWith('/(app)/messages', expect.objectContaining({ maxAttempts: 40 }));
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'M:5678',
+          title: 'New Message',
+          body: 'You have a new message',
+          data: { eventCode: 'M:5678' },
+        });
+      });
+
+      it('falls back when the weather alert navigation fails', async () => {
+        (openWeatherAlertDetail as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'Severe Weather',
+          body: 'Tornado warning in your area',
+          data: { eventCode: 'W:9012', alertId: '9012' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(openWeatherAlertDetail).toHaveBeenCalledWith('9012', { maxAttempts: 20, retryDelayMs: 250 });
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'W:9012',
+          title: 'Severe Weather',
+          body: 'Tornado warning in your area',
+          data: { eventCode: 'W:9012', alertId: '9012' },
+        });
+      });
+
+      it('does not fall back when the deep-link lands', async () => {
+        const response = createMockResponse({
+          title: 'Emergency Call',
+          body: 'Structure fire at Main St',
+          data: { eventCode: 'C:1234' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(mockShowNotificationModal).not.toHaveBeenCalled();
+      });
     });
   });
 

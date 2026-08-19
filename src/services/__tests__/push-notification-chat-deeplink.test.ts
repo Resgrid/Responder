@@ -72,13 +72,13 @@ describe('handleChatDeepLink', () => {
     ['g:9101', '9101'],
     ['T:channel-1', 'channel-1'],
     ['G:9101', '9101'],
-  ])('navigates with explicit route params for %s', (eventCode, channelId) => {
-    expect(handleChatDeepLink(eventCode)).toBe(true);
+  ])('navigates with explicit route params for %s', async (eventCode, channelId) => {
+    await expect(handleChatDeepLink(eventCode)).resolves.toBe(true);
     expect(push).toHaveBeenCalledWith({ pathname: '/chat/[channelId]', params: { channelId } });
   });
 
-  it.each(['t:a/b', 't:a\\b', 'g:a?x=1', 'g:a#fragment', 'x:123', 't:', 'notacode', ':missingprefix'])('rejects invalid payload %s', (eventCode) => {
-    expect(handleChatDeepLink(eventCode)).toBe(false);
+  it.each(['t:a/b', 't:a\\b', 'g:a?x=1', 'g:a#fragment', 'x:123', 't:', 'notacode', ':missingprefix'])('rejects invalid payload %s', async (eventCode) => {
+    await expect(handleChatDeepLink(eventCode)).resolves.toBe(false);
     expect(push).not.toHaveBeenCalled();
   });
 
@@ -89,26 +89,29 @@ describe('handleChatDeepLink', () => {
       })
       .mockImplementationOnce(() => undefined);
 
-    expect(handleChatDeepLink('t:channel-1')).toBe(true);
+    const navigated = handleChatDeepLink('t:channel-1');
     expect(push).toHaveBeenCalledTimes(1);
 
     await jest.advanceTimersByTimeAsync(300);
 
     expect(push).toHaveBeenCalledTimes(2);
+    await expect(navigated).resolves.toBe(true);
     expect(logError).not.toHaveBeenCalled();
   });
 
-  it('logs an error after exhausting navigation retries', async () => {
+  it('resolves false and logs after exhausting navigation retries', async () => {
     push.mockImplementation(() => {
       throw new Error('router not ready');
     });
 
-    expect(handleChatDeepLink('t:channel-1')).toBe(true);
+    const navigated = handleChatDeepLink('t:channel-1');
 
     // Budget is 40 attempts x 250ms so a cold start has ~10s to mount and hydrate.
     await jest.advanceTimersByTimeAsync(250 * 40);
 
     expect(push).toHaveBeenCalledTimes(40);
+    // Resolving false is what tells the tap handler to fall back to the notification modal.
+    await expect(navigated).resolves.toBe(false);
     expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Failed to deep-link to chat channel' }));
   });
 });
