@@ -1046,7 +1046,9 @@
     },
     "unknown_type_warning": "Ten typ powiadomienia nie jest rozpoznawany.",
     "view_alert": "Wyświetl alert",
-    "view_call": "Wyświetl zgłoszenie"
+    "view_call": "Wyświetl zgłoszenie",
+    "view_chat": "Zobacz czat",
+    "view_message": "Zobacz wiadomości"
   },
   "roles": {
     "modal": {

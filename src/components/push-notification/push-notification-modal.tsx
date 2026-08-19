@@ -107,6 +107,30 @@ export const PushNotificationModal: React.FC = () => {
     }
   };
 
+  const handleViewChat = () => {
+    if ((notification?.type === 'chat' || notification?.type === 'group-chat') && notification.id) {
+      trackEvent('push_notification_view_chat_pressed', {
+        id: notification.id,
+        eventCode: notification.eventCode,
+      });
+
+      hideNotificationModal();
+      router.push({ pathname: '/chat/[channelId]', params: { channelId: notification.id } });
+    }
+  };
+
+  const handleViewMessages = () => {
+    if (notification?.type === 'message') {
+      trackEvent('push_notification_view_messages_pressed', {
+        id: notification.id,
+        eventCode: notification.eventCode,
+      });
+
+      hideNotificationModal();
+      router.push('/(app)/messages');
+    }
+  };
+
   const handleViewWeatherAlert = async () => {
     if (notification?.type !== 'weather' || !notification.id) {
       return;
@@ -260,6 +284,18 @@ export const PushNotificationModal: React.FC = () => {
             {notification.type === 'call' && notification.id ? (
               <Button className="flex-1" onPress={handleViewCall}>
                 <ButtonText>{t('push_notifications.view_call')}</ButtonText>
+              </Button>
+            ) : null}
+
+            {(notification.type === 'chat' || notification.type === 'group-chat') && notification.id ? (
+              <Button className="flex-1" onPress={handleViewChat} testID="view-chat-button">
+                <ButtonText>{t('push_notifications.view_chat')}</ButtonText>
+              </Button>
+            ) : null}
+
+            {notification.type === 'message' ? (
+              <Button className="flex-1" onPress={handleViewMessages} testID="view-messages-button">
+                <ButtonText>{t('push_notifications.view_message')}</ButtonText>
               </Button>
             ) : null}
 

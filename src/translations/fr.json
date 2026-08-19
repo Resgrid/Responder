@@ -1046,7 +1046,9 @@
     },
     "unknown_type_warning": "Ce type de notification n'est pas reconnu.",
     "view_alert": "Voir l'alerte",
-    "view_call": "Voir l'appel"
+    "view_call": "Voir l'appel",
+    "view_chat": "Voir la discussion",
+    "view_message": "Voir les messages"
   },
   "roles": {
     "modal": {

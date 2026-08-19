@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
+import { routerPushWithRetry } from '@/lib/navigation';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 
 // Mock expo-device so tests don't attempt to load native modules
@@ -27,6 +28,13 @@ jest.mock('@/stores/push-notification/store', () => ({
 // Mock the weather alert navigation helper used for weather push deep links
 jest.mock('@/components/weather-alerts/weather-alert-navigation', () => ({
   openWeatherAlertDetail: jest.fn(() => Promise.resolve()),
+}));
+
+// Mock the retrying router helper used for call/chat/message push deep links
+jest.mock('@/lib/navigation', () => ({
+  routerPushWithRetry: jest.fn(() => Promise.resolve()),
+  registerNavigationReadyCheck: jest.fn(),
+  isNavigationReady: jest.fn(() => true),
 }));
 
 // Mock expo-notifications
@@ -107,6 +115,7 @@ describe('Push Notification Service Integration', () => {
     // Only clear the showNotificationModal mock between tests, not the addNotificationReceivedListener mock
     mockShowNotificationModal.mockClear();
     (openWeatherAlertDetail as jest.Mock).mockClear();
+    (routerPushWithRetry as jest.Mock).mockClear();
     mockGetState.mockReturnValue({
       showNotificationModal: mockShowNotificationModal,
     });
@@ -430,7 +439,7 @@ describe('Push Notification Service Integration', () => {
       });
     });
 
-    it('should show modal for call notification when tapped', () => {
+    it('should deep-link straight to the call detail when a call notification is tapped', () => {
       const response = createMockResponse({
         title: 'Emergency Call',
         body: 'Structure fire at Main St',
@@ -441,14 +450,8 @@ describe('Push Notification Service Integration', () => {
 
       notificationResponseHandler(response);
 
-      expect(mockShowNotificationModal).toHaveBeenCalledWith({
-        eventCode: 'C:1234',
-        title: 'Emergency Call',
-        body: 'Structure fire at Main St',
-        data: {
-          eventCode: 'C:1234',
-        },
-      });
+      expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/call/[id]', params: { id: '1234' } }, expect.objectContaining({ maxAttempts: 40, retryDelayMs: 250 }));
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
     it('should not show modal when the tapped notification has no eventCode', () => {
@@ -477,7 +480,7 @@ describe('Push Notification Service Integration', () => {
       notificationResponseHandler(response);
       notificationResponseHandler(response);
 
-      expect(mockShowNotificationModal).toHaveBeenCalledTimes(1);
+      expect(routerPushWithRetry).toHaveBeenCalledTimes(1);
     });
 
     it('should register response listener on initialization', () => {
@@ -512,7 +515,7 @@ describe('Push Notification Service Integration', () => {
       expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
-    it('replays a non-weather launch notification response so the modal is shown', async () => {
+    it('replays a launch notification response and deep-links to the call detail', async () => {
       const { pushNotificationService } = require('../push-notification');
 
       const launchResponse = {
@@ -529,17 +532,12 @@ describe('Push Notification Service Integration', () => {
 
       (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValueOnce(launchResponse);
       mockShowNotificationModal.mockClear();
+      (routerPushWithRetry as jest.Mock).mockClear();
 
       await (pushNotificationService as any).presentLaunchNotificationResponse();
 
-      expect(mockShowNotificationModal).toHaveBeenCalledWith({
-        eventCode: 'C:1234',
-        title: 'Emergency Call',
-        body: 'Structure fire at Main St',
-        data: {
-          eventCode: 'C:1234',
-        },
-      });
+      expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/call/[id]', params: { id: '1234' } }, expect.objectContaining({ maxAttempts: 40, retryDelayMs: 250 }));
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
     it('does not present anything when the app was not launched from a notification', async () => {

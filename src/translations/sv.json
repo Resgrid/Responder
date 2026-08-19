@@ -1046,7 +1046,9 @@
     },
     "unknown_type_warning": "Den här aviseringstypen känns inte igen.",
     "view_alert": "Visa varning",
-    "view_call": "Visa larm"
+    "view_call": "Visa larm",
+    "view_chat": "Visa chatt",
+    "view_message": "Visa meddelanden"
   },
   "roles": {
     "modal": {
