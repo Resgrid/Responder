@@ -1046,7 +1046,9 @@
     },
     "unknown_type_warning": "نوع الإشعار هذا غير معروف.",
     "view_alert": "عرض التنبيه",
-    "view_call": "عرض المكالمة"
+    "view_call": "عرض المكالمة",
+    "view_chat": "عرض المحادثة",
+    "view_message": "عرض الرسائل"
   },
   "roles": {
     "modal": {

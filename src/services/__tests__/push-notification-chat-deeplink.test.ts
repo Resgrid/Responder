@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 
 import { logger } from '@/lib/logging';
 
-import { handleChatDeepLink } from '../push-notification';
+import { extractPushNotificationData, handleChatDeepLink } from '../push-notification';
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
@@ -70,13 +70,15 @@ describe('handleChatDeepLink', () => {
   it.each([
     ['t:channel-1', 'channel-1'],
     ['g:9101', '9101'],
-  ])('navigates with explicit route params for %s', (eventCode, channelId) => {
-    expect(handleChatDeepLink(eventCode)).toBe(true);
+    ['T:channel-1', 'channel-1'],
+    ['G:9101', '9101'],
+  ])('navigates with explicit route params for %s', async (eventCode, channelId) => {
+    await expect(handleChatDeepLink(eventCode)).resolves.toBe(true);
     expect(push).toHaveBeenCalledWith({ pathname: '/chat/[channelId]', params: { channelId } });
   });
 
-  it.each(['t:a/b', 't:a\\b', 'g:a?x=1', 'g:a#fragment', 'x:123', 't:', 'notacode', ':missingprefix'])('rejects invalid payload %s', (eventCode) => {
-    expect(handleChatDeepLink(eventCode)).toBe(false);
+  it.each(['t:a/b', 't:a\\b', 'g:a?x=1', 'g:a#fragment', 'x:123', 't:', 'notacode', ':missingprefix'])('rejects invalid payload %s', async (eventCode) => {
+    await expect(handleChatDeepLink(eventCode)).resolves.toBe(false);
     expect(push).not.toHaveBeenCalled();
   });
 
@@ -87,26 +89,64 @@ describe('handleChatDeepLink', () => {
       })
       .mockImplementationOnce(() => undefined);
 
-    expect(handleChatDeepLink('t:channel-1')).toBe(true);
+    const navigated = handleChatDeepLink('t:channel-1');
     expect(push).toHaveBeenCalledTimes(1);
 
     await jest.advanceTimersByTimeAsync(300);
 
     expect(push).toHaveBeenCalledTimes(2);
+    await expect(navigated).resolves.toBe(true);
     expect(logError).not.toHaveBeenCalled();
   });
 
-  it('logs an error after exhausting navigation retries', async () => {
+  it('resolves false and logs after exhausting navigation retries', async () => {
     push.mockImplementation(() => {
       throw new Error('router not ready');
     });
 
-    expect(handleChatDeepLink('t:channel-1')).toBe(true);
+    const navigated = handleChatDeepLink('t:channel-1');
 
     // Budget is 40 attempts x 250ms so a cold start has ~10s to mount and hydrate.
     await jest.advanceTimersByTimeAsync(250 * 40);
 
     expect(push).toHaveBeenCalledTimes(40);
+    // Resolving false is what tells the tap handler to fall back to the notification modal.
+    await expect(navigated).resolves.toBe(false);
     expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Failed to deep-link to chat channel' }));
+  });
+});
+
+describe('extractPushNotificationData', () => {
+  const makeRequest = (data: unknown, triggerPayload?: unknown): any => ({
+    identifier: 'req-1',
+    content: { title: 'T', body: 'B', data },
+    trigger: triggerPayload === undefined ? { type: 'push' } : { type: 'push', payload: triggerPayload },
+  });
+
+  it('reads eventCode from content.data (Android FCM path)', () => {
+    const { eventCode, data } = extractPushNotificationData(makeRequest({ eventCode: 'g:123', other: 1 }));
+    expect(eventCode).toBe('g:123');
+    expect(data).toEqual({ eventCode: 'g:123', other: 1 });
+  });
+
+  it('falls back to a top-level trigger payload key (iOS APNs custom key)', () => {
+    const { eventCode } = extractPushNotificationData(makeRequest(undefined, { aps: { alert: {} }, eventCode: 't:abc', type: '13' }));
+    expect(eventCode).toBe('t:abc');
+  });
+
+  it('falls back to the trigger payload body dict (iOS expo-style body key)', () => {
+    const { eventCode } = extractPushNotificationData(makeRequest(null, { aps: {}, body: { eventCode: 'C:55' } }));
+    expect(eventCode).toBe('C:55');
+  });
+
+  it('falls back to an aps-nested eventCode (FCM-relayed APNs override)', () => {
+    const { eventCode } = extractPushNotificationData(makeRequest({}, { aps: { category: 'chats', eventCode: 'g:77' } }));
+    expect(eventCode).toBe('g:77');
+  });
+
+  it('returns undefined when no eventCode exists anywhere', () => {
+    const { eventCode, data } = extractPushNotificationData(makeRequest({ foo: 'bar' }, { aps: {} }));
+    expect(eventCode).toBeUndefined();
+    expect(data).toEqual({ foo: 'bar' });
   });
 });

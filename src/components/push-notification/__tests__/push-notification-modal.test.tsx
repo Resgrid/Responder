@@ -81,6 +81,9 @@ jest.mock('@/lib/logging', () => ({
 }));
 
 jest.mock('@/stores/push-notification/store', () => ({
+  // Keep the real isSafeRouteId so the tests exercise the same channel id validation the
+  // deep-link handler uses, rather than a stub that always says yes.
+  ...jest.requireActual('@/stores/push-notification/store'),
   usePushNotificationModalStore: jest.fn(),
 }));
 
@@ -107,6 +110,7 @@ jest.mock('react-i18next', () => ({
         'push_notifications.types.notification': 'Notification',
         'push_notifications.unknown_type_warning': 'Unknown notification type',
         'push_notifications.view_alert': 'View Alert',
+        'push_notifications.view_chat': 'View chat',
         'common.dismiss': 'Close',
       };
       return translations[key] || key;
@@ -303,6 +307,90 @@ describe('PushNotificationModal', () => {
         eventCode: 'C:1234',
       });
     });
+  });
+
+  // The call id comes from the push payload and is interpolated into the route path, so the same
+  // separator/query/fragment rejection the deep-link handler applies has to hold here too.
+  it.each(['../chat/9999', 'a\\b', 'a?x=1', 'a#fragment', ''])('should not offer the call button for unsafe call id %s', (id) => {
+    const hideNotificationModalMock = jest.fn();
+
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: {
+        type: 'call' as const,
+        id,
+        eventCode: `C:${id}`,
+        title: 'Emergency Call',
+        body: 'Structure fire',
+      },
+      hideNotificationModal: hideNotificationModalMock,
+    });
+
+    render(<PushNotificationModal />);
+
+    expect(screen.queryByText('View call')).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(hideNotificationModalMock).not.toHaveBeenCalled();
+    expect(mockAnalytics.trackEvent).not.toHaveBeenCalledWith('push_notification_view_call_pressed', expect.any(Object));
+  });
+
+  it('should handle view chat button press', async () => {
+    const hideNotificationModalMock = jest.fn();
+
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: {
+        type: 'group-chat' as const,
+        id: '9101',
+        eventCode: 'G:9101',
+        title: 'Group Chat',
+        body: 'Group chat content',
+      },
+      hideNotificationModal: hideNotificationModalMock,
+    });
+
+    render(<PushNotificationModal />);
+
+    const viewChatButton = screen.queryByText('View chat');
+    expect(viewChatButton).toBeTruthy();
+    fireEvent.press(viewChatButton!);
+
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith({ pathname: '/chat/[channelId]', params: { channelId: '9101' } });
+      expect(hideNotificationModalMock).toHaveBeenCalled();
+      expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_view_chat_pressed', {
+        id: '9101',
+        eventCode: 'G:9101',
+      });
+    });
+  });
+
+  // The channel id comes from the push payload, so an id carrying path separators, a query, or a
+  // fragment must not reach the router — the deep-link handler rejects the same ids.
+  it.each(['../call/9999', 'a\\b', 'a?x=1', 'a#fragment', ''])('should not offer the chat button for unsafe channel id %s', (id) => {
+    const hideNotificationModalMock = jest.fn();
+
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: {
+        type: 'chat' as const,
+        id,
+        eventCode: `T:${id}`,
+        title: 'Chat Message',
+        body: 'Chat content',
+      },
+      hideNotificationModal: hideNotificationModalMock,
+    });
+
+    render(<PushNotificationModal />);
+
+    expect(screen.queryByText('View chat')).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(hideNotificationModalMock).not.toHaveBeenCalled();
+    expect(mockAnalytics.trackEvent).not.toHaveBeenCalledWith('push_notification_view_chat_pressed', expect.any(Object));
   });
 
   it('should render weather alert notification with a view button', () => {

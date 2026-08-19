@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
+import { routerPushWithRetry } from '@/lib/navigation';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 
 // Mock expo-device so tests don't attempt to load native modules
@@ -27,6 +28,13 @@ jest.mock('@/stores/push-notification/store', () => ({
 // Mock the weather alert navigation helper used for weather push deep links
 jest.mock('@/components/weather-alerts/weather-alert-navigation', () => ({
   openWeatherAlertDetail: jest.fn(() => Promise.resolve()),
+}));
+
+// Mock the retrying router helper used for call/chat/message push deep links
+jest.mock('@/lib/navigation', () => ({
+  routerPushWithRetry: jest.fn(() => Promise.resolve()),
+  registerNavigationReadyCheck: jest.fn(),
+  isNavigationReady: jest.fn(() => true),
 }));
 
 // Mock expo-notifications
@@ -76,7 +84,9 @@ describe('Push Notification Service Integration', () => {
   const mockShowNotificationModal = jest.fn();
   const mockGetState = usePushNotificationModalStore.getState as jest.Mock;
   let notificationReceivedHandler: (notification: Notifications.Notification) => void;
-  let notificationResponseHandler: (response: Notifications.NotificationResponse) => void;
+  // The tap handler awaits its deep-link before deciding whether to fall back to the modal,
+  // so tests that assert the fallback have to await it too.
+  let notificationResponseHandler: (response: Notifications.NotificationResponse) => void | Promise<void>;
 
   beforeAll(() => {
     // Setup mocks first
@@ -107,6 +117,7 @@ describe('Push Notification Service Integration', () => {
     // Only clear the showNotificationModal mock between tests, not the addNotificationReceivedListener mock
     mockShowNotificationModal.mockClear();
     (openWeatherAlertDetail as jest.Mock).mockClear();
+    (routerPushWithRetry as jest.Mock).mockClear();
     mockGetState.mockReturnValue({
       showNotificationModal: mockShowNotificationModal,
     });
@@ -430,7 +441,7 @@ describe('Push Notification Service Integration', () => {
       });
     });
 
-    it('should show modal for call notification when tapped', () => {
+    it('should deep-link straight to the call detail when a call notification is tapped', () => {
       const response = createMockResponse({
         title: 'Emergency Call',
         body: 'Structure fire at Main St',
@@ -441,14 +452,8 @@ describe('Push Notification Service Integration', () => {
 
       notificationResponseHandler(response);
 
-      expect(mockShowNotificationModal).toHaveBeenCalledWith({
-        eventCode: 'C:1234',
-        title: 'Emergency Call',
-        body: 'Structure fire at Main St',
-        data: {
-          eventCode: 'C:1234',
-        },
-      });
+      expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/call/[id]', params: { id: '1234' } }, expect.objectContaining({ maxAttempts: 40, retryDelayMs: 250 }));
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
     it('should not show modal when the tapped notification has no eventCode', () => {
@@ -477,11 +482,108 @@ describe('Push Notification Service Integration', () => {
       notificationResponseHandler(response);
       notificationResponseHandler(response);
 
-      expect(mockShowNotificationModal).toHaveBeenCalledTimes(1);
+      expect(routerPushWithRetry).toHaveBeenCalledTimes(1);
     });
 
     it('should register response listener on initialization', () => {
       expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled();
+    });
+
+    // A deep-link that never lands (cold start where the session never hydrates, router never
+    // mounts) must not degrade into a logged no-op — the modal is the fallback that keeps the
+    // notification reachable instead of the app opening to nothing.
+    describe('deep-link failure falls back to the modal', () => {
+      it('falls back when the call deep-link exhausts its retries', async () => {
+        (routerPushWithRetry as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'Emergency Call',
+          body: 'Structure fire at Main St',
+          data: { eventCode: 'C:1234' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/call/[id]', params: { id: '1234' } }, expect.objectContaining({ maxAttempts: 40 }));
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'C:1234',
+          title: 'Emergency Call',
+          body: 'Structure fire at Main St',
+          data: { eventCode: 'C:1234' },
+        });
+      });
+
+      it('falls back when the chat deep-link exhausts its retries', async () => {
+        (routerPushWithRetry as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'New Message',
+          body: 'Hello there',
+          data: { eventCode: 'g:9101' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/chat/[channelId]', params: { channelId: '9101' } }, expect.objectContaining({ maxAttempts: 40 }));
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'g:9101',
+          title: 'New Message',
+          body: 'Hello there',
+          data: { eventCode: 'g:9101' },
+        });
+      });
+
+      it('falls back when the messages deep-link exhausts its retries', async () => {
+        (routerPushWithRetry as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'New Message',
+          body: 'You have a new message',
+          data: { eventCode: 'M:5678' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(routerPushWithRetry).toHaveBeenCalledWith('/(app)/messages', expect.objectContaining({ maxAttempts: 40 }));
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'M:5678',
+          title: 'New Message',
+          body: 'You have a new message',
+          data: { eventCode: 'M:5678' },
+        });
+      });
+
+      it('falls back when the weather alert navigation fails', async () => {
+        (openWeatherAlertDetail as jest.Mock).mockRejectedValueOnce(new Error('navigation never became ready'));
+
+        const response = createMockResponse({
+          title: 'Severe Weather',
+          body: 'Tornado warning in your area',
+          data: { eventCode: 'W:9012', alertId: '9012' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(openWeatherAlertDetail).toHaveBeenCalledWith('9012', { maxAttempts: 20, retryDelayMs: 250 });
+        expect(mockShowNotificationModal).toHaveBeenCalledWith({
+          eventCode: 'W:9012',
+          title: 'Severe Weather',
+          body: 'Tornado warning in your area',
+          data: { eventCode: 'W:9012', alertId: '9012' },
+        });
+      });
+
+      it('does not fall back when the deep-link lands', async () => {
+        const response = createMockResponse({
+          title: 'Emergency Call',
+          body: 'Structure fire at Main St',
+          data: { eventCode: 'C:1234' },
+        });
+
+        await notificationResponseHandler(response);
+
+        expect(mockShowNotificationModal).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -512,7 +614,7 @@ describe('Push Notification Service Integration', () => {
       expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
-    it('replays a non-weather launch notification response so the modal is shown', async () => {
+    it('replays a launch notification response and deep-links to the call detail', async () => {
       const { pushNotificationService } = require('../push-notification');
 
       const launchResponse = {
@@ -529,17 +631,12 @@ describe('Push Notification Service Integration', () => {
 
       (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValueOnce(launchResponse);
       mockShowNotificationModal.mockClear();
+      (routerPushWithRetry as jest.Mock).mockClear();
 
       await (pushNotificationService as any).presentLaunchNotificationResponse();
 
-      expect(mockShowNotificationModal).toHaveBeenCalledWith({
-        eventCode: 'C:1234',
-        title: 'Emergency Call',
-        body: 'Structure fire at Main St',
-        data: {
-          eventCode: 'C:1234',
-        },
-      });
+      expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/call/[id]', params: { id: '1234' } }, expect.objectContaining({ maxAttempts: 40, retryDelayMs: 250 }));
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
     it('does not present anything when the app was not launched from a notification', async () => {

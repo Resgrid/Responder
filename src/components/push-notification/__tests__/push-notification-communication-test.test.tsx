@@ -64,6 +64,8 @@ jest.mock('@/lib/logging', () => ({
 }));
 
 jest.mock('@/stores/push-notification/store', () => ({
+  // Keep the real isSafeRouteId; the modal calls it while deciding which action buttons to render.
+  ...jest.requireActual('@/stores/push-notification/store'),
   usePushNotificationModalStore: jest.fn(),
 }));
 
