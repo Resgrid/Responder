@@ -63,6 +63,13 @@ const WEATHER_ALERT_TRANSLATION_KEYS = {
 } as const;
 
 const WEATHER_ALERT_NUMERIC_ENUMS = {
+  category: {
+    '0': 'Met',
+    '1': 'Fire',
+    '2': 'Health',
+    '3': 'Env',
+    '4': 'Other',
+  },
   certainty: {
     '0': 'Observed',
     '1': 'Likely',
@@ -130,6 +137,18 @@ export const formatWeatherAlertTranslation = (t: WeatherAlertTranslationFunction
   }
 
   return toHumanReadableFallback(trimmedValue);
+};
+
+// Resolves either the server's numeric category or a CAP category string to the canonical
+// name used as the icon-map key ('Met', 'Fire', ...). Unknown values fall back to 'Other'.
+export const getWeatherAlertCategoryName = (value: unknown): string => {
+  const normalizedCategory = normalizeWeatherAlertValue(value);
+  const numericCategory = WEATHER_ALERT_NUMERIC_ENUMS.category[normalizedCategory as keyof typeof WEATHER_ALERT_NUMERIC_ENUMS.category];
+  if (numericCategory) {
+    return numericCategory;
+  }
+
+  return WEATHER_ALERT_TRANSLATION_KEYS.category[normalizedCategory as keyof typeof WEATHER_ALERT_TRANSLATION_KEYS.category] ?? 'Other';
 };
 
 export const getWeatherAlertSeverityOrder = (value: unknown): number => {

@@ -18,14 +18,14 @@ jest.mock('@/lib/utils', () => ({
 
 const makeAlert = (overrides: Partial<WeatherAlertResultData> = {}): WeatherAlertResultData => {
   const alert = new WeatherAlertResultData();
-  alert.AlertId = '1';
+  alert.WeatherAlertId = '1';
   alert.Event = 'Tornado Warning';
-  alert.Severity = 'Severe';
-  alert.Category = 'Met';
+  alert.Severity = 1; // Severe
+  alert.AlertCategory = 0; // Met
   alert.AreaDescription = 'County A, County B';
-  alert.Urgency = 'Immediate';
-  alert.Certainty = 'Observed';
-  alert.Expires = '2026-04-15T18:00:00Z';
+  alert.Urgency = 0; // Immediate
+  alert.Certainty = 0; // Observed
+  alert.ExpiresOnUtc = '2026-04-15T18:00:00.000Z';
   return Object.assign(alert, overrides);
 };
 
@@ -46,7 +46,7 @@ describe('WeatherAlertCard', () => {
 
   it('calls onPress with alertId when pressed', () => {
     const onPress = jest.fn();
-    const alert = makeAlert({ AlertId: 'alert-42' });
+    const alert = makeAlert({ WeatherAlertId: 'alert-42' });
     render(<WeatherAlertCard alert={alert} onPress={onPress} />);
 
     fireEvent.press(screen.getByTestId('weather-alert-card-alert-42'));
@@ -54,13 +54,13 @@ describe('WeatherAlertCard', () => {
   });
 
   it('renders with different severity levels', () => {
-    const extremeAlert = makeAlert({ Severity: 'Extreme', Event: 'Extreme Heat Warning' });
+    const extremeAlert = makeAlert({ Severity: 0, Event: 'Extreme Heat Warning' });
     const { unmount } = render(<WeatherAlertCard alert={extremeAlert} onPress={jest.fn()} />);
 
     expect(screen.getByText('Extreme Heat Warning')).toBeTruthy();
     unmount();
 
-    const minorAlert = makeAlert({ Severity: 'Minor', Event: 'Frost Advisory' });
+    const minorAlert = makeAlert({ Severity: 3, Event: 'Frost Advisory' });
     render(<WeatherAlertCard alert={minorAlert} onPress={jest.fn()} />);
 
     expect(screen.getByText('Frost Advisory')).toBeTruthy();

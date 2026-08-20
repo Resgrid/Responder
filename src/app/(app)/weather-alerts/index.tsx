@@ -45,7 +45,6 @@ export default function WeatherAlertsList() {
         : base.filter(
             (alert) =>
               (alert.Event?.toLowerCase() || '').includes(normalizedQuery) ||
-              (alert.Title?.toLowerCase() || '').includes(normalizedQuery) ||
               (alert.Headline?.toLowerCase() || '').includes(normalizedQuery) ||
               (alert.AreaDescription?.toLowerCase() || '').includes(normalizedQuery)
           );

@@ -58,8 +58,8 @@ describe('WeatherAlertBanner', () => {
 
   it('should render with the highest severity alert', () => {
     const severeAlerts = [
-      { AlertId: '1', Event: 'Tornado Warning', Severity: 'Extreme', Category: 'Met' },
-      { AlertId: '2', Event: 'Severe Thunderstorm', Severity: 'Severe', Category: 'Met' },
+      { WeatherAlertId: '1', Event: 'Tornado Warning', Severity: 0, AlertCategory: 0 },
+      { WeatherAlertId: '2', Event: 'Severe Thunderstorm', Severity: 1, AlertCategory: 0 },
     ];
 
     setupMock({ WeatherAlertsEnabled: true }, severeAlerts);
@@ -72,7 +72,7 @@ describe('WeatherAlertBanner', () => {
 
   it('should not show more badge when only one severe alert', () => {
     const severeAlerts = [
-      { AlertId: '1', Event: 'Tornado Warning', Severity: 'Extreme', Category: 'Met' },
+      { WeatherAlertId: '1', Event: 'Tornado Warning', Severity: 0, AlertCategory: 0 },
     ];
 
     setupMock({ WeatherAlertsEnabled: true }, severeAlerts);

@@ -1352,7 +1352,11 @@
       "Draft": "Draft",
       "Exercise": "Exercise",
       "System": "System",
-      "Test": "Test"
+      "Test": "Test",
+      "Active": "Active",
+      "Updated": "Updated",
+      "Expired": "Expired",
+      "Cancelled": "Cancelled"
     },
     "title": "Weather Alerts",
     "urgency": {

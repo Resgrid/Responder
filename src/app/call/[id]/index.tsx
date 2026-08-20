@@ -732,7 +732,7 @@ export default function CallDetail() {
 
         {/* Tabs */}
         <Box className="mx-4 mb-4 mt-3 flex-1 overflow-hidden rounded-xl bg-white pb-8 shadow-xs dark:bg-gray-800">
-          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'lg' : 'md'} scrollable={true} />
+          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'lg' : 'md'} tabClassName="min-h-11" scrollable={true} />
         </Box>
       </ScrollView>
       {isMapModalOpen && coordinates.latitude != null && coordinates.longitude != null ? (
