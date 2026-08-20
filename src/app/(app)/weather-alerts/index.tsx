@@ -44,9 +44,7 @@ export default function WeatherAlertsList() {
         ? base
         : base.filter(
             (alert) =>
-              (alert.Event?.toLowerCase() || '').includes(normalizedQuery) ||
-              (alert.Headline?.toLowerCase() || '').includes(normalizedQuery) ||
-              (alert.AreaDescription?.toLowerCase() || '').includes(normalizedQuery)
+              (alert.Event?.toLowerCase() || '').includes(normalizedQuery) || (alert.Headline?.toLowerCase() || '').includes(normalizedQuery) || (alert.AreaDescription?.toLowerCase() || '').includes(normalizedQuery)
           );
 
     return [...searched].sort((a, b) => getWeatherAlertSeverityOrder(a.Severity) - getWeatherAlertSeverityOrder(b.Severity));

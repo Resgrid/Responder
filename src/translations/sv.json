@@ -1348,11 +1348,15 @@
       "Unknown": "Okänd"
     },
     "status": {
+      "Active": "Aktiv",
       "Actual": "Faktisk",
+      "Cancelled": "Upphävd",
       "Draft": "Utkast",
       "Exercise": "Övning",
+      "Expired": "Utgången",
       "System": "System",
-      "Test": "Test"
+      "Test": "Test",
+      "Updated": "Uppdaterad"
     },
     "title": "Vädervarningar",
     "urgency": {

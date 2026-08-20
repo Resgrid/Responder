@@ -1348,11 +1348,15 @@
       "Unknown": "Unbekannt"
     },
     "status": {
+      "Active": "Aktiv",
       "Actual": "Aktuell",
+      "Cancelled": "Aufgehoben",
       "Draft": "Entwurf",
       "Exercise": "Übung",
+      "Expired": "Abgelaufen",
       "System": "System",
-      "Test": "Test"
+      "Test": "Test",
+      "Updated": "Aktualisiert"
     },
     "title": "Wetterwarnungen",
     "urgency": {
