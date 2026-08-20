@@ -1348,11 +1348,15 @@
       "Unknown": "Desconocido"
     },
     "status": {
+      "Active": "Activo",
       "Actual": "Real",
+      "Cancelled": "Cancelado",
       "Draft": "Borrador",
       "Exercise": "Ejercicio",
+      "Expired": "Expirado",
       "System": "Sistema",
-      "Test": "Prueba"
+      "Test": "Prueba",
+      "Updated": "Actualizado"
     },
     "title": "Alertas Meteorológicas",
     "urgency": {

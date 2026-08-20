@@ -1348,15 +1348,15 @@
       "Unknown": "Unknown"
     },
     "status": {
+      "Active": "Active",
       "Actual": "Actual",
+      "Cancelled": "Cancelled",
       "Draft": "Draft",
       "Exercise": "Exercise",
+      "Expired": "Expired",
       "System": "System",
       "Test": "Test",
-      "Active": "Active",
-      "Updated": "Updated",
-      "Expired": "Expired",
-      "Cancelled": "Cancelled"
+      "Updated": "Updated"
     },
     "title": "Weather Alerts",
     "urgency": {

@@ -1348,11 +1348,15 @@
       "Unknown": "غير معروف"
     },
     "status": {
+      "Active": "نشط",
       "Actual": "فعلي",
+      "Cancelled": "ملغى",
       "Draft": "مسودة",
       "Exercise": "تمرين",
+      "Expired": "منتهي الصلاحية",
       "System": "نظام",
-      "Test": "اختبار"
+      "Test": "اختبار",
+      "Updated": "محدث"
     },
     "title": "تنبيهات الطقس",
     "urgency": {
