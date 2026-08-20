@@ -7,7 +7,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
-import { normalizeWeatherAlertSeverity } from '@/components/weather-alerts/weather-alert-formatters';
+import { getWeatherAlertCategoryName, normalizeWeatherAlertSeverity } from '@/components/weather-alerts/weather-alert-formatters';
 import { SEVERITY_COLORS } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import type { WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAlertResultData';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
@@ -38,7 +38,7 @@ export const WeatherAlertBanner: React.FC = () => {
   const topAlert: WeatherAlertResultData = severeAlerts[0];
   const moreCount = severeAlerts.length - 1;
   const bgColor = SEVERITY_COLORS[normalizeWeatherAlertSeverity(topAlert.Severity)] ?? SEVERITY_COLORS.Severe;
-  const CategoryIcon = CATEGORY_ICON_MAP[topAlert.Category] ?? AlertTriangle;
+  const CategoryIcon = CATEGORY_ICON_MAP[getWeatherAlertCategoryName(topAlert.AlertCategory)] ?? AlertTriangle;
 
   return (
     <Pressable onPress={handlePress} testID="weather-alert-banner">

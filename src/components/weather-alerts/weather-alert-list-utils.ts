@@ -3,7 +3,7 @@ import type { WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAl
 const normalizeValue = (value?: string): string => value?.trim() ?? '';
 
 export const getWeatherAlertIdentity = (alert: WeatherAlertResultData): string => {
-  const alertId = normalizeValue(alert.AlertId);
+  const alertId = normalizeValue(alert.WeatherAlertId);
   if (alertId.length > 0) {
     return `alert:${alertId}`;
   }
@@ -13,13 +13,13 @@ export const getWeatherAlertIdentity = (alert: WeatherAlertResultData): string =
     return `external:${externalId}`;
   }
 
-  const fallbackParts = [alert.CreatedOnUtc, alert.Event, alert.AreaDescription].map((value) => normalizeValue(value)).filter((value) => value.length > 0);
+  const fallbackParts = [alert.FirstSeenUtc, alert.Event, alert.AreaDescription].map((value) => normalizeValue(value)).filter((value) => value.length > 0);
 
   return fallbackParts.join('::');
 };
 
 export const getWeatherAlertRequestId = (alert: WeatherAlertResultData): string => {
-  const alertId = normalizeValue(alert.AlertId);
+  const alertId = normalizeValue(alert.WeatherAlertId);
   if (alertId.length > 0) {
     return alertId;
   }
@@ -28,7 +28,7 @@ export const getWeatherAlertRequestId = (alert: WeatherAlertResultData): string 
 };
 
 export const getWeatherAlertKey = (alert: WeatherAlertResultData, index: number): string => {
-  const alertId = normalizeValue(alert.AlertId);
+  const alertId = normalizeValue(alert.WeatherAlertId);
   if (alertId.length > 0) {
     return `alert:${alertId}`;
   }

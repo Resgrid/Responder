@@ -6,9 +6,9 @@ import { getWeatherAlertKey, getWeatherAlertRequestId } from '@/components/weath
 
 const makeAlert = (overrides: Partial<WeatherAlertResultData> = {}): WeatherAlertResultData => {
   const alert = new WeatherAlertResultData();
-  alert.AlertId = 'alert-1';
+  alert.WeatherAlertId = 'alert-1';
   alert.ExternalId = 'external-1';
-  alert.CreatedOnUtc = '2026-04-15T10:00:00Z';
+  alert.FirstSeenUtc = '2026-04-15T10:00:00Z';
   alert.Event = 'Tornado Warning';
   return Object.assign(alert, overrides);
 };
@@ -21,19 +21,19 @@ describe('getWeatherAlertKey', () => {
   });
 
   it('uses external id when alert id is missing', () => {
-    const alert = makeAlert({ AlertId: '' });
+    const alert = makeAlert({ WeatherAlertId: '' });
 
     expect(getWeatherAlertKey(alert, 7)).toBe('external:external-1');
   });
 
   it('falls back to derived identity plus index when ids are missing', () => {
-    const alert = makeAlert({ AlertId: '', ExternalId: '' });
+    const alert = makeAlert({ WeatherAlertId: '', ExternalId: '' });
 
     expect(getWeatherAlertKey(alert, 7)).toBe('2026-04-15T10:00:00Z::Tornado Warning::7');
   });
 
   it('falls back to the list index when all identity fields are missing', () => {
-    const alert = makeAlert({ AlertId: '', ExternalId: '', CreatedOnUtc: '', Event: '', AreaDescription: '' });
+    const alert = makeAlert({ WeatherAlertId: '', ExternalId: '', FirstSeenUtc: '', Event: '', AreaDescription: '' });
 
     expect(getWeatherAlertKey(alert, 7)).toBe('weather-alert-7');
   });
@@ -47,13 +47,13 @@ describe('getWeatherAlertRequestId', () => {
   });
 
   it('does not use external id for detail requests', () => {
-    const alert = makeAlert({ AlertId: '' });
+    const alert = makeAlert({ WeatherAlertId: '' });
 
     expect(getWeatherAlertRequestId(alert)).toBe('');
   });
 
   it('returns empty string when no request id is available', () => {
-    const alert = makeAlert({ AlertId: '', ExternalId: '' });
+    const alert = makeAlert({ WeatherAlertId: '', ExternalId: '' });
 
     expect(getWeatherAlertRequestId(alert)).toBe('');
   });

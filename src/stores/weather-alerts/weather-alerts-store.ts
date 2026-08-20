@@ -31,11 +31,15 @@ interface WeatherAlertsState {
   reset: () => void;
 }
 
+// EffectiveOnUtc is the Z-stamped UTC instant; empty against older servers, which keeps the
+// comparison a stable 0-0 tie instead of NaN.
+const alertRecency = (alert: WeatherAlertResultData): number => (alert.EffectiveOnUtc ? new Date(alert.EffectiveOnUtc).getTime() : 0);
+
 const sortAlerts = (alerts: WeatherAlertResultData[]): WeatherAlertResultData[] => {
   const sortedAlerts = [...alerts].sort((a, b) => {
     const severityDiff = getWeatherAlertSeverityOrder(a.Severity) - getWeatherAlertSeverityOrder(b.Severity);
     if (severityDiff !== 0) return severityDiff;
-    return new Date(b.CreatedOnUtc).getTime() - new Date(a.CreatedOnUtc).getTime();
+    return alertRecency(b) - alertRecency(a);
   });
 
   const seenAlertIds = new Set<string>();
@@ -150,7 +154,7 @@ export const useWeatherAlertsStore = create<WeatherAlertsState>((set, get) => ({
       const updatedAlert = result.Data;
       if (updatedAlert) {
         set((state) => ({
-          alerts: sortAlerts(state.alerts.map((a) => (a.AlertId === alertId ? updatedAlert : a))),
+          alerts: sortAlerts(state.alerts.map((a) => (a.WeatherAlertId === alertId ? updatedAlert : a))),
           lastWeatherAlertTimestamp: Date.now(),
         }));
       }
@@ -164,7 +168,7 @@ export const useWeatherAlertsStore = create<WeatherAlertsState>((set, get) => ({
 
   handleAlertExpired: (alertId: string) => {
     set((state) => ({
-      alerts: state.alerts.filter((a) => a.AlertId !== alertId),
+      alerts: state.alerts.filter((a) => a.WeatherAlertId !== alertId),
       lastWeatherAlertTimestamp: Date.now(),
     }));
   },

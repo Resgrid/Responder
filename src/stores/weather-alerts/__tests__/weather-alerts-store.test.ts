@@ -15,7 +15,7 @@ const mockGetAlertsNearLocation = getAlertsNearLocation as jest.MockedFunction<t
 const mockGetSettings = getSettings as jest.MockedFunction<typeof getSettings>;
 
 const makeAlert = (overrides: Record<string, unknown> = {}) => ({
-  AlertId: '1',
+  WeatherAlertId: '1',
   DepartmentId: 1,
   Title: 'Test Alert',
   Event: 'Tornado Warning',
@@ -42,7 +42,7 @@ const makeAlert = (overrides: Record<string, unknown> = {}) => ({
   RadiusMiles: 25,
   ExternalId: 'ext-1',
   CreatedOn: '2026-04-15T10:00:00Z',
-  CreatedOnUtc: '2026-04-15T10:00:00Z',
+  EffectiveOnUtc: '2026-04-15T10:00:00Z',
   ...overrides,
 });
 
@@ -55,9 +55,9 @@ describe('useWeatherAlertsStore', () => {
   describe('fetchActiveAlerts', () => {
     it('should fetch and sort alerts by severity then date', async () => {
       const alerts = [
-        makeAlert({ AlertId: '1', Severity: 'Minor', CreatedOnUtc: '2026-04-15T12:00:00Z' }),
-        makeAlert({ AlertId: '2', Severity: 'Extreme', CreatedOnUtc: '2026-04-15T10:00:00Z' }),
-        makeAlert({ AlertId: '3', Severity: 'Severe', CreatedOnUtc: '2026-04-15T11:00:00Z' }),
+        makeAlert({ WeatherAlertId: '1', Severity: 'Minor', EffectiveOnUtc: '2026-04-15T12:00:00Z' }),
+        makeAlert({ WeatherAlertId: '2', Severity: 'Extreme', EffectiveOnUtc: '2026-04-15T10:00:00Z' }),
+        makeAlert({ WeatherAlertId: '3', Severity: 'Severe', EffectiveOnUtc: '2026-04-15T11:00:00Z' }),
       ];
 
       mockGetActiveAlerts.mockResolvedValue({ Data: alerts } as any);
@@ -79,8 +79,8 @@ describe('useWeatherAlertsStore', () => {
 
     it('should dedupe alerts with the same identity', async () => {
       const alerts = [
-        makeAlert({ AlertId: '1', ExternalId: 'external-1', Event: 'Older Alert', CreatedOnUtc: '2026-04-15T09:00:00Z', Severity: 'Moderate' }),
-        makeAlert({ AlertId: '1', ExternalId: 'external-1', Event: 'Newer Alert', CreatedOnUtc: '2026-04-15T10:00:00Z', Severity: 'Severe' }),
+        makeAlert({ WeatherAlertId: '1', ExternalId: 'external-1', Event: 'Older Alert', EffectiveOnUtc: '2026-04-15T09:00:00Z', Severity: 'Moderate' }),
+        makeAlert({ WeatherAlertId: '1', ExternalId: 'external-1', Event: 'Newer Alert', EffectiveOnUtc: '2026-04-15T10:00:00Z', Severity: 'Severe' }),
       ];
 
       mockGetActiveAlerts.mockResolvedValue({ Data: alerts } as any);
@@ -115,7 +115,7 @@ describe('useWeatherAlertsStore', () => {
 
   describe('handleAlertReceived', () => {
     it('should prepend new alert and re-sort', async () => {
-      const existingAlert = makeAlert({ AlertId: '1', Severity: 'Minor' });
+      const existingAlert = makeAlert({ WeatherAlertId: '1', Severity: 'Minor' });
       mockGetActiveAlerts.mockResolvedValue({ Data: [existingAlert] } as any);
 
       const { result } = renderHook(() => useWeatherAlertsStore());
@@ -124,7 +124,7 @@ describe('useWeatherAlertsStore', () => {
         await result.current.fetchActiveAlerts();
       });
 
-      const newAlert = makeAlert({ AlertId: '2', Severity: 'Extreme' });
+      const newAlert = makeAlert({ WeatherAlertId: '2', Severity: 'Extreme' });
       mockGetWeatherAlert.mockResolvedValue({ Data: newAlert } as any);
 
       await act(async () => {
@@ -133,13 +133,13 @@ describe('useWeatherAlertsStore', () => {
 
       await waitFor(() => {
         expect(result.current.alerts).toHaveLength(2);
-        expect(result.current.alerts[0].AlertId).toBe('2');
+        expect(result.current.alerts[0].WeatherAlertId).toBe('2');
         expect(result.current.alerts[0].Severity).toBe('Extreme');
       });
     });
 
     it('should avoid duplicate alerts when receiving an existing alert', async () => {
-      const existingAlert = makeAlert({ AlertId: '1', ExternalId: 'external-1', Event: 'Current Alert', Severity: 'Minor' });
+      const existingAlert = makeAlert({ WeatherAlertId: '1', ExternalId: 'external-1', Event: 'Current Alert', Severity: 'Minor' });
       mockGetActiveAlerts.mockResolvedValue({ Data: [existingAlert] } as any);
 
       const { result } = renderHook(() => useWeatherAlertsStore());
@@ -148,7 +148,7 @@ describe('useWeatherAlertsStore', () => {
         await result.current.fetchActiveAlerts();
       });
 
-      const updatedAlert = makeAlert({ AlertId: '1', ExternalId: 'external-1', Event: 'Updated Alert', Severity: 'Extreme' });
+      const updatedAlert = makeAlert({ WeatherAlertId: '1', ExternalId: 'external-1', Event: 'Updated Alert', Severity: 'Extreme' });
       mockGetWeatherAlert.mockResolvedValue({ Data: updatedAlert } as any);
 
       await act(async () => {
@@ -165,7 +165,7 @@ describe('useWeatherAlertsStore', () => {
 
   describe('handleAlertUpdated', () => {
     it('should update existing alert in place', async () => {
-      const alert = makeAlert({ AlertId: '1', Severity: 'Moderate', Event: 'Old Event' });
+      const alert = makeAlert({ WeatherAlertId: '1', Severity: 'Moderate', Event: 'Old Event' });
       mockGetActiveAlerts.mockResolvedValue({ Data: [alert] } as any);
 
       const { result } = renderHook(() => useWeatherAlertsStore());
@@ -174,7 +174,7 @@ describe('useWeatherAlertsStore', () => {
         await result.current.fetchActiveAlerts();
       });
 
-      const updated = makeAlert({ AlertId: '1', Severity: 'Severe', Event: 'Updated Event' });
+      const updated = makeAlert({ WeatherAlertId: '1', Severity: 'Severe', Event: 'Updated Event' });
       mockGetWeatherAlert.mockResolvedValue({ Data: updated } as any);
 
       await act(async () => {
@@ -191,7 +191,7 @@ describe('useWeatherAlertsStore', () => {
 
   describe('handleAlertExpired', () => {
     it('should remove the expired alert', async () => {
-      const alerts = [makeAlert({ AlertId: '1' }), makeAlert({ AlertId: '2' })];
+      const alerts = [makeAlert({ WeatherAlertId: '1' }), makeAlert({ WeatherAlertId: '2' })];
       mockGetActiveAlerts.mockResolvedValue({ Data: alerts } as any);
 
       const { result } = renderHook(() => useWeatherAlertsStore());
@@ -206,14 +206,14 @@ describe('useWeatherAlertsStore', () => {
 
       await waitFor(() => {
         expect(result.current.alerts).toHaveLength(1);
-        expect(result.current.alerts[0].AlertId).toBe('2');
+        expect(result.current.alerts[0].WeatherAlertId).toBe('2');
       });
     });
   });
 
   describe('getSevereAlerts', () => {
     it('should return only Extreme and Severe alerts', async () => {
-      const alerts = [makeAlert({ AlertId: '1', Severity: 'Extreme' }), makeAlert({ AlertId: '2', Severity: 'Moderate' }), makeAlert({ AlertId: '3', Severity: 'Severe' }), makeAlert({ AlertId: '4', Severity: 'Minor' })];
+      const alerts = [makeAlert({ WeatherAlertId: '1', Severity: 'Extreme' }), makeAlert({ WeatherAlertId: '2', Severity: 'Moderate' }), makeAlert({ WeatherAlertId: '3', Severity: 'Severe' }), makeAlert({ WeatherAlertId: '4', Severity: 'Minor' })];
       mockGetActiveAlerts.mockResolvedValue({ Data: alerts } as any);
 
       const { result } = renderHook(() => useWeatherAlertsStore());
@@ -231,7 +231,7 @@ describe('useWeatherAlertsStore', () => {
 
   describe('reset', () => {
     it('should clear all state', async () => {
-      const alerts = [makeAlert({ AlertId: '1' })];
+      const alerts = [makeAlert({ WeatherAlertId: '1' })];
       mockGetActiveAlerts.mockResolvedValue({ Data: alerts } as any);
 
       const { result } = renderHook(() => useWeatherAlertsStore());

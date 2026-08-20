@@ -7,7 +7,7 @@ import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { formatWeatherAlertTranslation, normalizeWeatherAlertSeverity } from '@/components/weather-alerts/weather-alert-formatters';
+import { formatWeatherAlertTranslation, getWeatherAlertCategoryName, normalizeWeatherAlertSeverity } from '@/components/weather-alerts/weather-alert-formatters';
 import { getTimeAgoUtc } from '@/lib/utils';
 import { SEVERITY_COLORS } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import type { WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAlertResultData';
@@ -32,7 +32,7 @@ export const WeatherAlertCard: React.FC<WeatherAlertCardProps> = ({ alert, onPre
   const { t } = useTranslation();
   const normalizedSeverity = normalizeWeatherAlertSeverity(alert.Severity);
   const accentColor = SEVERITY_COLORS[normalizedSeverity] ?? SEVERITY_COLORS.Unknown;
-  const CategoryIcon = CATEGORY_ICON_MAP[alert.Category] ?? AlertTriangle;
+  const CategoryIcon = CATEGORY_ICON_MAP[getWeatherAlertCategoryName(alert.AlertCategory)] ?? AlertTriangle;
   const alertRequestId = getWeatherAlertRequestId(alert);
 
   const handlePress = React.useCallback(() => {
@@ -41,7 +41,9 @@ export const WeatherAlertCard: React.FC<WeatherAlertCardProps> = ({ alert, onPre
     }
   }, [onPress, alertRequestId, alert.Event]);
 
-  const expiresText = alert.Expires ? getTimeAgoUtc(alert.Expires) : '';
+  // ExpiresOnUtc is the real UTC instant (Z-stamped); ExpiresUtc is a department-local display
+  // string that would read hours off, so the text only renders against servers that send it.
+  const expiresText = alert.ExpiresOnUtc ? getTimeAgoUtc(alert.ExpiresOnUtc) : '';
 
   return (
     <Pressable onPress={handlePress} testID={`weather-alert-card-${alertRequestId || 'unknown'}`}>
@@ -68,12 +70,12 @@ export const WeatherAlertCard: React.FC<WeatherAlertCardProps> = ({ alert, onPre
             ) : null}
 
             <HStack className="items-center" space="md">
-              {alert.Urgency ? (
+              {alert.Urgency != null ? (
                 <Text className="text-xs text-gray-500 dark:text-gray-400">
                   {t('weatherAlerts.urgency.label')}: {formatWeatherAlertTranslation(t, 'urgency', alert.Urgency)}
                 </Text>
               ) : null}
-              {alert.Certainty ? (
+              {alert.Certainty != null ? (
                 <Text className="text-xs text-gray-500 dark:text-gray-400">
                   {t('weatherAlerts.certainty.label')}: {formatWeatherAlertTranslation(t, 'certainty', alert.Certainty)}
                 </Text>

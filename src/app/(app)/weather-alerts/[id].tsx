@@ -12,7 +12,7 @@ import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { formatWeatherAlertTranslation } from '@/components/weather-alerts/weather-alert-formatters';
+import { formatWeatherAlertTranslation, getWeatherAlertCategoryName, normalizeWeatherAlertSeverity } from '@/components/weather-alerts/weather-alert-formatters';
 import { getWeatherAlertRequestId } from '@/components/weather-alerts/weather-alert-list-utils';
 import { WeatherAlertSeverityBadge } from '@/components/weather-alerts/weather-alert-severity-badge';
 import { SEVERITY_COLORS } from '@/models/v4/weatherAlerts/weatherAlertEnums';
@@ -48,6 +48,16 @@ function formatDateTime(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+// Prefers the Z-stamped UTC instant (rendered in the device's local time); falls back to the
+// department-local display string older servers send, rendered verbatim.
+function formatTiming(onUtc: string | undefined, display: string): string {
+  if (onUtc) {
+    const formatted = formatDateTime(onUtc);
+    if (formatted) return formatted;
+  }
+  return display;
 }
 
 export default function WeatherAlertDetail() {
@@ -120,11 +130,14 @@ export default function WeatherAlertDetail() {
     if (polygonExtrema) {
       return [(polygonExtrema.minLng + polygonExtrema.maxLng) / 2, (polygonExtrema.minLat + polygonExtrema.maxLat) / 2];
     }
-    if (selectedAlert?.Latitude && selectedAlert?.Longitude) {
-      return [parseFloat(selectedAlert.Longitude), parseFloat(selectedAlert.Latitude)];
+    if (selectedAlert?.CenterGeoLocation) {
+      const [lat, lng] = selectedAlert.CenterGeoLocation.split(',').map((part) => parseFloat(part.trim()));
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return [lng, lat];
+      }
     }
     return null;
-  }, [polygonExtrema, selectedAlert?.Latitude, selectedAlert?.Longitude]);
+  }, [polygonExtrema, selectedAlert?.CenterGeoLocation]);
 
   // Fit the camera to the polygon so the whole impacted area is visible —
   // a fixed zoom clips large warnings and shrinks small ones to a dot.
@@ -152,7 +165,8 @@ export default function WeatherAlertDetail() {
     );
   }
 
-  const accentColor = SEVERITY_COLORS[selectedAlert.Severity] ?? SEVERITY_COLORS.Unknown;
+  const normalizedSeverity = normalizeWeatherAlertSeverity(selectedAlert.Severity);
+  const accentColor = SEVERITY_COLORS[normalizedSeverity] ?? SEVERITY_COLORS.Unknown;
 
   return (
     <VStack className="size-full flex-1" testID="weather-alert-detail">
@@ -165,8 +179,8 @@ export default function WeatherAlertDetail() {
         {/* Severity + Category Header */}
         <Box className="bg-white px-4 py-3 dark:bg-gray-900">
           <HStack className="items-center" space="md">
-            <WeatherAlertSeverityBadge severity={selectedAlert.Severity} />
-            {selectedAlert.Category ? <Text className="text-sm text-gray-500 dark:text-gray-400">{formatWeatherAlertTranslation(t, 'category', selectedAlert.Category)}</Text> : null}
+            <WeatherAlertSeverityBadge severity={normalizedSeverity} />
+            {selectedAlert.AlertCategory != null ? <Text className="text-sm text-gray-500 dark:text-gray-400">{t(`weatherAlerts.category.${getWeatherAlertCategoryName(selectedAlert.AlertCategory)}`)}</Text> : null}
           </HStack>
         </Box>
 
@@ -184,22 +198,22 @@ export default function WeatherAlertDetail() {
             <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('weatherAlerts.detail.timing')}</Text>
           </HStack>
           <VStack className="mt-2" space="xs">
-            {selectedAlert.Effective ? (
+            {selectedAlert.EffectiveOnUtc || selectedAlert.EffectiveUtc ? (
               <HStack className="justify-between">
                 <Text className="text-sm text-gray-500">{t('weatherAlerts.detail.effective')}</Text>
-                <Text className="text-sm text-gray-700 dark:text-gray-300">{formatDateTime(selectedAlert.Effective)}</Text>
+                <Text className="text-sm text-gray-700 dark:text-gray-300">{formatTiming(selectedAlert.EffectiveOnUtc, selectedAlert.EffectiveUtc)}</Text>
               </HStack>
             ) : null}
-            {selectedAlert.Onset ? (
+            {selectedAlert.OnsetOnUtc || selectedAlert.OnsetUtc ? (
               <HStack className="justify-between">
                 <Text className="text-sm text-gray-500">{t('weatherAlerts.detail.onset')}</Text>
-                <Text className="text-sm text-gray-700 dark:text-gray-300">{formatDateTime(selectedAlert.Onset)}</Text>
+                <Text className="text-sm text-gray-700 dark:text-gray-300">{formatTiming(selectedAlert.OnsetOnUtc, selectedAlert.OnsetUtc)}</Text>
               </HStack>
             ) : null}
-            {selectedAlert.Expires ? (
+            {selectedAlert.ExpiresOnUtc || selectedAlert.ExpiresUtc ? (
               <HStack className="justify-between">
                 <Text className="text-sm text-gray-500">{t('weatherAlerts.detail.expires')}</Text>
-                <Text className="text-sm text-gray-700 dark:text-gray-300">{formatDateTime(selectedAlert.Expires)}</Text>
+                <Text className="text-sm text-gray-700 dark:text-gray-300">{formatTiming(selectedAlert.ExpiresOnUtc, selectedAlert.ExpiresUtc)}</Text>
               </HStack>
             ) : null}
           </VStack>
@@ -277,28 +291,28 @@ export default function WeatherAlertDetail() {
             <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('weatherAlerts.detail.metadata')}</Text>
           </HStack>
           <VStack className="mt-2" space="xs">
-            {selectedAlert.Urgency ? (
+            {selectedAlert.Urgency != null ? (
               <HStack className="justify-between">
                 <Text className="text-sm text-gray-500">{t('weatherAlerts.urgency.label')}</Text>
                 <Text className="text-sm text-gray-700 dark:text-gray-300">{formatWeatherAlertTranslation(t, 'urgency', selectedAlert.Urgency)}</Text>
               </HStack>
             ) : null}
-            {selectedAlert.Certainty ? (
+            {selectedAlert.Certainty != null ? (
               <HStack className="justify-between">
                 <Text className="text-sm text-gray-500">{t('weatherAlerts.certainty.label')}</Text>
                 <Text className="text-sm text-gray-700 dark:text-gray-300">{formatWeatherAlertTranslation(t, 'certainty', selectedAlert.Certainty)}</Text>
               </HStack>
             ) : null}
-            {selectedAlert.Status ? (
+            {selectedAlert.Status != null ? (
               <HStack className="justify-between">
                 <Text className="text-sm text-gray-500">{t('weatherAlerts.detail.status')}</Text>
                 <Text className="text-sm text-gray-700 dark:text-gray-300">{formatWeatherAlertTranslation(t, 'status', selectedAlert.Status)}</Text>
               </HStack>
             ) : null}
-            {selectedAlert.SenderName ? (
+            {selectedAlert.Sender ? (
               <HStack className="justify-between">
                 <Text className="text-sm text-gray-500">{t('weatherAlerts.detail.sender')}</Text>
-                <Text className="text-sm text-gray-700 dark:text-gray-300">{selectedAlert.SenderName}</Text>
+                <Text className="text-sm text-gray-700 dark:text-gray-300">{selectedAlert.Sender}</Text>
               </HStack>
             ) : null}
           </VStack>
