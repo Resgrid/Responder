@@ -74,13 +74,24 @@ const mockT = jest.fn((key: string) => {
   const translations: Record<string, string> = {
     'settings.realtime_geolocation': 'Realtime Geolocation',
     'settings.realtime_geolocation_warning': 'This feature connects to the real-time location hub to receive location updates from other personnel and units. It requires an active network connection.',
-    'settings.realtime_geolocation_connecting': 'Connecting to hub...',
+    'settings.geolocation_hub_connected': 'Connected to hub.',
+    'settings.geolocation_hub_connecting': 'Connecting to hub...',
   };
   return translations[key] || key;
 });
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: mockT }),
+}));
+
+const mockLoggerError = jest.fn();
+jest.mock('@/lib/logging', () => ({
+  logger: {
+    error: (...args: unknown[]) => mockLoggerError(...args),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+  },
 }));
 
 
@@ -206,7 +217,6 @@ describe('RealtimeGeolocationItem', () => {
 
   it('handles toggle errors gracefully', async () => {
     mockSetRealtimeGeolocationEnabled.mockRejectedValueOnce(new Error('Network error'));
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
     mockUseRealtimeGeolocation.isRealtimeGeolocationEnabled = false;
 
@@ -216,10 +226,8 @@ describe('RealtimeGeolocationItem', () => {
     fireEvent.press(switchElement);
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to toggle realtime geolocation:', expect.any(Error));
+      expect(mockLoggerError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Failed to toggle realtime geolocation' }));
     });
-
-    consoleSpy.mockRestore();
   });
 
   it('renders with dark color scheme', () => {

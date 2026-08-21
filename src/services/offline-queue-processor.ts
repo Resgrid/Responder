@@ -9,6 +9,10 @@ import type { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePe
 
 const MAX_RETRIES = 5;
 
+// The stub drops every item, so it must only ever stand in under test. Gating it on
+// "not production" previously disabled the queue in dev builds too.
+const IS_TEST_ENVIRONMENT = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+
 const hashDiagnosticIdentifier = (identifier: string): string | null => {
   return identifier ? CryptoJS.HmacSHA256(identifier, Env.LOGGING_KEY || '').toString() : null;
 };
@@ -27,6 +31,7 @@ export class RealOfflineQueueProcessor {
   private processing = false;
   private storageKey = 'offline_queue';
   private queueMutationChain: Promise<void> = Promise.resolve();
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   private constructor() {
     NetInfo.addEventListener((state) => {
@@ -55,6 +60,39 @@ export class RealOfflineQueueProcessor {
       logger.warn({ message: 'Corrupt offline queue data, resetting queue', context: { error } });
       return [];
     }
+  }
+
+  private clearRetryTimer(): void {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+  }
+
+  /**
+   * Wake up when the earliest deferred item is due. Without this a failed item kept its
+   * `nextRetryAt` but nothing ever honoured it, so a transient 500 on stable Wi-Fi left
+   * the item queued until the next NetInfo change - potentially never.
+   */
+  private scheduleNextRetry(items: QueueItem[]): void {
+    this.clearRetryTimer();
+
+    const dueTimes = items.map((item) => item.nextRetryAt).filter((time): time is number => typeof time === 'number');
+    if (dueTimes.length === 0) {
+      return;
+    }
+
+    const delay = Math.max(Math.min(...dueTimes) - Date.now(), 0);
+    const timer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.processQueue().catch((error) => {
+        logger.error({ message: 'Offline queue processing failed on scheduled retry', context: { error } });
+      });
+    }, delay);
+
+    // Node/Jest timers expose unref(); React Native's do not.
+    (timer as unknown as { unref?: () => void }).unref?.();
+    this.retryTimer = timer;
   }
 
   private serializeQueueMutation<T>(mutation: () => Promise<T>): Promise<T> {
@@ -98,6 +136,7 @@ export class RealOfflineQueueProcessor {
           }
         }
         await storage.set(this.storageKey, JSON.stringify(remaining));
+        this.scheduleNextRetry(remaining);
       });
     } catch (error) {
       logger.error({ message: 'Processing offline queue failed', context: { error } });
@@ -124,7 +163,7 @@ export class RealOfflineQueueProcessor {
   }
 
   cleanup(): void {
-    // no-op
+    this.clearRetryTimer();
   }
 
   startProcessing(): Promise<void> {
@@ -146,20 +185,20 @@ class StubOfflineQueueProcessor {
     return StubOfflineQueueProcessor.instance;
   }
   processQueue(): Promise<void> {
-    if (process.env.NODE_ENV === 'production') {
-      logger.error({ message: 'Stub offline queue used in production' });
-      throw new Error('OfflineQueueProcessor stub used in production');
+    if (!IS_TEST_ENVIRONMENT) {
+      logger.error({ message: 'Stub offline queue used outside of tests' });
+      throw new Error('OfflineQueueProcessor stub used outside of tests');
     }
-    logger.warn({ message: 'Stub offline queue active: queued items are NOT persisted or processed (non-production environment)' });
+    logger.warn({ message: 'Stub offline queue active: queued items are NOT persisted or processed (test environment)' });
     return Promise.resolve();
   }
   addPersonnelStatusToQueue(status: SavePersonStatusInput): string {
-    if (process.env.NODE_ENV === 'production') {
-      logger.error({ message: 'Stub offline queue used in production' });
-      throw new Error('OfflineQueueProcessor stub used in production');
+    if (!IS_TEST_ENVIRONMENT) {
+      logger.error({ message: 'Stub offline queue used outside of tests' });
+      throw new Error('OfflineQueueProcessor stub used outside of tests');
     }
     logger.warn({
-      message: 'Stub offline queue: dropping personnel status item (non-production environment)',
+      message: 'Stub offline queue: dropping personnel status item (test environment)',
       context: {
         userIdHash: hashDiagnosticIdentifier(status.UserId),
         eventIdHash: hashDiagnosticIdentifier(status.EventId),
@@ -180,7 +219,7 @@ class StubOfflineQueueProcessor {
   }
 }
 
-const ProcessorClass = process.env.NODE_ENV === 'production' ? RealOfflineQueueProcessor : StubOfflineQueueProcessor;
+const ProcessorClass = IS_TEST_ENVIRONMENT ? StubOfflineQueueProcessor : RealOfflineQueueProcessor;
 
 export class OfflineQueueProcessor extends ProcessorClass {
   /**

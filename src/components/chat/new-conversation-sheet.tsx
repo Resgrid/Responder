@@ -16,6 +16,7 @@ import { ScrollView } from '@/components/ui/scroll-view';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { logger } from '@/lib/logging';
 import { getAvatarUrl } from '@/lib/utils';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
@@ -46,6 +47,7 @@ function isSelfRecipient(recipient: RecipientsResultData, currentUserId: string 
 
 export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewConversationSheetProps) {
   const { t } = useTranslation();
+  const keyboardHeight = useKeyboardHeight();
   const currentUserId = useAuthStore((s) => s.userId);
   const [recipients, setRecipients] = useState<RecipientsResultData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -137,7 +139,10 @@ export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewCo
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose} snapPoints={[80]}>
       <ActionsheetBackdrop />
-      <ActionsheetContent>
+      {/* Single sanctioned keyboard mechanism for sheets: pad the sheet by the keyboard
+          height so the name/search field and the results under it stay visible. Never nest
+          a KeyboardAvoidingView here — see use-keyboard-height.ts. */}
+      <ActionsheetContent style={{ paddingBottom: keyboardHeight }}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>

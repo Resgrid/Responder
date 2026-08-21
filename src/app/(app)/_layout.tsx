@@ -2,14 +2,14 @@
 
 import { NovuProvider } from '@novu/react-native';
 import Mapbox from '@rnmapbox/maps';
-import { type Href, Redirect, Slot, SplashScreen, usePathname, useRouter } from 'expo-router';
-import { size } from 'lodash';
+import { type Href, Redirect, Slot, usePathname, useRouter } from 'expo-router';
 import { ArrowLeft, Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { RealtimeStatusBanner } from '@/components/common/realtime-status-banner';
 import { NotificationButton } from '@/components/notifications/NotificationButton';
 import { NotificationInbox } from '@/components/notifications/NotificationInbox';
 import SideMenu from '@/components/sidebar/side-menu-content';
@@ -26,10 +26,12 @@ import { useAuthStore } from '@/lib/auth';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { useIsFirstTime } from '@/lib/storage';
+import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
 import { audioService } from '@/services/audio.service';
 import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
 import { locationService } from '@/services/location';
+import { offlineEventManager } from '@/services/offline-event-manager.service';
 import { offlineQueueService } from '@/services/offline-queue.service';
 import { usePushNotifications } from '@/services/push-notification';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -76,7 +78,6 @@ export default function TabLayout() {
   // mutated after the last re-render left the hub lifecycle permanently disabled.
   const [isInitialized, setIsInitialized] = React.useState(false);
   const isInitializing = useRef(false);
-  const hasHiddenSplash = useRef(false);
   const lastSignedInStatus = useRef<string | null>(null);
   const parentRef = useRef(null);
   const hasAttemptedInit = useRef(false);
@@ -119,37 +120,68 @@ export default function TabLayout() {
     });
 
     try {
-      await useCoreStore.getState().init();
-      await useCallsStore.getState().init();
+      // These three only need an authenticated session — none consumes another's result —
+      // so they go out together. Run serially they were three full round trips of dead
+      // time before the app became usable on a cellular link.
+      await Promise.all([useCoreStore.getState().init(), useCallsStore.getState().init(), securityStore.getState().getRights()]);
       //await useCalendarStore.getState().init();
       //await useShiftsStore.getState().init();
       //await usePersonnelStore.getState().init();
-      await securityStore.getState().getRights();
+      if (!isCurrentRun()) return;
+
+      // Feature flags must follow rights: the identity key that decides whether persisted
+      // flags belong to this account reads securityStore.rights.DepartmentId.
       await featureFlagsStore.getState().fetchFlags();
       if (!isCurrentRun()) return;
 
-      //await useSignalRStore.getState().connectUpdateHub();
-      //await useSignalRStore.getState().connectGeolocationHub();
+      // Realtime feeds. Every one of them has to follow the Promise.all above: opening a hub reads
+      // `config.EventingUrl` off the core store, and the update hub's department-group announce
+      // reads `rights.DepartmentId` off security. They open together because they share no state
+      // and each is a full round trip on a cellular link.
+      const hubConnects: [string, () => Promise<void>][] = [
+        // Carries call, personnel, unit and status traffic. Connecting it here is the point of this
+        // block: useSignalRLifecycle only connects on a background -> foreground transition, so a
+        // responder who opened the app and kept it in the foreground received nothing at all until
+        // they backgrounded and reopened it. Double-connecting is not a risk — the lifecycle hook
+        // is not armed until `setIsInitialized(true)` below, its resume branch additionally requires
+        // a previous background state, and connectUpdateHub itself early-returns once connected.
+        ['update hub', () => useSignalRStore.getState().connectUpdateHub()],
+      ];
+
+      // Receiving other responders' and units' positions is opt-in, so this hub follows the stored
+      // setting. Sending *this* device's position is a REST call owned by locationService and never
+      // travels over this hub.
+      const isRealtimeGeolocationEnabled = await loadRealtimeGeolocationState();
+      if (!isCurrentRun()) return;
+
+      if (isRealtimeGeolocationEnabled) {
+        hubConnects.push(['geolocation hub', () => useSignalRStore.getState().connectGeolocationHub()]);
+      }
 
       // Connect the realtime chat hub only when the Chat.System feature flag is on for
       // this department; when it is off every chat surface stays hidden.
       if (featureFlagsStore.getState().isEnabled(FeatureFlagKeys.ChatSystem)) {
-        try {
-          await useSignalRStore.getState().connectChatHub();
-          logger.info({
-            message: 'SignalR chat hub connected successfully',
-          });
-        } catch (error) {
-          logger.error({
-            message: 'Failed to connect SignalR chat hub during initialization',
-            context: { error },
-          });
-        }
+        hubConnects.push(['chat hub', () => useSignalRStore.getState().connectChatHub()]);
       } else {
         logger.info({
           message: 'Chat disabled by feature flag; skipping chat hub connection',
         });
       }
+
+      const hubResults = await Promise.allSettled(hubConnects.map(([, connect]) => connect()));
+      hubResults.forEach((result, index) => {
+        const hubLabel = hubConnects[index]?.[0] ?? 'hub';
+        if (result.status === 'rejected') {
+          logger.error({
+            message: `Failed to connect SignalR ${hubLabel} during initialization`,
+            context: { error: result.reason },
+          });
+        } else {
+          logger.info({
+            message: `SignalR ${hubLabel} connected successfully`,
+          });
+        }
+      });
 
       if (!isCurrentRun()) return;
 
@@ -170,6 +202,19 @@ export default function TabLayout() {
         ['bluetooth audio service', () => bluetoothAudioService.initialize()],
         ['audio service', () => audioService.initialize()],
         ['offline queue service', () => offlineQueueService.initialize()],
+        // Without this the network listener never starts, so events queued while offline
+        // (a status set with no signal) sat until the user backgrounded and reopened the app.
+        ['offline event manager', async () => offlineEventManager.initialize()],
+        // fetchRoles ran only on resume from background, and fetchUsers had no live caller at
+        // all, so on a cold start `roles` was empty and `users` stayed empty for the whole
+        // session — leaving the home "personnel in service" stat at 0 and the personnel rows
+        // missing from the active-call and check-in panels.
+        [
+          'roles and personnel roster',
+          async () => {
+            await Promise.all([useRolesStore.getState().fetchRoles(), useRolesStore.getState().fetchUsers()]);
+          },
+        ],
       ];
 
       const results = await Promise.allSettled(independentInits.map(([, init]) => init()));
@@ -243,7 +288,7 @@ export default function TabLayout() {
 
     try {
       // Refresh data
-      await Promise.all([useCoreStore.getState().fetchConfig(), useCallsStore.getState().fetchCalls(), useRolesStore.getState().fetchRoles()]);
+      await Promise.all([useCoreStore.getState().fetchConfig(), useCallsStore.getState().fetchCalls(), useRolesStore.getState().fetchRoles(), useRolesStore.getState().fetchUsers()]);
     } catch (error) {
       logger.error({
         message: 'Failed to refresh data on app resume',
@@ -325,11 +370,11 @@ export default function TabLayout() {
     }
   }, [isActive, appState, refreshDataFromBackground]);
 
-  // Force drawer open in landscape
+  // Landscape shows the menu as a permanent sidebar; portrait shows it as a modal drawer.
+  // Resetting on the way back out matters: leaving the flag set meant rotating to portrait
+  // rendered that modal drawer open over the content until it was dismissed by hand.
   useEffect(() => {
-    if (isLandscape) {
-      setIsOpen(true);
-    }
+    setIsOpen(isLandscape);
   }, [isLandscape]);
 
   // Get user ID and config for notifications
@@ -362,6 +407,11 @@ export default function TabLayout() {
         <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />
       </View>
 
+      {/* Sits between the header and the routed content so it is visible on every screen, and
+          outside the row below so it never resizes the landscape sidebar or the drawer. Renders
+          nothing at all unless the realtime feed is actually down. */}
+      <RealtimeStatusBanner />
+
       <View className="flex-1 flex-row" ref={parentRef}>
         {/* Drawer - conditionally rendered as permanent in landscape */}
         {isLandscape ? (
@@ -392,18 +442,26 @@ export default function TabLayout() {
     </View>
   );
 
+  // Config and rights land a moment after a cold start. The provider is rendered
+  // unconditionally — with placeholder credentials until then — because swapping the tree
+  // between "bare content" and "content wrapped in a provider" unmounted and remounted the
+  // whole <Slot /> subtree seconds into every launch: active screen state was thrown away
+  // and every screen effect and query re-ran right after first paint. Novu rebuilds its
+  // client from the props instead, which leaves the subtree in place.
+  const isNovuConfigured = Boolean(userId && rights?.DepartmentCode && config?.NovuApplicationId && config?.NovuBackendApiUrl && config?.NovuSocketUrl);
+
   return (
-    <>
-      {userId && config && rights?.DepartmentCode ? (
-        <NovuProvider subscriberId={`${rights?.DepartmentCode}_User_${userId}`} applicationIdentifier={config.NovuApplicationId} backendUrl={config.NovuBackendApiUrl} socketUrl={config.NovuSocketUrl}>
-          {/* NotificationInbox at the root level */}
-          <NotificationInbox isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
-          {content}
-        </NovuProvider>
-      ) : (
-        content
-      )}
-    </>
+    <NovuProvider
+      subscriberId={isNovuConfigured ? `${rights?.DepartmentCode}_User_${userId}` : ''}
+      applicationIdentifier={config?.NovuApplicationId ?? ''}
+      backendUrl={config?.NovuBackendApiUrl ?? ''}
+      socketUrl={config?.NovuSocketUrl ?? ''}
+    >
+      {/* Held back until the real credentials arrive: it calls useNotifications(), which
+          would otherwise fetch against the placeholder client. */}
+      {isNovuConfigured ? <NotificationInbox isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} /> : null}
+      {content}
+    </NovuProvider>
   );
 }
 
@@ -435,6 +493,8 @@ const CreateDrawerMenuButton = ({ setIsOpen, isLandscape, onBack }: CreateDrawer
       onPress={() => {
         setIsOpen(true);
       }}
+      accessibilityRole="button"
+      accessibilityLabel={t('app.open_menu')}
     >
       <Menu size={24} color="white" />
     </Pressable>

@@ -1,4 +1,3 @@
-import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,6 +5,7 @@ import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { safeFormatTimestamp } from '@/lib/utils';
 import { type CheckInRecordResultData } from '@/models/v4/checkIn/checkInRecordResultData';
 
 interface CheckInHistoryListProps {
@@ -14,8 +14,7 @@ interface CheckInHistoryListProps {
 }
 
 const HistoryItem: React.FC<{ item: CheckInRecordResultData }> = React.memo(({ item }) => {
-  const { colorScheme } = useColorScheme();
-  const bgColor = colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-gray-50';
+  const bgColor = 'bg-gray-50 dark:bg-neutral-800';
 
   return (
     <Box className={`mb-2 rounded-lg p-3 ${bgColor}`}>
@@ -24,7 +23,7 @@ const HistoryItem: React.FC<{ item: CheckInRecordResultData }> = React.memo(({ i
           <Text className="font-medium">{item.CheckInTypeName}</Text>
           {item.Note ? <Text className="text-sm text-gray-500">{item.Note}</Text> : null}
         </VStack>
-        <Text className="text-xs text-gray-500">{new Date(item.Timestamp).toLocaleString()}</Text>
+        <Text className="text-xs text-gray-500">{safeFormatTimestamp(item.Timestamp, 'yyyy-MM-dd HH:mm')}</Text>
       </HStack>
     </Box>
   );

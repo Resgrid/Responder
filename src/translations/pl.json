@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "Otwórz menu",
+    "realtime_offline_description": "Ponowne łączenie. Nowe zgłoszenia i wiadomości mogą się nie pojawić.",
+    "realtime_offline_title": "Aktualizacje na żywo są niedostępne",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "Typ"
   },
   "bluetooth": {
+    "audio": "Dźwięk",
+    "audio_active": "Dźwięk aktywny",
+    "audio_capable": "Obsługuje dźwięk",
     "audio_device": "BT Słuchawka",
     "available_devices": "Dostępne urządzenia",
     "bluetooth_not_ready": "Bluetooth jest {{state}}. Proszę włączyć Bluetooth.",
+    "button_control_available": "Dostępne sterowanie przyciskami",
+    "button_event": {
+      "double_press": "Podwójne {{button}}",
+      "long_press": "Długie {{button}}"
+    },
+    "button_event_applied": "Zastosowano",
+    "buttons": {
+      "mute": "Wycisz",
+      "ptt_start": "Start PTT",
+      "ptt_stop": "Stop PTT",
+      "unknown": "Nieznane",
+      "volume_down": "Głośność -",
+      "volume_up": "Głośność +"
+    },
+    "checking_status": "Sprawdzanie stanu Bluetooth...",
     "clear": "Wyczyść",
+    "connect": "Połącz",
     "connected": "Połączono",
+    "connection_error": "Błąd połączenia",
     "current_selection": "Bieżący wybór",
+    "disconnect": "Rozłącz",
+    "livekit_active": "LiveKit aktywny",
+    "mute": "Wycisz",
     "no_device_selected": "Nie wybrano urządzenia",
     "no_devices_found": "Nie znaleziono urządzeń audio Bluetooth",
     "not_connected": "Nie połączono",
+    "powered_off_message": "Bluetooth jest wyłączony. Włącz Bluetooth, aby połączyć urządzenia audio.",
+    "recent_button_events": "Ostatnie zdarzenia przycisków",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "Skanuj",
     "scan_again": "Skanuj ponownie",
     "scan_error_message": "Nie można skanować urządzeń Bluetooth",
@@ -44,9 +74,14 @@
     "selected": "Wybrano",
     "selection_error_message": "Nie można zapisać preferowanego urządzenia",
     "selection_error_title": "Błąd wyboru",
+    "start_scanning": "Rozpocznij skanowanie",
+    "stop_scan": "Zatrzymaj skanowanie",
     "supports_mic_control": "Sterowanie mikrofonem",
     "tap_scan_to_find_devices": "Naciśnij „Skanuj”, aby znaleźć urządzenia audio Bluetooth",
-    "unknown_device": "Nieznane urządzenie"
+    "title": "Dźwięk Bluetooth",
+    "unauthorized_message": "Odmówiono uprawnień Bluetooth. Przyznaj uprawnienia Bluetooth w Ustawieniach.",
+    "unknown_device": "Nieznane urządzenie",
+    "unmute": "Wyłącz wyciszenie"
   },
   "calendar": {
     "allDay": "Cały dzień",
@@ -144,7 +179,8 @@
     "title": "Zdjęcia do zgłoszenia",
     "upload": "Prześlij",
     "upload_error": "Nie udało się przesłać zdjęcia. Proszę spróbować ponownie.",
-    "upload_success": "Zdjęcie przesłane pomyślnie"
+    "upload_success": "Zdjęcie przesłane pomyślnie",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "Dodaj notatkę",
@@ -320,6 +356,10 @@
     "required_fields_missing": "Twoja jednostka wymaga tych pól przed utworzeniem zgłoszenia: {{fields}}",
     "roles": "Role",
     "search": "Szukaj zgłoszeń...",
+    "search_address": "Szukaj adresu",
+    "search_coordinates": "Szukaj współrzędnych",
+    "search_plus_code": "Szukaj plus code",
+    "search_what3words": "Szukaj adresu what3words",
     "select_active_call": "Wybierz aktywne zgłoszenie",
     "select_address": "Wybierz adres",
     "select_address_placeholder": "Wybierz adres zgłoszenia",
@@ -391,6 +431,7 @@
     "message_deleted": "Ta wiadomość została usunięta",
     "moderator_delete": "Usuń (moderator)",
     "moderator_removed": "Usunięto przez moderatora",
+    "new_conversation": "Nowa rozmowa",
     "new_direct_message": "Nowa wiadomość bezpośrednia",
     "new_group": "Nowa grupa",
     "no_gifs": "Nie znaleziono GIF-ów",
@@ -468,6 +509,7 @@
     "all": "Wszystkie",
     "back": "Wstecz",
     "cancel": "Anuluj",
+    "clear_search": "Wyczyść wyszukiwanie",
     "close": "Zamknij",
     "confirm": "Potwierdź",
     "confirm_location": "Potwierdź lokalizację",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "Dodaj notatkę",
       "confirm_staffing": "Potwierdź obsadę: {{staffing}}",
+      "missing_required_info": "Brakuje wymaganych informacji",
       "no_options_available": "Brak dostępnych opcji obsady",
       "no_staffing_options": "Brak dostępnych opcji obsady",
       "note": "Notatka",
@@ -727,6 +770,7 @@
     "audio_settings": "Ustawienia audio",
     "connected_to_room": "Połączono z kanałem",
     "connecting": "Łączenie...",
+    "connection_failed": "Nie można dołączyć do kanału głosowego",
     "disconnect": "Rozłącz",
     "double_click_action": "Akcja podwójnego kliknięcia",
     "headset_button_ptt": "Przycisk słuchawki PTT",
@@ -897,6 +941,11 @@
       "subject_required": "Temat jest wymagany"
     }
   },
+  "not_found": {
+    "go_home": "Przejdź do ekranu głównego!",
+    "message": "Ten ekran nie istnieje.",
+    "title": "Ups!"
+  },
   "notes": {
     "actions": {
       "add": "Dodaj notatkę",
@@ -917,6 +966,7 @@
     "title": "Notatki"
   },
   "notifications": {
+    "additionalInformation": "Dodatkowe informacje",
     "bulkDeleteError": "Nie udało się usunąć powiadomień",
     "bulkDeleteSuccess": "Usunięto {{count}} powiadomienie(ń)",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "Odznacz wszystkie",
     "empty": "Brak dostępnych aktualizacji",
     "loadError": "Nie można załadować powiadomień",
+    "notAvailable": "N/D",
+    "notification": "Powiadomienie",
     "selectAll": "Zaznacz wszystkie",
     "selectedCount": "Wybrano {{count}}",
-    "title": "Powiadomienia"
+    "title": "Powiadomienia",
+    "viewReference": "Zobacz {{referenceType}}"
   },
   "onboarding": {
-    "message": "Witamy w aplikacji Resgrid Responder"
+    "get_started": "Zaczynajmy",
+    "message": "Witamy w aplikacji Resgrid Responder",
+    "skip": "Pomiń",
+    "slides": {
+      "calls": {
+        "description": "Przeglądaj informacje o zgłoszeniach i współpracuj z zespołem, aby sprawnie reagować na zdarzenia",
+        "title": "Pracuj ze zgłoszeniami"
+      },
+      "notifications": {
+        "description": "Otrzymuj natychmiastowe alarmy o zdarzeniach i ważne aktualizacje ze swojej jednostki",
+        "title": "Natychmiastowe powiadomienia"
+      },
+      "responder": {
+        "description": "Zarządzaj swoim statusem i obsadą oraz komunikuj się ze swoją organizacją w czasie rzeczywistym",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "Dane kontaktowe",
@@ -1050,15 +1119,6 @@
     "view_chat": "Zobacz czat",
     "view_message": "Zobacz wiadomości"
   },
-  "roles": {
-    "modal": {
-      "title": "Przypisania ról jednostki"
-    },
-    "selectUser": "Wybierz użytkownika",
-    "status": "{{active}} z {{total}} ról aktywnych",
-    "tap_to_manage": "Naciśnij, aby zarządzać rolami",
-    "unassigned": "Nieprzypisane"
-  },
   "settings": {
     "about": "O aplikacji",
     "account": "Konto",
@@ -1092,6 +1152,8 @@
     "french": "Francuski",
     "general": "Ogólne",
     "generale": "Ogólne",
+    "geolocation_hub_connected": "Połączono z hubem.",
+    "geolocation_hub_connecting": "Łączenie z hubem...",
     "german": "Niemiecki",
     "github": "Github",
     "greek": "Grecki",
@@ -1325,6 +1387,8 @@
       "effective": "Obowiązuje od",
       "expires": "Wygasa",
       "instructions": "Instrukcje",
+      "load_error": "Ostrzeżenie niedostępne",
+      "load_error_description": "Nie udało się załadować tego ostrzeżenia pogodowego. Mogło wygasnąć lub żądanie nie powiodło się.",
       "metadata": "Szczegóły",
       "onset": "Początek",
       "sender": "Nadawca",

@@ -1,5 +1,7 @@
+import { type TFunction } from 'i18next';
 import { AlertTriangle, Bluetooth, BluetoothConnected, CheckCircle, Mic, MicOff, RefreshCw, Signal, Wifi } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
@@ -14,7 +16,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
-import { type BluetoothAudioDevice, useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
+import { type AudioButtonEvent, type BluetoothAudioDevice, useBluetoothAudioStore } from '@/stores/app/bluetooth-audio-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
 
 interface BluetoothAudioModalProps {
@@ -22,10 +24,48 @@ interface BluetoothAudioModalProps {
   onClose: () => void;
 }
 
-const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClose }) => {
-  const { bluetoothState, isScanning, isConnecting, availableDevices, connectedDevice, connectionError, isAudioRoutingActive, buttonEvents, lastButtonAction } = useBluetoothAudioStore();
+const BUTTON_LABEL_KEYS: Record<AudioButtonEvent['button'], string> = {
+  ptt_start: 'bluetooth.buttons.ptt_start',
+  ptt_stop: 'bluetooth.buttons.ptt_stop',
+  mute: 'bluetooth.buttons.mute',
+  volume_up: 'bluetooth.buttons.volume_up',
+  volume_down: 'bluetooth.buttons.volume_down',
+  unknown: 'bluetooth.buttons.unknown',
+};
 
-  const { isConnected: isLiveKitConnected, currentRoom } = useLiveKitStore();
+/** "Long PTT Start" / "Double Mute" / "Mute" — built from whole phrases so translators
+ *  can reorder the modifier, rather than concatenating a loose prefix. */
+const formatButtonEventLabel = (t: TFunction, type: AudioButtonEvent['type'], button: AudioButtonEvent['button']): string => {
+  const buttonLabel = t(BUTTON_LABEL_KEYS[button] ?? BUTTON_LABEL_KEYS.unknown);
+
+  if (type === 'long_press') {
+    return t('bluetooth.button_event.long_press', { button: buttonLabel });
+  }
+
+  if (type === 'double_press') {
+    return t('bluetooth.button_event.double_press', { button: buttonLabel });
+  }
+
+  return buttonLabel;
+};
+
+const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, so this modal would re-render on every button event and scan tick whether or
+  // not anything it reads actually changed.
+  const bluetoothState = useBluetoothAudioStore((state) => state.bluetoothState);
+  const isScanning = useBluetoothAudioStore((state) => state.isScanning);
+  const isConnecting = useBluetoothAudioStore((state) => state.isConnecting);
+  const availableDevices = useBluetoothAudioStore((state) => state.availableDevices);
+  const connectedDevice = useBluetoothAudioStore((state) => state.connectedDevice);
+  const connectionError = useBluetoothAudioStore((state) => state.connectionError);
+  const isAudioRoutingActive = useBluetoothAudioStore((state) => state.isAudioRoutingActive);
+  const buttonEvents = useBluetoothAudioStore((state) => state.buttonEvents);
+  const lastButtonAction = useBluetoothAudioStore((state) => state.lastButtonAction);
+
+  const isLiveKitConnected = useLiveKitStore((state) => state.isConnected);
+  const currentRoom = useLiveKitStore((state) => state.currentRoom);
   const { trackEvent } = useAnalytics();
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [modalOpenTime, setModalOpenTime] = useState<number | null>(null);
@@ -209,14 +249,14 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
         return (
           <VStack space="md" className="items-center p-4">
             <AlertTriangle size={48} color="orange" />
-            <Text className="text-center">Bluetooth is turned off. Please enable Bluetooth to connect audio devices.</Text>
+            <Text className="text-center">{t('bluetooth.powered_off_message')}</Text>
           </VStack>
         );
       case 'unauthorized':
         return (
           <VStack space="md" className="items-center p-4">
             <AlertTriangle size={48} color="red" />
-            <Text className="text-center">Bluetooth permission denied. Please grant Bluetooth permissions in Settings.</Text>
+            <Text className="text-center">{t('bluetooth.unauthorized_message')}</Text>
           </VStack>
         );
       case 'poweredOn':
@@ -225,7 +265,7 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
         return (
           <VStack space="md" className="items-center p-4">
             <Spinner size="large" />
-            <Text className="text-center">Checking Bluetooth status...</Text>
+            <Text className="text-center">{t('bluetooth.checking_status')}</Text>
           </VStack>
         );
     }
@@ -239,7 +279,7 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
         <HStack space="sm" className="items-center">
           <AlertTriangle size={20} color="red" />
           <VStack className="flex-1">
-            <Text className="font-medium text-red-700">Connection Error</Text>
+            <Text className="font-medium text-red-700">{t('bluetooth.connection_error')}</Text>
             <Text className="text-sm text-red-600">{connectionError}</Text>
           </VStack>
         </HStack>
@@ -256,16 +296,16 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
           <HStack space="sm" className="flex-1 items-center">
             <BluetoothConnected size={24} color="green" />
             <VStack className="flex-1">
-              <Text className="font-medium text-green-700">{connectedDevice.name || 'Unknown Device'}</Text>
+              <Text className="font-medium text-green-700">{connectedDevice.name || t('bluetooth.unknown_device')}</Text>
               <HStack space="xs" className="items-center">
-                <Text className="text-sm text-green-600">Connected</Text>
+                <Text className="text-sm text-green-600">{t('bluetooth.connected')}</Text>
                 {isAudioRoutingActive ? (
                   <Badge variant="outline" className="ml-2">
-                    <Text className="text-xs">Audio Active</Text>
+                    <Text className="text-xs">{t('bluetooth.audio_active')}</Text>
                   </Badge>
                 ) : null}
               </HStack>
-              {connectedDevice.supportsMicrophoneControl ? <Text className="text-xs text-green-600">Button control available</Text> : null}
+              {connectedDevice.supportsMicrophoneControl ? <Text className="text-xs text-green-600">{t('bluetooth.button_control_available')}</Text> : null}
             </VStack>
           </HStack>
 
@@ -273,12 +313,12 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
             {isLiveKitConnected ? (
               <Button onPress={handleToggleMicrophone} variant="outline" size="sm">
                 {isMicMuted ? <MicOff size={16} color="red" /> : <Mic size={16} color="green" />}
-                <ButtonText className="ml-1">{isMicMuted ? 'Unmute' : 'Mute'}</ButtonText>
+                <ButtonText className="ml-1">{isMicMuted ? t('bluetooth.unmute') : t('bluetooth.mute')}</ButtonText>
               </Button>
             ) : null}
 
             <Button onPress={handleDisconnectDevice} variant="outline" action="secondary" size="sm">
-              <ButtonText>Disconnect</ButtonText>
+              <ButtonText>{t('bluetooth.disconnect')}</ButtonText>
             </Button>
           </VStack>
         </HStack>
@@ -294,29 +334,16 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
     return (
       <Card className="mb-4 p-4">
         <Heading size="sm" className="mb-2">
-          Recent Button Events
+          {t('bluetooth.recent_button_events')}
         </Heading>
         <VStack space="xs">
           {recentEvents.map((event, index) => (
             <HStack key={`${event.timestamp}-${index}`} space="sm" className="items-center">
               <Text className="text-xs text-gray-500">{new Date(event.timestamp).toLocaleTimeString()}</Text>
-              <Text className="text-sm">
-                {event.type === 'long_press' ? 'Long ' : event.type === 'double_press' ? 'Double ' : ''}
-                {event.button === 'ptt_start'
-                  ? 'PTT Start'
-                  : event.button === 'ptt_stop'
-                    ? 'PTT Stop'
-                    : event.button === 'mute'
-                      ? 'Mute'
-                      : event.button === 'volume_up'
-                        ? 'Volume +'
-                        : event.button === 'volume_down'
-                          ? 'Volume -'
-                          : 'Unknown'}
-              </Text>
+              <Text className="text-sm">{formatButtonEventLabel(t, event.type, event.button)}</Text>
               {lastButtonAction && lastButtonAction.timestamp === event.timestamp ? (
                 <Badge variant="outline" size="sm">
-                  <Text className="text-xs">Applied</Text>
+                  <Text className="text-xs">{t('bluetooth.button_event_applied')}</Text>
                 </Badge>
               ) : null}
             </HStack>
@@ -331,10 +358,10 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
       return (
         <VStack space="md" className="items-center p-4">
           <Bluetooth size={48} color="gray" />
-          <Text className="text-center text-gray-500">No audio devices found</Text>
+          <Text className="text-center text-gray-500">{t('bluetooth.no_devices_found')}</Text>
           <Button onPress={handleStartScan} variant="outline">
             <RefreshCw size={16} />
-            <ButtonText className="ml-2">Start Scanning</ButtonText>
+            <ButtonText className="ml-2">{t('bluetooth.start_scanning')}</ButtonText>
           </Button>
         </VStack>
       );
@@ -343,17 +370,17 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
     return (
       <VStack space="md">
         <HStack className="items-center justify-between">
-          <Heading size="md">Available Devices</Heading>
+          <Heading size="md">{t('bluetooth.available_devices')}</Heading>
           <Button onPress={isScanning ? handleStopScan : handleStartScan} variant="outline" size="sm" isDisabled={isConnecting}>
             {isScanning ? (
               <>
                 <Spinner size="small" />
-                <ButtonText className="ml-2">Stop Scan</ButtonText>
+                <ButtonText className="ml-2">{t('bluetooth.stop_scan')}</ButtonText>
               </>
             ) : (
               <>
                 <RefreshCw size={16} />
-                <ButtonText className="ml-2">Scan</ButtonText>
+                <ButtonText className="ml-2">{t('bluetooth.scan')}</ButtonText>
               </>
             )}
           </Button>
@@ -367,22 +394,22 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
                   <HStack space="sm" className="flex-1 items-center">
                     <Bluetooth size={20} color={device.isConnected ? 'green' : 'gray'} />
                     <VStack className="flex-1">
-                      <Text className="font-medium">{device.name || 'Unknown Device'}</Text>
+                      <Text className="font-medium">{device.name || t('bluetooth.unknown_device')}</Text>
                       <HStack space="xs" className="items-center">
                         {device.rssi ? (
                           <>
                             <Signal size={12} color="gray" />
-                            <Text className="text-xs text-gray-500">{device.rssi} dBm</Text>
+                            <Text className="text-xs text-gray-500">{t('bluetooth.rssi_dbm', { rssi: device.rssi })}</Text>
                           </>
                         ) : null}
                         {device.hasAudioCapability ? (
                           <Badge variant="outline" size="sm">
-                            <Text className="text-xs">Audio</Text>
+                            <Text className="text-xs">{t('bluetooth.audio')}</Text>
                           </Badge>
                         ) : null}
                         {device.supportsMicrophoneControl ? (
                           <Badge variant="outline" size="sm">
-                            <Text className="text-xs">Mic Control</Text>
+                            <Text className="text-xs">{t('bluetooth.supports_mic_control')}</Text>
                           </Badge>
                         ) : null}
                       </HStack>
@@ -391,12 +418,12 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
 
                   {!device.isConnected ? (
                     <Button onPress={() => handleConnectDevice(device)} size="sm" isDisabled={isConnecting}>
-                      {isConnecting ? <Spinner size="small" /> : <ButtonText>Connect</ButtonText>}
+                      {isConnecting ? <Spinner size="small" /> : <ButtonText>{t('bluetooth.connect')}</ButtonText>}
                     </Button>
                   ) : (
                     <HStack space="xs" className="items-center">
                       <CheckCircle size={16} color="green" />
-                      <Text className="text-sm text-green-600">Connected</Text>
+                      <Text className="text-sm text-green-600">{t('bluetooth.connected')}</Text>
                     </HStack>
                   )}
                 </HStack>
@@ -420,11 +447,11 @@ const BluetoothAudioModal: React.FC<BluetoothAudioModalProps> = ({ isOpen, onClo
 
         <VStack space="lg" className="w-full py-4">
           <HStack className="items-center justify-between">
-            <Heading size="xl">Bluetooth Audio</Heading>
+            <Heading size="xl">{t('bluetooth.title')}</Heading>
             {connectedDevice && isLiveKitConnected ? (
               <Badge variant="outline">
                 <Wifi size={12} />
-                <Text className="ml-1 text-xs">LiveKit Active</Text>
+                <Text className="ml-1 text-xs">{t('bluetooth.livekit_active')}</Text>
               </Badge>
             ) : null}
           </HStack>

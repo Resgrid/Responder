@@ -6,7 +6,6 @@ import { useCheckInStore } from '@/stores/calls/check-in-store';
 import { CheckInTabPanel } from '../check-in-tab-panel';
 
 let mockUnits: Array<{ UnitId: string; TypeId: number; Name: string }> = [];
-let mockActiveUnitId: string | null = null;
 let mockCurrentUser: { UserId: string; FirstName: string; LastName: string } | null = { UserId: 'user-1', FirstName: 'Test', LastName: 'User' };
 let mockRoles: Array<{ UnitId: string; UnitRoleId: string; Name: string; UserId?: string }> = [];
 
@@ -42,20 +41,26 @@ jest.mock('@/stores/home/home-store', () => ({
 jest.mock('@/stores/roles/store', () => ({
   useRolesStore: jest.fn((selector: (state: any) => any) => selector({ users: [], roles: mockRoles })),
 }));
-jest.mock('@/stores/app/core-store', () => ({
-  useCoreStore: jest.fn((selector: (state: any) => any) => selector({ activeUnitId: mockActiveUnitId })),
-}));
 
 const mockUseCheckInStore = useCheckInStore as unknown as jest.Mock;
+
+// The panel selects field by field and use-check-in-polling reads getState(), so the
+// mocked hook has to apply the selector and expose the same state via getState.
+const mockStoreState = (mock: jest.Mock, state: Record<string, unknown>) => {
+  mock.mockImplementation((...args: unknown[]) => {
+    const selector = args[0] as ((s: Record<string, unknown>) => unknown) | undefined;
+    return selector ? selector(state) : state;
+  });
+  (mock as unknown as { getState: () => Record<string, unknown> }).getState = () => state;
+};
 
 describe('CheckInTabPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUnits = [];
-    mockActiveUnitId = null;
     mockCurrentUser = { UserId: 'user-1', FirstName: 'Test', LastName: 'User' };
     mockRoles = [];
-    mockUseCheckInStore.mockReturnValue({
+    mockStoreState(mockUseCheckInStore, {
       timerStatuses: [],
       resolvedTimers: [],
       checkInHistory: [],
@@ -78,7 +83,7 @@ describe('CheckInTabPanel', () => {
   });
 
   it('should render quick check-in button when enabled', () => {
-    mockUseCheckInStore.mockReturnValue({
+    mockStoreState(mockUseCheckInStore, {
       timerStatuses: [
         {
           TargetType: 0,
@@ -112,7 +117,7 @@ describe('CheckInTabPanel', () => {
   });
 
   it('should hide quick check-in when a resolved Personnel timer is not currently active', () => {
-    mockUseCheckInStore.mockReturnValue({
+    mockStoreState(mockUseCheckInStore, {
       timerStatuses: [
         {
           TargetType: 1,
@@ -160,7 +165,7 @@ describe('CheckInTabPanel', () => {
   it('shows a UnitType check-in when the assigned current unit has the required type', () => {
     mockUnits = [{ UnitId: '42', TypeId: 5, Name: 'Engine 42' }];
     mockRoles = [{ UnitId: '42', UnitRoleId: '1', Name: 'Driver', UserId: 'user-1' }];
-    mockUseCheckInStore.mockReturnValue({
+    mockStoreState(mockUseCheckInStore, {
       timerStatuses: [
         {
           TargetType: 1,
@@ -195,8 +200,8 @@ describe('CheckInTabPanel', () => {
 
   it('hides mismatched UnitType and IC check-ins', () => {
     mockUnits = [{ UnitId: '42', TypeId: 5, Name: 'Engine 42' }];
-    mockActiveUnitId = '42';
-    mockUseCheckInStore.mockReturnValue({
+    mockRoles = [{ UnitId: '42', UnitRoleId: '1', Name: 'Driver', UserId: 'user-1' }];
+    mockStoreState(mockUseCheckInStore, {
       timerStatuses: [
         {
           TargetType: 1,

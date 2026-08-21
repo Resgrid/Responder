@@ -1,4 +1,5 @@
 import { type HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
@@ -31,6 +32,12 @@ export enum HubConnectingState {
 /** Emitted with `{ hubName }` whenever a hub connection is (re)established or lost. */
 export const HUB_CONNECTED_EVENT = 'hubConnected';
 export const HUB_DISCONNECTED_EVENT = 'hubDisconnected';
+/**
+ * Emitted with `{ hubName }` when every reconnection attempt has been exhausted. The hub
+ * stays registered and will be retried when the network becomes reachable again, but the
+ * app is not receiving live updates until then and should tell the user so.
+ */
+export const HUB_RECONNECT_EXHAUSTED_EVENT = 'hubReconnectExhausted';
 
 export interface HubLifecycleEvent {
   hubName: string;
@@ -49,12 +56,75 @@ class SignalRService {
   private hubStates: Map<string, HubConnectingState> = new Map();
   private intentionalDisconnects: Set<string> = new Set();
   private reconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private exhaustedHubs: Set<string> = new Set();
+  private netInfoUnsubscribe: (() => void) | null = null;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private readonly RECONNECT_INTERVAL = 5000; // 5 seconds
 
   private static instance: SignalRService | null = null;
 
   private constructor() {}
+
+  /**
+   * Hubs whose reconnect budget is exhausted. They keep their stored config and are
+   * retried once the network is reachable again; until then the app is offline for
+   * live call/chat/status updates.
+   */
+  public getExhaustedHubs(): string[] {
+    return Array.from(this.exhaustedHubs);
+  }
+
+  public isHubReconnectExhausted(hubName: string): boolean {
+    return this.exhaustedHubs.has(hubName);
+  }
+
+  /**
+   * Subscribe to NetInfo once, lazily, so a hub that gave up reconnecting is retried the
+   * moment connectivity returns (driving through a dead zone with the app open).
+   */
+  private ensureNetworkListener(): void {
+    if (this.netInfoUnsubscribe) {
+      return;
+    }
+
+    this.netInfoUnsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+      if (!state.isInternetReachable) {
+        return;
+      }
+      this.retryExhaustedHubs();
+    });
+  }
+
+  private retryExhaustedHubs(): void {
+    if (this.exhaustedHubs.size === 0) {
+      return;
+    }
+
+    // Snapshot and clear first: repeated reachable events must not stack retries.
+    const hubNames = Array.from(this.exhaustedHubs);
+    this.exhaustedHubs.clear();
+
+    for (const hubName of hubNames) {
+      const connection = this.connections.get(hubName);
+      if (connection && connection.state === HubConnectionState.Connected) {
+        continue;
+      }
+      if (this.reconnectTimers.has(hubName) || this.isHubConnecting(hubName)) {
+        continue;
+      }
+      if (!this.hubConfigs.has(hubName) && !this.directHubConfigs.has(hubName)) {
+        continue;
+      }
+
+      logger.info({
+        message: `Network reachable again, restarting reconnection for hub: ${hubName}`,
+      });
+
+      this.reconnectAttempts.set(hubName, 0);
+      this.setHubState(hubName, HubConnectingState.RECONNECTING);
+      void this.attemptReconnection(hubName, 0);
+    }
+  }
 
   public static getInstance(): SignalRService {
     if (!SignalRService.instance) {
@@ -230,11 +300,20 @@ class SignalRService {
           isGeolocationHub
             ? {}
             : {
-                accessTokenFactory: () => token,
+                // Read the token at call time. Closing over the connect-time token meant
+                // every automatic reconnect after an expiry replayed a dead 401 token.
+                accessTokenFactory: () => useAuthStore.getState().accessToken ?? '',
               }
         )
-        .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
         .configureLogging(LogLevel.Warning);
+
+      // The geolocation hub bakes the token into the URL, which SignalR cannot refresh on
+      // its own retries. Skip automatic reconnect for it so a drop falls straight through
+      // to handleConnectionClose -> attemptReconnection, which refreshes the token and
+      // rebuilds the URL. Other hubs use accessTokenFactory and can retry in place.
+      if (!isGeolocationHub) {
+        connectionBuilder.withAutomaticReconnect([0, 2000, 5000, 10000, 30000]);
+      }
 
       const connection = connectionBuilder.build();
 
@@ -281,6 +360,7 @@ class SignalRService {
       await connection.start();
       this.connections.set(config.name, connection);
       this.reconnectAttempts.set(config.name, 0);
+      this.exhaustedHubs.delete(config.name);
 
       // Clear the direct-connecting state on successful connection
       this.setHubState(config.name, HubConnectingState.IDLE);
@@ -381,7 +461,8 @@ class SignalRService {
 
       const connection = new HubConnectionBuilder()
         .withUrl(config.url, {
-          accessTokenFactory: () => token,
+          // Read the token at call time so automatic reconnects pick up a refreshed one.
+          accessTokenFactory: () => useAuthStore.getState().accessToken ?? '',
         })
         .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
         .configureLogging(LogLevel.Warning)
@@ -428,6 +509,7 @@ class SignalRService {
       await connection.start();
       this.connections.set(config.name, connection);
       this.reconnectAttempts.set(config.name, 0);
+      this.exhaustedHubs.delete(config.name);
 
       // Store the legacy hub config for reconnection purposes
       this.directHubConfigs.set(config.name, config);
@@ -481,12 +563,20 @@ class SignalRService {
         message: `Max reconnection attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached for hub: ${hubName}`,
       });
 
-      // Clean up resources for this failed connection
+      // Drop the dead connection but KEEP the stored config: deleting it used to make the
+      // outage permanent until an app resume or manual toggle. The hub is parked instead
+      // and retried as soon as the network is reachable again.
       this.connections.delete(hubName);
       this.reconnectAttempts.delete(hubName);
-      this.hubConfigs.delete(hubName);
-      this.directHubConfigs.delete(hubName);
       this.setHubState(hubName, HubConnectingState.IDLE);
+
+      if (this.hubConfigs.has(hubName) || this.directHubConfigs.has(hubName)) {
+        this.exhaustedHubs.add(hubName);
+        this.ensureNetworkListener();
+      }
+
+      this.emit(HUB_DISCONNECTED_EVENT, { hubName });
+      this.emit(HUB_RECONNECT_EXHAUSTED_EVENT, { hubName });
       return;
     }
 
@@ -655,6 +745,9 @@ class SignalRService {
       this.reconnectTimers.delete(hubName);
     }
 
+    // An explicit disconnect ends the outage: stop tracking it for network-triggered retries.
+    this.exhaustedHubs.delete(hubName);
+
     const connection = this.connections.get(hubName);
     if (connection) {
       try {
@@ -723,6 +816,12 @@ class SignalRService {
   // Method to reset the singleton instance (primarily for testing)
   public static resetInstance(): void {
     if (SignalRService.instance) {
+      SignalRService.instance.exhaustedHubs.clear();
+      if (SignalRService.instance.netInfoUnsubscribe) {
+        SignalRService.instance.netInfoUnsubscribe();
+        SignalRService.instance.netInfoUnsubscribe = null;
+      }
+
       // Disconnect all connections before resetting
       SignalRService.instance.disconnectAll().catch((error) => {
         logger.error({

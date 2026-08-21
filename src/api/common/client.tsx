@@ -1,13 +1,17 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 
-import { refreshTokenRequest } from '@/lib/auth/api';
 import { logger } from '@/lib/logging';
 import { getBaseApiUrl } from '@/lib/storage/app';
 import useAuthStore from '@/stores/auth/store';
 
+// A hung socket on flaky cellular never rejects on its own, so every store that flips
+// isLoading would spin indefinitely. Per-request overrides (uploads use 30s) still win.
+const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
+
 // Create axios instance with default config
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: getBaseApiUrl(),
+  timeout: DEFAULT_REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -132,6 +136,10 @@ axiosInstance.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then(() => {
+            // Mark the replay before it goes out. Without this a queued request that still
+            // 401s falls back into this branch and kicks off a second full refresh cycle
+            // instead of failing fast.
+            (originalRequest as InternalAxiosRequestConfig & { _retry: boolean })._retry = true;
             return axiosInstance(originalRequest);
           })
           .catch((err) => {
@@ -149,24 +157,23 @@ axiosInstance.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await refreshTokenRequest(refreshToken);
-        const { access_token, refresh_token: newRefreshToken } = response;
+        // Refresh through the auth store so this shares its single-flight promise with the
+        // request interceptor. Refreshing independently here raced that path over a
+        // one-time-use refresh token, and the loser's invalid_grant (a permanent 400) forced
+        // a logout mid-shift.
+        await useAuthStore.getState().refreshAccessToken();
 
-        // Update tokens in store
-        const now = Date.now();
-        const currentState = useAuthStore.getState();
-        useAuthStore.setState({
-          accessToken: access_token,
-          refreshToken: newRefreshToken || currentState.refreshToken,
-          accessTokenObtainedAt: now,
-          refreshTokenObtainedAt: newRefreshToken ? now : currentState.refreshTokenObtainedAt,
-          status: 'signedIn',
-          error: null,
-        });
+        const accessToken = useAuthStore.getState().accessToken;
+        if (!accessToken) {
+          // The store treated the failure as permanent and already signed the user out;
+          // fail this request with the original 401 rather than starting a second logout.
+          processQueue(error);
+          return Promise.reject(error);
+        }
 
         // Update Authorization header
-        axiosInstance.defaults.headers.common.Authorization = `Bearer ${access_token}`;
-        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null);
         return axiosInstance(originalRequest);

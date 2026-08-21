@@ -6,6 +6,7 @@ import { Linking, ScrollView, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { useAnalytics } from '@/hooks/use-analytics';
+import { parseDateISOString } from '@/lib/utils';
 import { type ContactNoteResultData } from '@/models/v4/contacts/contactNoteResultData';
 import { useContactsStore } from '@/stores/contacts/store';
 import { defaultWebViewProps, generateWebViewHtml } from '@/utils/webview-html';
@@ -37,7 +38,9 @@ const ContactNoteCard: React.FC<ContactNoteCardProps> = ({ note }) => {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString();
+      // Offsetless API timestamps must go through the shared parser — new Date() either
+      // shifts them by the device offset or yields "Invalid Date" on Hermes.
+      return parseDateISOString(dateString).toLocaleDateString();
     } catch {
       return dateString;
     }
@@ -138,6 +141,16 @@ const ContactNoteCard: React.FC<ContactNoteCardProps> = ({ note }) => {
   );
 };
 
+/** AddedOnUtc is typed as a Date but arrives from the API as a string — read both safely. */
+const getNoteTimestamp = (value: Date | string): number => {
+  try {
+    const time = value instanceof Date ? value.getTime() : parseDateISOString(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  } catch {
+    return 0;
+  }
+};
+
 export const ContactNotesList: React.FC<ContactNotesListProps> = ({ contactId }) => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
@@ -191,9 +204,9 @@ export const ContactNotesList: React.FC<ContactNotesListProps> = ({ contactId })
 
   // Sort notes by date (newest first)
   const sortedNotes = [...notes].sort((a, b) => {
-    const dateA = new Date(a.AddedOnUtc || a.AddedOn);
-    const dateB = new Date(b.AddedOnUtc || b.AddedOn);
-    return dateB.getTime() - dateA.getTime();
+    const dateA = getNoteTimestamp(a.AddedOnUtc || a.AddedOn);
+    const dateB = getNoteTimestamp(b.AddedOnUtc || b.AddedOn);
+    return dateB - dateA;
   });
 
   return (

@@ -40,9 +40,6 @@ import { appInitializationService } from '@/services/app-initialization.service'
 // Ensure OIDC / OAuth in-app browser sessions complete properly on iOS
 WebBrowser.maybeCompleteAuthSession();
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-//SplashScreen.preventAutoHideAsync();
-
 export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
@@ -73,9 +70,9 @@ Sentry.init({
   tracesSampleRate: __DEV__ ? 1.0 : 0.2,
   // profilesSampleRate: relative to tracesSampleRate!
   // Effective profile rate = tracesSampleRate * profilesSampleRate.
-  // In production: 0.2 * 1.0 = 20% of all transactions get profiles.
-  // Set to 1.0 to profile ALL sampled transactions, or lower to further sub-sample.
-  profilesSampleRate: __DEV__ ? 1.0 : 1.0,
+  // In production: 0.2 * 0.1 = 2% of all transactions get profiles. CPU profiling is
+  // expensive on low-end responder handsets, so only a small slice is sampled there.
+  profilesSampleRate: __DEV__ ? 1.0 : 0.1,
   sendDefaultPii: false,
   enableAppHangTracking: true, // v8: Tracks app freeze/hang events
   enableWatchdogTerminationTracking: true, // v8: Tracks iOS watchdog terminations
@@ -85,10 +82,12 @@ Sentry.init({
   ],
   enableNativeFramesTracking: true, // Tracks slow and frozen frames
   beforeBreadcrumb(breadcrumb) {
-    // Drop console breadcrumbs in development: every dev log would otherwise be
-    // synced to the native scope, and LogService already emits explicit `log`
-    // breadcrumbs for warn/error, so nothing of value is lost.
-    if (__DEV__ && breadcrumb.category === 'console') {
+    // Drop console breadcrumbs everywhere: in development every dev log would be synced
+    // to the native scope, and in production a stray `console.log` of an API payload
+    // would attach that payload — potentially PII — to every event despite
+    // `sendDefaultPii: false`. LogService already emits explicit `log` breadcrumbs for
+    // warn/error, so nothing of value is lost.
+    if (breadcrumb.category === 'console') {
       return null;
     }
     return breadcrumb;
@@ -110,9 +109,11 @@ loadSelectedTheme();
 
 //useAuth().hydrate();
 
-// Set the animation options. This is optional.
+// The splash auto-hides at first frame (nothing calls preventAutoHideAsync), so this fade
+// plays over already-rendered UI. Keep it short — a long fade is pure added perceived
+// time-to-interactive on every launch.
 SplashScreen.setOptions({
-  duration: 2000,
+  duration: 400,
   fade: true,
 });
 

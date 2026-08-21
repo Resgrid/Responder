@@ -281,8 +281,11 @@ jest.mock('@/components/ui/icon', () => {
 const mockUseShiftsStore = useShiftsStore as jest.MockedFunction<typeof useShiftsStore>;
 const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
-const setShiftsStoreMock = (state: unknown) =>
+const setShiftsStoreMock = (state: unknown) => {
   mockUseShiftsStore.mockImplementation(((selector?: (s: unknown) => unknown) => (selector ? selector(state) : state)) as any);
+  // The screen reads a snapshot via getState() for its focus analytics.
+  (mockUseShiftsStore as unknown as { getState: () => unknown }).getState = () => state;
+};
 
 const mockShifts = [
   {

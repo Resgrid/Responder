@@ -26,7 +26,9 @@ interface WeatherAlertFilter {
 export default function WeatherAlertsList() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { alerts, isLoading, fetchActiveAlerts } = useWeatherAlertsStore();
+  const alerts = useWeatherAlertsStore((state) => state.alerts);
+  const isLoading = useWeatherAlertsStore((state) => state.isLoading);
+  const fetchActiveAlerts = useWeatherAlertsStore((state) => state.fetchActiveAlerts);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -99,7 +101,7 @@ export default function WeatherAlertsList() {
           </InputSlot>
           <InputField placeholder={t('weatherAlerts.search')} value={searchQuery} onChangeText={setSearchQuery} />
           {searchQuery ? (
-            <InputSlot className="pr-3" onPress={() => setSearchQuery('')}>
+            <InputSlot className="pr-3" onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel={t('common.clear_search')}>
               <InputIcon as={X} />
             </InputSlot>
           ) : null}

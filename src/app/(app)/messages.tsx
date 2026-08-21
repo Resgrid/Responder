@@ -33,6 +33,7 @@ export default function MessagesScreen() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
+  // useSecurityStore is a hook that already selects per field and memoizes its result.
   const { canUserCreateMessages } = useSecurityStore();
   const { trackEvent } = useAnalytics();
 
@@ -60,14 +61,17 @@ export default function MessagesScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const filteredMessages = useMemo(() => useMessagesStore.getState().getFilteredMessages(), [inboxMessages, sentMessages, searchQuery, currentFilter]);
 
-  // Fetch messages when screen comes into focus
+  // Fetch messages when screen comes into focus.
+  // The message count is read via getState(): depending on filteredMessages.length re-created this
+  // callback as soon as the fetches below landed, so the effect re-ran and both lists were fetched
+  // twice per focus, with a duplicate messages_viewed event.
   useFocusEffect(
     useCallback(() => {
       // Track analytics when view becomes visible
       trackEvent('messages_viewed', {
         timestamp: new Date().toISOString(),
         currentFilter,
-        messageCount: filteredMessages.length,
+        messageCount: useMessagesStore.getState().getFilteredMessages().length,
       });
 
       if (currentFilter === 'sent') {
@@ -79,7 +83,7 @@ export default function MessagesScreen() {
         fetchInboxMessages();
         fetchSentMessages();
       }
-    }, [fetchInboxMessages, fetchSentMessages, currentFilter, trackEvent, filteredMessages.length])
+    }, [fetchInboxMessages, fetchSentMessages, currentFilter, trackEvent])
   );
 
   const handleMessagePress = useCallback(
@@ -156,13 +160,20 @@ export default function MessagesScreen() {
     });
   };
 
-  const handleOpenCompose = (source: 'fab' | 'zero_state') => {
-    trackEvent('message_compose_opened', {
-      timestamp: new Date().toISOString(),
-      source,
-    });
-    openCompose();
-  };
+  const handleOpenCompose = useCallback(
+    (source: 'fab' | 'zero_state') => {
+      trackEvent('message_compose_opened', {
+        timestamp: new Date().toISOString(),
+        source,
+      });
+      openCompose();
+    },
+    [openCompose, trackEvent]
+  );
+
+  const handleComposeFabPress = useCallback(() => {
+    handleOpenCompose('fab');
+  }, [handleOpenCompose]);
 
   const handleSearchQueryChange = useCallback(
     (query: string) => {
@@ -237,7 +248,7 @@ export default function MessagesScreen() {
                 </InputSlot>
                 <InputField placeholder={t('messages.search_placeholder')} value={searchQuery} onChangeText={handleSearchQueryChange} testID="messages-search-input" />
                 {searchQuery ? (
-                  <InputSlot className="pr-3" onPress={handleClearSearch} testID="clear-search-button">
+                  <InputSlot className="pr-3" onPress={handleClearSearch} testID="clear-search-button" accessibilityRole="button" accessibilityLabel={t('common.clear_search')}>
                     <InputIcon as={X} />
                   </InputSlot>
                 ) : null}
@@ -342,8 +353,6 @@ export default function MessagesScreen() {
           />
         )}
 
-        {isLoading && filteredMessages.length === 0 ? <Loading /> : null}
-
         {/* Filter Action Sheet */}
         <Actionsheet isOpen={isFilterMenuOpen} onClose={() => setIsFilterMenuOpen(false)}>
           <ActionsheetBackdrop />
@@ -420,7 +429,7 @@ export default function MessagesScreen() {
 
         {/* FAB button for composing new message */}
         {!isSelectionMode && canUserCreateMessages ? (
-          <Fab placement="bottom right" size="lg" onPress={() => handleOpenCompose('fab')} testID="messages-compose-fab">
+          <Fab placement="bottom right" size="lg" onPress={handleComposeFabPress} testID="messages-compose-fab" accessibilityRole="button" accessibilityLabel={t('messages.compose')}>
             <FabIcon as={MessageSquarePlus} size="lg" />
           </Fab>
         ) : null}

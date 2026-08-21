@@ -10,6 +10,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Env } from '@/lib/env';
+import { logger } from '@/lib/logging';
 import { useDepartmentMapCenter } from '@/lib/map-center';
 import { locationService } from '@/services/location';
 import { useLocationStore } from '@/stores/app/location-store';
@@ -176,7 +177,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
 
       // If we have a valid stored location, use it
       if (storedLocation && storedLocation.latitude !== 0 && storedLocation.longitude !== 0) {
-        console.log('Using stored location from location store');
+        logger.debug({ message: 'Location picker: using stored location from location store' });
         setCurrentLocation(storedLocation);
         reverseGeocode(storedLocation.latitude, storedLocation.longitude);
 
@@ -196,7 +197,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       }
 
       // If no stored location, try to get current device location
-      console.log('No stored location found, getting current device location');
+      logger.debug({ message: 'Location picker: no stored location, getting current device location' });
       const deviceLocation = await getCurrentLocationFromDevice();
 
       if (!isMountedRef.current) return;
@@ -218,7 +219,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
           }
         }
       } else {
-        console.log('Unable to get current location');
+        logger.debug({ message: 'Location picker: unable to get current location' });
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -245,7 +246,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
 
     // Treat 0,0 coordinates as "no initial location" to recover user position
     if (initialLocation && !(initialLocation.latitude === 0 && initialLocation.longitude === 0)) {
-      console.log('Using provided initial location');
+      logger.debug({ message: 'Location picker: using provided initial location' });
       setCurrentLocation(initialLocation);
       setHasAttemptedLocationFetch(true);
       reverseGeocode(initialLocation.latitude, initialLocation.longitude);
@@ -260,7 +261,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
           : null;
 
       if (storedLocation && !(storedLocation.latitude === 0 && storedLocation.longitude === 0)) {
-        console.log('Using stored location from location store');
+        logger.debug({ message: 'Location picker: using stored location from location store' });
         setCurrentLocation(storedLocation);
         setHasAttemptedLocationFetch(true);
         reverseGeocode(storedLocation.latitude, storedLocation.longitude);

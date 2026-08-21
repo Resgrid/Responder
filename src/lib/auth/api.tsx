@@ -7,8 +7,13 @@ import { logger } from '@/lib/logging';
 import { getBaseApiUrl } from '../storage/app';
 import type { AuthResponse, ExternalTokenCredentials, LoginCredentials, LoginResponse } from './types';
 
+// Without a timeout a hung socket on flaky cellular never rejects, so the login spinner
+// (and every token refresh behind it) would sit there for minutes.
+const AUTH_REQUEST_TIMEOUT_MS = 15000;
+
 const authApi = axios.create({
   baseURL: getBaseApiUrl(),
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded',
   },

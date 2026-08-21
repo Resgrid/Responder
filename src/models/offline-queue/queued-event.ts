@@ -1,7 +1,5 @@
 export enum QueuedEventType {
-  UNIT_STATUS = 'unit_status',
   PERSONNEL_STATUS = 'personnel_status',
-  LOCATION_UPDATE = 'location_update',
   CALL_IMAGE_UPLOAD = 'call_image_upload',
   CHECK_IN = 'check_in',
 }
@@ -44,44 +42,6 @@ export interface QueuedPersonnelStatusEvent extends Omit<QueuedEvent, 'data'> {
     speed?: string;
     heading?: string;
     eventId?: string;
-  };
-}
-
-export interface QueuedUnitStatusEvent extends Omit<QueuedEvent, 'data'> {
-  type: QueuedEventType.UNIT_STATUS;
-  data: {
-    unitId: string;
-    statusType: string;
-    note?: string;
-    respondingTo?: string;
-    respondingToType?: number | null;
-    timestamp: string;
-    timestampUtc: string;
-    eventId?: string;
-    roles?: {
-      roleId: string;
-      userId: string;
-    }[];
-    latitude?: string;
-    longitude?: string;
-    accuracy?: string;
-    altitude?: string;
-    altitudeAccuracy?: string;
-    speed?: string;
-    heading?: string;
-  };
-}
-
-export interface QueuedLocationUpdateEvent extends Omit<QueuedEvent, 'data'> {
-  type: QueuedEventType.LOCATION_UPDATE;
-  data: {
-    unitId: string;
-    latitude: number;
-    longitude: number;
-    accuracy?: number;
-    heading?: number;
-    speed?: number;
-    timestamp: string;
   };
 }
 

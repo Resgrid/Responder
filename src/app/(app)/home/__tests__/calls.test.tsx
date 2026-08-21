@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import React from 'react';
 
 import { useAnalytics } from '@/hooks/use-analytics';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useRolesStore } from '@/stores/roles/store';
@@ -31,7 +30,6 @@ jest.mock('react-i18next', () => ({
 jest.mock('@/stores/calls/store');
 jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/roles/store');
-jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/security/store');
 
 jest.mock('@/hooks/use-analytics', () => ({
@@ -161,7 +159,6 @@ jest.mock('lucide-react-native', () => ({
 const mockUseCallsStore = useCallsStore as jest.MockedFunction<typeof useCallsStore>;
 const mockUseHomeStore = useHomeStore as jest.MockedFunction<typeof useHomeStore>;
 const mockUseRolesStore = useRolesStore as jest.MockedFunction<typeof useRolesStore>;
-const mockUseCoreStore = useCoreStore as jest.MockedFunction<typeof useCoreStore>;
 const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
 const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
@@ -198,11 +195,6 @@ describe('Calls Screen', () => {
 
     mockUseRolesStore.mockImplementation(((selector?: (state: { roles: any[] }) => unknown) => {
       const state = { roles: [] as any[] };
-      return selector ? selector(state) : state;
-    }) as any);
-
-    mockUseCoreStore.mockImplementation(((selector?: (state: { activeUnitId: null }) => unknown) => {
-      const state = { activeUnitId: null };
       return selector ? selector(state) : state;
     }) as any);
 

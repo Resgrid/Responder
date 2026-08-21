@@ -39,7 +39,9 @@ export default function Login() {
     if (status === 'signedIn' && isAuthenticated) {
       logger.info({ message: 'Login successful, redirecting to home' });
       trackEvent('login_success', { timestamp: new Date().toISOString() });
-      router.push('/(app)');
+      // replace, not push: pushing left the login form on the stack, so Android back from home
+      // returned the signed-in user to it. Matches the SSO screen.
+      router.replace('/(app)');
     }
   }, [status, isAuthenticated, router, trackEvent]);
 

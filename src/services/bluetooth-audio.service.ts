@@ -45,12 +45,22 @@ const BUTTON_CONTROL_SERVICES = [
 
 const BUTTON_CONTROL_CHARACTERISTICS = [
   '0000FE59-0000-1000-8000-00805F9B34FB', // Common button control characteristic
-  '00002A19-0000-1000-8000-00805F9B34FB', // Battery Level (may include button state)
-  '00002A4D-0000-1000-8000-00805F9B34FB', // HID Report characteristic
-  '00002A4A-0000-1000-8000-00805F9B34FB', // HID Information characteristic
-  '00002A4B-0000-1000-8000-00805F9B34FB', // HID Report Map characteristic
-  '00002A4C-0000-1000-8000-00805F9B34FB', // HID Control Point characteristic
 ];
+
+// Standard GATT characteristics that must never be fed to the generic button parser.
+// Their payloads are telemetry/descriptors, not button frames: a headset reporting
+// battery 100% (0x64) decodes as `0x64 & 0x0f === 0x04` -> 'mute', which would toggle
+// the LiveKit microphone mid-transmission. Battery levels 4/20/36/52/68/84/100 all hit it.
+const EXCLUDED_STANDARD_CHARACTERISTICS = [
+  '00002A19-0000-1000-8000-00805F9B34FB', // Battery Level
+  '00002A4A-0000-1000-8000-00805F9B34FB', // HID Information
+  '00002A4B-0000-1000-8000-00805F9B34FB', // HID Report Map
+  '00002A4C-0000-1000-8000-00805F9B34FB', // HID Control Point
+  '00002A4D-0000-1000-8000-00805F9B34FB', // HID Report
+];
+
+// Upper bound on a single BleManager.connect attempt (Android can hang indefinitely).
+const CONNECTION_TIMEOUT_MS = 15000;
 
 export class BluetoothAudioService {
   private static instance: BluetoothAudioService;
@@ -236,8 +246,10 @@ export class BluetoothAudioService {
 
     if (state === State.PoweredOff || state === State.Unauthorized) {
       this.handleBluetoothDisabled();
-    } else if (state === State.PoweredOn && this.isInitialized && !this.hasAttemptedPreferredDeviceConnection) {
-      // If Bluetooth is turned back on, try to reconnect to preferred device
+    } else if (state === State.PoweredOn && this.isInitialized) {
+      // If Bluetooth is turned back on, try to reconnect to preferred device.
+      // attemptReconnectToPreferredDevice() resets hasAttemptedPreferredDeviceConnection
+      // itself, so gating on that flag here would make this branch unreachable after init.
       this.attemptReconnectToPreferredDevice();
     }
   }
@@ -262,17 +274,18 @@ export class BluetoothAudioService {
       return;
     }
 
-    // Define RSSI threshold for strong signals (typical range: -100 to -20 dBm)
-    const STRONG_RSSI_THRESHOLD = -60; // Only allow devices with RSSI stronger than -60 dBm
+    // Define RSSI floor (typical range: -100 to -20 dBm). -60 dBm only reached headsets
+    // within a couple of meters, so pocket/belt-worn devices presented as "not found".
+    const MIN_RSSI_THRESHOLD = -85;
 
-    // Check RSSI signal strength - only proceed with strong signals
-    if (!device.rssi || device.rssi < STRONG_RSSI_THRESHOLD) {
+    // Check RSSI signal strength - drop only devices that are effectively out of range
+    if (!device.rssi || device.rssi < MIN_RSSI_THRESHOLD) {
       return;
     }
 
     // Log discovered device for debugging
     logger.debug({
-      message: 'Device discovered during scan with strong RSSI',
+      message: 'Device discovered during scan with usable RSSI',
       context: {
         deviceId: device.id,
         deviceName: device.name,
@@ -321,6 +334,15 @@ export class BluetoothAudioService {
   private handleButtonEventFromCharacteristic(serviceUuid: string, characteristicUuid: string, value: string): void {
     const normalizedServiceUuid = this.normalizeUuid(serviceUuid);
     const normalizedCharUuid = this.normalizeUuid(characteristicUuid);
+
+    // Standard GATT telemetry/descriptor characteristics are never button input.
+    if (EXCLUDED_STANDARD_CHARACTERISTICS.some((uuid) => uuid.toUpperCase() === normalizedCharUuid)) {
+      logger.debug({
+        message: 'Ignoring standard GATT characteristic for button routing',
+        context: { service: normalizedServiceUuid, characteristic: normalizedCharUuid },
+      });
+      return;
+    }
 
     // Route to appropriate handler based on service/characteristic
     if (normalizedServiceUuid === AINA_HEADSET_SERVICE.toUpperCase() && normalizedCharUuid === AINA_HEADSET_SVC_PROP.toUpperCase()) {
@@ -977,12 +999,45 @@ export class BluetoothAudioService {
     });
   }
 
+  private clearConnectionTimeout(): void {
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+  }
+
+  /**
+   * Race a connect operation against CONNECTION_TIMEOUT_MS. A hung native connect would
+   * otherwise leave the store's isConnecting flag true forever with no way to recover.
+   */
+  private withConnectionTimeout<T>(operation: Promise<T>, deviceId: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.clearConnectionTimeout();
+
+      this.connectionTimeout = setTimeout(() => {
+        this.connectionTimeout = null;
+        reject(new Error(`Timed out connecting to Bluetooth device ${deviceId}`));
+      }, CONNECTION_TIMEOUT_MS);
+
+      operation.then(
+        (value) => {
+          this.clearConnectionTimeout();
+          resolve(value);
+        },
+        (error) => {
+          this.clearConnectionTimeout();
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      );
+    });
+  }
+
   async connectToDevice(deviceId: string): Promise<void> {
     try {
       useBluetoothAudioStore.getState().setIsConnecting(true);
 
       // Connect to the device
-      await BleManager.connect(deviceId);
+      await this.withConnectionTimeout(Promise.resolve(BleManager.connect(deviceId)), deviceId);
 
       logger.info({
         message: 'Connected to Bluetooth audio device',
@@ -1125,6 +1180,12 @@ export class BluetoothAudioService {
             // Add service/characteristic pairs for characteristics that support notifications
             const serviceUuid = characteristic.service;
             const characteristicUuid = characteristic.characteristic;
+
+            // Never subscribe standard GATT telemetry/descriptor characteristics: they are
+            // not button frames and would be misread as presses (e.g. Battery Level -> 'mute').
+            if (EXCLUDED_STANDARD_CHARACTERISTICS.some((uuid) => uuid === this.normalizeUuid(characteristicUuid))) {
+              continue;
+            }
 
             // Skip if we already have this combination
             const alreadyAdded = buttonControlConfigs.some((config) => config.service.toUpperCase() === serviceUuid.toUpperCase() && config.characteristic.toUpperCase() === characteristicUuid.toUpperCase());

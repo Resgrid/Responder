@@ -192,16 +192,17 @@ class PushNotificationService {
     }
 
     try {
-      // Standard call/notification/message channels
-      for (const channel of NOTIFICATION_CHANNELS) {
-        await this.createNotificationChannel(channel.id, channel.name, channel.description, channel.sound, channel.vibration ?? true);
-      }
+      // Create every channel in parallel: awaiting each one serialized 32 bridge
+      // round trips on every Android launch.
+      const channelPromises: Promise<void>[] = NOTIFICATION_CHANNELS.map((channel) => this.createNotificationChannel(channel.id, channel.name, channel.description, channel.sound, channel.vibration ?? true));
 
       // Custom call channels (c1-c25) keep their own dedicated tones.
       for (let i = 1; i <= 25; i++) {
         const channelId = `c${i}`;
-        await this.createNotificationChannel(channelId, `Custom Call ${i}`, `Custom Call Tone ${i}`, channelId);
+        channelPromises.push(this.createNotificationChannel(channelId, `Custom Call ${i}`, `Custom Call Tone ${i}`, channelId));
       }
+
+      await Promise.all(channelPromises);
 
       logger.info({
         message: 'Android notification channels setup completed',
@@ -219,12 +220,13 @@ class PushNotificationService {
     this.notificationListener = Notifications.addNotificationReceivedListener(this.handleNotificationReceived);
     this.responseListener = Notifications.addNotificationResponseReceivedListener(this.handleNotificationResponse);
 
+    // Handle a cold start FIRST: when the app is launched from a killed state by tapping a
+    // notification, the response listener above misses that initial tap, so replay it from
+    // the last response. Channel setup does not gate the deep link and must not delay it.
+    await this.presentLaunchNotificationResponse();
+
     // Set up Android notification channels
     await this.setupAndroidNotificationChannels();
-
-    // Handle a cold start: when the app is launched from a killed state by tapping a notification,
-    // the response listener above misses that initial tap, so replay it from the last response.
-    await this.presentLaunchNotificationResponse();
 
     logger.info({
       message: 'Push notification service initialized',
@@ -440,7 +442,7 @@ class PushNotificationService {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Test Notification',
-          body: 'This is a test notification from Resgrid Unit',
+          body: 'This is a test notification from Resgrid Responder',
           data: { type: 'test', timestamp: new Date().toISOString() },
         },
         trigger: null, // Send immediately

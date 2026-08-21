@@ -83,7 +83,7 @@ export default function Contacts() {
           </InputSlot>
           <InputField placeholder={t('contacts.search')} value={searchQuery} onChangeText={setSearchQuery} />
           {searchQuery ? (
-            <InputSlot className="pr-3" onPress={() => setSearchQuery('')} testID="clear-search-button">
+            <InputSlot className="pr-3" onPress={() => setSearchQuery('')} testID="clear-search-button" accessibilityRole="button" accessibilityLabel={t('common.clear_search')}>
               <InputIcon as={X} />
             </InputSlot>
           ) : null}

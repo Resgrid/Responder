@@ -221,7 +221,13 @@ export const ContactDetailsSheet: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const { trackEvent } = useAnalytics();
-  const { contacts, selectedContactId, isDetailsOpen, closeDetails, selectedContactDetails } = useContactsStore();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, re-rendering the sheet whether or not anything it reads actually changed.
+  const contacts = useContactsStore((state) => state.contacts);
+  const selectedContactId = useContactsStore((state) => state.selectedContactId);
+  const isDetailsOpen = useContactsStore((state) => state.isDetailsOpen);
+  const closeDetails = useContactsStore((state) => state.closeDetails);
+  const selectedContactDetails = useContactsStore((state) => state.selectedContactDetails);
   const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details');
 
   const selectedContact = React.useMemo(() => {

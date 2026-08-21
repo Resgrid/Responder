@@ -334,7 +334,10 @@ export function BluetoothDeviceSelectionBottomSheet({ isOpen, onClose }: Bluetoo
                 {isConnected && <WifiIcon size={14} className="ml-2 text-green-600" />}
               </HStack>
               <HStack className="mt-1 items-center">
-                {item.rssi && <Text className="text-xs text-neutral-600 dark:text-neutral-400">RSSI: {item.rssi}dBm</Text>}
+                {/* Ternary, not `&&`: rssi is numeric, so `0 && …` would render a bare "0"
+                    outside a <Text> and crash with "Text strings must be rendered within a
+                    <Text> component". */}
+                {item.rssi !== undefined ? <Text className="text-xs text-neutral-600 dark:text-neutral-400">{t('bluetooth.rssi_value', { rssi: item.rssi })}</Text> : null}
                 {item.supportsMicrophoneControl && <Text className="ml-2 text-xs text-blue-600 dark:text-blue-400">{t('bluetooth.supports_mic_control')}</Text>}
                 {item.hasAudioCapability && <Text className="ml-2 text-xs text-green-600 dark:text-green-400">{t('bluetooth.audio_capable')}</Text>}
               </HStack>

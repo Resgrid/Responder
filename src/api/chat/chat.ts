@@ -31,11 +31,8 @@ const MODERATION = '/ChatModeration';
 // Channels
 // ---------------------------------------------------------------------------
 
-export const getChannels = async (activeUnitId?: number, signal?: AbortSignal) => {
-  const response = await api.get<ChatV4Response<ChatChannelResultData[]>>(`${CHAT}/GetChannels`, {
-    params: activeUnitId != null ? { activeUnitId } : undefined,
-    signal,
-  });
+export const getChannels = async (signal?: AbortSignal) => {
+  const response = await api.get<ChatV4Response<ChatChannelResultData[]>>(`${CHAT}/GetChannels`, { signal });
   return response.data;
 };
 

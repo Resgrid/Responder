@@ -230,6 +230,13 @@ export default function ChannelConversationScreen() {
     [router, channelId]
   );
 
+  // Stable identity: an inline arrow here changed on every render and defeated MessageBubble's memo.
+  const handleRetry = useCallback((message: ChatMessageResultData) => {
+    if (message.ClientMessageId) {
+      void useChatStore.getState().retryOutboxItem(message.ClientMessageId);
+    }
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: ChatMessageResultData }) => (
       <MessageBubble
@@ -240,11 +247,11 @@ export default function ChannelConversationScreen() {
         onLongPress={setActionsMessage}
         onToggleReaction={handleToggleReaction}
         onOpenThread={openThread}
-        onRetry={(m) => m.ClientMessageId && useChatStore.getState().retryOutboxItem(m.ClientMessageId)}
+        onRetry={handleRetry}
         onPressImage={setImageUri}
       />
     ),
-    [currentUserId, showSender, handleToggleReaction, openThread]
+    [currentUserId, showSender, handleToggleReaction, openThread, handleRetry]
   );
 
   const keyExtractor = useCallback((item: ChatMessageResultData) => item.ChatMessageId, []);

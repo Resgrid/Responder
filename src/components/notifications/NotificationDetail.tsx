@@ -1,6 +1,89 @@
 import { ArrowLeft, Calendar, ExternalLink, Trash2 } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useEffect } from 'react';
-import { Animated, Appearance, Dimensions, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Animated, Platform, Pressable, SafeAreaView, type StyleProp, StyleSheet, Text, useWindowDimensions, View, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Constants
+const SIDEBAR_WIDTH_RATIO = 0.85;
+const SIDEBAR_MAX_WIDTH = 400;
+
+// Color-dependent rules live here instead of the module-level StyleSheet so they follow the
+// app theme (nativewind) rather than the system theme captured once at app launch.
+const createThemedStyles = (isDark: boolean) =>
+  StyleSheet.create({
+    sidebarContainer: {
+      backgroundColor: isDark ? '#171717' : '#fff',
+      shadowColor: isDark ? '#262626' : '#e5e5e5',
+    },
+    header: {
+      borderBottomColor: isDark ? '#333333' : '#e5e5e5',
+    },
+    headerTitle: {
+      color: isDark ? '#f3f4f6' : '#111827',
+    },
+    dateText: {
+      color: isDark ? '#9ca3af' : '#6b7280',
+    },
+    timeText: {
+      color: isDark ? '#9ca3af' : '#6b7280',
+    },
+    typeTagDefault: {
+      backgroundColor: isDark ? '#374151' : '#e5e7eb',
+    },
+    typeTagInfo: {
+      backgroundColor: isDark ? '#1e40af' : '#dbeafe',
+    },
+    typeTagSuccess: {
+      backgroundColor: isDark ? '#065f46' : '#d1fae5',
+    },
+    typeTagWarning: {
+      backgroundColor: isDark ? '#92400e' : '#fef3c7',
+    },
+    typeTagAlert: {
+      backgroundColor: isDark ? '#991b1b' : '#fee2e2',
+    },
+    title: {
+      color: isDark ? '#f3f4f6' : '#111827',
+    },
+    bodyContainer: {
+      backgroundColor: isDark ? '#262626' : '#f9fafb',
+    },
+    body: {
+      color: isDark ? '#e5e5e5' : '#374151',
+    },
+    metadataDetailsContainer: {
+      backgroundColor: isDark ? '#262626' : '#f9fafb',
+    },
+    metadataTitle: {
+      color: isDark ? '#f3f4f6' : '#111827',
+    },
+    metadataKey: {
+      color: isDark ? '#9ca3af' : '#6b7280',
+    },
+    metadataValue: {
+      color: isDark ? '#e5e5e5' : '#111827',
+    },
+    buttonText: {
+      color: isDark ? '#3b82f6' : '#2563eb',
+    },
+    referenceButton: {
+      backgroundColor: isDark ? '#1e3a8a' : '#dbeafe',
+      borderColor: isDark ? '#3b82f6' : '#60a5fa',
+    },
+    referenceButtonIcon: {
+      marginRight: 8,
+      color: isDark ? '#3b82f6' : '#2563eb',
+    },
+  });
+
+type ThemedStyles = ReturnType<typeof createThemedStyles>;
+
+const useThemedStyles = () => {
+  const { colorScheme } = useColorScheme();
+  return React.useMemo(() => createThemedStyles(colorScheme === 'dark'), [colorScheme]);
+};
 
 // Define the interface directly in this file
 interface NotificationPayload {
@@ -12,7 +95,7 @@ interface NotificationPayload {
   type?: string;
   referenceId?: string;
   referenceType?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface NotificationDetailProps {
@@ -22,12 +105,20 @@ interface NotificationDetailProps {
   onNavigateToReference: (referenceType: string, referenceId: string) => void;
 }
 
-const { width } = Dimensions.get('window');
-const SIDEBAR_WIDTH = Math.min(width * 0.85, 400);
-const STATUS_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0;
-
 export const NotificationDetail = ({ notification, onClose, onDelete, onNavigateToReference }: NotificationDetailProps) => {
-  const slideAnim = React.useRef(new Animated.Value(SIDEBAR_WIDTH)).current;
+  const { t } = useTranslation();
+  const themed = useThemedStyles();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // Sidebar geometry — recomputed on rotation / split view rather than captured at module load
+  const sidebarWidth = Math.min(width * SIDEBAR_WIDTH_RATIO, SIDEBAR_MAX_WIDTH);
+  const sidebarSizeStyle = React.useMemo(() => ({ width: sidebarWidth }), [sidebarWidth]);
+  // RN's SafeAreaView only insets on iOS, so Android still needs the status bar padding applied
+  // manually — from live safe-area insets instead of a hardcoded height.
+  const headerInsetStyle = React.useMemo(() => ({ paddingTop: Platform.OS === 'android' ? insets.top + 16 : 16 }), [insets.top]);
+
+  const slideAnim = React.useRef(new Animated.Value(sidebarWidth)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -50,7 +141,7 @@ export const NotificationDetail = ({ notification, onClose, onDelete, onNavigate
     // Animate out
     Animated.parallel([
       Animated.timing(slideAnim, {
-        toValue: SIDEBAR_WIDTH,
+        toValue: sidebarWidth,
         duration: 300,
         useNativeDriver: true,
       }),
@@ -95,13 +186,13 @@ export const NotificationDetail = ({ notification, onClose, onDelete, onNavigate
         <Pressable style={styles.backdropPressable} onPress={handleClose} />
       </Animated.View>
 
-      <Animated.View style={[styles.sidebarContainer, { transform: [{ translateX: slideAnim }] }]}>
+      <Animated.View style={[styles.sidebarContainer, themed.sidebarContainer, sidebarSizeStyle, { transform: [{ translateX: slideAnim }] }]}>
         <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
+          <View style={[styles.header, themed.header, headerInsetStyle]}>
             <Pressable onPress={handleClose} style={styles.backButton}>
               <ArrowLeft size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
             </Pressable>
-            <Text style={styles.headerTitle}>Notification</Text>
+            <Text style={[styles.headerTitle, themed.headerTitle]}>{t('notifications.notification')}</Text>
             <Pressable onPress={handleDelete} style={styles.deleteButton}>
               <Trash2 size={24} className="text-red-500 dark:text-red-400" strokeWidth={2} />
             </Pressable>
@@ -111,39 +202,39 @@ export const NotificationDetail = ({ notification, onClose, onDelete, onNavigate
             <View style={styles.metadataContainer}>
               <View style={styles.dateContainer}>
                 <Calendar size={16} className="text-gray-500 dark:text-gray-400" strokeWidth={2} />
-                <Text style={styles.dateText}>{formattedDate}</Text>
+                <Text style={[styles.dateText, themed.dateText]}>{formattedDate}</Text>
               </View>
-              <Text style={styles.timeText}>{formattedTime}</Text>
+              <Text style={[styles.timeText, themed.timeText]}>{formattedTime}</Text>
             </View>
 
             {notification.type ? (
-              <View style={[styles.typeTag, getTypeTagStyle(notification.type)]}>
+              <View style={[styles.typeTag, getTypeTagStyle(notification.type, themed)]}>
                 <Text style={styles.typeTagText}>{notification.type}</Text>
               </View>
             ) : null}
 
-            {notification.title ? <Text style={styles.title}>{notification.title}</Text> : null}
+            {notification.title ? <Text style={[styles.title, themed.title]}>{notification.title}</Text> : null}
 
-            <View style={styles.bodyContainer}>
-              <Text style={styles.body}>{notification.body}</Text>
+            <View style={[styles.bodyContainer, themed.bodyContainer]}>
+              <Text style={[styles.body, themed.body]}>{notification.body}</Text>
             </View>
 
             {notification.metadata && Object.keys(notification.metadata).length > 0 ? (
-              <View style={styles.metadataDetailsContainer}>
-                <Text style={styles.metadataTitle}>Additional Information</Text>
+              <View style={[styles.metadataDetailsContainer, themed.metadataDetailsContainer]}>
+                <Text style={[styles.metadataTitle, themed.metadataTitle]}>{t('notifications.additionalInformation')}</Text>
                 {Object.entries(notification.metadata).map(([key, value]) => (
                   <View key={key} style={styles.metadataItem}>
-                    <Text style={styles.metadataKey}>{formatKey(key)}:</Text>
-                    <Text style={styles.metadataValue}>{formatValue(value)}</Text>
+                    <Text style={[styles.metadataKey, themed.metadataKey]}>{formatKey(key)}:</Text>
+                    <Text style={[styles.metadataValue, themed.metadataValue]}>{formatValue(value, t('notifications.notAvailable'))}</Text>
                   </View>
                 ))}
               </View>
             ) : null}
 
             {notification.referenceType && notification.referenceId ? (
-              <Pressable onPress={handleNavigateToReference} style={styles.referenceButton}>
-                <ExternalLink size={18} style={styles.referenceButtonIcon} />
-                <Text style={styles.buttonText}>View {notification.referenceType}</Text>
+              <Pressable onPress={handleNavigateToReference} style={[styles.referenceButton, themed.referenceButton]}>
+                <ExternalLink size={18} style={themed.referenceButtonIcon} />
+                <Text style={[styles.buttonText, themed.buttonText]}>{t('notifications.viewReference', { referenceType: notification.referenceType })}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -161,27 +252,29 @@ const formatKey = (key: string): string => {
     .trim();
 };
 
-// Helper function to format metadata values for display
-const formatValue = (value: any): string => {
-  if (value === null || value === undefined) return 'N/A';
+// Helper function to format metadata values for display. `fallback` is passed in already
+// translated because this helper lives outside the component and has no access to `t`.
+const formatValue = (value: unknown, fallback: string): string => {
+  if (value === null || value === undefined) return fallback;
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 };
 
-// Helper function to get tag style based on notification type
-const getTypeTagStyle = (type: string): any => {
+// Helper function to get tag style based on notification type. The themed styles are passed in
+// because the tag colors follow the app theme and can no longer live on the static StyleSheet.
+const getTypeTagStyle = (type: string, themed: ThemedStyles): StyleProp<ViewStyle> => {
   const lowerType = type.toLowerCase();
 
   if (lowerType.includes('alert') || lowerType.includes('emergency')) {
-    return styles.typeTagAlert;
+    return themed.typeTagAlert;
   } else if (lowerType.includes('warning')) {
-    return styles.typeTagWarning;
+    return themed.typeTagWarning;
   } else if (lowerType.includes('info')) {
-    return styles.typeTagInfo;
+    return themed.typeTagInfo;
   } else if (lowerType.includes('success')) {
-    return styles.typeTagSuccess;
+    return themed.typeTagSuccess;
   } else {
-    return styles.typeTagDefault;
+    return themed.typeTagDefault;
   }
 };
 
@@ -198,10 +291,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    width: SIDEBAR_WIDTH,
     height: '100%',
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#171717' : '#fff',
-    shadowColor: Appearance.getColorScheme() === 'dark' ? '#262626' : '#e5e5e5',
     shadowOffset: {
       width: -2,
       height: 0,
@@ -219,16 +309,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: Platform.OS === 'android' ? STATUS_BAR_HEIGHT + 16 : 16,
     borderBottomWidth: 1,
-    borderBottomColor: Appearance.getColorScheme() === 'dark' ? '#333333' : '#e5e5e5',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
-    color: Appearance.getColorScheme() === 'dark' ? '#f3f4f6' : '#111827',
   },
   backButton: {
     padding: 8,
@@ -251,12 +338,10 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    color: Appearance.getColorScheme() === 'dark' ? '#9ca3af' : '#6b7280',
     marginLeft: 6,
   },
   timeText: {
     fontSize: 14,
-    color: Appearance.getColorScheme() === 'dark' ? '#9ca3af' : '#6b7280',
   },
   typeTag: {
     alignSelf: 'flex-start',
@@ -270,29 +355,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textTransform: 'uppercase',
   },
-  typeTagDefault: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#374151' : '#e5e7eb',
-  },
-  typeTagInfo: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#1e40af' : '#dbeafe',
-  },
-  typeTagSuccess: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#065f46' : '#d1fae5',
-  },
-  typeTagWarning: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#92400e' : '#fef3c7',
-  },
-  typeTagAlert: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#991b1b' : '#fee2e2',
-  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: Appearance.getColorScheme() === 'dark' ? '#f3f4f6' : '#111827',
   },
   bodyContainer: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#262626' : '#f9fafb',
     padding: 16,
     borderRadius: 8,
     marginBottom: 20,
@@ -300,19 +368,16 @@ const styles = StyleSheet.create({
   body: {
     fontSize: 16,
     lineHeight: 24,
-    color: Appearance.getColorScheme() === 'dark' ? '#e5e5e5' : '#374151',
   },
   metadataDetailsContainer: {
     marginTop: 10,
     padding: 16,
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#262626' : '#f9fafb',
     borderRadius: 8,
   },
   metadataTitle: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 10,
-    color: Appearance.getColorScheme() === 'dark' ? '#f3f4f6' : '#111827',
   },
   metadataItem: {
     flexDirection: 'row',
@@ -322,31 +387,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginRight: 8,
-    color: Appearance.getColorScheme() === 'dark' ? '#9ca3af' : '#6b7280',
   },
   metadataValue: {
     fontSize: 14,
     flex: 1,
-    color: Appearance.getColorScheme() === 'dark' ? '#e5e5e5' : '#111827',
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: Appearance.getColorScheme() === 'dark' ? '#3b82f6' : '#2563eb',
   },
   referenceButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 24,
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#1e3a8a' : '#dbeafe',
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Appearance.getColorScheme() === 'dark' ? '#3b82f6' : '#60a5fa',
-  },
-  referenceButtonIcon: {
-    marginRight: 8,
-    color: Appearance.getColorScheme() === 'dark' ? '#3b82f6' : '#2563eb',
   },
 });

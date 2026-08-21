@@ -36,10 +36,19 @@ jest.mock('@/stores/toast/store', () => ({
 
 const mockUseVideoFeedStore = useVideoFeedStore as unknown as jest.Mock;
 
+// The panel selects field by field, so the mocked hook has to apply the selector rather
+// than return the whole state object.
+const mockStoreState = (mock: jest.Mock, state: Record<string, unknown>) => {
+  mock.mockImplementation((...args: unknown[]) => {
+    const selector = args[0] as ((s: Record<string, unknown>) => unknown) | undefined;
+    return selector ? selector(state) : state;
+  });
+};
+
 describe('VideoFeedTabPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseVideoFeedStore.mockReturnValue({
+    mockStoreState(mockUseVideoFeedStore, {
       videoFeeds: [],
       isLoading: false,
       isSaving: false,
@@ -76,7 +85,7 @@ describe('VideoFeedTabPanel', () => {
   });
 
   it('should render loading state', () => {
-    mockUseVideoFeedStore.mockReturnValue({
+    mockStoreState(mockUseVideoFeedStore, {
       videoFeeds: [],
       isLoading: true,
       isSaving: false,
@@ -96,7 +105,7 @@ describe('VideoFeedTabPanel', () => {
 
   it('should call fetchVideoFeeds on mount', () => {
     const fetchVideoFeeds = jest.fn();
-    mockUseVideoFeedStore.mockReturnValue({
+    mockStoreState(mockUseVideoFeedStore, {
       videoFeeds: [],
       isLoading: false,
       isSaving: false,
@@ -131,7 +140,7 @@ describe('VideoFeedTabPanel', () => {
       FullName: 'User',
     };
 
-    mockUseVideoFeedStore.mockReturnValue({
+    mockStoreState(mockUseVideoFeedStore, {
       videoFeeds: [mockFeed],
       isLoading: false,
       isSaving: false,

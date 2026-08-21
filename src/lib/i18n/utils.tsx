@@ -34,6 +34,11 @@ export const changeLanguage = (lang: Language) => {
 
   i18n.changeLanguage(lang);
 
+  // `translate` memoizes on the key alone, so every cached entry still holds the previous
+  // language's string. LTR↔LTR switches deliberately don't restart the app, which would
+  // otherwise leave those call sites rendering the old language until the app is killed.
+  translate.cache.clear?.();
+
   const newRTL = lang === 'ar';
 
   // Only restart if RTL direction is changing and we're not in web

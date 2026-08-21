@@ -20,7 +20,7 @@ import FullScreenLocationPicker from '@/components/maps/full-screen-location-pic
 import LocationPicker from '@/components/maps/location-picker';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Box } from '@/components/ui/box';
-import { Button, ButtonText } from '@/components/ui/button';
+import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormControl, FormControlError, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField } from '@/components/ui/input';
@@ -104,9 +104,20 @@ export default function EditCall() {
   const { colorScheme } = useColorScheme();
   const { id } = useLocalSearchParams();
   const callId = Array.isArray(id) ? id[0] : id;
-  const { callPriorities, callTypes, isLoading: callDataLoading, error: callDataError, fetchCallPriorities, fetchCallTypes } = useCallsStore();
-  const { call, callExtraData, isLoading: callDetailLoading, error: callDetailError, fetchCallDetail } = useCallDetailStore();
-  const { config } = useCoreStore();
+  // Per-field selectors: subscribing to whole stores re-rendered this form on every unrelated
+  // store write (background list refreshes, SignalR updates) while it was being edited.
+  const callPriorities = useCallsStore((state) => state.callPriorities);
+  const callTypes = useCallsStore((state) => state.callTypes);
+  const callDataLoading = useCallsStore((state) => state.isLoading);
+  const callDataError = useCallsStore((state) => state.error);
+  const fetchCallPriorities = useCallsStore((state) => state.fetchCallPriorities);
+  const fetchCallTypes = useCallsStore((state) => state.fetchCallTypes);
+  const call = useCallDetailStore((state) => state.call);
+  const callExtraData = useCallDetailStore((state) => state.callExtraData);
+  const callDetailLoading = useCallDetailStore((state) => state.isLoading);
+  const callDetailError = useCallDetailStore((state) => state.error);
+  const fetchCallDetail = useCallDetailStore((state) => state.fetchCallDetail);
+  const config = useCoreStore((state) => state.config);
   const { trackEvent } = useAnalytics();
   // Safe wrapper for analytics that catches errors and promise rejections
   const safeTrack = React.useCallback(
@@ -115,10 +126,10 @@ export default function EditCall() {
         const res = trackEvent(eventName, properties);
         // Handle promise rejections if trackEvent returns a promise
         Promise.resolve(res).catch((error) => {
-          console.error(`[Analytics] Error tracking event ${eventName}`, error);
+          logger.error({ message: 'Error tracking analytics event', context: { eventName, error } });
         });
       } catch (error) {
-        console.error(`[Analytics] Error tracking event ${eventName}`, error);
+        logger.error({ message: 'Error tracking analytics event', context: { eventName, error } });
       }
     },
     [trackEvent]
@@ -134,6 +145,14 @@ export default function EditCall() {
   const [isGeocodingCoordinates, setIsGeocodingCoordinates] = useState(false);
   const [isGeocodingWhat3Words, setIsGeocodingWhat3Words] = useState(false);
   const [isDestinationPoisLoading, setIsDestinationPoisLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Mirrors isSubmitting so a second tap is rejected synchronously, before React has re-rendered
+  // the disabled button. Without it a double-tap sends the update -- and its re-dispatch -- twice.
+  const isSubmittingRef = useRef(false);
+  // Tracks which call the form has already been populated from. The populate effect depends on
+  // array identities that change on any refetch, so without this a background refresh (or
+  // priorities/types resolving late) re-ran reset() and silently discarded the user's edits.
+  const populatedCallIdRef = useRef<string | null>(null);
   const [addressResults, setAddressResults] = useState<GeocodingResult[]>([]);
   const [destinationPois, setDestinationPois] = useState<PoiResultData[]>([]);
   const [destinationPoiTypes, setDestinationPoiTypes] = useState<PoiTypeResultData[]>([]);
@@ -260,21 +279,26 @@ export default function EditCall() {
     }, [safeTrack, callDataLoading, callDetailLoading, call, callPriorities, callTypes, callId, config?.GoogleMapsKey, config?.W3WKey])
   );
 
-  // Pre-populate form when call data is loaded
+  // Pre-populate form when call data is loaded -- once per call, never again
   useEffect(() => {
     if (call) {
-      if (__DEV__) {
-        console.log('Loading call data:', { Priority: call.Priority, Type: call.Type });
-        console.log('Available types count:', callTypes.length, 'priorities count:', callPriorities.length);
+      // Populate exactly once per call: re-running reset() after the user has started typing
+      // wipes their edits. The picker lists are read here if they have already landed, and
+      // filled in by the effect below if they land later.
+      if (populatedCallIdRef.current === call.CallId) {
+        return;
       }
 
-      const priority = callPriorities.find((p) => p.Id === call.Priority);
+      populatedCallIdRef.current = call.CallId;
+
+      logger.debug({
+        message: 'Populating call edit form',
+        context: { callId: call.CallId, priority: call.Priority, type: call.Type },
+      });
+
+      const priority = useCallsStore.getState().callPriorities.find((p) => p.Id === call.Priority);
       // Call.Type is the type's text, not its id -- matching on Id left the picker blank on every edit.
-      const type = callTypes.find((t) => t.Name === call.Type);
-
-      if (__DEV__) {
-        console.log('Found priority ID:', priority?.Id, 'type ID:', type?.Id);
-      }
+      const type = useCallsStore.getState().callTypes.find((t) => t.Name === call.Type);
 
       // Parse dispatched items from callExtraData
       const dispatchedUsers: string[] = [];
@@ -346,13 +370,38 @@ export default function EditCall() {
         }
       }
     }
-  }, [call, callExtraData, callPriorities, callTypes, reset]);
+  }, [call, callExtraData, reset]);
+
+  // Priorities and types can resolve after the form was populated. setValue touches only the two
+  // picker fields -- and only while they are still blank -- so a late arrival fills the pickers
+  // without discarding anything the user has typed.
+  useEffect(() => {
+    if (!call || populatedCallIdRef.current !== call.CallId) {
+      return;
+    }
+
+    const priority = callPriorities.find((p) => p.Id === call.Priority);
+    if (priority && !getValues('priority')) {
+      setValue('priority', priority.Name);
+    }
+
+    const type = callTypes.find((candidate) => candidate.Name === call.Type);
+    if (type && !getValues('type')) {
+      setValue('type', type.Name);
+    }
+  }, [call, callPriorities, callTypes, getValues, setValue]);
 
   const onSubmit = useCallback(
     async (data: FormValues) => {
-      if (__DEV__) {
-        console.log('onSubmit called');
+      // Saving re-dispatches the call, so a duplicate reaches everyone assigned to it. Reject
+      // re-entry outright rather than relying on the disabled button.
+      if (isSubmittingRef.current) {
+        return;
       }
+
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+
       try {
         const destinationPoiId = getDestinationPoiIdFromValue(data.destinationPoiId);
 
@@ -362,16 +411,13 @@ export default function EditCall() {
           data.longitude = selectedLocation.longitude;
         }
 
-        if (__DEV__) {
-          console.log('Updating call - has location:', !!data.latitude, 'has priority:', !!data.priority, 'has type:', !!data.type);
-        }
-
         const priority = data.priority ? callPriorities.find((p) => p.Name === data.priority) : null;
         const type = data.type ? callTypes.find((t) => t.Name === data.type) : null;
 
-        if (__DEV__) {
-          console.log('Mapped priority ID:', priority?.Id, 'type ID:', type?.Id);
-        }
+        logger.debug({
+          message: 'Submitting call update',
+          context: { callId, hasLocation: data.latitude != null, priorityId: priority?.Id, typeId: type?.Id },
+        });
 
         if (data.priority && !priority) {
           throw new Error(`Priority "${data.priority}" not found in available priorities`);
@@ -423,10 +469,6 @@ export default function EditCall() {
           dispatchEveryone: data.dispatchSelection?.everyone || false,
         };
 
-        if (__DEV__) {
-          console.log('Update payload summary - callId:', updatePayload.callId, 'priority:', updatePayload.priority, 'type:', updatePayload.type);
-        }
-
         await useCallDetailStore.getState().updateCall(updatePayload);
 
         // Analytics: Track successful call update
@@ -455,7 +497,7 @@ export default function EditCall() {
         // Navigate back to call detail
         router.back();
       } catch (error) {
-        console.error('Error updating call:', error);
+        logger.error({ message: 'Error updating call', context: { callId, error } });
 
         // Analytics: Track failed call update
         safeTrack('call_update_failed', {
@@ -477,10 +519,23 @@ export default function EditCall() {
             );
           },
         });
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
       }
     },
     [selectedLocation, callPriorities, callTypes, callId, safeTrack, toast, t]
   );
+
+  const handleSavePress = useCallback(async () => {
+    try {
+      await handleSubmit(onSubmit, (validationErrors) => {
+        logger.debug({ message: 'Call edit validation failed', context: { callId, errorCount: Object.keys(validationErrors).length } });
+      })();
+    } catch (error) {
+      logger.error({ message: 'Error submitting call edit form', context: { callId, error } });
+    }
+  }, [handleSubmit, onSubmit, callId]);
 
   const handleLocationSelected = (location: { latitude: number; longitude: number; address?: string }) => {
     setSelectedLocation(location);
@@ -632,7 +687,7 @@ export default function EditCall() {
         });
       }
     } catch (error) {
-      console.error('Error geocoding address:', error);
+      logger.error({ message: 'Error geocoding address', context: { callId, error } });
 
       // Analytics: Track geocoding error (if not already tracked above)
       if (!(error instanceof Error && error.message.includes('Google Maps API key'))) {
@@ -690,7 +745,12 @@ export default function EditCall() {
     });
   };
 
-  if (callDetailLoading || callDataLoading) {
+  // The calls store's isLoading/error are shared with the background call-list fetches that run on
+  // app resume and active-call selection. Gate only on what this form actually needs -- the call
+  // itself -- so a background refetch (or a failure in one) can never replace a half-edited form.
+  const isMissingFormData = !call;
+
+  if (isMissingFormData && (callDetailLoading || callDataLoading)) {
     return (
       <>
         <Stack.Screen
@@ -705,7 +765,7 @@ export default function EditCall() {
     );
   }
 
-  if (callDetailError || callDataError || !call) {
+  if (isMissingFormData) {
     return (
       <>
         <Stack.Screen
@@ -717,7 +777,7 @@ export default function EditCall() {
         />
         <View className="size-full flex-1">
           <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
-            <Text className="error text-center">{callDetailError || callDataError || 'Call not found'}</Text>
+            <Text className="error text-center">{callDetailError || callDataError || t('call_detail.not_found')}</Text>
           </Box>
         </View>
       </>
@@ -752,11 +812,11 @@ export default function EditCall() {
                     </Input>
                   )}
                 />
-                {errors.name && (
+                {errors.name ? (
                   <FormControlError>
                     <Text className="text-red-500">{errors.name.message}</Text>
                   </FormControlError>
-                )}
+                ) : null}
               </FormControl>
             </Card>
 
@@ -774,11 +834,11 @@ export default function EditCall() {
                     </Textarea>
                   )}
                 />
-                {errors.nature && (
+                {errors.nature ? (
                   <FormControlError>
                     <Text className="text-red-500">{errors.nature.message}</Text>
                   </FormControlError>
-                )}
+                ) : null}
               </FormControl>
             </Card>
 
@@ -906,7 +966,16 @@ export default function EditCall() {
                           <InputField testID="address-input" placeholder={t('calls.address_placeholder')} value={value} onChangeText={onChange} onBlur={onBlur} />
                         </Input>
                       </Box>
-                      <Button testID="address-search-button" size="sm" variant="outline" className="ml-2" onPress={() => handleAddressSearch(value || '')} disabled={isGeocodingAddress || !value?.trim()}>
+                      <Button
+                        testID="address-search-button"
+                        accessibilityRole="button"
+                        accessibilityLabel={t('calls.search_address')}
+                        size="sm"
+                        variant="outline"
+                        className="ml-2"
+                        onPress={() => handleAddressSearch(value || '')}
+                        disabled={isGeocodingAddress || !value?.trim()}
+                      >
                         {isGeocodingAddress ? <Text>...</Text> : <SearchIcon size={16} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />}
                       </Button>
                     </Box>
@@ -971,34 +1040,9 @@ export default function EditCall() {
               <Button className="mr-10 flex-1" variant="outline" onPress={() => router.back()}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button
-                className="ml-10 flex-1"
-                variant="solid"
-                action="primary"
-                onPress={async () => {
-                  if (__DEV__) {
-                    console.log('Save button pressed');
-                  }
-                  try {
-                    await handleSubmit(
-                      (data) => {
-                        if (__DEV__) {
-                          console.log('Validation passed, submitting call update');
-                        }
-                        onSubmit(data);
-                      },
-                      (errors) => {
-                        if (__DEV__) {
-                          console.log('Validation failed, error count:', Object.keys(errors).length);
-                        }
-                      }
-                    )();
-                  } catch (error) {
-                    console.error('Error in handleSubmit:', error);
-                  }
-                }}
-              >
-                <ButtonText>{t('common.save')}</ButtonText>
+              <Button testID="save-call-button" className="ml-10 flex-1" variant="solid" action="primary" isDisabled={isSubmitting} onPress={handleSavePress}>
+                {isSubmitting ? <ButtonSpinner className="mr-2" /> : null}
+                <ButtonText>{isSubmitting ? t('common.submitting') : t('common.save')}</ButtonText>
               </Button>
             </Box>
           </ScrollView>
@@ -1007,7 +1051,7 @@ export default function EditCall() {
       </View>
 
       {/* Full-screen location picker overlay */}
-      {showLocationPicker && (
+      {showLocationPicker ? (
         <View
           style={{
             position: 'absolute',
@@ -1025,7 +1069,7 @@ export default function EditCall() {
             onClose={() => setShowLocationPicker(false)}
           />
         </View>
-      )}
+      ) : null}
 
       {/* Dispatch selection modal */}
       <DispatchSelectionModal isVisible={showDispatchModal} onClose={() => setShowDispatchModal(false)} onConfirm={handleDispatchSelection} initialSelection={dispatchSelection} />

@@ -50,16 +50,21 @@ export default function HomeDashboard() {
     }
   }, [calls, fetchGlobalOverdueCount]);
 
-  // Track analytics when view becomes visible, and refresh overdue count on focus
+  // Track analytics when view becomes visible, and refresh overdue count on focus.
+  // The calls list is read via getState(): depending on the array identity re-ran this whole
+  // effect -- duplicate home_viewed events and an extra overdue fetch -- on every calls refetch
+  // and SignalR update while Home was focused. The effect above already covers calls changes.
   useFocusEffect(
     useCallback(() => {
       trackEvent('home_viewed', {
         timestamp: new Date().toISOString(),
       });
-      if (calls.length > 0) {
-        void fetchGlobalOverdueCount(calls);
+
+      const currentCalls = useCallsStore.getState().calls;
+      if (currentCalls.length > 0) {
+        void fetchGlobalOverdueCount(currentCalls);
       }
-    }, [trackEvent, calls, fetchGlobalOverdueCount])
+    }, [trackEvent, fetchGlobalOverdueCount])
   );
 
   const tabs: TabItem[] = [

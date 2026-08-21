@@ -141,29 +141,55 @@ describe('SignalR Reconnection Fix', () => {
     Math.random = originalRandom;
   });
 
-  it('should properly clean up state on max attempts reached', async () => {
+  it('should park the hub (keeping its config) on max attempts reached', async () => {
     const hubName = 'testHub';
     const MAX_RECONNECT_ATTEMPTS = 5;
-    
+
     // Set up initial state
     (service as any).connections.set(hubName, { mock: 'connection' });
     (service as any).reconnectAttempts.set(hubName, 3);
     (service as any).hubConfigs.set(hubName, { mock: 'config' });
     (service as any).directHubConfigs.set(hubName, { mock: 'directConfig' });
-    
+
     // Verify initial state is set
     expect((service as any).connections.has(hubName)).toBe(true);
     expect((service as any).reconnectAttempts.has(hubName)).toBe(true);
     expect((service as any).hubConfigs.has(hubName)).toBe(true);
     expect((service as any).directHubConfigs.has(hubName)).toBe(true);
-    
-    // Call attemptReconnection with max attempts to trigger cleanup
+
+    // Call attemptReconnection with max attempts to trigger give-up handling
     await (service as any).attemptReconnection(hubName, MAX_RECONNECT_ATTEMPTS);
-    
-    // Verify state was cleaned up
+
+    // The dead connection and attempt counter go away...
     expect((service as any).connections.has(hubName)).toBe(false);
     expect((service as any).reconnectAttempts.has(hubName)).toBe(false);
-    expect((service as any).hubConfigs.has(hubName)).toBe(false);
-    expect((service as any).directHubConfigs.has(hubName)).toBe(false);
+    // ...but the config is kept so the hub can be retried when the network returns.
+    expect((service as any).hubConfigs.has(hubName)).toBe(true);
+    expect((service as any).directHubConfigs.has(hubName)).toBe(true);
+    expect(service.isHubReconnectExhausted(hubName)).toBe(true);
+    expect(service.getExhaustedHubs()).toContain(hubName);
+  });
+
+  it('should retry an exhausted hub when the network becomes reachable again', async () => {
+    const hubName = 'testHub';
+    const MAX_RECONNECT_ATTEMPTS = 5;
+
+    (service as any).hubConfigs.set(hubName, { mock: 'config' });
+    await (service as any).attemptReconnection(hubName, MAX_RECONNECT_ATTEMPTS);
+    expect(service.isHubReconnectExhausted(hubName)).toBe(true);
+
+    const attemptSpy = jest.spyOn(service as any, 'attemptReconnection').mockResolvedValue(undefined);
+
+    (service as any).retryExhaustedHubs();
+
+    expect(attemptSpy).toHaveBeenCalledWith(hubName, 0);
+    expect(service.isHubReconnectExhausted(hubName)).toBe(false);
+
+    // A second reachable event must not stack another retry for the same hub.
+    attemptSpy.mockClear();
+    (service as any).retryExhaustedHubs();
+    expect(attemptSpy).not.toHaveBeenCalled();
+
+    attemptSpy.mockRestore();
   });
 });

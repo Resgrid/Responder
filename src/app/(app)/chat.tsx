@@ -1,6 +1,6 @@
 import { type Href, Redirect, Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Bot, MessageCircle, MessagesSquare, Network, Plus, Sparkles, Users } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView } from 'react-native';
 
@@ -96,6 +96,10 @@ export default function ChatScreen() {
   const [fabOpen, setFabOpen] = useState(false);
   const [newMode, setNewMode] = useState<'dm' | 'group' | null>(null);
 
+  const handleOpenFab = useCallback(() => {
+    setFabOpen(true);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       if (!isChatEnabled) return;
@@ -104,7 +108,7 @@ export default function ChatScreen() {
     }, [isChatEnabled])
   );
 
-  const grouped = groupChannels(channels);
+  const grouped = useMemo(() => groupChannels(channels), [channels]);
 
   const openChannel = useCallback(
     (channelId: string) => {
@@ -171,7 +175,7 @@ export default function ChatScreen() {
         <Box className="h-24" />
       </ScrollView>
 
-      <Fab placement="bottom right" onPress={() => setFabOpen(true)} className="bg-primary-600">
+      <Fab placement="bottom right" onPress={handleOpenFab} className="bg-primary-600" accessibilityRole="button" accessibilityLabel={t('chat.new_conversation')}>
         <FabIcon as={Plus} />
       </Fab>
 

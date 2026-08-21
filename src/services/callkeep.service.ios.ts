@@ -1,5 +1,4 @@
 import { RTCAudioSession } from '@livekit/react-native-webrtc';
-import { config } from 'dotenv';
 import { Platform } from 'react-native';
 import RNCallKeep, { AudioSessionCategoryOption, AudioSessionMode } from 'react-native-callkeep';
 

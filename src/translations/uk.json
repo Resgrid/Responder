@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "Відкрити меню",
+    "realtime_offline_description": "Повторне підключення. Нові виклики та повідомлення можуть не з’являтися.",
+    "realtime_offline_title": "Оновлення в реальному часі недоступні",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "Тип"
   },
   "bluetooth": {
+    "audio": "Аудіо",
+    "audio_active": "Аудіо активне",
+    "audio_capable": "Підтримує аудіо",
     "audio_device": "BT Гарнітура",
     "available_devices": "Доступні пристрої",
     "bluetooth_not_ready": "Bluetooth {{state}}. Будь ласка, увімкніть Bluetooth.",
+    "button_control_available": "Доступне керування кнопками",
+    "button_event": {
+      "double_press": "Подвійне {{button}}",
+      "long_press": "Довге {{button}}"
+    },
+    "button_event_applied": "Застосовано",
+    "buttons": {
+      "mute": "Вимкнути звук",
+      "ptt_start": "PTT Старт",
+      "ptt_stop": "PTT Стоп",
+      "unknown": "Невідомо",
+      "volume_down": "Гучність -",
+      "volume_up": "Гучність +"
+    },
+    "checking_status": "Перевірка стану Bluetooth...",
     "clear": "Очистити",
+    "connect": "Підключити",
     "connected": "Підключено",
+    "connection_error": "Помилка підключення",
     "current_selection": "Поточний вибір",
+    "disconnect": "Відключити",
+    "livekit_active": "LiveKit активний",
+    "mute": "Вимкнути звук",
     "no_device_selected": "Пристрій не вибрано",
     "no_devices_found": "Аудіопристрої Bluetooth не знайдено",
     "not_connected": "Не підключено",
+    "powered_off_message": "Bluetooth вимкнено. Увімкніть Bluetooth, щоб підключити аудіопристрої.",
+    "recent_button_events": "Останні події кнопок",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "Сканувати",
     "scan_again": "Сканувати знову",
     "scan_error_message": "Неможливо сканувати пристрої Bluetooth",
@@ -44,9 +74,14 @@
     "selected": "Вибрано",
     "selection_error_message": "Неможливо зберегти бажаний пристрій",
     "selection_error_title": "Помилка вибору",
+    "start_scanning": "Почати сканування",
+    "stop_scan": "Зупинити сканування",
     "supports_mic_control": "Керування мікрофоном",
     "tap_scan_to_find_devices": "Натисніть «Сканувати», щоб знайти аудіопристрої Bluetooth",
-    "unknown_device": "Невідомий пристрій"
+    "title": "Аудіо Bluetooth",
+    "unauthorized_message": "Дозвіл на Bluetooth відхилено. Надайте дозволи Bluetooth у Налаштуваннях.",
+    "unknown_device": "Невідомий пристрій",
+    "unmute": "Увімкнути звук"
   },
   "calendar": {
     "allDay": "Весь день",
@@ -144,7 +179,8 @@
     "title": "Фото виклику",
     "upload": "Завантажити",
     "upload_error": "Не вдалося завантажити фото. Будь ласка, спробуйте ще раз.",
-    "upload_success": "Фото успішно завантажено"
+    "upload_success": "Фото успішно завантажено",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "Додати примітку",
@@ -320,6 +356,10 @@
     "required_fields_missing": "Ваш відділ вимагає ці поля перед створенням виклику: {{fields}}",
     "roles": "Ролі",
     "search": "Шукати виклики...",
+    "search_address": "Пошук адреси",
+    "search_coordinates": "Пошук координат",
+    "search_plus_code": "Пошук plus code",
+    "search_what3words": "Пошук адреси what3words",
     "select_active_call": "Вибрати активний виклик",
     "select_address": "Вибрати адресу",
     "select_address_placeholder": "Вибрати адресу виклику",
@@ -391,6 +431,7 @@
     "message_deleted": "Це повідомлення видалено",
     "moderator_delete": "Видалити (модератор)",
     "moderator_removed": "Видалено модератором",
+    "new_conversation": "Нова розмова",
     "new_direct_message": "Нове особисте повідомлення",
     "new_group": "Нова група",
     "no_gifs": "GIF не знайдено",
@@ -468,6 +509,7 @@
     "all": "Всі",
     "back": "Назад",
     "cancel": "Скасувати",
+    "clear_search": "Очистити пошук",
     "close": "Закрити",
     "confirm": "Підтвердити",
     "confirm_location": "Підтвердити місцезнаходження",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "Додати примітку",
       "confirm_staffing": "Підтвердити укомплектування: {{staffing}}",
+      "missing_required_info": "Бракує обов’язкової інформації",
       "no_options_available": "Параметри укомплектування недоступні",
       "no_staffing_options": "Параметри укомплектування недоступні",
       "note": "Примітка",
@@ -727,6 +770,7 @@
     "audio_settings": "Налаштування аудіо",
     "connected_to_room": "Підключено до каналу",
     "connecting": "Підключення...",
+    "connection_failed": "Не вдалося приєднатися до голосового каналу",
     "disconnect": "Відключитися",
     "double_click_action": "Дія подвійного натискання",
     "headset_button_ptt": "Кнопка гарнітури PTT",
@@ -897,6 +941,11 @@
       "subject_required": "Тема є обов'язковою"
     }
   },
+  "not_found": {
+    "go_home": "Перейти на головний екран!",
+    "message": "Цей екран не існує.",
+    "title": "Ой!"
+  },
   "notes": {
     "actions": {
       "add": "Додати примітку",
@@ -917,6 +966,7 @@
     "title": "Примітки"
   },
   "notifications": {
+    "additionalInformation": "Додаткова інформація",
     "bulkDeleteError": "Не вдалося видалити сповіщення",
     "bulkDeleteSuccess": "Видалено {{count}} сповіщення(нь)",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "Зняти вибір з усіх",
     "empty": "Оновлення недоступні",
     "loadError": "Не вдалося завантажити сповіщення",
+    "notAvailable": "Н/Д",
+    "notification": "Сповіщення",
     "selectAll": "Вибрати всі",
     "selectedCount": "Вибрано {{count}}",
-    "title": "Сповіщення"
+    "title": "Сповіщення",
+    "viewReference": "Переглянути {{referenceType}}"
   },
   "onboarding": {
-    "message": "Ласкаво просимо до Resgrid Responder"
+    "get_started": "Почнімо",
+    "message": "Ласкаво просимо до Resgrid Responder",
+    "skip": "Пропустити",
+    "slides": {
+      "calls": {
+        "description": "Легко переглядайте інформацію про виклики та взаємодійте з командою для ефективного реагування",
+        "title": "Взаємодія з викликами"
+      },
+      "notifications": {
+        "description": "Отримуйте негайні сповіщення про надзвичайні ситуації та важливі оновлення від вашого підрозділу",
+        "title": "Миттєві сповіщення"
+      },
+      "responder": {
+        "description": "Керуйте своїм статусом і укомплектуванням та взаємодійте зі своєю організацією в реальному часі",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "Контактна інформація",
@@ -1050,15 +1119,6 @@
     "view_chat": "Переглянути чат",
     "view_message": "Переглянути повідомлення"
   },
-  "roles": {
-    "modal": {
-      "title": "Призначення ролей підрозділу"
-    },
-    "selectUser": "Вибрати користувача",
-    "status": "{{active}} з {{total}} ролей активних",
-    "tap_to_manage": "Натисніть для управління ролями",
-    "unassigned": "Не призначено"
-  },
   "settings": {
     "about": "Про застосунок",
     "account": "Обліковий запис",
@@ -1092,6 +1152,8 @@
     "french": "Французька",
     "general": "Загальне",
     "generale": "Загальне",
+    "geolocation_hub_connected": "Підключено до хаба.",
+    "geolocation_hub_connecting": "Підключення до хаба...",
     "german": "Німецька",
     "github": "Github",
     "greek": "Грецька",
@@ -1325,6 +1387,8 @@
       "effective": "Діє з",
       "expires": "Закінчується",
       "instructions": "Інструкції",
+      "load_error": "Сповіщення недоступне",
+      "load_error_description": "Не вдалося завантажити це погодне сповіщення. Можливо, воно застаріло або запит не вдався.",
       "metadata": "Деталі",
       "onset": "Початок",
       "sender": "Відправник",

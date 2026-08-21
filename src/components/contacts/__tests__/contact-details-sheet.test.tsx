@@ -187,6 +187,16 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { useContactsStore } from '@/stores/contacts/store';
 import { ContactDetailsSheet } from '../contact-details-sheet';
 
+// The component selects field by field, so the mocked store hook must apply the selector
+// rather than hand back the whole state object.
+const applySelector = (mock: unknown, state: unknown): void => {
+  (mock as jest.Mock).mockImplementation((...args: unknown[]) => {
+    const selector = args[0] as ((s: unknown) => unknown) | undefined;
+    return selector ? selector(state) : state;
+  });
+};
+
+
 describe('ContactDetailsSheet', () => {
   const mockTrackEvent = jest.fn();
   const mockCloseDetails = jest.fn();
@@ -306,7 +316,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     // Use the stable mock store object
-    mockUseContactsStore.mockReturnValue(mockStoreData);
+    applySelector(mockUseContactsStore, mockStoreData);
   });
 
   describe('Analytics Tracking', () => {
@@ -329,7 +339,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should track view analytics for company contact', async () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         contacts: [mockCompanyContact],
         contactNotes: {},
         searchQuery: '',
@@ -363,7 +373,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should track view analytics for contact with minimal info', async () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         contacts: [mockMinimalContact],
         contactNotes: {},
         searchQuery: '',
@@ -397,7 +407,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should not track analytics when sheet is closed', () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         contacts: [mockPersonContact],
         contactNotes: {},
         searchQuery: '',
@@ -482,7 +492,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should not render when closed', () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         contacts: [mockPersonContact],
         contactNotes: {},
         searchQuery: '',
@@ -512,7 +522,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should display company contact information correctly', () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         contacts: [mockCompanyContact],
         contactNotes: {},
         searchQuery: '',
@@ -536,7 +546,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should handle missing contact gracefully', () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         contacts: [],
         contactNotes: {},
         searchQuery: '',
@@ -584,7 +594,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should not show star for non-important contacts', () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         contacts: [mockCompanyContact],
         contactNotes: {},
         searchQuery: '',
@@ -615,7 +625,7 @@ describe('ContactDetailsSheet', () => {
     });
 
     it('should handle contacts with partial information', () => {
-      mockUseContactsStore.mockReturnValue({
+      applySelector(mockUseContactsStore, {
         ...mockStoreData,
         contacts: [mockMinimalContact],
         selectedContactId: 'minimal-1',

@@ -90,7 +90,6 @@ describe('Core Store', () => {
 
 		// Reset store state between tests
 		useCoreStore.setState({
-			activeUnitId: null,
 			activeCallId: null,
 			activeCall: null,
 			activePriority: null,

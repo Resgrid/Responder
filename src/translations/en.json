@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "Open menu",
+    "realtime_offline_description": "Reconnecting. New calls and messages may not appear.",
+    "realtime_offline_title": "Live updates unavailable",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "Type"
   },
   "bluetooth": {
+    "audio": "Audio",
+    "audio_active": "Audio Active",
+    "audio_capable": "Audio Capable",
     "audio_device": "BT Handset",
     "available_devices": "Available Devices",
     "bluetooth_not_ready": "Bluetooth is {{state}}. Please enable Bluetooth.",
+    "button_control_available": "Button control available",
+    "button_event": {
+      "double_press": "Double {{button}}",
+      "long_press": "Long {{button}}"
+    },
+    "button_event_applied": "Applied",
+    "buttons": {
+      "mute": "Mute",
+      "ptt_start": "PTT Start",
+      "ptt_stop": "PTT Stop",
+      "unknown": "Unknown",
+      "volume_down": "Volume -",
+      "volume_up": "Volume +"
+    },
+    "checking_status": "Checking Bluetooth status...",
     "clear": "Clear",
+    "connect": "Connect",
     "connected": "Connected",
+    "connection_error": "Connection Error",
     "current_selection": "Current Selection",
+    "disconnect": "Disconnect",
+    "livekit_active": "LiveKit Active",
+    "mute": "Mute",
     "no_device_selected": "No device selected",
     "no_devices_found": "No Bluetooth audio devices found",
     "not_connected": "Not connected",
+    "powered_off_message": "Bluetooth is turned off. Please enable Bluetooth to connect audio devices.",
+    "recent_button_events": "Recent Button Events",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "Scan",
     "scan_again": "Scan Again",
     "scan_error_message": "Unable to scan for Bluetooth devices",
@@ -44,9 +74,14 @@
     "selected": "Selected",
     "selection_error_message": "Unable to save preferred device",
     "selection_error_title": "Selection Error",
+    "start_scanning": "Start Scanning",
+    "stop_scan": "Stop Scan",
     "supports_mic_control": "Mic Control",
     "tap_scan_to_find_devices": "Tap 'Scan' to find Bluetooth audio devices",
-    "unknown_device": "Unknown Device"
+    "title": "Bluetooth Audio",
+    "unauthorized_message": "Bluetooth permission denied. Please grant Bluetooth permissions in Settings.",
+    "unknown_device": "Unknown Device",
+    "unmute": "Unmute"
   },
   "calendar": {
     "allDay": "All Day",
@@ -144,7 +179,8 @@
     "title": "Call Images",
     "upload": "Upload",
     "upload_error": "Failed to upload image. Please try again.",
-    "upload_success": "Image uploaded successfully"
+    "upload_success": "Image uploaded successfully",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "Add Note",
@@ -320,6 +356,10 @@
     "required_fields_missing": "Your department requires these fields before a call can be created: {{fields}}",
     "roles": "Roles",
     "search": "Search calls...",
+    "search_address": "Search address",
+    "search_coordinates": "Search coordinates",
+    "search_plus_code": "Search plus code",
+    "search_what3words": "Search what3words address",
     "select_active_call": "Select Active Call",
     "select_address": "Select Address",
     "select_address_placeholder": "Select the address of the call",
@@ -391,6 +431,7 @@
     "message_deleted": "This message was deleted",
     "moderator_delete": "Remove (moderator)",
     "moderator_removed": "Removed by moderator",
+    "new_conversation": "New conversation",
     "new_direct_message": "New Direct Message",
     "new_group": "New Group",
     "no_gifs": "No GIFs found",
@@ -468,6 +509,7 @@
     "all": "All",
     "back": "Back",
     "cancel": "Cancel",
+    "clear_search": "Clear search",
     "close": "Close",
     "confirm": "Confirm",
     "confirm_location": "Confirm Location",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "Add Note",
       "confirm_staffing": "Confirm Staffing: {{staffing}}",
+      "missing_required_info": "Missing required information",
       "no_options_available": "No staffing options available",
       "no_staffing_options": "No staffing options available",
       "note": "Note",
@@ -727,6 +770,7 @@
     "audio_settings": "Audio Settings",
     "connected_to_room": "Connected to Channel",
     "connecting": "Connecting...",
+    "connection_failed": "Could not join the voice channel",
     "disconnect": "Disconnect",
     "double_click_action": "Double Click Action",
     "headset_button_ptt": "Headset Button PTT",
@@ -897,6 +941,11 @@
       "subject_required": "Subject is required"
     }
   },
+  "not_found": {
+    "go_home": "Go to home screen!",
+    "message": "This screen doesn't exist.",
+    "title": "Oops!"
+  },
   "notes": {
     "actions": {
       "add": "Add Note",
@@ -917,6 +966,7 @@
     "title": "Notes"
   },
   "notifications": {
+    "additionalInformation": "Additional Information",
     "bulkDeleteError": "Failed to remove notifications",
     "bulkDeleteSuccess": "{{count}} notification{{count, plural, one {} other {s}}} removed",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "Deselect All",
     "empty": "No updates available",
     "loadError": "Unable to load notifications",
+    "notAvailable": "N/A",
+    "notification": "Notification",
     "selectAll": "Select All",
     "selectedCount": "{{count}} selected",
-    "title": "Notifications"
+    "title": "Notifications",
+    "viewReference": "View {{referenceType}}"
   },
   "onboarding": {
-    "message": "Welcome to obytes app site"
+    "get_started": "Let's Get Started",
+    "message": "Welcome to obytes app site",
+    "skip": "Skip",
+    "slides": {
+      "calls": {
+        "description": "Seamlessly view call information and interact with your team members for efficient emergency response",
+        "title": "Interact with Calls"
+      },
+      "notifications": {
+        "description": "Receive immediate alerts for emergencies and important updates from your department",
+        "title": "Instant Notifications"
+      },
+      "responder": {
+        "description": "Manage your status, staffing, and interact with your organization in real-time",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "Contact Information",
@@ -1050,15 +1119,6 @@
     "view_chat": "View Chat",
     "view_message": "View Messages"
   },
-  "roles": {
-    "modal": {
-      "title": "Unit Role Assignments"
-    },
-    "selectUser": "Select user",
-    "status": "{{active}} of {{total}} Roles Active",
-    "tap_to_manage": "Tap to manage roles",
-    "unassigned": "Unassigned"
-  },
   "settings": {
     "about": "About",
     "account": "Account",
@@ -1092,6 +1152,8 @@
     "french": "French",
     "general": "General",
     "generale": "General",
+    "geolocation_hub_connected": "Connected to hub.",
+    "geolocation_hub_connecting": "Connecting to hub...",
     "german": "German",
     "github": "Github",
     "greek": "Greek",
@@ -1325,6 +1387,8 @@
       "effective": "Effective",
       "expires": "Expires",
       "instructions": "Instructions",
+      "load_error": "Alert unavailable",
+      "load_error_description": "This weather alert could not be loaded. It may have expired or the request failed.",
       "metadata": "Details",
       "onset": "Onset",
       "sender": "Sender",

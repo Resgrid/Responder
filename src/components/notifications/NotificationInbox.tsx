@@ -1,31 +1,106 @@
 import { useNotifications } from '@novu/react-native';
 import { FlashList } from '@shopify/flash-list';
 import { CheckCircle, ChevronRight, Circle, ExternalLink, MoreVertical, Trash2, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Animated, Appearance, Dimensions, Modal as RNModal, Platform, Pressable, RefreshControl, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Modal as RNModal, Platform, Pressable, RefreshControl, SafeAreaView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteMessage } from '@/api/novu/inbox';
 import { NotificationDetail } from '@/components/notifications/NotificationDetail';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/lib/auth';
+import { logger } from '@/lib/logging';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useToastStore } from '@/stores/toast/store';
 import { type NotificationPayload } from '@/types/notification';
 
 // Constants
-const { width } = Dimensions.get('window');
-const SIDEBAR_WIDTH = Math.min(width * 0.85, 400);
-const STATUS_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0;
+const SIDEBAR_WIDTH_RATIO = 0.85;
+const SIDEBAR_MAX_WIDTH = 400;
+
+// Color-dependent rules live here instead of the module-level StyleSheet so they follow the
+// app theme (nativewind) rather than the system theme captured once at app launch.
+const createThemedStyles = (isDark: boolean) =>
+  StyleSheet.create({
+    sidebarContainer: {
+      backgroundColor: isDark ? '#171717' : '#fff',
+      shadowColor: isDark ? '#262626' : '#e5e5e5',
+    },
+    header: {
+      borderBottomColor: isDark ? '#333333' : '#eee',
+    },
+    selectionCount: {
+      color: isDark ? '#ffffff' : '#000000',
+    },
+    confirmCard: {
+      backgroundColor: isDark ? '#171717' : '#fff',
+    },
+    notificationItem: {
+      borderBottomColor: isDark ? '#333333' : '#eee',
+    },
+    unreadNotificationItem: {
+      backgroundColor: isDark ? '#262626' : '#f0f7ff',
+    },
+    selectedNotificationItem: {
+      backgroundColor: isDark ? '#1e3a8a' : '#dbeafe',
+    },
+    unreadIndicator: {
+      backgroundColor: isDark ? '#60a5fa' : '#3b82f6',
+    },
+    notificationBody: {
+      color: isDark ? '#e5e5e5' : '#333333',
+    },
+    unreadNotificationText: {
+      color: isDark ? '#ffffff' : '#000000',
+    },
+    timestamp: {
+      color: isDark ? '#a3a3a3' : '#666',
+    },
+  });
+
+const useThemedStyles = () => {
+  const { colorScheme } = useColorScheme();
+  return React.useMemo(() => createThemedStyles(colorScheme === 'dark'), [colorScheme]);
+};
 
 interface NotificationInboxProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+// Derived from the hook's own return type so we don't depend on @novu/js directly.
+type NovuNotification = NonNullable<ReturnType<typeof useNotifications>['notifications']>[number];
+
+const REFERENCE_TYPES = ['call', 'message', 'status', 'note', 'other'] as const;
+
+const asString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+
+const asReferenceType = (value: unknown): NotificationPayload['referenceType'] => REFERENCE_TYPES.find((candidate) => candidate === value);
+
+// Novu v3 renamed these fields (title -> subject, read -> isRead, payload -> data). Reading the
+// v2 names silently yielded undefined, which is why unread styling and the reference button never
+// appeared. `data` is an untyped bag from the server, so every field is narrowed before use.
+export const mapNovuNotification = (item: NovuNotification): NotificationPayload => {
+  const data = item.data;
+
+  return {
+    id: item.id,
+    title: item.subject,
+    body: item.body,
+    createdAt: item.createdAt,
+    read: item.isRead,
+    type: asString(data?.type),
+    referenceId: asString(data?.referenceId),
+    referenceType: asReferenceType(data?.referenceType),
+    metadata: data,
+  };
+};
+
 interface NotificationRowProps {
-  item: any;
+  item: NovuNotification;
   isSelectionMode: boolean;
   isSelected: boolean;
   onPress: (notification: NotificationPayload) => void;
@@ -34,17 +109,9 @@ interface NotificationRowProps {
 }
 
 const NotificationRow = React.memo(function NotificationRow({ item, isSelectionMode, isSelected, onPress, onLongPress, onNavigateToReference }: NotificationRowProps) {
-  const notification: NotificationPayload = {
-    id: item.id,
-    title: item.title,
-    body: item.body,
-    createdAt: item.createdAt,
-    read: item.read,
-    type: item.type,
-    referenceId: item.payload?.referenceId,
-    referenceType: item.payload?.referenceType,
-    metadata: item.payload?.metadata,
-  };
+  const themed = useThemedStyles();
+
+  const notification: NotificationPayload = React.useMemo(() => mapNovuNotification(item), [item]);
 
   const createdAt = new Date(notification.createdAt);
 
@@ -52,9 +119,9 @@ const NotificationRow = React.memo(function NotificationRow({ item, isSelectionM
     <Pressable
       onPress={() => onPress(notification)}
       onLongPress={() => onLongPress(notification)}
-      style={[styles.notificationItem, !item.read ? styles.unreadNotificationItem : {}, isSelected ? styles.selectedNotificationItem : {}]}
+      style={[styles.notificationItem, themed.notificationItem, !notification.read ? themed.unreadNotificationItem : {}, isSelected ? themed.selectedNotificationItem : {}]}
     >
-      {!item.read ? <View style={styles.unreadIndicator} /> : null}
+      {!notification.read ? <View style={[styles.unreadIndicator, themed.unreadIndicator]} /> : null}
 
       {isSelectionMode ? (
         <View style={styles.selectionIndicator}>
@@ -63,8 +130,8 @@ const NotificationRow = React.memo(function NotificationRow({ item, isSelectionM
       ) : null}
 
       <View style={styles.notificationContent}>
-        <Text style={[styles.notificationBody, !item.read ? styles.unreadNotificationText : {}]}>{notification.body}</Text>
-        <Text style={styles.timestamp}>
+        <Text style={[styles.notificationBody, themed.notificationBody, !notification.read ? [styles.unreadNotificationText, themed.unreadNotificationText] : {}]}>{notification.body}</Text>
+        <Text style={[styles.timestamp, themed.timestamp]}>
           {createdAt.toLocaleDateString()} {createdAt.toLocaleTimeString()}
         </Text>
       </View>
@@ -87,7 +154,10 @@ const NotificationRow = React.memo(function NotificationRow({ item, isSelectionM
 
 export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) => {
   const { t } = useTranslation();
-  const config = useCoreStore((state: any) => state.config);
+  const themed = useThemedStyles();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const config = useCoreStore((state) => state.config);
   const userId = useAuthStore((state) => state.userId);
   const { notifications, isLoading, fetchMore, hasMore, refetch } = useNotifications();
   const showToast = useToastStore((state) => state.showToast);
@@ -97,8 +167,15 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [isDeletingSelected, setIsDeletingSelected] = useState(false);
 
+  // Sidebar geometry — recomputed on rotation / split view rather than captured at module load
+  const sidebarWidth = Math.min(width * SIDEBAR_WIDTH_RATIO, SIDEBAR_MAX_WIDTH);
+  const sidebarSizeStyle = React.useMemo(() => ({ width: sidebarWidth }), [sidebarWidth]);
+  // RN's SafeAreaView only insets on iOS, so Android still needs the status bar padding applied
+  // manually — from live safe-area insets instead of a hardcoded height.
+  const headerInsetStyle = React.useMemo(() => ({ paddingTop: Platform.OS === 'android' ? insets.top + 16 : 16 }), [insets.top]);
+
   // Animation values
-  const slideAnim = useRef(new Animated.Value(SIDEBAR_WIDTH)).current;
+  const slideAnim = useRef(new Animated.Value(sidebarWidth)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -120,7 +197,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       // Animate out and reset state
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: SIDEBAR_WIDTH,
+          toValue: sidebarWidth,
           duration: 300,
           useNativeDriver: true,
         }),
@@ -137,7 +214,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       setSelectedNotification(null);
       setShowDeleteConfirmModal(false);
     }
-  }, [isOpen, slideAnim, fadeAnim]);
+  }, [isOpen, slideAnim, fadeAnim, sidebarWidth]);
 
   const toggleNotificationSelection = React.useCallback((notificationId: string) => {
     setSelectedNotificationIds((prev) => {
@@ -183,7 +260,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
   }, []);
 
   const selectAllNotifications = () => {
-    const allIds = notifications?.map((item: any) => item.id) || [];
+    const allIds = notifications?.map((item: NovuNotification) => item.id) || [];
     setSelectedNotificationIds(new Set(allIds));
   };
 
@@ -237,14 +314,17 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
   const handleNavigateToReference = React.useCallback(
     (referenceType: string, referenceId: string) => {
       // TODO: Implement navigation based on reference type
-      console.log('Navigate to:', referenceType, referenceId);
+      logger.debug({
+        message: 'Notification reference navigation requested',
+        context: { referenceType, referenceId },
+      });
       onClose();
     },
     [onClose]
   );
 
   const renderItem = React.useCallback(
-    ({ item }: { item: any }) => (
+    ({ item }: { item: NovuNotification }) => (
       <NotificationRow
         item={item}
         isSelectionMode={isSelectionMode}
@@ -292,14 +372,14 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       </Animated.View>
 
       {/* Sidebar container */}
-      <Animated.View style={[styles.sidebarContainer, { transform: [{ translateX: slideAnim }] }]}>
+      <Animated.View style={[styles.sidebarContainer, themed.sidebarContainer, sidebarSizeStyle, { transform: [{ translateX: slideAnim }] }]}>
         <SafeAreaView style={styles.safeArea}>
           <>
-            <View style={styles.header}>
+            <View style={[styles.header, themed.header, headerInsetStyle]}>
               {isSelectionMode ? (
                 <>
                   <View style={styles.selectionHeader}>
-                    <Text style={styles.selectionCount} numberOfLines={1}>
+                    <Text style={[styles.selectionCount, themed.selectionCount]} numberOfLines={1}>
                       {t('notifications.selectedCount', { count: selectedNotificationIds.size })}
                     </Text>
                     <View style={styles.selectionActions}>
@@ -358,7 +438,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                 data={notifications}
                 renderItem={renderItem}
                 extraData={listExtraData}
-                keyExtractor={(item: any) => item.id}
+                keyExtractor={(item: NovuNotification) => item.id}
                 onEndReached={fetchMore}
                 onEndReachedThreshold={0.5}
                 ListFooterComponent={renderFooter}
@@ -383,7 +463,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
       {showDeleteConfirmModal ? (
         <RNModal transparent visible animationType="fade" onRequestClose={handleCloseConfirmModal}>
           <View style={styles.confirmBackdrop}>
-            <View style={styles.confirmCard}>
+            <View style={[styles.confirmCard, themed.confirmCard]}>
               <Text className="text-lg font-semibold">{t('notifications.confirmDelete.title')}</Text>
               <Text className="mt-2">{t('notifications.confirmDelete.message', { count: selectedNotificationIds.size })}</Text>
               <View style={styles.confirmActions}>
@@ -415,10 +495,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    width: SIDEBAR_WIDTH,
     height: '100%',
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#171717' : '#fff',
-    shadowColor: Appearance.getColorScheme() === 'dark' ? '#262626' : '#e5e5e5',
     shadowOffset: {
       width: -2,
       height: 0,
@@ -436,9 +513,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: Platform.OS === 'android' ? STATUS_BAR_HEIGHT + 16 : 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   headerTitle: {
     fontSize: 18,
@@ -464,7 +539,6 @@ const styles = StyleSheet.create({
   selectionCount: {
     fontSize: 16,
     fontWeight: '600',
-    color: Appearance.getColorScheme() === 'dark' ? '#ffffff' : '#000000',
   },
   selectionActions: {
     flexDirection: 'row',
@@ -483,7 +557,6 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 12,
     padding: 16,
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#171717' : '#fff',
   },
   confirmActions: {
     flexDirection: 'row',
@@ -498,14 +571,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Appearance.getColorScheme() === 'dark' ? '#333333' : '#eee',
     position: 'relative',
-  },
-  unreadNotificationItem: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#262626' : '#f0f7ff',
-  },
-  selectedNotificationItem: {
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#1e3a8a' : '#dbeafe',
   },
   unreadIndicator: {
     position: 'absolute',
@@ -513,7 +579,6 @@ const styles = StyleSheet.create({
     top: 0,
     width: 4,
     height: '100%',
-    backgroundColor: Appearance.getColorScheme() === 'dark' ? '#60a5fa' : '#3b82f6',
   },
   selectionIndicator: {
     marginRight: 12,
@@ -525,15 +590,12 @@ const styles = StyleSheet.create({
   notificationBody: {
     fontSize: 16,
     marginBottom: 4,
-    color: Appearance.getColorScheme() === 'dark' ? '#e5e5e5' : '#333333',
   },
   unreadNotificationText: {
     fontWeight: '600',
-    color: Appearance.getColorScheme() === 'dark' ? '#ffffff' : '#000000',
   },
   timestamp: {
     fontSize: 12,
-    color: Appearance.getColorScheme() === 'dark' ? '#a3a3a3' : '#666',
   },
   actionButtons: {
     flexDirection: 'row',

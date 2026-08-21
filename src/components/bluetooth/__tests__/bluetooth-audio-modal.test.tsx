@@ -178,6 +178,15 @@ const { useBluetoothAudioStore } = require('@/stores/app/bluetooth-audio-store')
 const { useLiveKitStore } = require('@/stores/app/livekit-store');
 const { useAnalytics } = require('@/hooks/use-analytics');
 
+// The modal selects field by field, so the mocked store hooks must apply the selector
+// rather than hand back the whole state object.
+const applySelector = (mock: unknown, state: unknown): void => {
+  (mock as jest.Mock).mockImplementation((...args: unknown[]) => {
+    const selector = args[0] as ((s: unknown) => unknown) | undefined;
+    return selector ? selector(state) : state;
+  });
+};
+
 describe('BluetoothAudioModal', () => {
   const mockProps = {
     isOpen: true,
@@ -201,7 +210,7 @@ describe('BluetoothAudioModal', () => {
     });
 
     // Default mock for Bluetooth store
-    useBluetoothAudioStore.mockReturnValue({
+    applySelector(useBluetoothAudioStore, {
       bluetoothState: 'poweredOn',
       isScanning: false,
       isConnecting: false,
@@ -214,7 +223,7 @@ describe('BluetoothAudioModal', () => {
     });
 
     // Default mock for LiveKit store
-    useLiveKitStore.mockReturnValue({
+    applySelector(useLiveKitStore, {
       isConnected: false,
       currentRoom: null,
     });
@@ -312,7 +321,7 @@ describe('BluetoothAudioModal', () => {
     });
 
     it('should handle null connected device gracefully', () => {
-      useBluetoothAudioStore.mockReturnValue({
+      applySelector(useBluetoothAudioStore, {
         bluetoothState: 'poweredOn',
         isScanning: false,
         isConnecting: false,

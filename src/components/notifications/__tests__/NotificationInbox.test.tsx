@@ -17,6 +17,7 @@ jest.mock('@/api/novu/inbox');
 jest.mock('react-i18next');
 jest.mock('nativewind', () => ({
   styled: jest.fn((Component: any) => Component),
+  useColorScheme: jest.fn(() => ({ colorScheme: 'light', setColorScheme: jest.fn(), toggleColorScheme: jest.fn() })),
   colorScheme: {
     get: jest.fn(() => 'light'),
     set: jest.fn(),
@@ -80,41 +81,42 @@ describe('NotificationInbox', () => {
     return translations[key] || key;
   });
 
+  // Shaped like a real @novu/js v3 Notification (subject / isRead / data), NOT the v2
+  // title/read/payload names — mocking the v2 shape is what let the field-mapping bug hide.
   const mockNotifications = [
     {
       id: '1',
-      title: 'Test Notification 1',
+      subject: 'Test Notification 1',
       body: 'This is a test notification',
       createdAt: '2024-01-01T10:00:00Z',
-      read: false,
-      type: 'info',
-      payload: {
+      isRead: false,
+      data: {
+        type: 'info',
         referenceId: 'ref-1',
         referenceType: 'call',
-        metadata: {},
       },
     },
     {
       id: '2',
-      title: 'Test Notification 2',
+      subject: 'Test Notification 2',
       body: 'This is another test notification',
       createdAt: '2024-01-01T11:00:00Z',
-      read: true,
-      type: 'info',
-      payload: {
+      isRead: true,
+      data: {
+        type: 'info',
         referenceId: 'ref-2',
         referenceType: 'message',
-        metadata: {},
       },
     },
     {
       id: '3',
-      title: 'Test Notification 3',
+      subject: 'Test Notification 3',
       body: 'This is a third test notification',
       createdAt: '2024-01-01T12:00:00Z',
-      read: false,
-      type: 'warning',
-      payload: {},
+      isRead: false,
+      data: {
+        type: 'warning',
+      },
     },
   ];
 
@@ -150,7 +152,6 @@ describe('NotificationInbox', () => {
 
     mockUseCoreStore.mockImplementation((selector: any) => {
       const state = {
-        activeUnitId: 'unit-1',
         config: {
           apiUrl: 'test-url',
           NovuApplicationId: 'test-app-id',
@@ -314,7 +315,6 @@ describe('NotificationInbox', () => {
   it('handles missing unit or config', () => {
     mockUseCoreStore.mockImplementation((selector: any) => {
       const state = {
-        activeUnitId: null,
         config: { apiUrl: 'test-url' }, // Missing Novu config properties
       };
       return selector(state);

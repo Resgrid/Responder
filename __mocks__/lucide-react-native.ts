@@ -52,3 +52,4 @@ export const Users = mockIcon;
 export const UsersIcon = mockIcon;
 export const X = mockIcon;
 export const Menu = mockIcon;
+export const WifiOff = mockIcon;

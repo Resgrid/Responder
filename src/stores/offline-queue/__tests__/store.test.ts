@@ -69,7 +69,7 @@ describe('OfflineQueueStore', () => {
     it('should add a new event to the queue', () => {
       const store = useOfflineQueueStore.getState();
       
-      const eventId = store.addEvent(QueuedEventType.UNIT_STATUS, {
+      const eventId = store.addEvent(QueuedEventType.CHECK_IN, {
         unitId: 'unit-1',
         statusType: 'available',
       });
@@ -80,7 +80,7 @@ describe('OfflineQueueStore', () => {
       expect(state.queuedEvents).toHaveLength(1);
       expect(state.queuedEvents[0]).toMatchObject({
         id: eventId, // Use the actual returned ID
-        type: QueuedEventType.UNIT_STATUS,
+        type: QueuedEventType.CHECK_IN,
         status: QueuedEventStatus.PENDING,
         data: {
           unitId: 'unit-1',
@@ -95,7 +95,7 @@ describe('OfflineQueueStore', () => {
     it('should add event with custom max retries', () => {
       const store = useOfflineQueueStore.getState();
       
-      store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' }, 5);
+      store.addEvent(QueuedEventType.CHECK_IN, { test: 'data' }, 5);
 
       const state = useOfflineQueueStore.getState();
       expect(state.queuedEvents[0]?.maxRetries).toBe(5);
@@ -108,7 +108,7 @@ describe('OfflineQueueStore', () => {
     beforeEach(() => {
       // Add an event first
       const store = useOfflineQueueStore.getState();
-      eventId = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      eventId = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data' });
     });
 
     it('should update event status to completed', () => {
@@ -152,7 +152,7 @@ describe('OfflineQueueStore', () => {
     
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      eventId = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      eventId = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data' });
     });
 
     it('should remove event from queue', () => {
@@ -170,7 +170,7 @@ describe('OfflineQueueStore', () => {
     
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      eventId = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      eventId = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data' });
     });
 
     it('should return event by ID', () => {
@@ -194,17 +194,17 @@ describe('OfflineQueueStore', () => {
   describe('getEventsByType', () => {
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data1' });
-      store.addEvent(QueuedEventType.LOCATION_UPDATE, { test: 'data2' });
+      store.addEvent(QueuedEventType.CHECK_IN, { test: 'data1' });
+      store.addEvent(QueuedEventType.CALL_IMAGE_UPLOAD, { test: 'data2' });
     });
 
     it('should return events of specified type', () => {
       const store = useOfflineQueueStore.getState();
       
-      const events = store.getEventsByType(QueuedEventType.UNIT_STATUS);
+      const events = store.getEventsByType(QueuedEventType.CHECK_IN);
 
       expect(events).toHaveLength(1);
-      expect(events[0]?.type).toBe(QueuedEventType.UNIT_STATUS);
+      expect(events[0]?.type).toBe(QueuedEventType.CHECK_IN);
     });
   });
 
@@ -214,8 +214,8 @@ describe('OfflineQueueStore', () => {
     
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      eventId1 = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data1' });
-      eventId2 = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data2' });
+      eventId1 = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data1' });
+      eventId2 = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data2' });
     });
 
     it('should return events with pending status', () => {
@@ -268,8 +268,8 @@ describe('OfflineQueueStore', () => {
     
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      eventId1 = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data1' });
-      eventId2 = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data2' });
+      eventId1 = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data1' });
+      eventId2 = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data2' });
     });
 
     it('should return events that have exceeded max retries', () => {
@@ -294,8 +294,8 @@ describe('OfflineQueueStore', () => {
     
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      eventId1 = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data1' });
-      eventId2 = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data2' });
+      eventId1 = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data1' });
+      eventId2 = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data2' });
       store.updateEventStatus(eventId1, QueuedEventStatus.COMPLETED);
     });
 
@@ -313,8 +313,8 @@ describe('OfflineQueueStore', () => {
   describe('clearAllEvents', () => {
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data1' });
-      store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data2' });
+      store.addEvent(QueuedEventType.CHECK_IN, { test: 'data1' });
+      store.addEvent(QueuedEventType.CHECK_IN, { test: 'data2' });
     });
 
     it('should clear all events and reset counters', () => {
@@ -335,7 +335,7 @@ describe('OfflineQueueStore', () => {
   describe('retryEvent', () => {
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      store.addEvent(QueuedEventType.CHECK_IN, { test: 'data' });
       store.updateEventStatus('test-event-id', QueuedEventStatus.FAILED);
     });
 
@@ -354,8 +354,8 @@ describe('OfflineQueueStore', () => {
   describe('retryAllFailedEvents', () => {
     beforeEach(() => {
       const store = useOfflineQueueStore.getState();
-      store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data1' });
-      store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data2' });
+      store.addEvent(QueuedEventType.CHECK_IN, { test: 'data1' });
+      store.addEvent(QueuedEventType.CHECK_IN, { test: 'data2' });
       store.updateEventStatus('test-event-id', QueuedEventStatus.FAILED);
     });
 
@@ -432,7 +432,7 @@ describe('OfflineQueueStore', () => {
 
     const addFailedEvent = (lastAttemptAt: number): string => {
       const store = useOfflineQueueStore.getState();
-      const eventId = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      const eventId = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data' });
       store.updateEventStatus(eventId, QueuedEventStatus.FAILED, 'error');
       store.updateEventStatus(eventId, QueuedEventStatus.FAILED, 'error');
       store.updateEventStatus(eventId, QueuedEventStatus.FAILED, 'error');
@@ -462,7 +462,7 @@ describe('OfflineQueueStore', () => {
 
     it('should keep pending events regardless of age', () => {
       const store = useOfflineQueueStore.getState();
-      const eventId = store.addEvent(QueuedEventType.UNIT_STATUS, { test: 'data' });
+      const eventId = store.addEvent(QueuedEventType.CHECK_IN, { test: 'data' });
       useOfflineQueueStore.setState((state) => ({
         queuedEvents: state.queuedEvents.map((event) => (event.id === eventId ? { ...event, createdAt: Date.now() - EIGHT_DAYS_MS } : event)),
       }));
@@ -475,7 +475,7 @@ describe('OfflineQueueStore', () => {
     it('should purge stale failed events when adding a new event', () => {
       addFailedEvent(Date.now() - EIGHT_DAYS_MS);
 
-      useOfflineQueueStore.getState().addEvent(QueuedEventType.UNIT_STATUS, { test: 'new' });
+      useOfflineQueueStore.getState().addEvent(QueuedEventType.CHECK_IN, { test: 'new' });
 
       const state = useOfflineQueueStore.getState();
       expect(state.queuedEvents).toHaveLength(1);
@@ -486,7 +486,7 @@ describe('OfflineQueueStore', () => {
       const now = Date.now();
       const deadLetters: QueuedEvent[] = Array.from({ length: 501 }, (_, index) => ({
         id: `dead-letter-${index}`,
-        type: QueuedEventType.UNIT_STATUS,
+        type: QueuedEventType.CHECK_IN,
         status: QueuedEventStatus.FAILED,
         data: {},
         retryCount: 3,
@@ -509,7 +509,7 @@ describe('OfflineQueueStore', () => {
       const now = Date.now();
       const deadLetter: QueuedEvent = {
         id: 'dead-letter',
-        type: QueuedEventType.UNIT_STATUS,
+        type: QueuedEventType.CHECK_IN,
         status: QueuedEventStatus.FAILED,
         data: {},
         retryCount: 3,
@@ -519,7 +519,7 @@ describe('OfflineQueueStore', () => {
       };
       const pending: QueuedEvent[] = Array.from({ length: 501 }, (_, index) => ({
         id: `pending-${index}`,
-        type: QueuedEventType.UNIT_STATUS,
+        type: QueuedEventType.CHECK_IN,
         status: QueuedEventStatus.PENDING,
         data: {},
         retryCount: 0,

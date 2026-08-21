@@ -8,6 +8,12 @@ jest.mock('@/lib/auth');
 jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/toast/store');
 
+// The app's i18n instance isn't initialized in this suite, so resolve keys against
+// the real en.json to keep the assertions on user-visible English.
+jest.mock('@/lib/i18n/utils', () => ({
+	translate: (key: string) => key.split('.').reduce<unknown>((acc, part) => (acc as Record<string, unknown> | undefined)?.[part], require('@/translations/en.json')) ?? key,
+}));
+
 const mockSavePersonnelStaffing = jest.fn();
 const mockShowToast = jest.fn();
 const mockFetchCurrentUserInfo = jest.fn();

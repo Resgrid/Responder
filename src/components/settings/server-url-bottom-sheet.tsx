@@ -3,10 +3,11 @@ import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Platform, ScrollView, useWindowDimensions } from 'react-native';
+import { ScrollView, useWindowDimensions } from 'react-native';
 
 import { getSystemConfig } from '@/api/config';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import type { ResgridSystemLocation } from '@/models/v4/configs/getSystemConfigResultData';
@@ -56,6 +57,7 @@ const buildApiUrl = (url: string) => `${normalizeBaseUrl(url)}${API_PATH_SUFFIX}
 export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUrlBottomSheetProps) {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const keyboardHeight = useKeyboardHeight();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [isLoading, setIsLoading] = React.useState(false);
@@ -243,25 +245,29 @@ export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUr
   return (
     <Actionsheet isOpen={isOpen} onClose={handleClose} snapPoints={[80]}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className={`rounded-t-3xl px-4 pb-6 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-white'}`}>
+      {/* Single sanctioned keyboard mechanism for sheets: pad the sheet by the keyboard
+          height so the server URL field and the save buttons stay visible. Never nest a
+          KeyboardAvoidingView (or stack a second inset adjuster) here — see
+          use-keyboard-height.ts. */}
+      <ActionsheetContent className="rounded-t-3xl bg-white px-4 dark:bg-neutral-900" style={{ paddingBottom: keyboardHeight }}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
 
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }} showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
           <VStack space="lg" className="mt-4 w-full">
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{t('settings.server')}</FormControlLabelText>
+                <FormControlLabelText className="text-sm font-medium text-neutral-700 dark:text-neutral-200">{t('settings.server')}</FormControlLabelText>
               </FormControlLabel>
               {isLoadingServerOptions ? (
-                <Center testID="server-options-loading" className={`min-h-16 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}>
+                <Center testID="server-options-loading" className="min-h-16 rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-800">
                   <ButtonSpinner />
-                  <Text className={`mt-2 ${colorScheme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>{t('loading.loadingData')}</Text>
+                  <Text className="mt-2 text-neutral-600 dark:text-neutral-300">{t('loading.loadingData')}</Text>
                 </Center>
               ) : (
                 <Select onValueChange={handleServerChange} selectedValue={selectedServer}>
-                  <SelectTrigger className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}>
+                  <SelectTrigger className="rounded-lg border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800">
                     <SelectInput placeholder={t('settings.server')} value={selectedServer === CUSTOM_SERVER_VALUE ? t('settings.custom') : locations.find((location) => location.Name === selectedServer)?.Name} />
                     <SelectIcon as={ChevronDownIcon} className="mr-3" />
                   </SelectTrigger>
@@ -282,7 +288,7 @@ export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUr
             </FormControl>
             <FormControl isRequired={isCustomSelected} isInvalid={isCustomSelected ? !!errors.url : false}>
               <FormControlLabel>
-                <FormControlLabelText className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{t('settings.server_url')}</FormControlLabelText>
+                <FormControlLabelText className="text-sm font-medium text-neutral-700 dark:text-neutral-200">{t('settings.server_url')}</FormControlLabelText>
               </FormControlLabel>
               <Controller
                 control={control}
@@ -301,7 +307,7 @@ export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUr
                   },
                 }}
                 render={({ field: { onChange, value } }) => (
-                  <Input className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}>
+                  <Input className="rounded-lg border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800">
                     <InputField
                       value={value}
                       onChangeText={onChange}

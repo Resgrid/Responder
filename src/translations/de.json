@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "Menü öffnen",
+    "realtime_offline_description": "Verbindung wird wiederhergestellt. Neue Einsätze und Nachrichten werden möglicherweise nicht angezeigt.",
+    "realtime_offline_title": "Live-Updates nicht verfügbar",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "Typ"
   },
   "bluetooth": {
+    "audio": "Audio",
+    "audio_active": "Audio aktiv",
+    "audio_capable": "Audiofähig",
     "audio_device": "BT-Hörer",
     "available_devices": "Verfügbare Geräte",
     "bluetooth_not_ready": "Bluetooth ist {{state}}. Bitte aktivieren Sie Bluetooth.",
+    "button_control_available": "Tastensteuerung verfügbar",
+    "button_event": {
+      "double_press": "Doppelt {{button}}",
+      "long_press": "Lang {{button}}"
+    },
+    "button_event_applied": "Angewendet",
+    "buttons": {
+      "mute": "Stumm",
+      "ptt_start": "PTT Start",
+      "ptt_stop": "PTT Stopp",
+      "unknown": "Unbekannt",
+      "volume_down": "Lautstärke -",
+      "volume_up": "Lautstärke +"
+    },
+    "checking_status": "Bluetooth-Status wird geprüft...",
     "clear": "Löschen",
+    "connect": "Verbinden",
     "connected": "Verbunden",
+    "connection_error": "Verbindungsfehler",
     "current_selection": "Aktuelle Auswahl",
+    "disconnect": "Trennen",
+    "livekit_active": "LiveKit aktiv",
+    "mute": "Stumm",
     "no_device_selected": "Kein Gerät ausgewählt",
     "no_devices_found": "Keine Bluetooth-Audiogeräte gefunden",
     "not_connected": "Nicht verbunden",
+    "powered_off_message": "Bluetooth ist ausgeschaltet. Bitte aktivieren Sie Bluetooth, um Audiogeräte zu verbinden.",
+    "recent_button_events": "Letzte Tastenereignisse",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "Suchen",
     "scan_again": "Erneut suchen",
     "scan_error_message": "Bluetooth-Geräte konnten nicht gesucht werden",
@@ -44,9 +74,14 @@
     "selected": "Ausgewählt",
     "selection_error_message": "Bevorzugtes Gerät konnte nicht gespeichert werden",
     "selection_error_title": "Auswahlfehler",
+    "start_scanning": "Suche starten",
+    "stop_scan": "Suche stoppen",
     "supports_mic_control": "Mikrofonsteuerung",
     "tap_scan_to_find_devices": "Tippen Sie auf 'Suchen', um Bluetooth-Audiogeräte zu finden",
-    "unknown_device": "Unbekanntes Gerät"
+    "title": "Bluetooth-Audio",
+    "unauthorized_message": "Bluetooth-Berechtigung verweigert. Bitte erteilen Sie die Bluetooth-Berechtigung in den Einstellungen.",
+    "unknown_device": "Unbekanntes Gerät",
+    "unmute": "Ton an"
   },
   "calendar": {
     "allDay": "Ganztägig",
@@ -144,7 +179,8 @@
     "title": "Einsatzbilder",
     "upload": "Hochladen",
     "upload_error": "Bild konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut.",
-    "upload_success": "Bild erfolgreich hochgeladen"
+    "upload_success": "Bild erfolgreich hochgeladen",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "Notiz hinzufügen",
@@ -320,6 +356,10 @@
     "required_fields_missing": "Ihre Abteilung benötigt diese Felder, bevor ein Einsatz angelegt werden kann: {{fields}}",
     "roles": "Rollen",
     "search": "Einsätze suchen...",
+    "search_address": "Adresse suchen",
+    "search_coordinates": "Koordinaten suchen",
+    "search_plus_code": "Plus Code suchen",
+    "search_what3words": "what3words-Adresse suchen",
     "select_active_call": "Aktiven Einsatz auswählen",
     "select_address": "Adresse auswählen",
     "select_address_placeholder": "Einsatzadresse auswählen",
@@ -391,6 +431,7 @@
     "message_deleted": "Diese Nachricht wurde gelöscht",
     "moderator_delete": "Entfernen (Moderator)",
     "moderator_removed": "Von Moderator entfernt",
+    "new_conversation": "Neue Unterhaltung",
     "new_direct_message": "Neue Direktnachricht",
     "new_group": "Neue Gruppe",
     "no_gifs": "Keine GIFs gefunden",
@@ -468,6 +509,7 @@
     "all": "Alle",
     "back": "Zurück",
     "cancel": "Abbrechen",
+    "clear_search": "Suche löschen",
     "close": "Schließen",
     "confirm": "Bestätigen",
     "confirm_location": "Standort bestätigen",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "Notiz hinzufügen",
       "confirm_staffing": "Besetzung bestätigen: {{staffing}}",
+      "missing_required_info": "Erforderliche Informationen fehlen",
       "no_options_available": "Keine Besetzungsoptionen verfügbar",
       "no_staffing_options": "Keine Besetzungsoptionen verfügbar",
       "note": "Notiz",
@@ -727,6 +770,7 @@
     "audio_settings": "Audioeinstellungen",
     "connected_to_room": "Mit Kanal verbunden",
     "connecting": "Wird verbunden...",
+    "connection_failed": "Sprachkanal konnte nicht betreten werden",
     "disconnect": "Trennen",
     "double_click_action": "Doppelklick-Aktion",
     "headset_button_ptt": "Headset-Taste PTT",
@@ -897,6 +941,11 @@
       "subject_required": "Betreff ist erforderlich"
     }
   },
+  "not_found": {
+    "go_home": "Zur Startseite!",
+    "message": "Diese Seite existiert nicht.",
+    "title": "Hoppla!"
+  },
   "notes": {
     "actions": {
       "add": "Notiz hinzufügen",
@@ -917,6 +966,7 @@
     "title": "Notizen"
   },
   "notifications": {
+    "additionalInformation": "Zusätzliche Informationen",
     "bulkDeleteError": "Benachrichtigungen konnten nicht entfernt werden",
     "bulkDeleteSuccess": "{{count}} Benachrichtigung(en) entfernt",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "Alle abwählen",
     "empty": "Keine Aktualisierungen verfügbar",
     "loadError": "Benachrichtigungen konnten nicht geladen werden",
+    "notAvailable": "N/V",
+    "notification": "Benachrichtigung",
     "selectAll": "Alle auswählen",
     "selectedCount": "{{count}} ausgewählt",
-    "title": "Benachrichtigungen"
+    "title": "Benachrichtigungen",
+    "viewReference": "{{referenceType}} anzeigen"
   },
   "onboarding": {
-    "message": "Willkommen bei Resgrid Responder"
+    "get_started": "Los geht's",
+    "message": "Willkommen bei Resgrid Responder",
+    "skip": "Überspringen",
+    "slides": {
+      "calls": {
+        "description": "Sieh Einsatzinformationen nahtlos ein und arbeite für eine effiziente Notfallreaktion mit deinem Team zusammen",
+        "title": "Mit Einsätzen interagieren"
+      },
+      "notifications": {
+        "description": "Erhalte sofortige Alarme bei Notfällen und wichtige Updates deiner Organisation",
+        "title": "Sofortige Benachrichtigungen"
+      },
+      "responder": {
+        "description": "Verwalte deinen Status und deine Besetzung und interagiere in Echtzeit mit deiner Organisation",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "Kontaktinformationen",
@@ -1050,15 +1119,6 @@
     "view_chat": "Chat anzeigen",
     "view_message": "Nachrichten anzeigen"
   },
-  "roles": {
-    "modal": {
-      "title": "Rollenzuweisungen der Einheit"
-    },
-    "selectUser": "Benutzer auswählen",
-    "status": "{{active}} von {{total}} Rollen aktiv",
-    "tap_to_manage": "Tippen zum Verwalten der Rollen",
-    "unassigned": "Nicht zugewiesen"
-  },
   "settings": {
     "about": "Über",
     "account": "Konto",
@@ -1092,6 +1152,8 @@
     "french": "Französisch",
     "general": "Allgemein",
     "generale": "Allgemein",
+    "geolocation_hub_connected": "Mit Hub verbunden.",
+    "geolocation_hub_connecting": "Verbindung zum Hub wird hergestellt...",
     "german": "Deutsch",
     "github": "Github",
     "greek": "Griechisch",
@@ -1325,6 +1387,8 @@
       "effective": "Gültig ab",
       "expires": "Läuft ab",
       "instructions": "Anweisungen",
+      "load_error": "Warnung nicht verfügbar",
+      "load_error_description": "Diese Wetterwarnung konnte nicht geladen werden. Möglicherweise ist sie abgelaufen oder die Anfrage ist fehlgeschlagen.",
       "metadata": "Details",
       "onset": "Beginn",
       "sender": "Absender",

@@ -50,13 +50,95 @@ const styles = StyleSheet.create({
   },
 });
 
+interface CallImageGalleryItemProps {
+  item: CallFileResultData;
+  index: number;
+  itemWidth: number;
+  hasError: boolean;
+  onPress: (imageSource: { uri: string }, itemName?: string) => void;
+  onLoadError: (itemId: string) => void;
+  onLoadSuccess: (itemId: string) => void;
+}
+
+/** Memoized so typing an image note or paging the gallery does not re-render (and
+ *  re-derive the multi-MB base64 `data:` URI for) every other item in the list. */
+const CallImageGalleryItem = React.memo(({ item, index, itemWidth, hasError, onPress, onLoadError, onLoadSuccess }: CallImageGalleryItemProps) => {
+  const { t } = useTranslation();
+
+  const imageSource = useMemo<{ uri: string } | null>(() => {
+    if (item.Data && item.Data.trim() !== '') {
+      // Use Data as base64 image
+      const mimeType = item.Mime || 'image/png'; // Default to png if no mime type
+      return { uri: `data:${mimeType};base64,${item.Data}` };
+    }
+
+    if (item.Url && item.Url.trim() !== '') {
+      // Use URL directly since it's unauthenticated
+      return { uri: item.Url.trim() };
+    }
+
+    return null;
+  }, [item.Data, item.Mime, item.Url]);
+
+  const handlePress = useCallback(() => {
+    if (imageSource) {
+      onPress(imageSource, item.Name);
+    }
+  }, [imageSource, item.Name, onPress]);
+
+  const handleError = useCallback(() => onLoadError(item.Id), [item.Id, onLoadError]);
+  const handleLoad = useCallback(() => onLoadSuccess(item.Id), [item.Id, onLoadSuccess]);
+
+  // Show error state if there's an error or no valid image source
+  if (!imageSource || hasError) {
+    return (
+      <Box className="w-full items-center justify-center px-4" style={{ width: itemWidth }}>
+        <Box className="h-64 w-full items-center justify-center rounded-lg bg-gray-200">
+          <ImageIcon size={48} color="#999" />
+          <Text className="mt-2 text-gray-500">{t('callImages.failed_to_load')}</Text>
+          {item.Url ? (
+            <Text className="mt-1 px-2 text-center text-xs text-gray-400" numberOfLines={2}>
+              {t('callImages.url_label', { url: item.Url })}
+            </Text>
+          ) : null}
+        </Box>
+        <Text className="mt-2 text-center font-medium">{item.Name || ''}</Text>
+        <Text className="text-xs text-gray-500">{item.Timestamp || ''}</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Box className="w-full items-center justify-center px-4" style={{ width: itemWidth }}>
+      <TouchableOpacity onPress={handlePress} testID={`image-${item.Id}-touchable`} activeOpacity={0.7} style={{ width: '100%' }} delayPressIn={0} delayPressOut={0}>
+        <Image
+          key={`${item.Id}-${index}`}
+          source={imageSource}
+          style={styles.galleryImage}
+          contentFit="contain"
+          transition={200}
+          pointerEvents="none"
+          cachePolicy="memory-disk"
+          recyclingKey={item.Id}
+          onError={handleError}
+          onLoad={handleLoad}
+        />
+      </TouchableOpacity>
+      <Text className="mt-2 text-center font-medium">{item.Name || ''}</Text>
+      <Text className="text-xs text-gray-500">{item.Timestamp || ''}</Text>
+    </Box>
+  );
+});
+
+CallImageGalleryItem.displayName = 'CallImageGalleryItem';
+
 const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const { colorScheme } = useColorScheme();
   const latitude = useLocationStore((state) => state.latitude);
   const longitude = useLocationStore((state) => state.longitude);
-  const { showToast } = useToastStore();
+  const showToast = useToastStore((state) => state.showToast);
 
   // Create dynamic styles based on color scheme
   const dynamicStyles = useMemo(
@@ -97,7 +179,15 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
   const [listWidth, setListWidth] = useState(width);
   const flatListRef = useRef<FlashListRef<CallFileResultData>>(null);
 
-  const { callImages, isLoadingImages, errorImages, fetchCallImages, uploadCallImage, clearCallImages } = useCallDetailStore();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, re-rendering this modal (and every gallery item) whether or not anything it
+  // reads actually changed.
+  const callImages = useCallDetailStore((state) => state.callImages);
+  const isLoadingImages = useCallDetailStore((state) => state.isLoadingImages);
+  const errorImages = useCallDetailStore((state) => state.errorImages);
+  const fetchCallImages = useCallDetailStore((state) => state.fetchCallImages);
+  const uploadCallImage = useCallDetailStore((state) => state.uploadCallImage);
+  const clearCallImages = useCallDetailStore((state) => state.clearCallImages);
 
   // Filter out images without proper data or URL
   const validImages = useMemo(() => {
@@ -424,63 +514,16 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
 
   // Reset active index when valid images change
 
-  const renderImageItem = ({ item, index }: { item: CallFileResultData; index: number }) => {
-    if (!item) return null;
+  const renderImageItem = useCallback(
+    ({ item, index }: { item: CallFileResultData; index: number }) => {
+      if (!item) return null;
 
-    const hasError = imageErrors.has(item.Id);
-    let imageSource: { uri: string } | null = null;
-
-    if (item.Data && item.Data.trim() !== '') {
-      // Use Data as base64 image
-      const mimeType = item.Mime || 'image/png'; // Default to png if no mime type
-      imageSource = { uri: `data:${mimeType};base64,${item.Data}` };
-    } else if (item.Url && item.Url.trim() !== '') {
-      // Use URL directly since it's unauthenticated
-      const url = item.Url.trim();
-      imageSource = { uri: url };
-    }
-
-    // Show error state if there's an error or no valid image source
-    if (!imageSource || hasError) {
       return (
-        <Box className="w-full items-center justify-center px-4" style={{ width: listWidth }}>
-          <Box className="h-64 w-full items-center justify-center rounded-lg bg-gray-200">
-            <ImageIcon size={48} color="#999" />
-            <Text className="mt-2 text-gray-500">{t('callImages.failed_to_load')}</Text>
-            {item.Url && (
-              <Text className="mt-1 px-2 text-center text-xs text-gray-400" numberOfLines={2}>
-                URL: {item.Url}
-              </Text>
-            )}
-          </Box>
-          <Text className="mt-2 text-center font-medium">{item.Name || ''}</Text>
-          <Text className="text-xs text-gray-500">{item.Timestamp || ''}</Text>
-        </Box>
+        <CallImageGalleryItem item={item} index={index} itemWidth={listWidth} hasError={imageErrors.has(item.Id)} onPress={handleImagePress} onLoadError={handleImageLoadError} onLoadSuccess={handleImageLoadSuccess} />
       );
-    }
-
-    // At this point, imageSource is guaranteed to be non-null
-    return (
-      <Box className="w-full items-center justify-center px-4" style={{ width: listWidth }}>
-        <TouchableOpacity onPress={() => handleImagePress(imageSource, item.Name)} testID={`image-${item.Id}-touchable`} activeOpacity={0.7} style={{ width: '100%' }} delayPressIn={0} delayPressOut={0}>
-          <Image
-            key={`${item.Id}-${index}`}
-            source={imageSource}
-            style={styles.galleryImage}
-            contentFit="contain"
-            transition={200}
-            pointerEvents="none"
-            cachePolicy="memory-disk"
-            recyclingKey={item.Id}
-            onError={() => handleImageLoadError(item.Id)}
-            onLoad={() => handleImageLoadSuccess(item.Id)}
-          />
-        </TouchableOpacity>
-        <Text className="mt-2 text-center font-medium">{item.Name || ''}</Text>
-        <Text className="text-xs text-gray-500">{item.Timestamp || ''}</Text>
-      </Box>
-    );
-  };
+    },
+    [imageErrors, listWidth, handleImagePress, handleImageLoadError, handleImageLoadSuccess]
+  );
 
   const handleViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {

@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { type TFunction } from 'i18next';
 
-import { getAvatarUrl } from '@/lib/utils';
+import { getAvatarUrl, parseDateISOString } from '@/lib/utils';
 import { type ChatChannelResultData, ChatChannelType, type ChatGifMetadata, type ChatImageMetadata, type ChatLocationMetadata } from '@/models/v4/chat';
 
 /** Buckets used to group the channel list into sections. */
@@ -10,6 +10,21 @@ export interface GroupedChannels {
   channels: ChatChannelResultData[];
   incidents: ChatChannelResultData[];
   assistant: ChatChannelResultData[];
+}
+
+/**
+ * Reads an API timestamp. Offsetless / space-separated values must go through
+ * parseDateISOString — new Date() shifts them by the device offset or fails outright
+ * on Hermes. Returns null when the value is missing or unreadable.
+ */
+export function parseApiTimestamp(iso?: string | null): Date | null {
+  if (!iso) return null;
+  try {
+    const date = parseDateISOString(iso);
+    return Number.isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
 }
 
 export function groupChannels(channels: ChatChannelResultData[]): GroupedChannels {
@@ -35,7 +50,7 @@ export function groupChannels(channels: ChatChannelResultData[]): GroupedChannel
         break;
     }
   }
-  const byRecent = (a: ChatChannelResultData, b: ChatChannelResultData) => new Date(b.LastMessageOn ?? 0).getTime() - new Date(a.LastMessageOn ?? 0).getTime();
+  const byRecent = (a: ChatChannelResultData, b: ChatChannelResultData) => (parseApiTimestamp(b.LastMessageOn)?.getTime() ?? 0) - (parseApiTimestamp(a.LastMessageOn)?.getTime() ?? 0);
   grouped.directMessages.sort(byRecent);
   grouped.channels.sort(byRecent);
   grouped.incidents.sort(byRecent);
@@ -194,9 +209,8 @@ export function getImageMimeType(uri: string, assetMimeType?: string | null): st
 
 /** Relative-ish short time label for message rows and channel list. */
 export function formatShortTime(iso?: string | null): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
+  const date = parseApiTimestamp(iso);
+  if (!date) return '';
   const now = Date.now();
   const diffMs = now - date.getTime();
   const oneDay = 24 * 60 * 60 * 1000;

@@ -5,6 +5,7 @@ import { getRecipients } from '@/api/messaging/messages';
 import { getAllPersonnelInfos } from '@/api/personnel/personnel';
 import { getAllUnitRolesAndAssignmentsForDepartment } from '@/api/units/unitRoles';
 import { getUnits } from '@/api/units/units';
+import { logger } from '@/lib/logging';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
@@ -82,9 +83,10 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
         return;
       }
 
-      if (__DEV__) {
-        console.log(`Successfully fetched ${recipients.Data.length} recipients from API`);
-      }
+      logger.debug({
+        message: 'Fetched dispatch recipients from API',
+        context: { count: recipients.Data.length },
+      });
 
       // Initialize arrays for categorized recipients
       const categorizedUsers: RecipientsResultData[] = [];
@@ -137,9 +139,10 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
         }
       });
 
-      if (__DEV__) {
-        console.log(`Categorized recipients: Users: ${categorizedUsers.length}, Groups: ${categorizedGroups.length}, Roles: ${categorizedRoles.length}, Units: ${categorizedUnits.length}`);
-      }
+      logger.debug({
+        message: 'Categorized dispatch recipients',
+        context: { users: categorizedUsers.length, groups: categorizedGroups.length, roles: categorizedRoles.length, units: categorizedUnits.length },
+      });
 
       // Only log if we have issues with categorization
       const totalCategorized = categorizedUsers.length + categorizedGroups.length + categorizedRoles.length + categorizedUnits.length;

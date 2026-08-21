@@ -67,6 +67,7 @@ const DEFAULT_CONFIG: HeadsetButtonConfig = {
 class HeadsetButtonService {
   private static instance: HeadsetButtonService;
   private isInitialized: boolean = false;
+  private initializePromise: Promise<void> | null = null;
   private isMonitoring: boolean = false;
   private config: HeadsetButtonConfig = DEFAULT_CONFIG;
 
@@ -95,12 +96,25 @@ class HeadsetButtonService {
   /**
    * Initialize the headset button service
    */
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     if (this.isInitialized) {
       logger.debug({ message: 'HeadsetButtonService already initialized' });
-      return;
+      return Promise.resolve();
     }
 
+    // Store the in-flight promise before the first await so concurrent callers
+    // (livekit-store and use-headset-button-ptt) share one init and cannot register
+    // duplicate 'headset-button' listeners, which would process every press twice.
+    if (!this.initializePromise) {
+      this.initializePromise = this.initializeInternal().finally(() => {
+        this.initializePromise = null;
+      });
+    }
+
+    return this.initializePromise;
+  }
+
+  private async initializeInternal(): Promise<void> {
     try {
       logger.info({ message: 'Initializing HeadsetButtonService' });
 

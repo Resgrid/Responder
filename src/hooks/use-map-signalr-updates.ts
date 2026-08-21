@@ -13,8 +13,10 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
   const lastProcessedTimestampRef = useRef<number | undefined>(undefined);
   const isUpdating = useRef<boolean>(false);
   const pendingTimestamp = useRef<number | null>(null);
-  const debounceTimer = useRef<number | null>(null);
-  const queuedFetchTimer = useRef<number | null>(null);
+  // ReturnType<typeof setTimeout>, not number: under @types/node setTimeout returns a
+  // Timeout object, so a `number` ref does not type-check.
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queuedFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortController = useRef<AbortController | null>(null);
 
   const lastUpdateTimestamp = useSignalRStore((state) => state.lastUpdateTimestamp);

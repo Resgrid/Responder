@@ -142,7 +142,10 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
-      console.log('fetchAllShifts error:', error);
+      logger.debug({
+        message: 'fetchAllShifts error',
+        context: { error },
+      });
       set({
         error: 'Failed to fetch shifts',
         isLoading: false,

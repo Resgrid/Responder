@@ -352,7 +352,7 @@ describe('LiveKit Store - Permission Management', () => {
       // Note: setupCallKeep is now handled globally via app initialization service
       // This test just verifies the CallKeep service methods can be called
       await mockCallKeepService.setup({
-        appName: 'Resgrid Unit',
+        appName: 'Resgrid Responder',
         maximumCallGroups: 1,
         maximumCallsPerCallGroup: 1,
         includesCallsInRecents: false,
