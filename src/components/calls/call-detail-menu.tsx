@@ -1,4 +1,3 @@
-import { EditIcon, MoreVerticalIcon, TimerIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { Pressable } from '@/components/ui/';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper, ActionsheetItem, ActionsheetItemText } from '@/components/ui/actionsheet';
 import { HStack } from '@/components/ui/hstack';
+import { EditIcon, MoreVerticalIcon, TimerIcon, XIcon } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useSecurityStore } from '@/stores/security/store';
 

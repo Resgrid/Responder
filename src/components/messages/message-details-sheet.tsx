@@ -1,8 +1,8 @@
-import { Check, Clock, Mail, MailOpen, Reply, Trash2, User, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, useWindowDimensions } from 'react-native';
 
+import { Check, Clock, Mail, MailOpen, Reply, Trash2, User, X } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useMessagesStore } from '@/stores/messages/store';

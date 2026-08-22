@@ -61,7 +61,7 @@ jest.mock('react-i18next', () => ({
 jest.mock('nativewind', () => ({
   useColorScheme: jest.fn(() => ({ colorScheme: 'light' })),
   cssInterop: jest.fn(),
-  styled: jest.fn(() => (Component: any) => Component),
+  styled: jest.fn((Component: any) => Component),
 }));
 
 // Remove duplicate Platform mock since it's already in the react-native mock above

@@ -804,6 +804,13 @@
     "pleaseWait": "Vänta",
     "processingRequest": "Behandlar din begäran..."
   },
+  "location": {
+    "fix_permission_denied": "Platsbehörighet krävs. Aktivera platsåtkomst i enhetens inställningar och försök igen.",
+    "fix_services_disabled": "Platstjänster är avstängda. Slå på dem i enhetens inställningar och försök igen.",
+    "fix_unavailable": "Kunde inte fastställa din position. Flytta till en plats med fri sikt mot himlen och försök igen.",
+    "tracking_notification_body": "Delar din position med din avdelning.",
+    "tracking_notification_title": "Platsspårning"
+  },
   "login": {
     "change_server_url": "Ändra server-URL",
     "errorModal": {

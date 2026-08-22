@@ -34,6 +34,9 @@ jest.mock('@/lib/storage/realtime-geolocation', () => ({
   loadRealtimeGeolocationState: jest.fn(),
   saveRealtimeGeolocationState: jest.fn(),
 }));
+jest.mock('@/lib/i18n/utils', () => ({
+  translate: jest.fn((key: string) => key),
+}));
 
 // Create mock store states
 const mockAuthState = {
@@ -75,13 +78,24 @@ jest.mock('expo-location', () => {
     Accuracy: {
       Balanced: 'balanced',
     },
+    LocationActivityType: {
+      Other: 1,
+      AutomotiveNavigation: 2,
+      Fitness: 3,
+      OtherNavigation: 4,
+      Airborne: 5,
+    },
   };
 });
 
 // TaskManager mocks are now handled in the jest.mock() call
 
+const registeredTasks: Record<string, (body: unknown) => Promise<void>> = {};
+
 jest.mock('expo-task-manager', () => ({
-  defineTask: jest.fn(),
+  defineTask: jest.fn((name: string, handler: (body: unknown) => Promise<void>) => {
+    registeredTasks[name] = handler;
+  }),
   isTaskRegisteredAsync: jest.fn(),
 }));
 
@@ -360,9 +374,16 @@ describe('LocationService', () => {
         accuracy: Location.Accuracy.Balanced,
         timeInterval: 15000,
         distanceInterval: 10,
+        // Android batches fixes while the screen is off instead of waking the app per fix.
+        deferredUpdatesInterval: 30000,
+        deferredUpdatesDistance: 25,
+        // iOS must not pause a stationary responder off dispatch's map.
+        pausesUpdatesAutomatically: false,
+        activityType: Location.LocationActivityType.Other,
+        showsBackgroundLocationIndicator: true,
         foregroundService: {
-          notificationTitle: 'Location Tracking',
-          notificationBody: 'Tracking your location in the background',
+          notificationTitle: 'location.tracking_notification_title',
+          notificationBody: 'location.tracking_notification_body',
         },
       });
     });
@@ -521,6 +542,151 @@ describe('LocationService', () => {
 
       // Verify that watchPositionAsync is not called for background updates
       expect(mockLocation.watchPositionAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Foreground watcher lifecycle across app state', () => {
+    // watchPositionAsync holds the GPS on for as long as it is subscribed, and on Android it keeps
+    // doing so after the app is backgrounded. Leaving it running alongside the OS task means two
+    // consumers of the radio; leaving it running with background tracking OFF means tracking a
+    // responder who asked not to be tracked in the background.
+    // jest-setup.ts mocks 'react-native' wholesale, so the AppState the service imports is not the
+    // object this file's factory builds and the registered subscription cannot be captured from the
+    // mock. Invoke the service's own handler, which is the unit under test either way.
+    const emitAppState = async (nextAppState: string) => {
+      await (locationService as any).handleAppStateChange(nextAppState);
+    };
+
+    it('releases the foreground watcher when the app is backgrounded', async () => {
+      await locationService.startLocationUpdates();
+      expect(mockLocation.watchPositionAsync).toHaveBeenCalledTimes(1);
+
+      await emitAppState('background');
+
+      expect(mockLocationSubscription.remove).toHaveBeenCalled();
+    });
+
+    it('re-subscribes on return to the foreground for a session that was tracking', async () => {
+      await locationService.startLocationUpdates();
+      await emitAppState('background');
+      mockLocation.watchPositionAsync.mockClear();
+
+      await emitAppState('active');
+
+      expect(mockLocation.watchPositionAsync).toHaveBeenCalled();
+    });
+
+    it('discards a watcher that resolves after the app has already gone to the background', async () => {
+      let resolveWatcher: (subscription: Location.LocationSubscription) => void;
+      const watcherPromise = new Promise<Location.LocationSubscription>((resolve) => {
+        resolveWatcher = resolve;
+      });
+      mockLocation.watchPositionAsync.mockReturnValue(watcherPromise);
+
+      const pendingStart = locationService.startLocationUpdates();
+      // Backgrounding lands while watchPositionAsync is still in flight, so there is no
+      // subscription to release yet — the pending one has to release itself.
+      await emitAppState('background');
+
+      const lateSubscription = { remove: jest.fn() } as jest.Mocked<Location.LocationSubscription>;
+      resolveWatcher!(lateSubscription);
+      await pendingStart;
+
+      expect(lateSubscription.remove).toHaveBeenCalledTimes(1);
+      expect((locationService as any).locationSubscription).toBeNull();
+    });
+
+    it('re-subscribes on return to the foreground after a start that was discarded mid-flight', async () => {
+      let resolveWatcher: (subscription: Location.LocationSubscription) => void;
+      const watcherPromise = new Promise<Location.LocationSubscription>((resolve) => {
+        resolveWatcher = resolve;
+      });
+      mockLocation.watchPositionAsync.mockReturnValue(watcherPromise);
+
+      const pendingStart = locationService.startLocationUpdates();
+      await emitAppState('background');
+      resolveWatcher!({ remove: jest.fn() } as jest.Mocked<Location.LocationSubscription>);
+      await pendingStart;
+
+      mockLocation.watchPositionAsync.mockResolvedValue(mockLocationSubscription);
+      await emitAppState('active');
+
+      expect((locationService as any).locationSubscription).toBe(mockLocationSubscription);
+    });
+
+    it('does not start watching on foreground for a session that never started tracking', async () => {
+      await locationService.stopLocationUpdates();
+      mockLocation.watchPositionAsync.mockClear();
+
+      await emitAppState('active');
+
+      expect(mockLocation.watchPositionAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Background task transmission gating', () => {
+    // The OS task keeps firing while the app is foregrounded, so the fix it delivers has to be
+    // attributed to the setting that owns that app state before it can be transmitted.
+    const runTask = async (appState: string) => {
+      (AppState as any).currentState = appState;
+      const handler = registeredTasks['location-updates'];
+      expect(handler).toBeDefined();
+      await handler({ data: { locations: [mockLocationObject] }, error: null });
+    };
+
+    beforeEach(() => {
+      mockSetPersonLocation.mockResolvedValue(mockApiResponse as any);
+    });
+
+    afterEach(() => {
+      (AppState as any).currentState = 'active';
+    });
+
+    it('transmits a backgrounded fix on the background setting alone, with realtime off', async () => {
+      mockLoadBackgroundGeolocationState.mockResolvedValue(true);
+      mockLoadRealtimeGeolocationState.mockResolvedValue(false);
+
+      await runTask('background');
+
+      expect(mockSetPersonLocation).toHaveBeenCalled();
+      expect(mockLoadBackgroundGeolocationState).toHaveBeenCalled();
+    });
+
+    it('does not transmit a backgrounded fix when background tracking is off', async () => {
+      mockLoadBackgroundGeolocationState.mockResolvedValue(false);
+      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
+
+      await runTask('background');
+
+      expect(mockSetPersonLocation).not.toHaveBeenCalled();
+    });
+
+    it('governs a foregrounded fix by the realtime setting, not the background one', async () => {
+      mockLoadBackgroundGeolocationState.mockResolvedValue(true);
+      mockLoadRealtimeGeolocationState.mockResolvedValue(false);
+
+      await runTask('active');
+
+      expect(mockSetPersonLocation).not.toHaveBeenCalled();
+    });
+
+    it('transmits a foregrounded fix when realtime is on', async () => {
+      mockLoadBackgroundGeolocationState.mockResolvedValue(false);
+      mockLoadRealtimeGeolocationState.mockResolvedValue(true);
+
+      await runTask('active');
+
+      expect(mockSetPersonLocation).toHaveBeenCalled();
+    });
+
+    it('always records the fix locally regardless of whether it may be transmitted', async () => {
+      mockLoadBackgroundGeolocationState.mockResolvedValue(false);
+      mockLoadRealtimeGeolocationState.mockResolvedValue(false);
+
+      await runTask('background');
+
+      expect(mockLocationStoreState.setLocation).toHaveBeenCalledWith(mockLocationObject);
+      expect(mockSetPersonLocation).not.toHaveBeenCalled();
     });
   });
 
@@ -741,14 +907,14 @@ describe('LocationService', () => {
       });
     });
 
-    it('should skip API call when realtime geolocation is disabled', async () => {
+    it('should skip API call when transmission is disabled for the fix', async () => {
       const { sendLocationToAPI } = require('../location');
-      
+
       await sendLocationToAPI(mockLocationObject, false);
 
       expect(mockSetPersonLocation).not.toHaveBeenCalled();
       expect(mockLogger.debug).toHaveBeenCalledWith({
-        message: 'Realtime geolocation disabled, skipping API call',
+        message: 'Location transmission disabled for this fix, skipping API call',
       });
     });
 

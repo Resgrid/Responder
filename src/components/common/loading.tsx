@@ -1,7 +1,8 @@
-import { Loader2 } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
+
+import { Loader2 } from '@/components/ui/lucide-icons';
 
 import { Box } from '../ui/box';
 import { HStack } from '../ui/hstack';

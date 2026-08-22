@@ -804,6 +804,13 @@
     "pleaseWait": "Veuillez patienter",
     "processingRequest": "Traitement de votre demande..."
   },
+  "location": {
+    "fix_permission_denied": "L'autorisation de localisation est requise. Activez l'accès à la localisation dans les réglages de votre appareil, puis réessayez.",
+    "fix_services_disabled": "Les services de localisation sont désactivés. Activez-les dans les réglages de votre appareil, puis réessayez.",
+    "fix_unavailable": "Impossible d'obtenir une position. Placez-vous dans une zone dégagée, puis réessayez.",
+    "tracking_notification_body": "Partage de votre position avec votre département.",
+    "tracking_notification_title": "Suivi de la position"
+  },
   "login": {
     "change_server_url": "Modifier l'URL du serveur",
     "errorModal": {

@@ -7,7 +7,7 @@ import { type UnitResultData } from '@/models/v4/units/unitResultData';
 // Mock NativeWind and appearance-related modules first
 jest.mock('nativewind', () => ({
   cssInterop: jest.fn(),
-  styled: jest.fn(() => (Component: any) => Component),
+  styled: jest.fn((Component: any) => Component),
 }));
 
 jest.mock('react-native/Libraries/Utilities/Appearance', () => ({

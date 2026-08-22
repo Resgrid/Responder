@@ -66,6 +66,20 @@ const useThemedStyles = () => {
   return React.useMemo(() => createThemedStyles(colorScheme === 'dark'), [colorScheme]);
 };
 
+// lucide-react-native icons default to `stroke="currentColor"`, which react-native-svg resolves
+// from the `color` *prop* only — a nativewind `className` lands in `style` and is dropped, so the
+// icons rendered near-black on the dark sidebar. Colors are passed explicitly instead.
+const createIconColors = (isDark: boolean) => ({
+  accent: isDark ? '#60a5fa' : '#3b82f6',
+  danger: isDark ? '#f87171' : '#ef4444',
+  muted: isDark ? '#9ca3af' : '#6b7280',
+});
+
+const useIconColors = () => {
+  const { colorScheme } = useColorScheme();
+  return React.useMemo(() => createIconColors(colorScheme === 'dark'), [colorScheme]);
+};
+
 interface NotificationInboxProps {
   isOpen: boolean;
   onClose: () => void;
@@ -110,6 +124,7 @@ interface NotificationRowProps {
 
 const NotificationRow = React.memo(function NotificationRow({ item, isSelectionMode, isSelected, onPress, onLongPress, onNavigateToReference }: NotificationRowProps) {
   const themed = useThemedStyles();
+  const iconColors = useIconColors();
 
   const notification: NotificationPayload = React.useMemo(() => mapNovuNotification(item), [item]);
 
@@ -124,9 +139,7 @@ const NotificationRow = React.memo(function NotificationRow({ item, isSelectionM
       {!notification.read ? <View style={[styles.unreadIndicator, themed.unreadIndicator]} /> : null}
 
       {isSelectionMode ? (
-        <View style={styles.selectionIndicator}>
-          {isSelected ? <CheckCircle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} /> : <Circle size={24} className="text-gray-400 dark:text-gray-500" strokeWidth={2} />}
-        </View>
+        <View style={styles.selectionIndicator}>{isSelected ? <CheckCircle size={24} color={iconColors.accent} strokeWidth={2} /> : <Circle size={24} color={iconColors.muted} strokeWidth={2} />}</View>
       ) : null}
 
       <View style={styles.notificationContent}>
@@ -140,12 +153,12 @@ const NotificationRow = React.memo(function NotificationRow({ item, isSelectionM
         notification.referenceType && notification.referenceId ? (
           <View style={styles.actionButtons}>
             <Button onPress={() => onNavigateToReference(notification.referenceType!, notification.referenceId!)} variant="outline" className="size-8 p-0">
-              <ExternalLink size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+              <ExternalLink size={24} color={iconColors.accent} strokeWidth={2} />
             </Button>
-            <ChevronRight size={24} className="ml-2 text-gray-400" strokeWidth={2} />
+            <ChevronRight size={24} color={iconColors.muted} strokeWidth={2} style={styles.chevron} />
           </View>
         ) : (
-          <ChevronRight size={24} className="ml-2 text-gray-400" strokeWidth={2} />
+          <ChevronRight size={24} color={iconColors.muted} strokeWidth={2} style={styles.chevron} />
         )
       ) : null}
     </Pressable>
@@ -155,6 +168,7 @@ const NotificationRow = React.memo(function NotificationRow({ item, isSelectionM
 export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) => {
   const { t } = useTranslation();
   const themed = useThemedStyles();
+  const iconColors = useIconColors();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const config = useCoreStore((state) => state.config);
@@ -389,11 +403,7 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                         accessibilityRole="button"
                         accessibilityLabel={allNotificationsSelected ? t('notifications.deselectAll') : t('notifications.selectAll')}
                       >
-                        {allNotificationsSelected ? (
-                          <CheckCircle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
-                        ) : (
-                          <Circle size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
-                        )}
+                        {allNotificationsSelected ? <CheckCircle size={24} color={iconColors.accent} strokeWidth={2} /> : <Circle size={24} color={iconColors.accent} strokeWidth={2} />}
                       </Pressable>
                       <Pressable
                         onPress={handleBulkDelete}
@@ -402,23 +412,23 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
                         accessibilityRole="button"
                         accessibilityLabel={t('common.delete')}
                       >
-                        {isDeletingSelected ? <ActivityIndicator size="small" color="#ef4444" /> : <Trash2 size={24} className="text-red-500" strokeWidth={2} />}
+                        {isDeletingSelected ? <ActivityIndicator size="small" color={iconColors.danger} /> : <Trash2 size={24} color={iconColors.danger} strokeWidth={2} />}
                       </Pressable>
                       <Pressable onPress={exitSelectionMode} style={styles.closeButton} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
-                        <X size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                        <X size={24} color={iconColors.accent} strokeWidth={2} />
                       </Pressable>
                     </View>
                   </View>
                 </>
               ) : (
                 <>
-                  <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
+                  <Text style={[styles.headerTitle, themed.selectionCount]}>{t('notifications.title')}</Text>
                   <View style={styles.headerActions}>
                     <Pressable onPress={enterSelectionMode} style={styles.actionButton}>
-                      <MoreVertical size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                      <MoreVertical size={24} color={iconColors.accent} strokeWidth={2} />
                     </Pressable>
                     <Pressable onPress={onClose} style={styles.closeButton}>
-                      <X size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+                      <X size={24} color={iconColors.accent} strokeWidth={2} />
                     </Pressable>
                   </View>
                 </>
@@ -600,6 +610,9 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  chevron: {
+    marginLeft: 8,
   },
   listContainer: {
     flexGrow: 1,

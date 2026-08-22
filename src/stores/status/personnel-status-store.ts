@@ -24,6 +24,7 @@ import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
 import { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
+import { acquireLocationFix, getLocationFixErrorMessage } from '@/services/location-fix';
 import { offlineQueueProcessor } from '@/services/offline-queue-processor';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -347,7 +348,6 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     const showToast = useToastStore.getState().showToast;
     const { userId } = useAuthStore.getState();
     const { fetchCurrentUserInfo } = useHomeStore.getState();
-    const locationState = useLocationStore.getState();
 
     if (!userId || !selectedStatus) {
       showToast('error', getTranslatedMessage('personnel.status.missing_required_info', 'Missing required information'));
@@ -363,13 +363,32 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
       }
     }
 
-    const requiresGps = getRequiredGpsAccuracy();
-    if (requiresGps && (locationState.latitude == null || locationState.longitude == null)) {
-      showToast('error', getTranslatedMessage('personnel.status.gps_required', 'GPS location is required for this status but not available'));
+    set({ isLoading: true });
+
+    // Always ask for a fresh fix, whether or not the status demands one. The continuous watcher is
+    // not a dependable source here: it only runs once sign-in has started it, its store is
+    // deliberately never persisted, and permission can be revoked from the OS at any point. Asking
+    // at submission time is also the only way `Gps` can be enforced honestly -- checking a cached
+    // value would pass a status whose coordinates are hours old.
+    const fix = await acquireLocationFix();
+
+    if (fix.outcome !== 'acquired' && getRequiredGpsAccuracy()) {
+      set({ isLoading: false });
+      showToast('error', getLocationFixErrorMessage(fix.outcome));
       return;
     }
 
-    set({ isLoading: true });
+    // Fall back to the watcher's last value when the on-demand fix failed but the status does not
+    // require one: a slightly stale position still helps dispatch more than an empty field.
+    const coords = fix.location?.coords ?? null;
+    const locationState = useLocationStore.getState();
+    const latitude = coords?.latitude ?? locationState.latitude;
+    const longitude = coords?.longitude ?? locationState.longitude;
+    const accuracy = coords?.accuracy ?? locationState.accuracy;
+    const altitude = coords?.altitude ?? locationState.altitude;
+    const altitudeAccuracy = coords?.altitudeAccuracy ?? null;
+    const speed = coords?.speed ?? locationState.speed;
+    const heading = coords?.heading ?? locationState.heading;
 
     try {
       const status = new SavePersonStatusInput();
@@ -391,13 +410,13 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
       status.RespondingTo = respondingTo || destinationPayload.respondingTo;
       status.RespondingToType = destinationPayload.respondingToType;
       status.EventId = destinationPayload.eventId;
-      status.Latitude = locationState.latitude != null ? locationState.latitude.toString() : '';
-      status.Longitude = locationState.longitude != null ? locationState.longitude.toString() : '';
-      status.Accuracy = locationState.accuracy != null ? locationState.accuracy.toString() : '';
-      status.Altitude = locationState.altitude != null ? locationState.altitude.toString() : '';
-      status.AltitudeAccuracy = '';
-      status.Speed = locationState.speed != null ? locationState.speed.toString() : '';
-      status.Heading = locationState.heading != null ? locationState.heading.toString() : '';
+      status.Latitude = latitude != null ? latitude.toString() : '';
+      status.Longitude = longitude != null ? longitude.toString() : '';
+      status.Accuracy = accuracy != null ? accuracy.toString() : '';
+      status.Altitude = altitude != null ? altitude.toString() : '';
+      status.AltitudeAccuracy = altitudeAccuracy != null ? altitudeAccuracy.toString() : '';
+      status.Speed = speed != null ? speed.toString() : '';
+      status.Heading = heading != null ? heading.toString() : '';
 
       try {
         await savePersonnelStatus(status);

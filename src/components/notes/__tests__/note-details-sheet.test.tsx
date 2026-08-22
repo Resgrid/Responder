@@ -22,7 +22,7 @@ jest.mock('react-i18next');
 jest.mock('nativewind', () => ({
   useColorScheme: jest.fn(),
   cssInterop: jest.fn(),
-  styled: jest.fn(() => (Component: any) => Component),
+  styled: jest.fn((Component: any) => Component),
 }));
 jest.mock('@/stores/notes/store');
 jest.mock('@/lib/utils', () => ({

@@ -1,8 +1,8 @@
-import { CalendarDays, Check, ChevronDown, Plus, Send, Users, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, useWindowDimensions } from 'react-native';
 
+import { CalendarDays, Check, ChevronDown, Plus, Send, Users, X } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';

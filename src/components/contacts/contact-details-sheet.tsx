@@ -1,3 +1,11 @@
+import { useColorScheme } from 'nativewind';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import WebView from 'react-native-webview';
+
+import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import {
   BuildingIcon,
   CalendarIcon,
@@ -15,15 +23,7 @@ import {
   TrashIcon,
   UserIcon,
   X,
-} from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import WebView from 'react-native-webview';
-
-import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
+} from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { ContactType } from '@/models/v4/contacts/contactResultData';

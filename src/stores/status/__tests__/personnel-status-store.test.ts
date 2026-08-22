@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { getAllGroups } from '@/api/groups/groups';
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { useAuthStore } from '@/lib/auth';
+import { acquireLocationFix, getLocationFixErrorMessage } from '@/services/location-fix';
 import { offlineQueueProcessor } from '@/services/offline-queue-processor';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -29,10 +30,27 @@ jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/app/location-store');
 jest.mock('@/stores/toast/store');
 jest.mock('@/services/offline-queue-processor');
+// The store's contract is the fix service, not expo-location. A factory mock (rather than an
+// automock) is required: automocking still loads the real module to derive its shape, which drags
+// expo-location's native surface into this node-environment suite.
+jest.mock('@/services/location-fix', () => ({
+	acquireLocationFix: jest.fn(),
+	getLocationFixErrorMessage: jest.fn(),
+}));
 
 const mockGetAllGroups = getAllGroups as jest.MockedFunction<typeof getAllGroups>;
 const mockSavePersonnelStatus = savePersonnelStatus as jest.MockedFunction<typeof savePersonnelStatus>;
 const mockOfflineQueueProcessor = offlineQueueProcessor as jest.Mocked<typeof offlineQueueProcessor>;
+const mockAcquireLocationFix = acquireLocationFix as jest.MockedFunction<typeof acquireLocationFix>;
+const mockGetLocationFixErrorMessage = getLocationFixErrorMessage as jest.MockedFunction<typeof getLocationFixErrorMessage>;
+
+const buildFix = (latitude: number, longitude: number) => ({
+	outcome: 'acquired' as const,
+	location: {
+		coords: { latitude, longitude, accuracy: 5, altitude: 100, altitudeAccuracy: 3, speed: 0, heading: 90 },
+		timestamp: 1700000000000,
+	},
+});
 
 describe('usePersonnelStatusBottomSheetStore', () => {
 	beforeEach(() => {
@@ -65,6 +83,8 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			speed: null, 
 			heading: null 
 		});
+		mockAcquireLocationFix.mockResolvedValue(buildFix(40.7128, -74.006));
+		mockGetLocationFixErrorMessage.mockImplementation((outcome) => `fix-error:${outcome}`);
 	});
 
 	afterEach(() => {
@@ -1137,45 +1157,97 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			(mockOfflineQueueProcessor.addPersonnelStatusToQueue as jest.MockedFunction<any>) = jest.fn().mockReturnValue('event-123');
 		});
 
-		it('should fail submission when GPS is required but not available', async () => {
+		const gpsRequiredStatus = {
+			Id: 1,
+			Text: 'Responding',
+			BColor: '#FF0000',
+			Type: 1,
+			StateId: 1,
+			Color: '#FF0000',
+			Gps: true,
+			Note: 0,
+			Detail: 0,
+		};
+
+		it.each([
+			['permission-denied' as const],
+			['services-disabled' as const],
+			['unavailable' as const],
+		])('should block a GPS-required status and name the obstacle when the fix fails with %s', async (outcome) => {
 			const mockShowToast = jest.fn();
-			
+
 			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
 			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: jest.fn() });
 			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
-			(useLocationStore as any).getState = jest.fn().mockReturnValue({ 
-				latitude: null, 
-				longitude: null, 
-				accuracy: null, 
-				altitude: null, 
-				speed: null, 
-				heading: null 
-			});
-
-			const mockStatus = { 
-				Id: 1, 
-				Text: 'Responding', 
-				BColor: '#FF0000', 
-				Type: 1, 
-				StateId: 1, 
-				Color: '#FF0000', 
-				Gps: true, // GPS required
-				Note: 0, 
-				Detail: 0 
-			};
+			mockAcquireLocationFix.mockResolvedValue({ outcome, location: null });
 
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
 
 			act(() => {
-				result.current.setIsOpen(true, mockStatus as any);
+				result.current.setIsOpen(true, gpsRequiredStatus as any);
 			});
 
 			await act(async () => {
 				await result.current.submitStatus();
 			});
 
-			expect(mockShowToast).toHaveBeenCalledWith('error', 'GPS location is required for this status but not available');
+			expect(mockShowToast).toHaveBeenCalledWith('error', `fix-error:${outcome}`);
 			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+			// A blocked submission must not strand the sheet in its loading state.
+			expect(usePersonnelStatusBottomSheetStore.getState().isLoading).toBe(false);
+		});
+
+		it('should attempt a fix even when the status does not require GPS, and still submit if it fails', async () => {
+			const mockShowToast = jest.fn();
+
+			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: jest.fn() });
+			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			mockAcquireLocationFix.mockResolvedValue({ outcome: 'unavailable', location: null });
+			mockSavePersonnelStatus.mockResolvedValue({} as any);
+
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, { ...gpsRequiredStatus, Gps: false } as any);
+			});
+
+			await act(async () => {
+				await result.current.submitStatus();
+			});
+
+			expect(mockAcquireLocationFix).toHaveBeenCalled();
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ Latitude: '', Longitude: '' }));
+		});
+
+		it('should fall back to the watcher position when the on-demand fix fails and GPS is optional', async () => {
+			const mockShowToast = jest.fn();
+
+			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: jest.fn() });
+			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			(useLocationStore as any).getState = jest.fn().mockReturnValue({
+				latitude: 51.5074,
+				longitude: -0.1278,
+				accuracy: 12,
+				altitude: 20,
+				speed: 3,
+				heading: 45,
+			});
+			mockAcquireLocationFix.mockResolvedValue({ outcome: 'unavailable', location: null });
+			mockSavePersonnelStatus.mockResolvedValue({} as any);
+
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, { ...gpsRequiredStatus, Gps: false } as any);
+			});
+
+			await act(async () => {
+				await result.current.submitStatus();
+			});
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ Latitude: '51.5074', Longitude: '-0.1278' }));
 		});
 
 		it('should proceed with submission when GPS is required and available', async () => {
@@ -1185,14 +1257,14 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			(useAuthStore as any).getState = jest.fn().mockReturnValue({ userId: 'user123' });
 			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: mockFetchCurrentUserInfo });
 			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
-			(useLocationStore as any).getState = jest.fn().mockReturnValue({ 
-				latitude: 40.7128, 
-				longitude: -74.0060, 
-				accuracy: 10, 
-				altitude: 100, 
-				speed: 5, // Non-zero speed to avoid empty string
-				heading: 90 
-			});
+			// Coordinates now come from the on-demand fix rather than the watcher's cache.
+			mockAcquireLocationFix.mockResolvedValue({
+				outcome: 'acquired',
+				location: {
+					coords: { latitude: 40.7128, longitude: -74.006, accuracy: 10, altitude: 100, altitudeAccuracy: 4, speed: 5, heading: 90 },
+					timestamp: 1700000000000,
+				},
+			} as any);
 
 			const mockStatus = { 
 				Id: 1, 

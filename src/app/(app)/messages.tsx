@@ -1,6 +1,5 @@
 import { useFocusEffect } from 'expo-router';
 import { router, Stack } from 'expo-router';
-import { ChevronDown, Mail, MailOpen, MessageSquarePlus, MoreVertical, Search, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
@@ -19,6 +18,7 @@ import { Fab, FabIcon } from '@/components/ui/fab';
 import { FlatList } from '@/components/ui/flat-list';
 import { HStack } from '@/components/ui/hstack';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { ChevronDown, Mail, MailOpen, MessageSquarePlus, MoreVertical, Search, Trash2, X } from '@/components/ui/lucide-icons';
 import { Pressable } from '@/components/ui/pressable';
 import { SafeAreaView } from '@/components/ui/safe-area-view';
 import { Text } from '@/components/ui/text';

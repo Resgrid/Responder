@@ -804,6 +804,13 @@
     "pleaseWait": "Please wait",
     "processingRequest": "Processing your request..."
   },
+  "location": {
+    "fix_permission_denied": "Location permission is required. Enable location access in your device settings and try again.",
+    "fix_services_disabled": "Location services are turned off. Turn them on in your device settings and try again.",
+    "fix_unavailable": "Could not get a location fix. Move to an area with a clearer view of the sky and try again.",
+    "tracking_notification_body": "Sharing your location with your department.",
+    "tracking_notification_title": "Location Tracking"
+  },
   "login": {
     "change_server_url": "Change Server URL",
     "errorModal": {

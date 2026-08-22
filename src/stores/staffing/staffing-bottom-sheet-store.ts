@@ -92,6 +92,11 @@ export const useStaffingBottomSheetStore = create<StaffingBottomSheetStore>((set
     }
 
     set({ isLoading: true });
+
+    // Staffing deliberately takes no location fix and enforces no GPS gate. Staffing levels come
+    // from the same CustomStateDetail rows as statuses and do carry the same `Gps` flag, but
+    // SavePersonStaffing has no coordinate fields on the server, so there is nothing to transmit
+    // and no reason to make a responder wait on a fix. Status is where the gate lives.
     try {
       const staffing = new SavePersonStaffingInput();
       const date = new Date();

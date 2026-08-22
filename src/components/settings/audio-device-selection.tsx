@@ -1,4 +1,3 @@
-import { CheckCircle, Headphones, Mic, Speaker } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
@@ -6,6 +5,7 @@ import { ScrollView } from 'react-native';
 import { Card } from '@/components/ui/card';
 import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
+import { CheckCircle, Headphones, Mic, Speaker } from '@/components/ui/lucide-icons';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
