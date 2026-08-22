@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import { useAuthStore } from '@/lib';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
-import { HUB_CONNECTED_EVENT, HUB_DISCONNECTED_EVENT, type HubLifecycleEvent, signalRService } from '@/services/signalr.service';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
+import { HUB_CONNECTED_EVENT, HUB_DISCONNECTED_EVENT, HUB_RECONNECT_EXHAUSTED_EVENT, type HubLifecycleEvent, signalRService } from '@/services/signalr.service';
 
 import { useCoreStore } from '../app/core-store';
 import { useIncidentCommandStore } from '../calls/incident-command-store';
@@ -11,6 +12,18 @@ import { useChatStore } from '../chat/store';
 import { FeatureFlagKeys, featureFlagsStore } from '../feature-flags/store';
 import { securityStore, useSecurityStore } from '../security/store';
 import { useWeatherAlertsStore } from '../weather-alerts/weather-alerts-store';
+
+/** The realtime feeds an outage is tracked for. Geolocation is opt-in and cosmetic, so it is not. */
+export type RealtimeHubKey = 'update' | 'chat';
+
+export interface RealtimeHubOutage {
+  /** Epoch ms the live session dropped. */
+  since: number;
+  /** Every reconnection attempt has been spent; the hub is parked until the network returns. */
+  exhausted: boolean;
+}
+
+export type RealtimeHubOutages = Partial<Record<RealtimeHubKey, RealtimeHubOutage>>;
 
 interface SignalRState {
   isUpdateHubConnected: boolean;
@@ -20,6 +33,16 @@ interface SignalRState {
   lastGeolocationMessage: unknown;
   lastGeolocationTimestamp: number;
   isChatHubConnected: boolean;
+  /**
+   * Hubs that were live and then went quiet, so the UI can tell the responder the update feed
+   * has stopped -- a dead feed and a quiet shift look identical on screen otherwise.
+   *
+   * Only a hub that actually established a session can land here: every entry originates from a
+   * disconnect emitted by an open connection. A cold start, a hub that was never connected, and
+   * an intentional teardown (backgrounding, sign-out) all leave this empty, which is what keeps
+   * the banner from flashing when nothing is wrong.
+   */
+  realtimeHubOutages: RealtimeHubOutages;
   error: Error | null;
   connectUpdateHub: () => Promise<void>;
   disconnectUpdateHub: () => Promise<void>;
@@ -87,6 +110,21 @@ function stopUpdateRejoinRetry(): void {
   }
 }
 
+/**
+ * Tear the realtime session down. Registered with `registerStoreReset` below, so signing out runs
+ * it from `clearAllAppData` while the tokens the sockets were opened with are still valid.
+ *
+ * Left alone, those sockets stay open authenticated as the outgoing user, the chat heartbeat
+ * interval ticks forever, and a dropped transport reconnects into `refreshAccessToken` --
+ * re-entering the very logout that should have ended it. The flags matter just as much: a stale
+ * `isChatHubConnected` makes the next user's `connectChatHub` early-return onto the previous
+ * user's connection.
+ *
+ * Assigned from inside the store factory because the teardown needs its `set` and the per-hub
+ * timers that live in that closure.
+ */
+let resetRealtimeSession: () => void = () => undefined;
+
 export const useSignalRStore = create<SignalRState>((set, get) => {
   const createSafeHandler = (event: string, handler: SignalRHandler): SignalRHandler => {
     return (...args) => {
@@ -99,6 +137,43 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         });
       }
     };
+  };
+
+  /**
+   * Record that a hub which *was* live has gone quiet.
+   *
+   * Only ever reached from a disconnect raised by an established connection, so a hub that never
+   * connected cannot register an outage and cannot flash the banner during startup.
+   *
+   * The original `since` survives repeat events: a second disconnect inside the same outage must
+   * not restart the grace period the banner is counting down, and an exhausted hub stays exhausted
+   * until it either reconnects or is torn down.
+   */
+  const markHubLost = (hub: RealtimeHubKey, exhausted: boolean): void => {
+    set((state) => {
+      const current = state.realtimeHubOutages[hub];
+      if (current && (current.exhausted || !exhausted)) {
+        return {};
+      }
+      return {
+        realtimeHubOutages: {
+          ...state.realtimeHubOutages,
+          [hub]: { since: current?.since ?? Date.now(), exhausted },
+        },
+      };
+    });
+  };
+
+  /** Clear a hub's outage: it reconnected, or it was disconnected on purpose. */
+  const markHubHealthy = (hub: RealtimeHubKey): void => {
+    set((state) => {
+      if (!state.realtimeHubOutages[hub]) {
+        return {};
+      }
+      const next = { ...state.realtimeHubOutages };
+      delete next[hub];
+      return { realtimeHubOutages: next };
+    });
   };
 
   /**
@@ -120,6 +195,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
       stopUpdateRejoinRetry();
       updateRejoinAttempts = 0;
       set({ isUpdateHubConnected: true, error: null });
+      markHubHealthy('update');
       logger.info({ message: 'Re-announced to update hub after reconnect', context: { departmentId } });
       const openCallId = useIncidentCommandStore.getState().callId;
       if (openCallId) {
@@ -166,7 +242,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'personnelStatusUpdated',
       createSafeHandler('personnelStatusUpdated', (message) => {
-        logger.info({
+        logger.debug({
           message: 'personnelStatusUpdated',
           context: { message },
         });
@@ -176,7 +252,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'personnelStaffingUpdated',
       createSafeHandler('personnelStaffingUpdated', (message) => {
-        logger.info({
+        logger.debug({
           message: 'personnelStaffingUpdated',
           context: { message },
         });
@@ -186,7 +262,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'unitStatusUpdated',
       createSafeHandler('unitStatusUpdated', (message) => {
-        logger.info({
+        logger.debug({
           message: 'unitStatusUpdated',
           context: { message },
         });
@@ -198,7 +274,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
       createSafeHandler('callsUpdated', (message) => {
         const now = Date.now();
 
-        logger.info({
+        logger.debug({
           message: 'callsUpdated',
           context: { message, now },
         });
@@ -208,7 +284,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'callAdded',
       createSafeHandler('callAdded', (message) => {
-        logger.info({
+        logger.debug({
           message: 'callAdded',
           context: { message },
         });
@@ -218,7 +294,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'callClosed',
       createSafeHandler('callClosed', (message) => {
-        logger.info({
+        logger.debug({
           message: 'callClosed',
           context: { message },
         });
@@ -228,7 +304,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'weatherAlertReceived',
       createSafeHandler('weatherAlertReceived', (message) => {
-        logger.info({
+        logger.debug({
           message: 'weatherAlertReceived',
           context: { message },
         });
@@ -242,7 +318,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'weatherAlertUpdated',
       createSafeHandler('weatherAlertUpdated', (message) => {
-        logger.info({
+        logger.debug({
           message: 'weatherAlertUpdated',
           context: { message },
         });
@@ -256,7 +332,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'weatherAlertExpired',
       createSafeHandler('weatherAlertExpired', (message) => {
-        logger.info({
+        logger.debug({
           message: 'weatherAlertExpired',
           context: { message },
         });
@@ -270,7 +346,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     [
       'incidentCommandUpdated',
       createSafeHandler('incidentCommandUpdated', (message) => {
-        logger.info({
+        logger.debug({
           message: 'incidentCommandUpdated',
           context: { message },
         });
@@ -301,6 +377,17 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         stopUpdateRejoinRetry();
         updateRejoinAttempts = 0;
         set({ isUpdateHubConnected: false });
+        markHubLost('update', false);
+      }),
+    ],
+    [
+      HUB_RECONNECT_EXHAUSTED_EVENT,
+      createSafeHandler(`${HUB_RECONNECT_EXHAUSTED_EVENT}:update`, (message) => {
+        if (readHubName(message) !== Env.CHANNEL_HUB_NAME) return;
+        // Reconnection has given up. The service parks the hub and retries it when the network is
+        // reachable again, but until then nothing arrives, so there is no reason to keep waiting
+        // out the banner's grace period.
+        markHubLost('update', true);
       }),
     ],
     [
@@ -310,6 +397,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           message: 'Connected to update SignalR hub',
         });
         set({ isUpdateHubConnected: true, error: null });
+        markHubHealthy('update');
       }),
     ],
   ]);
@@ -389,6 +477,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           message: 'Connected to chat SignalR hub',
         });
         set({ isChatHubConnected: true, error: null });
+        markHubHealthy('chat');
         resyncChat();
       }),
     ],
@@ -414,6 +503,14 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
         // Clearing the flag is what lets connectChatHub repair the session later;
         // while it stayed true the hub could never be re-announced.
         set({ isChatHubConnected: false });
+        markHubLost('chat', false);
+      }),
+    ],
+    [
+      HUB_RECONNECT_EXHAUSTED_EVENT,
+      createSafeHandler(`${HUB_RECONNECT_EXHAUSTED_EVENT}:chat`, (message) => {
+        if (readHubName(message) !== Env.CHAT_HUB_NAME) return;
+        markHubLost('chat', true);
       }),
     ],
   ]);
@@ -522,6 +619,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
 
     chatArmAttempts = 0;
     set({ isChatHubConnected: true, error: null });
+    markHubHealthy('chat');
 
     stopChatHeartbeat();
     chatHeartbeatTimer = setInterval(() => {
@@ -564,6 +662,42 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     return operation;
   };
 
+  resetRealtimeSession = () => {
+    stopChatHeartbeat();
+    stopChatArmRetry();
+    stopUpdateRejoinRetry();
+    chatArmAttempts = 0;
+    updateRejoinAttempts = 0;
+    lastChatResyncAt = 0;
+    // Any rejoin still in flight belongs to the session that just ended.
+    updateConnectionGeneration += 1;
+    unsubscribeUpdateHubHandlers();
+    unsubscribeGeolocationHubHandlers();
+    unsubscribeChatHubHandlers();
+    set({
+      isUpdateHubConnected: false,
+      lastUpdateMessage: null,
+      lastUpdateTimestamp: 0,
+      isGeolocationHubConnected: false,
+      lastGeolocationMessage: null,
+      lastGeolocationTimestamp: 0,
+      isChatHubConnected: false,
+      // Signing out is not an outage. Left populated, the next user would land on a home screen
+      // already showing "live updates unavailable" for a session that no longer exists.
+      realtimeHubOutages: {},
+      error: null,
+    });
+
+    // Closing the transports is local work, so it can finish after this returns; the handlers
+    // are already gone and nothing is left listening for whatever arrives in between.
+    void signalRService.disconnectAll().catch((error) => {
+      logger.warn({
+        message: 'Failed to disconnect SignalR hubs while resetting the realtime session',
+        context: { error },
+      });
+    });
+  };
+
   return {
     isUpdateHubConnected: false,
     lastUpdateMessage: null,
@@ -572,6 +706,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
     lastGeolocationMessage: null,
     lastGeolocationTimestamp: 0,
     isChatHubConnected: false,
+    realtimeHubOutages: {},
     error: null,
     connectUpdateHub: async () => {
       try {
@@ -650,6 +785,10 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
       } finally {
         unsubscribeUpdateHubHandlers();
         set({ isUpdateHubConnected: false, lastUpdateMessage: null });
+        // Closing the socket raises the same disconnect event a dropped transport does, so the
+        // handler above has already recorded an outage. Backgrounding the app is not an outage --
+        // clearing it here is what stops a banner from being queued up behind every app switch.
+        markHubHealthy('update');
       }
     },
     connectGeolocationHub: async () => {
@@ -779,7 +918,11 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
       } finally {
         unsubscribeChatHubHandlers();
         set({ isChatHubConnected: false });
+        // Same as the update hub: an intentional close is not something to warn the user about.
+        markHubHealthy('chat');
       }
     },
   };
 });
+
+registerStoreReset('signalr', () => resetRealtimeSession());

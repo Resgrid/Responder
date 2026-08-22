@@ -27,7 +27,7 @@ interface MessageBubbleProps {
   onPressImage?: (uri: string) => void;
 }
 
-export function MessageBubble({ message, isOwn, showSender, currentUserId, onLongPress, onToggleReaction, onOpenThread, onRetry, onPressImage }: MessageBubbleProps) {
+function MessageBubbleComponent({ message, isOwn, showSender, currentUserId, onLongPress, onToggleReaction, onOpenThread, onRetry, onPressImage }: MessageBubbleProps) {
   const { t } = useTranslation();
 
   // Realtime payloads omit empty collections; the store normalizes them, but messages
@@ -42,6 +42,10 @@ export function MessageBubble({ message, isOwn, showSender, currentUserId, onLon
     }
     return Array.from(map.entries());
   }, [message.Reactions, currentUserId]);
+
+  // Linkifying scans the whole body with a regex; without this it re-ran for every
+  // visible bubble on every incoming message or typing event.
+  const bodySegments = useMemo(() => linkifySegments(message.Body ?? ''), [message.Body]);
 
   // System message: centered, subtle.
   if (message.MessageType === ChatMessageType.System) {
@@ -102,11 +106,10 @@ export function MessageBubble({ message, isOwn, showSender, currentUserId, onLon
     }
 
     // Text (with inline links).
-    const segments = linkifySegments(message.Body ?? '');
-    if (segments.length === 0) return <Text className={textTone}>{message.Body}</Text>;
+    if (bodySegments.length === 0) return <Text className={textTone}>{message.Body}</Text>;
     return (
       <Text className={textTone}>
-        {segments.map((segment, index) =>
+        {bodySegments.map((segment, index) =>
           segment.isLink ? (
             <Text key={index} className={`underline ${isOwn ? 'text-white' : 'text-primary-600'}`} onPress={() => Linking.openURL(segment.text)}>
               {segment.text}
@@ -183,3 +186,10 @@ export function MessageBubble({ message, isOwn, showSender, currentUserId, onLon
     </HStack>
   );
 }
+
+// Memoized: a channel keeps every visible bubble mounted, so without this each incoming
+// message or typing event re-rendered (and re-linkified) all of them. Callers must pass
+// stable callback identities for this to bite.
+export const MessageBubble = React.memo(MessageBubbleComponent);
+
+MessageBubble.displayName = 'MessageBubble';

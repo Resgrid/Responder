@@ -13,6 +13,7 @@ import { Checkbox } from '../ui/checkbox';
 import { HStack } from '../ui/hstack';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
+import { isMessageExpired } from './message-utils';
 
 interface MessageCardProps {
   message: MessageResultData;
@@ -70,7 +71,7 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
     }
   };
 
-  const isExpired = message.ExpiredOn && new Date(message.ExpiredOn) < new Date();
+  const isExpired = isMessageExpired(message.ExpiredOn);
   const senderName = message.IsSystem ? t('common.system') : message.SendingName || t('common.unknown_user');
   // Read state is tracked locally (the messages API has no read flag) — a message is
   // read once its detail sheet has been opened. `Responded` only means poll response.

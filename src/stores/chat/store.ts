@@ -75,7 +75,7 @@ interface ChatState {
   outbox: ChatOutboxItem[];
 
   // --- Channels ---------------------------------------------------------
-  fetchChannels: (activeUnitId?: number) => Promise<void>;
+  fetchChannels: () => Promise<void>;
   setActiveChannel: (channelId: string | null) => void;
 
   // --- Messages ---------------------------------------------------------
@@ -188,19 +188,53 @@ function withCollections(incoming: ChatMessageResultData, existing?: ChatMessage
   };
 }
 
+/** Index of the first entry that sorts after `message`. The lists are always kept ascending,
+ * so a binary search replaces the full re-sort every hub event used to pay for — and with it
+ * the Date parsing `compareMessages` does on each of the hundreds of comparisons. */
+function findInsertIndex(list: ChatMessageResultData[], message: ChatMessageResultData): number {
+  let low = 0;
+  let high = list.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (compareMessages(list[mid], message) <= 0) low = mid + 1;
+    else high = mid;
+  }
+  return low;
+}
+
 /** Insert or replace a message in an ascending-by-sequence list, de-duplicated
  * by ChatMessageId and ClientMessageId (so optimistic sends reconcile). */
 function upsertMessage(list: ChatMessageResultData[], incoming: ChatMessageResultData): ChatMessageResultData[] {
+  const idx = list.findIndex((m) => m.ChatMessageId === incoming.ChatMessageId || (!!incoming.ClientMessageId && !!m.ClientMessageId && m.ClientMessageId === incoming.ClientMessageId));
   const next = list.slice();
-  const idx = next.findIndex((m) => m.ChatMessageId === incoming.ChatMessageId || (!!incoming.ClientMessageId && !!m.ClientMessageId && m.ClientMessageId === incoming.ClientMessageId));
+
   if (idx >= 0) {
     const existing = next[idx];
-    next[idx] = withCollections({ ...existing, ...incoming }, existing);
-  } else {
-    next.push(withCollections(incoming));
+    const merged = withCollections({ ...existing, ...incoming }, existing);
+    // An edit or a reaction keeps the entry's sort key, so it can be swapped in place. An
+    // optimistic send reconciling with its server row moves from the pending range down to a
+    // real sequence and has to be re-positioned.
+    if (merged.MessageSeq === existing.MessageSeq && merged.SentOn === existing.SentOn) {
+      next[idx] = merged;
+      return next;
+    }
+    next.splice(idx, 1);
+    next.splice(findInsertIndex(next, merged), 0, merged);
+    return next;
   }
-  next.sort(compareMessages);
+
+  const inserted = withCollections(incoming);
+  next.splice(findInsertIndex(next, inserted), 0, inserted);
   return next;
+}
+
+/** Ceiling on what one channel keeps in memory. Realtime traffic is the only unbounded
+ * producer, so the trim runs there; anything evicted is still reachable through
+ * loadOlderMessages, which pages from the lowest sequence still held. */
+const MAX_MESSAGES_PER_CHANNEL = 500;
+
+function trimChannelMessages(list: ChatMessageResultData[]): ChatMessageResultData[] {
+  return list.length > MAX_MESSAGES_PER_CHANNEL ? list.slice(list.length - MAX_MESSAGES_PER_CHANNEL) : list;
 }
 
 function highestRealSeq(list: ChatMessageResultData[] | undefined): number {
@@ -270,10 +304,10 @@ export const useChatStore = create<ChatState>()(
       // ------------------------------------------------------------------
       // Channels
       // ------------------------------------------------------------------
-      fetchChannels: async (activeUnitId?: number) => {
+      fetchChannels: async () => {
         set({ isLoadingChannels: true });
         try {
-          const response = await chatApi.getChannels(activeUnitId);
+          const response = await chatApi.getChannels();
           set({ channels: response.Data ?? [], isLoadingChannels: false });
         } catch (error) {
           logger.error({ message: 'chat: failed to fetch channels', context: { error } });
@@ -731,11 +765,18 @@ export const useChatStore = create<ChatState>()(
         const isActive = state.activeChannelId === msg.ChatChannelId;
 
         set((s) => {
-          const list = upsertMessage(s.messagesByChannel[msg.ChatChannelId] ?? [], { ...msg, _localStatus: 'sent' });
+          const upserted = upsertMessage(s.messagesByChannel[msg.ChatChannelId] ?? [], { ...msg, _localStatus: 'sent' });
+          const list = trimChannelMessages(upserted);
           const channels = s.channels.map((c) =>
             c.ChatChannelId === msg.ChatChannelId ? { ...c, LastMessageSeq: Math.max(c.LastMessageSeq, msg.MessageSeq), LastMessageOn: msg.SentOn, UnreadCount: isActive || isOwn ? c.UnreadCount : c.UnreadCount + 1 } : c
           );
-          return { messagesByChannel: { ...s.messagesByChannel, [msg.ChatChannelId]: list }, channels };
+          return {
+            messagesByChannel: { ...s.messagesByChannel, [msg.ChatChannelId]: list },
+            channels,
+            // Whatever the trim dropped is older than everything still held, so pagination has
+            // to know there is more behind the window even if it had reached the top before.
+            ...(list !== upserted ? { hasMoreByChannel: { ...s.hasMoreByChannel, [msg.ChatChannelId]: true } } : {}),
+          };
         });
 
         // Clear the sender's typing indicator now that a message landed.

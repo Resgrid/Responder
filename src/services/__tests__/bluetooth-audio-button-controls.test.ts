@@ -232,28 +232,48 @@ describe('BluetoothAudioService Button Control Fixes', () => {
       mockHandleGenericButtonEvent.mockRestore();
     });
 
-    it('should handle HID characteristics properly', () => {
+    it('should not route standard GATT characteristics to the generic button parser', () => {
       const mockHandleGenericButtonEvent = jest.spyOn(service, 'handleGenericButtonEvent').mockImplementation(() => {});
 
-      // Test HID Report characteristic (should trigger button handler)
-      service.handleButtonEventFromCharacteristic(
-        '00001812-0000-1000-8000-00805F9B34FB', // HID Service
-        '00002A4D-0000-1000-8000-00805F9B34FB', // HID Report characteristic
-        'hidreport'
-      );
+      const standardCharacteristics = [
+        '00002A19-0000-1000-8000-00805F9B34FB', // Battery Level
+        '00002A4A-0000-1000-8000-00805F9B34FB', // HID Information
+        '00002A4B-0000-1000-8000-00805F9B34FB', // HID Report Map
+        '00002A4C-0000-1000-8000-00805F9B34FB', // HID Control Point
+        '00002A4D-0000-1000-8000-00805F9B34FB', // HID Report
+      ];
 
-      expect(mockHandleGenericButtonEvent).toHaveBeenCalledWith('hidreport');
+      standardCharacteristics.forEach((characteristic) => {
+        service.handleButtonEventFromCharacteristic('00001812-0000-1000-8000-00805F9B34FB', characteristic, 'ZA==');
+      });
 
-      // Test HID Control Point characteristic (should trigger button handler)
-      service.handleButtonEventFromCharacteristic(
-        '00001812-0000-1000-8000-00805F9B34FB', // HID Service
-        '00002A4C-0000-1000-8000-00805F9B34FB', // HID Control Point characteristic
-        'hidcontrol'
-      );
-
-      expect(mockHandleGenericButtonEvent).toHaveBeenCalledWith('hidcontrol');
+      expect(mockHandleGenericButtonEvent).not.toHaveBeenCalled();
 
       mockHandleGenericButtonEvent.mockRestore();
+    });
+
+    it('should not treat a battery level notification as a mute press', () => {
+      const mockProcessButtonEvent = jest.spyOn(service, 'processButtonEvent').mockImplementation(() => {});
+
+      // 0x64 == 100% battery. The generic parser maps 0x64 & 0x0f === 0x04 to 'mute',
+      // which used to flip the LiveKit microphone mid-transmission.
+      const batteryFullBase64 = Buffer.from([0x64]).toString('base64');
+
+      service.handleCharacteristicValueUpdate({
+        peripheral: 'test-device',
+        service: '0000180F-0000-1000-8000-00805F9B34FB', // Battery Service
+        characteristic: '00002A19-0000-1000-8000-00805F9B34FB', // Battery Level
+        value: [0x64],
+      });
+
+      expect(mockProcessButtonEvent).not.toHaveBeenCalled();
+
+      // The vendor characteristic still works with the same payload.
+      service.handleButtonEventFromCharacteristic('SOME-SERVICE-UUID', '0000FE59-0000-1000-8000-00805F9B34FB', batteryFullBase64);
+
+      expect(mockProcessButtonEvent).toHaveBeenCalledWith(expect.objectContaining({ button: 'mute' }));
+
+      mockProcessButtonEvent.mockRestore();
     });
   });
 

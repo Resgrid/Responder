@@ -115,14 +115,30 @@ describe('AudioService', () => {
       });
     });
 
-    it('should set audio mode correctly', () => {
+    it('should set a playback-only audio mode until LiveKit connects', () => {
       expect(mockAudioSetAudioModeAsync).toHaveBeenCalledWith({
-        allowsRecording: true,
+        allowsRecording: false,
         shouldPlayInBackground: true,
         playsInSilentMode: true,
         shouldRouteThroughEarpiece: true,
         interruptionMode: 'mixWithOthers',
       });
+    });
+
+    it('should switch to a record-capable session only when explicitly enabled', async () => {
+      mockAudioSetAudioModeAsync.mockClear();
+
+      await audioService.enableRecordingSession();
+
+      expect(mockAudioSetAudioModeAsync).toHaveBeenCalledWith(expect.objectContaining({ allowsRecording: true }));
+
+      // Repeated calls are a no-op while the session is already record-capable.
+      mockAudioSetAudioModeAsync.mockClear();
+      await audioService.enableRecordingSession();
+      expect(mockAudioSetAudioModeAsync).not.toHaveBeenCalled();
+
+      await audioService.releaseRecordingSession();
+      expect(mockAudioSetAudioModeAsync).toHaveBeenCalledWith(expect.objectContaining({ allowsRecording: false }));
     });
 
     it('should preload all audio assets', () => {

@@ -11,7 +11,8 @@ export const HEIGHT = height;
 
 // for onError react queries and mutations
 export const showError = (error: AxiosError) => {
-  console.log(JSON.stringify(error?.response?.data));
+  // Never log the raw response body here: it can contain PII and console output is
+  // captured as Sentry breadcrumbs. The toast below already surfaces what the user needs.
   const description = extractError(error?.response?.data).trimEnd();
 
   useToastStore.getState().showToast('error', description, 'Error', 'top', 4000);

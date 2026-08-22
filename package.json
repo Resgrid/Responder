@@ -37,7 +37,7 @@
     "test": "jest --coverage=true --coverageReporters=cobertura",
     "check-all": "yarn run lint && yarn run type-check && yarn run lint:translations",
     "test:ci": "yarn run test --coverage",
-    "test:watch": "yarn run test --watch",
+    "test:watch": "jest --watch",
     "install-maestro": "curl -Ls 'https://get.maestro.mobile.dev' | bash",
     "e2e-test": "maestro test .maestro/ -e APP_ID=com.obytes.development"
   },

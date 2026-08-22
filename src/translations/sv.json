@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "Öppna menyn",
+    "realtime_offline_description": "Återansluter. Nya larm och meddelanden kanske inte visas.",
+    "realtime_offline_title": "Liveuppdateringar är inte tillgängliga",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "Typ"
   },
   "bluetooth": {
+    "audio": "Ljud",
+    "audio_active": "Ljud aktivt",
+    "audio_capable": "Ljudkapabel",
     "audio_device": "BT-handset",
     "available_devices": "Tillgängliga enheter",
     "bluetooth_not_ready": "Bluetooth är {{state}}. Aktivera Bluetooth.",
+    "button_control_available": "Knappstyrning tillgänglig",
+    "button_event": {
+      "double_press": "Dubbel {{button}}",
+      "long_press": "Lång {{button}}"
+    },
+    "button_event_applied": "Tillämpad",
+    "buttons": {
+      "mute": "Ljud av",
+      "ptt_start": "PTT Start",
+      "ptt_stop": "PTT Stopp",
+      "unknown": "Okänd",
+      "volume_down": "Volym -",
+      "volume_up": "Volym +"
+    },
+    "checking_status": "Kontrollerar Bluetooth-status...",
     "clear": "Rensa",
+    "connect": "Anslut",
     "connected": "Ansluten",
+    "connection_error": "Anslutningsfel",
     "current_selection": "Aktuellt val",
+    "disconnect": "Koppla från",
+    "livekit_active": "LiveKit aktivt",
+    "mute": "Ljud av",
     "no_device_selected": "Ingen enhet vald",
     "no_devices_found": "Inga Bluetooth-ljudenheter hittades",
     "not_connected": "Inte ansluten",
+    "powered_off_message": "Bluetooth är avstängt. Aktivera Bluetooth för att ansluta ljudenheter.",
+    "recent_button_events": "Senaste knapphändelser",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "Sök",
     "scan_again": "Sök igen",
     "scan_error_message": "Det gick inte att söka efter Bluetooth-enheter",
@@ -44,9 +74,14 @@
     "selected": "Vald",
     "selection_error_message": "Det gick inte att spara föredragen enhet",
     "selection_error_title": "Valfel",
+    "start_scanning": "Starta sökning",
+    "stop_scan": "Stoppa sökning",
     "supports_mic_control": "Mikrofonkontroll",
     "tap_scan_to_find_devices": "Tryck på 'Sök' för att hitta Bluetooth-ljudenheter",
-    "unknown_device": "Okänd enhet"
+    "title": "Bluetooth-ljud",
+    "unauthorized_message": "Bluetooth-behörighet nekad. Bevilja Bluetooth-behörigheter i Inställningar.",
+    "unknown_device": "Okänd enhet",
+    "unmute": "Ljud på"
   },
   "calendar": {
     "allDay": "Hela dagen",
@@ -144,7 +179,8 @@
     "title": "Larmbilder",
     "upload": "Ladda upp",
     "upload_error": "Det gick inte att ladda upp bilden. Försök igen.",
-    "upload_success": "Bilden laddades upp"
+    "upload_success": "Bilden laddades upp",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "Lägg till anteckning",
@@ -320,6 +356,10 @@
     "required_fields_missing": "Din avdelning kräver dessa fält innan ett larm kan skapas: {{fields}}",
     "roles": "Roller",
     "search": "Sök larm...",
+    "search_address": "Sök adress",
+    "search_coordinates": "Sök koordinater",
+    "search_plus_code": "Sök plus code",
+    "search_what3words": "Sök what3words-adress",
     "select_active_call": "Välj aktivt larm",
     "select_address": "Välj adress",
     "select_address_placeholder": "Välj larmets adress",
@@ -391,6 +431,7 @@
     "message_deleted": "Det här meddelandet har raderats",
     "moderator_delete": "Ta bort (moderator)",
     "moderator_removed": "Borttagen av moderator",
+    "new_conversation": "Ny konversation",
     "new_direct_message": "Nytt direktmeddelande",
     "new_group": "Ny grupp",
     "no_gifs": "Inga GIF hittades",
@@ -468,6 +509,7 @@
     "all": "Alla",
     "back": "Tillbaka",
     "cancel": "Avbryt",
+    "clear_search": "Rensa sökning",
     "close": "Stäng",
     "confirm": "Bekräfta",
     "confirm_location": "Bekräfta plats",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "Lägg till anteckning",
       "confirm_staffing": "Bekräfta bemanning: {{staffing}}",
+      "missing_required_info": "Nödvändig information saknas",
       "no_options_available": "Inga bemanningsalternativ tillgängliga",
       "no_staffing_options": "Inga bemanningsalternativ tillgängliga",
       "note": "Anteckning",
@@ -727,6 +770,7 @@
     "audio_settings": "Ljudinställningar",
     "connected_to_room": "Ansluten till kanal",
     "connecting": "Ansluter...",
+    "connection_failed": "Det gick inte att ansluta till röstkanalen",
     "disconnect": "Koppla från",
     "double_click_action": "Dubbelklicksåtgärd",
     "headset_button_ptt": "Headset-knapp PTT",
@@ -897,6 +941,11 @@
       "subject_required": "Ämne krävs"
     }
   },
+  "not_found": {
+    "go_home": "Gå till startskärmen!",
+    "message": "Den här skärmen finns inte.",
+    "title": "Hoppsan!"
+  },
   "notes": {
     "actions": {
       "add": "Lägg till anteckning",
@@ -917,6 +966,7 @@
     "title": "Anteckningar"
   },
   "notifications": {
+    "additionalInformation": "Ytterligare information",
     "bulkDeleteError": "Det gick inte att ta bort aviseringar",
     "bulkDeleteSuccess": "{{count}} avisering(ar) borttagen(a)",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "Avmarkera alla",
     "empty": "Inga uppdateringar tillgängliga",
     "loadError": "Det gick inte att läsa in aviseringar",
+    "notAvailable": "N/A",
+    "notification": "Avisering",
     "selectAll": "Välj alla",
     "selectedCount": "{{count}} valda",
-    "title": "Aviseringar"
+    "title": "Aviseringar",
+    "viewReference": "Visa {{referenceType}}"
   },
   "onboarding": {
-    "message": "Välkommen till Resgrid Responder"
+    "get_started": "Nu kör vi",
+    "message": "Välkommen till Resgrid Responder",
+    "skip": "Hoppa över",
+    "slides": {
+      "calls": {
+        "description": "Se larminformation smidigt och samarbeta med ditt team för effektiv utryckning",
+        "title": "Interagera med larm"
+      },
+      "notifications": {
+        "description": "Få omedelbara larm vid nödsituationer och viktiga uppdateringar från din organisation",
+        "title": "Omedelbara aviseringar"
+      },
+      "responder": {
+        "description": "Hantera din status och bemanning och interagera med din organisation i realtid",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "Kontaktinformation",
@@ -1050,15 +1119,6 @@
     "view_chat": "Visa chatt",
     "view_message": "Visa meddelanden"
   },
-  "roles": {
-    "modal": {
-      "title": "Rolltilldelningar för enhet"
-    },
-    "selectUser": "Välj användare",
-    "status": "{{active}} av {{total}} roller aktiva",
-    "tap_to_manage": "Tryck för att hantera roller",
-    "unassigned": "Otilldelad"
-  },
   "settings": {
     "about": "Om",
     "account": "Konto",
@@ -1092,6 +1152,8 @@
     "french": "Franska",
     "general": "Allmänt",
     "generale": "Allmänt",
+    "geolocation_hub_connected": "Ansluten till hubben.",
+    "geolocation_hub_connecting": "Ansluter till hubben...",
     "german": "Tyska",
     "github": "Github",
     "greek": "Grekiska",
@@ -1325,6 +1387,8 @@
       "effective": "Gäller från",
       "expires": "Upphör",
       "instructions": "Instruktioner",
+      "load_error": "Varningen är inte tillgänglig",
+      "load_error_description": "Den här vädervarningen kunde inte laddas. Den kan ha upphört eller så misslyckades begäran.",
       "metadata": "Detaljer",
       "onset": "Start",
       "sender": "Avsändare",

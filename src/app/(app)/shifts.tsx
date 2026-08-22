@@ -65,16 +65,20 @@ const ShiftsScreen: React.FC = () => {
     }
   }, [currentView, fetchTodaysShifts, fetchAllShifts]);
 
-  // Track analytics when view becomes visible
+  // Track analytics when view becomes visible. The event payload is read from the store via
+  // getState(): depending on searchQuery and the list lengths re-created this callback, so
+  // shifts_viewed fired on every search keystroke and every data refresh instead of once per focus.
   useFocusEffect(
     React.useCallback(() => {
+      const shiftsState = useShiftsStore.getState();
+
       trackEvent('shifts_viewed', {
         timestamp: new Date().toISOString(),
-        activeTab: currentView,
-        shiftCount: currentView === 'today' ? todaysShiftDays.length : shifts.length,
-        hasSearchQuery: searchQuery.trim().length > 0,
+        activeTab: shiftsState.currentView,
+        shiftCount: shiftsState.currentView === 'today' ? shiftsState.todaysShiftDays.length : shiftsState.shifts.length,
+        hasSearchQuery: shiftsState.searchQuery.trim().length > 0,
       });
-    }, [trackEvent, currentView, todaysShiftDays.length, shifts.length, searchQuery])
+    }, [trackEvent])
   );
 
   const handleTabChange = useCallback(

@@ -8,7 +8,6 @@ import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { buildCallAssignmentContext, isCurrentUserOnCall } from '@/lib/call-dispatch';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useCheckInStore } from '@/stores/calls/check-in-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -111,12 +110,11 @@ export const SummaryStatsRow: React.FC = () => {
   const departmentStats = useHomeStore((state) => state.departmentStats);
   const currentUser = useHomeStore((state) => state.currentUser);
   const roles = useRolesStore((state) => state.roles);
-  const activeUnitId = useCoreStore((state) => state.activeUnitId);
   const timerStatuses = useCheckInStore((state) => state.timerStatuses);
   const globalOverdueCount = useCheckInStore((state) => state.globalOverdueCount);
   const severeAlerts = useWeatherAlertsStore((state) => state.getSevereAlerts());
 
-  const assignmentContext = useMemo(() => buildCallAssignmentContext(currentUser, roles, activeUnitId), [activeUnitId, currentUser, roles]);
+  const assignmentContext = useMemo(() => buildCallAssignmentContext(currentUser, roles), [currentUser, roles]);
 
   const activeCallsCount = departmentStats.openCalls > 0 ? departmentStats.openCalls : calls.length;
   const callsImOnCount = useMemo(() => calls.filter((call) => isCurrentUserOnCall(callExtrasById[call.CallId], assignmentContext)).length, [assignmentContext, callExtrasById, calls]);

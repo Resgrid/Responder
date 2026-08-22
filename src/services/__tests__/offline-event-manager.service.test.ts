@@ -1,8 +1,6 @@
 import { AppState } from 'react-native';
 
 import { saveCallImage } from '@/api/calls/callFiles';
-import { setUnitLocation } from '@/api/units/unitLocation';
-import { saveUnitStatus } from '@/api/units/unitStatuses';
 import { QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
 import { offlineEventManager } from '@/services/offline-event-manager.service';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
@@ -18,14 +16,6 @@ jest.mock('react-native', () => ({
 // Mock APIs
 jest.mock('@/api/calls/callFiles', () => ({
   saveCallImage: jest.fn(),
-}));
-
-jest.mock('@/api/units/unitLocation', () => ({
-  setUnitLocation: jest.fn(),
-}));
-
-jest.mock('@/api/units/unitStatuses', () => ({
-  saveUnitStatus: jest.fn(),
 }));
 
 // Mock the offline queue store
@@ -45,40 +35,7 @@ jest.mock('@/lib/logging', () => ({
   },
 }));
 
-// Mock models
-jest.mock('@/models/v4/unitLocation/saveUnitLocationInput', () => ({
-  SaveUnitLocationInput: jest.fn().mockImplementation(() => ({
-    UnitId: '',
-    Timestamp: '',
-    Latitude: '',
-    Longitude: '',
-    Accuracy: '',
-    Altitude: '',
-    AltitudeAccuracy: '',
-    Speed: '',
-    Heading: '',
-  })),
-}));
-
-jest.mock('@/models/v4/unitStatus/saveUnitStatusInput', () => ({
-  SaveUnitStatusInput: jest.fn().mockImplementation(() => ({
-    Id: '',
-    Type: '',
-    Note: '',
-    RespondingTo: '',
-    Timestamp: '',
-    TimestampUtc: '',
-    Roles: [],
-  })),
-  SaveUnitStatusRoleInput: jest.fn().mockImplementation(() => ({
-    RoleId: '',
-    UserId: '',
-  })),
-}));
-
 const mockSaveCallImage = saveCallImage as jest.MockedFunction<typeof saveCallImage>;
-const mockSetUnitLocation = setUnitLocation as jest.MockedFunction<typeof setUnitLocation>;
-const mockSaveUnitStatus = saveUnitStatus as jest.MockedFunction<typeof saveUnitStatus>;
 const mockUseOfflineQueueStore = useOfflineQueueStore as { getState: jest.MockedFunction<any> };
 const mockAppState = AppState as jest.Mocked<typeof AppState>;
 
@@ -130,92 +87,6 @@ describe('OfflineEventManager', () => {
       // Ignore any errors during cleanup
     }
     jest.clearAllTimers();
-  });
-
-  describe('queueUnitStatusEvent', () => {
-    it('should queue a unit status event', () => {
-      const eventId = offlineEventManager.queueUnitStatusEvent(
-        'unit-1',
-        'available',
-        'Test note',
-        'call-1',
-        [{ roleId: 'role-1', userId: 'user-1' }]
-      );
-
-      expect(eventId).toBe('test-event-id');
-      expect(mockStoreState.addEvent).toHaveBeenCalledWith(
-        QueuedEventType.UNIT_STATUS,
-        expect.objectContaining({
-          unitId: 'unit-1',
-          statusType: 'available',
-          note: 'Test note',
-          respondingTo: 'call-1',
-          roles: [{ roleId: 'role-1', userId: 'user-1' }],
-          timestamp: expect.any(String),
-          timestampUtc: expect.any(String),
-        })
-      );
-    });
-
-    it('should queue unit status event without optional parameters', () => {
-      const eventId = offlineEventManager.queueUnitStatusEvent('unit-1', 'available');
-
-      expect(eventId).toBe('test-event-id');
-      expect(mockStoreState.addEvent).toHaveBeenCalledWith(
-        QueuedEventType.UNIT_STATUS,
-        expect.objectContaining({
-          unitId: 'unit-1',
-          statusType: 'available',
-          note: undefined,
-          respondingTo: undefined,
-          roles: undefined,
-        })
-      );
-    });
-  });
-
-  describe('queueLocationUpdateEvent', () => {
-    it('should queue a location update event', () => {
-      const eventId = offlineEventManager.queueLocationUpdateEvent(
-        'unit-1',
-        40.7128,
-        -74.0060,
-        10,
-        45,
-        25
-      );
-
-      expect(eventId).toBe('test-event-id');
-      expect(mockStoreState.addEvent).toHaveBeenCalledWith(
-        QueuedEventType.LOCATION_UPDATE,
-        expect.objectContaining({
-          unitId: 'unit-1',
-          latitude: 40.7128,
-          longitude: -74.0060,
-          accuracy: 10,
-          heading: 45,
-          speed: 25,
-          timestamp: expect.any(String),
-        })
-      );
-    });
-
-    it('should queue location update event without optional parameters', () => {
-      const eventId = offlineEventManager.queueLocationUpdateEvent('unit-1', 40.7128, -74.0060);
-
-      expect(eventId).toBe('test-event-id');
-      expect(mockStoreState.addEvent).toHaveBeenCalledWith(
-        QueuedEventType.LOCATION_UPDATE,
-        expect.objectContaining({
-          unitId: 'unit-1',
-          latitude: 40.7128,
-          longitude: -74.0060,
-          accuracy: undefined,
-          heading: undefined,
-          speed: undefined,
-        })
-      );
-    });
   });
 
   describe('queueCallImageUploadEvent', () => {
@@ -349,8 +220,6 @@ describe('OfflineEventManager', () => {
 
   describe('event processing', () => {
     beforeEach(() => {
-      mockSaveUnitStatus.mockResolvedValue({} as any);
-      mockSetUnitLocation.mockResolvedValue({} as any);
       mockSaveCallImage.mockResolvedValue({} as any);
     });
 
@@ -372,13 +241,14 @@ describe('OfflineEventManager', () => {
     it('should set up processing interval when online', () => {
       const mockEvent = {
         id: 'test-event',
-        type: QueuedEventType.UNIT_STATUS,
+        type: QueuedEventType.CALL_IMAGE_UPLOAD,
         status: QueuedEventStatus.PENDING,
         data: {
-          unitId: 'unit-1',
-          statusType: 'available',
-          timestamp: '2023-01-01T00:00:00Z',
-          timestampUtc: 'Sun, 01 Jan 2023 00:00:00 GMT',
+          callId: 'call-1',
+          userId: 'user-1',
+          note: 'Test note',
+          name: 'image.jpg',
+          filePath: '/path/to/image.jpg',
         },
         retryCount: 0,
         maxRetries: 3,

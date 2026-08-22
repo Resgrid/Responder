@@ -32,6 +32,7 @@ jest.mock('@/services/signalr.service', () => {
     // `undefined` and the subscription set cannot be asserted meaningfully.
     HUB_CONNECTED_EVENT: 'hubConnected',
     HUB_DISCONNECTED_EVENT: 'hubDisconnected',
+    HUB_RECONNECT_EXHAUSTED_EVENT: 'hubReconnectExhausted',
     default: mockInstance,
   };
 });
@@ -223,8 +224,8 @@ describe('useSignalRStore', () => {
 
       // Every update hub subscription must be torn down by its own reference; the set includes the
       // incident command feed and the hub-connected listener that rejoins the department group.
-      expect(registrations).toHaveLength(13);
-      expect(registrations.map(([event]) => event)).toEqual(expect.arrayContaining(['incidentCommandUpdated', 'hubConnected', 'hubDisconnected']));
+      expect(registrations).toHaveLength(14);
+      expect(registrations.map(([event]) => event)).toEqual(expect.arrayContaining(['incidentCommandUpdated', 'hubConnected', 'hubDisconnected', 'hubReconnectExhausted']));
       registrations.forEach(([event, handler]) => {
         expect(signalRService.off).toHaveBeenCalledWith(event, handler);
       });
@@ -239,7 +240,9 @@ describe('useSignalRStore', () => {
       });
 
       const personnelStatusHandler = (signalRService.on as jest.Mock).mock.calls.find(([event]) => event === 'personnelStatusUpdated')?.[1];
-      (logger.info as jest.Mock).mockImplementationOnce(() => {
+      // Hub payloads are logged at debug level; prod severity is 'warn', so serializing every
+      // personnel/unit/call event at info was pure JS-thread cost.
+      (logger.debug as jest.Mock).mockImplementationOnce(() => {
         throw handlerError;
       });
 
@@ -281,7 +284,7 @@ describe('useSignalRStore', () => {
       });
 
       expect(result.current.error).toEqual(disconnectError);
-      expect(signalRService.off).toHaveBeenCalledTimes(13);
+      expect(signalRService.off).toHaveBeenCalledTimes(14);
       expect(logger.error).toHaveBeenCalledWith({
         message: 'Failed to disconnect from SignalR hubs',
         context: { error: disconnectError },
@@ -436,5 +439,150 @@ describe('useSignalRStore', () => {
         context: { error: disconnectError },
       });
     });
+  });
+
+  // What the offline banner reads. A responder cannot tell a dead update feed from a quiet
+  // shift, so the store has to distinguish "was live and dropped" from every other reason the
+  // hub is not connected — otherwise the banner either lies or never shows.
+  describe('realtime outage tracking', () => {
+    beforeEach(async () => {
+      // The store is a module singleton, so an earlier test can leave the hub flagged connected
+      // with its handlers still subscribed — connectUpdateHub would then early-return and register
+      // nothing for this test to grab.
+      await act(async () => {
+        await useSignalRStore.getState().disconnectUpdateHub();
+      });
+      (signalRService.on as jest.Mock).mockClear();
+      (signalRService.off as jest.Mock).mockClear();
+    });
+
+    const connectUpdateHubAndGetHandlers = async () => {
+      const { result } = renderHook(() => useSignalRStore());
+
+      await act(async () => {
+        await result.current.connectUpdateHub();
+      });
+
+      const findHandler = (event: string) => (signalRService.on as jest.Mock).mock.calls.find(([name]) => name === event)?.[1];
+
+      return {
+        result,
+        disconnected: findHandler('hubDisconnected'),
+        exhausted: findHandler('hubReconnectExhausted'),
+        connected: findHandler('onConnected'),
+      };
+    };
+
+    it('records no outage until a live hub actually drops', async () => {
+      const { result } = await connectUpdateHubAndGetHandlers();
+
+      expect(result.current.realtimeHubOutages).toEqual({});
+    });
+
+    it('records an outage when the update hub drops', async () => {
+      const { result, disconnected } = await connectUpdateHubAndGetHandlers();
+
+      act(() => {
+        disconnected({ hubName: 'eventingHub' });
+      });
+
+      expect(result.current.realtimeHubOutages.update).toEqual({ since: expect.any(Number), exhausted: false });
+    });
+
+    it('ignores lifecycle events belonging to a different hub', async () => {
+      const { result, disconnected } = await connectUpdateHubAndGetHandlers();
+
+      act(() => {
+        disconnected({ hubName: 'someOtherHub' });
+      });
+
+      expect(result.current.realtimeHubOutages).toEqual({});
+    });
+
+    it('marks the outage exhausted without restarting its clock', async () => {
+      const { result, disconnected, exhausted } = await connectUpdateHubAndGetHandlers();
+
+      act(() => {
+        disconnected({ hubName: 'eventingHub' });
+      });
+      const droppedAt = result.current.realtimeHubOutages.update?.since;
+
+      act(() => {
+        exhausted({ hubName: 'eventingHub' });
+      });
+
+      // The banner counts its grace period from `since`; resetting it on the follow-up event
+      // would push the warning further away exactly when things got worse.
+      expect(result.current.realtimeHubOutages.update).toEqual({ since: droppedAt, exhausted: true });
+    });
+
+    it('keeps the original drop time when the hub drops again mid-outage', async () => {
+      const { result, disconnected } = await connectUpdateHubAndGetHandlers();
+
+      act(() => {
+        disconnected({ hubName: 'eventingHub' });
+      });
+      const droppedAt = result.current.realtimeHubOutages.update?.since;
+
+      act(() => {
+        disconnected({ hubName: 'eventingHub' });
+      });
+
+      expect(result.current.realtimeHubOutages.update?.since).toBe(droppedAt);
+    });
+
+    it('clears the outage when the hub reconnects', async () => {
+      const { result, disconnected, connected } = await connectUpdateHubAndGetHandlers();
+
+      act(() => {
+        disconnected({ hubName: 'eventingHub' });
+      });
+      expect(result.current.realtimeHubOutages.update).toBeDefined();
+
+      act(() => {
+        connected();
+      });
+
+      expect(result.current.realtimeHubOutages).toEqual({});
+    });
+
+    it('clears the outage on an intentional disconnect', async () => {
+      const { result, disconnected } = await connectUpdateHubAndGetHandlers();
+
+      // Closing the socket raises the same event a dropped transport does, so backgrounding the
+      // app would otherwise queue a banner up behind every app switch.
+      act(() => {
+        disconnected({ hubName: 'eventingHub' });
+      });
+
+      await act(async () => {
+        await result.current.disconnectUpdateHub();
+      });
+
+      expect(result.current.realtimeHubOutages).toEqual({});
+    });
+  });
+});
+
+describe('sign-out teardown', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('registers a reset so clearAllAppData tears the realtime session down', async () => {
+    const { clearAllAppData, getRegisteredStoreNames } = require('@/lib/storage/clear-all-data');
+
+    expect(getRegisteredStoreNames()).toContain('signalr');
+
+    useSignalRStore.setState({ isUpdateHubConnected: true, isGeolocationHubConnected: true, isChatHubConnected: true });
+
+    await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false, clearSecure: false });
+
+    // Sockets opened by the outgoing user must not survive sign-out, and the connected flags
+    // have to clear or the next user's connect* calls early-return onto a dead connection.
+    expect(signalRService.disconnectAll).toHaveBeenCalled();
+    expect(useSignalRStore.getState().isUpdateHubConnected).toBe(false);
+    expect(useSignalRStore.getState().isGeolocationHubConnected).toBe(false);
+    expect(useSignalRStore.getState().isChatHubConnected).toBe(false);
   });
 });

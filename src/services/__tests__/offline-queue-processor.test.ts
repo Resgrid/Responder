@@ -93,9 +93,11 @@ describe('RealOfflineQueueProcessor', () => {
     savePersonnelStatus.mockResolvedValue(undefined);
     processor.processing = false;
     processor.queueMutationChain = Promise.resolve();
+    processor.cleanup();
   });
 
   afterEach(() => {
+    processor.cleanup();
     jest.restoreAllMocks();
   });
 
@@ -126,6 +128,60 @@ describe('RealOfflineQueueProcessor', () => {
         nextRetryAt: now + 2000,
       }),
     ]);
+  });
+
+  it('schedules a timer for the earliest pending retry and clears the previous one', async () => {
+    jest.useFakeTimers();
+    try {
+      const now = 100000;
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      storage.getString.mockReturnValue(
+        JSON.stringify([
+          {
+            id: 'item-1',
+            type: 'personnelStatus',
+            payload: { UserId: 'user-1' },
+            retries: 0,
+            attempts: 0,
+          },
+        ])
+      );
+      savePersonnelStatus.mockRejectedValue(new Error('offline'));
+
+      await processor.processQueue();
+
+      // Backoff of 2s from the failed item is armed rather than left dormant.
+      expect(processor.retryTimer).not.toBeNull();
+      expect(jest.getTimerCount()).toBe(1);
+
+      const firstTimer = processor.retryTimer;
+
+      // A second pass must replace the timer, not leak another one.
+      await processor.processQueue();
+
+      expect(processor.retryTimer).not.toBe(firstTimer);
+      expect(jest.getTimerCount()).toBe(1);
+
+      processor.cleanup();
+      expect(processor.retryTimer).toBeNull();
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not schedule a retry timer when nothing is deferred', async () => {
+    jest.useFakeTimers();
+    try {
+      storage.getString.mockReturnValue('[]');
+
+      await processor.processQueue();
+
+      expect(processor.retryTimer).toBeNull();
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('processes only items whose next retry time has elapsed', async () => {

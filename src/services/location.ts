@@ -1,9 +1,8 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
 
 import { setPersonLocation } from '@/api/personnel/personnelLocation';
-import { setUnitLocation } from '@/api/units/unitLocation';
 import { useAuthStore } from '@/lib/auth';
 import { registerLocationServiceUpdater } from '@/lib/hooks/use-background-geolocation';
 import { registerLocationServiceRealtimeUpdater } from '@/lib/hooks/use-realtime-geolocation';
@@ -11,14 +10,16 @@ import { logger } from '@/lib/logging';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
 import { loadRealtimeGeolocationState, saveRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { SavePersonnelLocationInput } from '@/models/v4/personnelLocation/savePersonnelLocationInput';
-import { SaveUnitLocationInput } from '@/models/v4/unitLocation/saveUnitLocationInput';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 
 const LOCATION_TASK_NAME = 'location-updates';
 
 // Minimum gap between foreground location log lines (updates can fire every second).
 const FOREGROUND_LOCATION_LOG_INTERVAL_MS = 30000;
+
+// Minimum gap between foreground location API posts. iOS ignores `timeInterval` on
+// watchPositionAsync, so fixes can arrive every second; match the background cadence.
+const FOREGROUND_LOCATION_API_INTERVAL_MS = 15000;
 
 // Helper to safely convert numeric values to strings, guarding against invalid numbers.
 const safeNumericString = (value: number | null | undefined, field: string): string => {
@@ -30,15 +31,23 @@ const safeNumericString = (value: number | null | undefined, field: string): str
   return value.toString();
 };
 
-// Helper function to send location to API
-const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEnabled: boolean): Promise<void> => {
+/**
+ * Post a fix to the personnel-location endpoint.
+ *
+ * Resolves `true` once the request has been attempted — success or failure — and `false` when a
+ * precondition rejected the fix before any request went out. The foreground watcher uses that to
+ * decide whether its send throttle has actually been spent: stamping on a fix that was never sent
+ * (poor accuracy, no signed-in user) would suppress the good fix arriving a second later for the
+ * rest of the window.
+ */
+const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEnabled: boolean): Promise<boolean> => {
   // Check location accuracy early - skip if accuracy is poor (> 100 meters)
   if (location.coords.accuracy != null && location.coords.accuracy > 100) {
     logger.debug({
       message: 'Skipping low-accuracy location',
       context: { accuracy: location.coords.accuracy },
     });
-    return;
+    return false;
   }
 
   // Only send to API if realtime geolocation is enabled
@@ -46,17 +55,18 @@ const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEn
     logger.debug({
       message: 'Realtime geolocation disabled, skipping API call',
     });
-    return;
+    return false;
   }
 
   try {
-    const unitId = useCoreStore.getState().activeUnitId;
-    if (!unitId) {
-      logger.warn({ message: 'No active unit selected, skipping location API call' });
-      return;
+    // Responder reports personnel locations, keyed on the signed-in user.
+    const userId = useAuthStore.getState().userId;
+    if (!userId) {
+      logger.warn({ message: 'No authenticated user, skipping location API call' });
+      return false;
     }
-    const locationInput = new SaveUnitLocationInput();
-    locationInput.UnitId = unitId;
+    const locationInput = new SavePersonnelLocationInput();
+    locationInput.UserId = userId;
     locationInput.Timestamp = new Date(location.timestamp).toISOString();
     locationInput.Latitude = location.coords.latitude.toString();
     locationInput.Longitude = location.coords.longitude.toString();
@@ -65,11 +75,10 @@ const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEn
     locationInput.AltitudeAccuracy = safeNumericString(location.coords.altitudeAccuracy, 'altitudeAccuracy');
     locationInput.Speed = safeNumericString(location.coords.speed, 'speed');
     locationInput.Heading = safeNumericString(location.coords.heading, 'heading');
-    const result = await setUnitLocation(locationInput);
+    const result = await setPersonLocation(locationInput);
     logger.info({
       message: 'Location successfully sent to API',
       context: {
-        unitId: unitId,
         resultId: result.Id,
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -85,6 +94,10 @@ const sendLocationToAPI = async (location: Location.LocationObject, isRealtimeEn
       },
     });
   }
+
+  // A request that went out and failed still counts as spent: retrying every fix would hammer an
+  // endpoint that is already refusing us.
+  return true;
 };
 
 // Define the task
@@ -123,13 +136,13 @@ class LocationService {
   private static instance: LocationService;
   private locationSubscription: Location.LocationSubscription | null = null;
   private startLocationUpdatesPromise: Promise<void> | null = null;
-  private appStateSubscription: { remove: () => void } | null = null;
   private isBackgroundGeolocationEnabled = false;
   private isRealtimeGeolocationEnabled = false;
+  private isBackgroundTaskRegistered = false;
   private lastForegroundLocationLogAt = 0;
+  private lastForegroundLocationSentAt = 0;
 
   private constructor() {
-    this.initializeAppStateListener();
     // Register this service's update function to avoid circular dependency
     registerLocationServiceUpdater(this.updateBackgroundGeolocationSetting.bind(this));
     registerLocationServiceRealtimeUpdater(this.updateRealtimeGeolocationSetting.bind(this));
@@ -141,17 +154,6 @@ class LocationService {
     }
     return LocationService.instance;
   }
-
-  private initializeAppStateListener(): void {
-    this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
-  }
-
-  private handleAppStateChange = async (nextAppState: AppStateStatus): Promise<void> => {
-    logger.info({
-      message: 'Location service handling app state change',
-      context: { nextAppState, backgroundEnabled: this.isBackgroundGeolocationEnabled },
-    });
-  };
 
   async requestPermissions(): Promise<boolean> {
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
@@ -200,6 +202,7 @@ class LocationService {
 
     // Check if task is already registered for background updates
     const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
+    this.isBackgroundTaskRegistered = isTaskRegistered;
     if (!isTaskRegistered && this.isBackgroundGeolocationEnabled) {
       // Check background permission before registering background task
       const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
@@ -213,6 +216,7 @@ class LocationService {
             notificationBody: 'Tracking your location in the background',
           },
         });
+        this.isBackgroundTaskRegistered = true;
         logger.info({
           message: 'Background location task registered',
         });
@@ -230,6 +234,7 @@ class LocationService {
       this.locationSubscription = null;
     }
     this.lastForegroundLocationLogAt = 0;
+    this.lastForegroundLocationSentAt = 0;
 
     // Start foreground updates
     this.locationSubscription = await Location.watchPositionAsync(
@@ -253,8 +258,21 @@ class LocationService {
             },
           });
         }
-        // Location sending is handled by TaskManager, so we only update the local store
         useLocationStore.getState().setLocation(location);
+
+        // When the background task is registered it posts the fixes. When it is not
+        // (realtime on, background off) the foreground watcher is the only sender, so
+        // dispatch would otherwise never see the responder move.
+        //
+        // The throttle is stamped from the result, not before the call: a fix rejected for poor
+        // accuracy never reached the API, and burning the window on it would drop the usable fix
+        // that lands a second later.
+        if (!this.isBackgroundTaskRegistered && now - this.lastForegroundLocationSentAt >= FOREGROUND_LOCATION_API_INTERVAL_MS) {
+          const wasSent = await sendLocationToAPI(location, this.isRealtimeGeolocationEnabled);
+          if (wasSent) {
+            this.lastForegroundLocationSentAt = now;
+          }
+        }
       }
     );
 
@@ -300,6 +318,32 @@ class LocationService {
 
     await saveRealtimeGeolocationState(enabled);
 
+    // Flipping the flag is worthless without a watcher, and one is not guaranteed to exist:
+    // `startLocationUpdates` runs once per sign-in and throws when the permission prompt was
+    // declined. A responder who denied location at launch, granted it in the OS settings and then
+    // switched realtime on would otherwise have transmitted nothing until the next cold start.
+    //
+    // Restarting is idempotent — the existing subscription is replaced, not stacked — and it clears
+    // the send throttle so the first fix after the toggle goes out immediately rather than up to
+    // FOREGROUND_LOCATION_API_INTERVAL_MS later. Failures are logged rather than rethrown: the
+    // setting itself was saved, and permissions can still be granted later.
+    if (enabled) {
+      try {
+        await this.startLocationUpdates();
+      } catch (error) {
+        logger.error({
+          message: 'Failed to start location updates after enabling realtime geolocation',
+          context: { error },
+        });
+      }
+
+      // startLocationUpdatesInternal re-reads the setting from storage, and
+      // loadRealtimeGeolocationState answers `false` for a read that threw. The caller's explicit
+      // choice wins over that guess -- otherwise one bad read would silently stop transmitting for
+      // a responder who has the toggle switched on.
+      this.isRealtimeGeolocationEnabled = enabled;
+    }
+
     logger.info({
       message: `Realtime geolocation setting updated to: ${enabled}`,
       context: { enabled },
@@ -337,6 +381,7 @@ class LocationService {
           message: 'Background location task registered after setting change',
         });
       }
+      this.isBackgroundTaskRegistered = true;
 
       // Start background updates if app is currently backgrounded
       if (AppState.currentState === 'background') {
@@ -352,6 +397,7 @@ class LocationService {
           message: 'Background location task unregistered after setting change',
         });
       }
+      this.isBackgroundTaskRegistered = false;
     }
   }
 
@@ -368,17 +414,11 @@ class LocationService {
     if (isTaskRegistered) {
       await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     }
+    this.isBackgroundTaskRegistered = false;
 
     logger.info({
       message: 'All location updates stopped',
     });
-  }
-
-  cleanup(): void {
-    if (this.appStateSubscription) {
-      this.appStateSubscription.remove();
-      this.appStateSubscription = null;
-    }
   }
 }
 

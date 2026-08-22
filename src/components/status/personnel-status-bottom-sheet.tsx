@@ -61,8 +61,15 @@ export const PersonnelStatusBottomSheet = () => {
     arePoisAllowed = () => false,
   } = usePersonnelStatusBottomSheetStore();
 
-  const { activeCall, activeStatuses } = useCoreStore();
-  const { calls, isLoading: isLoadingCalls, fetchCalls } = useCallsStore();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, so any unrelated core/calls update would re-render the whole sheet. (The
+  // sheet's own store above stays destructured — it is dedicated to this sheet, so every
+  // write to it is already meant for this component.)
+  const activeCall = useCoreStore((state) => state.activeCall);
+  const activeStatuses = useCoreStore((state) => state.activeStatuses);
+  const calls = useCallsStore((state) => state.calls);
+  const isLoadingCalls = useCallsStore((state) => state.isLoading);
+  const fetchCalls = useCallsStore((state) => state.fetchCalls);
   const { colorScheme } = useColorScheme();
 
   // Refs for volatile values read inside trackViewAnalytics so the callback

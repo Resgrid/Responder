@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { safeFormatTimestamp } from '@/lib/utils';
 import { useHomeStore } from '@/stores/home/home-store';
 
 export const UserStaffingCard: React.FC = () => {
@@ -22,6 +23,9 @@ export const UserStaffingCard: React.FC = () => {
   }
 
   const displayStaffing = currentUser?.Staffing || t('home.user.staffing_unknown');
+  // API timestamps can arrive without a timezone designator — parse them through the shared
+  // helper so they don't shift by the device offset or render as "Invalid Date" on Hermes.
+  const updatedTime = safeFormatTimestamp(currentUser?.StaffingTimestamp, 'h:mm tt');
   let displayColor = currentUser?.StaffingColor || '#6B7280'; // Default gray
 
   // Fix up the color values to match the design system
@@ -59,11 +63,11 @@ export const UserStaffingCard: React.FC = () => {
         <Text className="text-lg font-bold" style={{ color: displayColor }} testID="user-staffing-text">
           {displayStaffing}
         </Text>
-        {currentUser?.StaffingTimestamp && (
+        {updatedTime ? (
           <Text className="text-xs text-gray-500">
-            {t('home.user.updated')}: {new Date(currentUser.StaffingTimestamp).toLocaleTimeString()}
+            {t('home.user.updated')}: {updatedTime}
           </Text>
-        )}
+        ) : null}
       </VStack>
     </Card>
   );

@@ -1,4 +1,3 @@
-import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,10 +12,10 @@ import { Heading } from '@/components/ui/heading';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useCheckInPolling } from '@/hooks/use-check-in-polling';
 import { CHECK_IN_TARGET_TYPE, getEligibleCheckInTypeValues, getPreferredQuickCheckInType, isCheckInTargetEligible } from '@/lib/check-in-eligibility';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
 import { type ResolvedCheckInTimerResultData } from '@/models/v4/checkIn/resolvedCheckInTimerResultData';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useCheckInStore } from '@/stores/calls/check-in-store';
 import { useDispatchStore } from '@/stores/dispatch/store';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -31,10 +30,8 @@ interface CheckInTabPanelProps {
 
 export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkInTimersEnabled }) => {
   const { t } = useTranslation();
-  const { colorScheme } = useColorScheme();
   const showToast = useToastStore((state) => state.showToast);
   const currentUser = useHomeStore((state) => state.currentUser);
-  const activeUnitId = useCoreStore((state) => state.activeUnitId);
   const dispatchUnits = useDispatchStore((state) => state.data.units);
   const fetchDispatchData = useDispatchStore((state) => state.fetchDispatchData);
   const units = useUnitsStore((state) => state.units);
@@ -47,31 +44,29 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
   const [selectedUnitId, setSelectedUnitId] = useState<number | undefined>(undefined);
   const [selectedTargetName, setSelectedTargetName] = useState<string | undefined>(undefined);
 
-  const {
-    timerStatuses,
-    resolvedTimers,
-    checkInHistory,
-    isLoadingStatuses,
-    isLoadingHistory,
-    isCheckingIn,
-    fetchTimerStatuses,
-    fetchResolvedTimers,
-    fetchCheckInHistory,
-    performCheckIn: storePerformCheckIn,
-    startPolling,
-    stopPolling,
-  } = useCheckInStore();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, re-rendering the whole panel whether or not anything it reads changed.
+  const timerStatuses = useCheckInStore((state) => state.timerStatuses);
+  const resolvedTimers = useCheckInStore((state) => state.resolvedTimers);
+  const checkInHistory = useCheckInStore((state) => state.checkInHistory);
+  const isLoadingStatuses = useCheckInStore((state) => state.isLoadingStatuses);
+  const isLoadingHistory = useCheckInStore((state) => state.isLoadingHistory);
+  const isCheckingIn = useCheckInStore((state) => state.isCheckingIn);
+  const fetchTimerStatuses = useCheckInStore((state) => state.fetchTimerStatuses);
+  const fetchResolvedTimers = useCheckInStore((state) => state.fetchResolvedTimers);
+  const fetchCheckInHistory = useCheckInStore((state) => state.fetchCheckInHistory);
+  const storePerformCheckIn = useCheckInStore((state) => state.performCheckIn);
 
   useEffect(() => {
     if (checkInTimersEnabled) {
       fetchTimerStatuses(callId);
       fetchResolvedTimers(callId);
-      startPolling(callId);
     }
-    return () => {
-      stopPolling();
-    };
-  }, [callId, checkInTimersEnabled, fetchResolvedTimers, fetchTimerStatuses, startPolling, stopPolling]);
+  }, [callId, checkInTimersEnabled, fetchResolvedTimers, fetchTimerStatuses]);
+
+  // Refcounted: the home Active Call tab stays mounted behind this screen and shares the
+  // store's single poll interval, so popping this panel must not stop its polling.
+  useCheckInPolling(checkInTimersEnabled ? callId : null);
 
   useEffect(() => {
     if (dispatchUnits.length === 0) {
@@ -86,9 +81,7 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
   }, [units.length, fetchUnits]);
 
   const assignedUnitId = roles.find((role) => role.UserId === currentUser?.UserId)?.UnitId;
-  const activeUnit = units.find((unit) => unit.UnitId === activeUnitId);
-  const assignedUnit = units.find((unit) => unit.UnitId === assignedUnitId);
-  const currentUnit = activeUnit ?? assignedUnit;
+  const currentUnit = units.find((unit) => unit.UnitId === assignedUnitId);
   const currentUnitId = currentUnit?.UnitId;
   const eligibilityContext = {
     currentUnitTypeId: currentUnit?.TypeId,
@@ -226,7 +219,7 @@ export const CheckInTabPanel: React.FC<CheckInTabPanelProps> = ({ callId, checkI
 
       {/* History section */}
       <Pressable onPress={handleToggleHistory}>
-        <Heading size="sm" className={`py-2 ${colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+        <Heading size="sm" className="py-2 text-gray-700 dark:text-gray-300">
           {t('check_in.history')} {isHistoryExpanded ? '▲' : '▼'}
         </Heading>
       </Pressable>

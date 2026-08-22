@@ -1,9 +1,10 @@
 import { CalendarDays, Check, ChevronDown, Plus, Send, Users, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions } from 'react-native';
+import { Alert, ScrollView, useWindowDimensions } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
 import { useDispatchStore } from '@/stores/dispatch/store';
 import { useMessagesStore } from '@/stores/messages/store';
@@ -26,6 +27,7 @@ import { VStack } from '../ui/vstack';
 export const ComposeMessageSheet: React.FC = () => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const keyboardHeight = useKeyboardHeight();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
@@ -362,7 +364,10 @@ export const ComposeMessageSheet: React.FC = () => {
   return (
     <Actionsheet isOpen={isComposeOpen} onClose={handleClose} snapPoints={[90]}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="w-full rounded-t-xl bg-white dark:bg-gray-800">
+      {/* Single sanctioned keyboard mechanism for sheets: pad the sheet by the keyboard
+          height so its content lifts out from under the keyboard. Never nest a
+          KeyboardAvoidingView here — see use-keyboard-height.ts. */}
+      <ActionsheetContent className="w-full rounded-t-xl bg-white dark:bg-gray-800" style={{ paddingBottom: keyboardHeight }}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
@@ -378,144 +383,142 @@ export const ComposeMessageSheet: React.FC = () => {
           </HStack>
         </VStack>
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, width: '100%' }} keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 50}>
-          <ScrollView className="w-full flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
-            <VStack space="md" className="w-full flex-1 p-4">
-              {/* Message Type */}
-              <VStack space="xs" className="w-full">
-                <Text className="font-semibold">{t('messages.message_type')}</Text>
-                <Select
-                  selectedValue={messageType.toString()}
-                  onValueChange={(value) => {
-                    const newType = parseInt(value);
-                    const oldType = messageType;
-                    setMessageType(newType);
+        <ScrollView className="w-full flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
+          <VStack space="md" className="w-full flex-1 p-4">
+            {/* Message Type */}
+            <VStack space="xs" className="w-full">
+              <Text className="font-semibold">{t('messages.message_type')}</Text>
+              <Select
+                selectedValue={messageType.toString()}
+                onValueChange={(value) => {
+                  const newType = parseInt(value);
+                  const oldType = messageType;
+                  setMessageType(newType);
 
-                    // Track message type change analytics
-                    try {
-                      trackEvent('compose_message_type_changed', {
-                        timestamp: new Date().toISOString(),
-                        fromType: oldType,
-                        toType: newType,
-                        fromTypeLabel: getMessageTypeLabel(oldType),
-                        toTypeLabel: getMessageTypeLabel(newType),
-                      });
-                    } catch (error) {
-                      console.warn('Failed to track compose message type change analytics:', error);
-                    }
-                  }}
-                >
-                  <SelectTrigger variant="outline" size="md" className="w-full">
-                    <SelectInput placeholder={t('messages.select_message_type')} value={getMessageTypeLabel(messageType)} />
-                  </SelectTrigger>
-                  <SelectPortal>
-                    <SelectBackdrop />
-                    <SelectContent className="max-h-[60vh] pb-20">
-                      <SelectDragIndicatorWrapper>
-                        <SelectDragIndicator />
-                      </SelectDragIndicatorWrapper>
-                      <SelectItem label={t('messages.types.message')} value="0" />
-                      <SelectItem label={t('messages.types.poll')} value="1" />
-                      <SelectItem label={t('messages.types.alert')} value="2" />
-                    </SelectContent>
-                  </SelectPortal>
-                </Select>
-              </VStack>
-
-              {/* Recipients */}
-              <VStack space="sm" className="w-full">
-                <Text className="font-semibold">{t('messages.recipients')}</Text>
-
-                <Pressable
-                  className={`w-full rounded-lg border p-3 ${errors.recipients ? 'border-red-500 bg-red-50 dark:border-red-400 dark:bg-red-900/20' : 'border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'}`}
-                  onPress={() => {
-                    setIsRecipientsSheetOpen(true);
-
-                    // Track recipients sheet opened analytics
-                    try {
-                      trackEvent('compose_message_recipients_sheet_opened', {
-                        timestamp: new Date().toISOString(),
-                        currentlySelectedCount: selectedRecipients.size,
-                        hasDispatchData: dispatchData.users.length > 0 || dispatchData.groups.length > 0 || dispatchData.roles.length > 0 || dispatchData.units.length > 0,
-                      });
-                    } catch (error) {
-                      console.warn('Failed to track compose message recipients sheet opened analytics:', error);
-                    }
-                  }}
-                >
-                  <HStack space="sm" className="items-center justify-between">
-                    <VStack className="flex-1">
-                      <Text className={`font-medium ${errors.recipients ? 'text-red-700 dark:text-red-300' : ''}`}>
-                        {selectedRecipients.size > 0 ? t('messages.recipients_selected', { count: selectedRecipients.size }) : t('messages.select_recipients')}
-                      </Text>
-                      {selectedRecipients.size > 0 && (
-                        <Text className="text-sm text-gray-600 dark:text-gray-300" numberOfLines={2}>
-                          {getSelectedRecipientsNames()}
-                        </Text>
-                      )}
-                    </VStack>
-                    <ChevronDown size={20} color={errors.recipients ? '#dc2626' : 'currentColor'} />
-                  </HStack>
-                </Pressable>
-                {errors.recipients && <Text className="text-sm text-red-600 dark:text-red-400">{errors.recipients}</Text>}
-              </VStack>
-
-              {/* Subject */}
-              <VStack space="sm" className="w-full">
-                <Text className="font-semibold">{t('messages.subject')}</Text>
-                <Input variant="outline" className={`w-full ${errors.subject ? 'border-red-500' : ''}`}>
-                  <InputField
-                    placeholder={t('messages.enter_subject')}
-                    value={subject}
-                    onChangeText={(text) => {
-                      setSubject(text);
-                      if (errors.subject && text.trim()) {
-                        setErrors((prev) => {
-                          const { subject, ...rest } = prev;
-                          return rest;
-                        });
-                      }
-                    }}
-                  />
-                </Input>
-                {errors.subject && <Text className="text-sm text-red-600 dark:text-red-400">{errors.subject}</Text>}
-              </VStack>
-
-              {/* Body */}
-              <VStack space="sm" className="w-full flex-1">
-                <Text className="font-semibold">{t('messages.message_body')}</Text>
-                <Textarea className={`min-h-24 w-full flex-1 ${errors.body ? 'border-red-500' : ''}`}>
-                  <TextareaInput
-                    placeholder={t('messages.enter_message_body')}
-                    value={body}
-                    onChangeText={(text) => {
-                      setBody(text);
-                      if (errors.body && text.trim()) {
-                        setErrors((prev) => {
-                          const { body, ...rest } = prev;
-                          return rest;
-                        });
-                      }
-                    }}
-                    multiline
-                    numberOfLines={6}
-                    className="min-h-24 flex-1"
-                    textAlignVertical="top"
-                  />
-                </Textarea>
-                {errors.body && <Text className="text-sm text-red-600 dark:text-red-400">{errors.body}</Text>}
-              </VStack>
+                  // Track message type change analytics
+                  try {
+                    trackEvent('compose_message_type_changed', {
+                      timestamp: new Date().toISOString(),
+                      fromType: oldType,
+                      toType: newType,
+                      fromTypeLabel: getMessageTypeLabel(oldType),
+                      toTypeLabel: getMessageTypeLabel(newType),
+                    });
+                  } catch (error) {
+                    console.warn('Failed to track compose message type change analytics:', error);
+                  }
+                }}
+              >
+                <SelectTrigger variant="outline" size="md" className="w-full">
+                  <SelectInput placeholder={t('messages.select_message_type')} value={getMessageTypeLabel(messageType)} />
+                </SelectTrigger>
+                <SelectPortal>
+                  <SelectBackdrop />
+                  <SelectContent className="max-h-[60vh] pb-20">
+                    <SelectDragIndicatorWrapper>
+                      <SelectDragIndicator />
+                    </SelectDragIndicatorWrapper>
+                    <SelectItem label={t('messages.types.message')} value="0" />
+                    <SelectItem label={t('messages.types.poll')} value="1" />
+                    <SelectItem label={t('messages.types.alert')} value="2" />
+                  </SelectContent>
+                </SelectPortal>
+              </Select>
             </VStack>
-          </ScrollView>
 
-          {/* Send Button - Fixed at bottom */}
-          <VStack className="w-full border-t border-gray-200 p-4 dark:border-gray-700">
-            <Button variant="solid" className="w-full bg-primary-600 shadow-lg dark:bg-primary-500" onPress={handleSend} disabled={isSending} size="lg">
-              <Send size={18} color="white" />
-              <ButtonText className="ml-2 text-lg font-semibold text-white">{isSending ? t('messages.sending') : t('messages.send')}</ButtonText>
-            </Button>
+            {/* Recipients */}
+            <VStack space="sm" className="w-full">
+              <Text className="font-semibold">{t('messages.recipients')}</Text>
+
+              <Pressable
+                className={`w-full rounded-lg border p-3 ${errors.recipients ? 'border-red-500 bg-red-50 dark:border-red-400 dark:bg-red-900/20' : 'border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'}`}
+                onPress={() => {
+                  setIsRecipientsSheetOpen(true);
+
+                  // Track recipients sheet opened analytics
+                  try {
+                    trackEvent('compose_message_recipients_sheet_opened', {
+                      timestamp: new Date().toISOString(),
+                      currentlySelectedCount: selectedRecipients.size,
+                      hasDispatchData: dispatchData.users.length > 0 || dispatchData.groups.length > 0 || dispatchData.roles.length > 0 || dispatchData.units.length > 0,
+                    });
+                  } catch (error) {
+                    console.warn('Failed to track compose message recipients sheet opened analytics:', error);
+                  }
+                }}
+              >
+                <HStack space="sm" className="items-center justify-between">
+                  <VStack className="flex-1">
+                    <Text className={`font-medium ${errors.recipients ? 'text-red-700 dark:text-red-300' : ''}`}>
+                      {selectedRecipients.size > 0 ? t('messages.recipients_selected', { count: selectedRecipients.size }) : t('messages.select_recipients')}
+                    </Text>
+                    {selectedRecipients.size > 0 && (
+                      <Text className="text-sm text-gray-600 dark:text-gray-300" numberOfLines={2}>
+                        {getSelectedRecipientsNames()}
+                      </Text>
+                    )}
+                  </VStack>
+                  <ChevronDown size={20} color={errors.recipients ? '#dc2626' : 'currentColor'} />
+                </HStack>
+              </Pressable>
+              {errors.recipients && <Text className="text-sm text-red-600 dark:text-red-400">{errors.recipients}</Text>}
+            </VStack>
+
+            {/* Subject */}
+            <VStack space="sm" className="w-full">
+              <Text className="font-semibold">{t('messages.subject')}</Text>
+              <Input variant="outline" className={`w-full ${errors.subject ? 'border-red-500' : ''}`}>
+                <InputField
+                  placeholder={t('messages.enter_subject')}
+                  value={subject}
+                  onChangeText={(text) => {
+                    setSubject(text);
+                    if (errors.subject && text.trim()) {
+                      setErrors((prev) => {
+                        const { subject, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
+                />
+              </Input>
+              {errors.subject && <Text className="text-sm text-red-600 dark:text-red-400">{errors.subject}</Text>}
+            </VStack>
+
+            {/* Body */}
+            <VStack space="sm" className="w-full flex-1">
+              <Text className="font-semibold">{t('messages.message_body')}</Text>
+              <Textarea className={`min-h-24 w-full flex-1 ${errors.body ? 'border-red-500' : ''}`}>
+                <TextareaInput
+                  placeholder={t('messages.enter_message_body')}
+                  value={body}
+                  onChangeText={(text) => {
+                    setBody(text);
+                    if (errors.body && text.trim()) {
+                      setErrors((prev) => {
+                        const { body, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
+                  multiline
+                  numberOfLines={6}
+                  className="min-h-24 flex-1"
+                  textAlignVertical="top"
+                />
+              </Textarea>
+              {errors.body && <Text className="text-sm text-red-600 dark:text-red-400">{errors.body}</Text>}
+            </VStack>
           </VStack>
-        </KeyboardAvoidingView>
+        </ScrollView>
+
+        {/* Send Button - Fixed at bottom */}
+        <VStack className="w-full border-t border-gray-200 p-4 dark:border-gray-700">
+          <Button variant="solid" className="w-full bg-primary-600 shadow-lg dark:bg-primary-500" onPress={handleSend} disabled={isSending} size="lg">
+            <Send size={18} color="white" />
+            <ButtonText className="ml-2 text-lg font-semibold text-white">{isSending ? t('messages.sending') : t('messages.send')}</ButtonText>
+          </Button>
+        </VStack>
 
         {/* Recipients Selection Sheet */}
         <Actionsheet isOpen={isRecipientsSheetOpen} onClose={() => setIsRecipientsSheetOpen(false)} snapPoints={[80]}>

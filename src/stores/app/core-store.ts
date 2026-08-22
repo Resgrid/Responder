@@ -1,5 +1,4 @@
 import { Env } from '@env';
-import _ from 'lodash';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -27,8 +26,6 @@ interface CoreState {
   currentStaffing: GetCurrentStaffingResultData | null;
   currentStaffingValue: StatusesResultData | null;
 
-  /** Currently selected unit ID */
-  activeUnitId: string | null;
   activeCallId: string | null;
   activeCall: CallResultData | null;
   activePriority: CallPriorityResultData | null;
@@ -48,7 +45,6 @@ interface CoreState {
 export const useCoreStore = create<CoreState>()(
   persist(
     (set, get) => ({
-      activeUnitId: null,
       activeCallId: null,
       activeCall: null,
       activePriority: null,
@@ -77,27 +73,18 @@ export const useCoreStore = create<CoreState>()(
         set({ isLoading: true, isInitializing: true, error: null });
 
         try {
-          const config = await getConfig(Env.APP_KEY);
-
-          const personnelStatuses = await getAllPersonnelStatuses();
-          const personnelStaffings = await getAllPersonnelStaffings();
-
           const userId = useAuthStore.getState().userId;
-          if (!userId) {
-            set({
-              isInitialized: true,
-              isLoading: false,
-              isInitializing: false,
-              activeStatuses: personnelStatuses.Data,
-              activeStaffing: personnelStaffings.Data,
-              config: config.Data,
-            });
 
-            return;
-          }
-
-          const currentStatus = await getCurrentPersonStatus(userId);
-          const currentStaffing = await getCurrentPersonStaffing(userId);
+          // None of these depend on one another, so they go out together: five serial round
+          // trips on a flaky cellular link is the difference between a usable app and a
+          // responder staring at a spinner.
+          const [config, personnelStatuses, personnelStaffings, currentStatus, currentStaffing] = await Promise.all([
+            getConfig(Env.APP_KEY),
+            getAllPersonnelStatuses(),
+            getAllPersonnelStaffings(),
+            userId ? getCurrentPersonStatus(userId) : Promise.resolve(null),
+            userId ? getCurrentPersonStaffing(userId) : Promise.resolve(null),
+          ]);
 
           set({
             isInitialized: true,
@@ -105,8 +92,8 @@ export const useCoreStore = create<CoreState>()(
             isInitializing: false,
             activeStatuses: personnelStatuses.Data,
             activeStaffing: personnelStaffings.Data,
-            currentStatus: currentStatus.Data,
-            currentStaffing: currentStaffing.Data,
+            currentStatus: currentStatus?.Data ?? null,
+            currentStaffing: currentStaffing?.Data ?? null,
             config: config.Data,
           });
 
@@ -128,27 +115,19 @@ export const useCoreStore = create<CoreState>()(
       getStatusesAndStaffing: async () => {
         set({ error: null });
         try {
-          const personnelStatuses = await getAllPersonnelStatuses();
-          const personnelStaffings = await getAllPersonnelStaffings();
-
           const userId = useAuthStore.getState().userId;
-          if (!userId) {
-            set({
-              activeStatuses: personnelStatuses.Data,
-              activeStaffing: personnelStaffings.Data,
-            });
 
-            return;
-          }
-
-          const currentStatus = await getCurrentPersonStatus(userId);
-          const currentStaffing = await getCurrentPersonStaffing(userId);
+          const [personnelStatuses, personnelStaffings, currentStatus, currentStaffing] = await Promise.all([
+            getAllPersonnelStatuses(),
+            getAllPersonnelStaffings(),
+            userId ? getCurrentPersonStatus(userId) : Promise.resolve(null),
+            userId ? getCurrentPersonStaffing(userId) : Promise.resolve(null),
+          ]);
 
           set({
             activeStatuses: personnelStatuses.Data,
             activeStaffing: personnelStaffings.Data,
-            currentStatus: currentStatus.Data,
-            currentStaffing: currentStaffing.Data,
+            ...(userId ? { currentStatus: currentStatus?.Data ?? null, currentStaffing: currentStaffing?.Data ?? null } : {}),
           });
         } catch (error) {
           set({
@@ -209,6 +188,32 @@ export const useCoreStore = create<CoreState>()(
     {
       name: 'core-storage',
       storage: createJSONStorage(() => zustandStorage),
+      // Transient flags describe a single run of init(), never a saved session, so they are
+      // kept out of storage entirely.
+      partialize: (state) => ({
+        activeCallId: state.activeCallId,
+        activeCall: state.activeCall,
+        activePriority: state.activePriority,
+        config: state.config,
+        isInitialized: state.isInitialized,
+        activeStatuses: state.activeStatuses,
+        activeStaffing: state.activeStaffing,
+        currentStatus: state.currentStatus,
+        currentStatusValue: state.currentStatusValue,
+        currentStaffing: state.currentStaffing,
+        currentStaffingValue: state.currentStaffingValue,
+      }),
+      // partialize only governs what is written; blobs saved before it existed still carry the
+      // flags. Forcing them back to their defaults on the way in is what rescues an install that
+      // was killed mid-init() -- otherwise isInitializing rehydrates as true and init() early
+      // returns forever, leaving the app permanently unable to load until the user signs out.
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<CoreState> | undefined),
+        isLoading: false,
+        isInitializing: false,
+        error: null,
+      }),
     }
   )
 );

@@ -74,41 +74,28 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
     }, [])
   );
 
+  // Live snapshot for the focus effect below. The location service writes to the store
+  // every 15s/10m, so these values must never appear in that effect's dependency list.
+  const focusSnapshotRef = useRef({ focusedPoi, isMapLocked, latitude, longitude, trackEvent });
+  focusSnapshotRef.current = { focusedPoi, isMapLocked, latitude, longitude, trackEvent };
+
   useFocusEffect(
+    // Deps MUST stay empty so this only runs on real focus transitions. Camera follow is
+    // owned by the location-driven effect below; clearing hasUserMovedMap re-arms it so
+    // the map recenters once on focus instead of snapping back on every location tick.
     useCallback(() => {
-      trackEvent('map_viewed', {
+      const snapshot = focusSnapshotRef.current;
+
+      snapshot.trackEvent('map_viewed', {
         timestamp: new Date().toISOString(),
-        isMapLocked: isMapLocked,
-        hasLocation: latitude != null && longitude != null,
+        isMapLocked: snapshot.isMapLocked,
+        hasLocation: snapshot.latitude != null && snapshot.longitude != null,
       });
 
-      if (focusedPoi == null) {
+      if (snapshot.focusedPoi == null) {
         setHasUserMovedMap(false);
       }
-
-      if (focusedPoi == null && isMapReady && latitude != null && longitude != null) {
-        const cameraConfig: {
-          centerCoordinate: [number, number];
-          zoomLevel: number;
-          animationDuration: number;
-          heading: number;
-          pitch: number;
-        } = {
-          centerCoordinate: [longitude, latitude],
-          zoomLevel: isMapLocked ? 16 : 12,
-          animationDuration: 1000,
-          heading: 0,
-          pitch: 0,
-        };
-
-        if (isMapLocked && heading != null) {
-          cameraConfig.heading = heading;
-          cameraConfig.pitch = 45;
-        }
-
-        cameraRef.current?.setCamera(cameraConfig);
-      }
-    }, [focusedPoi, isMapReady, heading, isMapLocked, latitude, longitude, trackEvent])
+    }, [])
   );
 
   useEffect(() => {

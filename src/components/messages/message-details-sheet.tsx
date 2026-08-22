@@ -19,6 +19,7 @@ import { Pressable } from '../ui/pressable';
 import { Text } from '../ui/text';
 import { Textarea, TextareaInput } from '../ui/textarea';
 import { VStack } from '../ui/vstack';
+import { isMessageExpired } from './message-utils';
 
 export const MessageDetailsSheet: React.FC = () => {
   const { t } = useTranslation();
@@ -83,7 +84,7 @@ export const MessageDetailsSheet: React.FC = () => {
       const hasRecipients = selectedMessage.Recipients && selectedMessage.Recipients.length > 0;
       const hasResponsedRecipients = hasRecipients && selectedMessage.Recipients.some((r) => r.RespondedOn);
       const hasExpiration = !!selectedMessage.ExpiredOn;
-      const isExpired = hasExpiration && new Date(selectedMessage.ExpiredOn) < new Date();
+      const isExpired = isMessageExpired(selectedMessage.ExpiredOn);
       const canRespond = !selectedMessage.Responded && !isExpired && selectedMessage.Type !== 0;
 
       trackEvent('message_details_sheet_viewed', {
@@ -189,7 +190,7 @@ export const MessageDetailsSheet: React.FC = () => {
     }
   };
 
-  const isExpired = selectedMessage.ExpiredOn && new Date(selectedMessage.ExpiredOn) < new Date();
+  const isExpired = isMessageExpired(selectedMessage.ExpiredOn);
   const isCalendarRsvp = selectedMessage.Type === 4 && !!selectedMessage.CalendarItemId;
   const canRespond = !selectedMessage.Responded && !isExpired && selectedMessage.Type !== 0 && !isCalendarRsvp;
   const senderName = selectedMessage.IsSystem ? t('common.system') : selectedMessage.SendingName || t('common.unknown_user');

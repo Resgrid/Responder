@@ -14,6 +14,7 @@ import { Input, InputField } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { type DispatchSelection, useDispatchStore } from '@/stores/dispatch/store';
 
 interface DispatchSelectionModalProps {
@@ -27,6 +28,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
+  const keyboardHeight = useKeyboardHeight();
   const wasModalOpenRef = useRef(false);
 
   const { data, selection, isLoading, error, searchQuery, fetchDispatchData, refreshDispatchData, setSelection, toggleEveryone, toggleUser, toggleGroup, toggleRole, toggleUnit, setSearchQuery, clearSelection } =
@@ -228,7 +230,10 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
   return (
     <Actionsheet isOpen={isVisible} onClose={handleCancel} snapPoints={[80]}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="w-full bg-white dark:bg-gray-900">
+      {/* Single sanctioned keyboard mechanism for sheets: pad the sheet by the keyboard
+          height so the search field and the results under it stay visible. Never nest a
+          KeyboardAvoidingView here — see use-keyboard-height.ts. */}
+      <ActionsheetContent className="w-full bg-white dark:bg-gray-900" style={{ paddingBottom: keyboardHeight }}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>

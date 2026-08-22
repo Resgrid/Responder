@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "Άνοιγμα μενού",
+    "realtime_offline_description": "Γίνεται επανασύνδεση. Οι νέες κλήσεις και τα μηνύματα ενδέχεται να μην εμφανιστούν.",
+    "realtime_offline_title": "Οι ζωντανές ενημερώσεις δεν είναι διαθέσιμες",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "Τύπος"
   },
   "bluetooth": {
+    "audio": "Ήχος",
+    "audio_active": "Ήχος Ενεργός",
+    "audio_capable": "Υποστηρίζει Ήχο",
     "audio_device": "Ακουστικό BT",
     "available_devices": "Διαθέσιμες Συσκευές",
     "bluetooth_not_ready": "Το Bluetooth είναι {{state}}. Ενεργοποιήστε το Bluetooth.",
+    "button_control_available": "Διαθέσιμος έλεγχος με κουμπιά",
+    "button_event": {
+      "double_press": "Διπλό {{button}}",
+      "long_press": "Παρατεταμένο {{button}}"
+    },
+    "button_event_applied": "Εφαρμόστηκε",
+    "buttons": {
+      "mute": "Σίγαση",
+      "ptt_start": "Έναρξη PTT",
+      "ptt_stop": "Λήξη PTT",
+      "unknown": "Άγνωστο",
+      "volume_down": "Ένταση -",
+      "volume_up": "Ένταση +"
+    },
+    "checking_status": "Έλεγχος κατάστασης Bluetooth...",
     "clear": "Καθαρισμός",
+    "connect": "Σύνδεση",
     "connected": "Συνδεδεμένη",
+    "connection_error": "Σφάλμα Σύνδεσης",
     "current_selection": "Τρέχουσα Επιλογή",
+    "disconnect": "Αποσύνδεση",
+    "livekit_active": "LiveKit Ενεργό",
+    "mute": "Σίγαση",
     "no_device_selected": "Δεν έχει επιλεγεί συσκευή",
     "no_devices_found": "Δεν βρέθηκαν συσκευές ήχου Bluetooth",
     "not_connected": "Μη συνδεδεμένη",
+    "powered_off_message": "Το Bluetooth είναι απενεργοποιημένο. Ενεργοποιήστε το Bluetooth για να συνδέσετε συσκευές ήχου.",
+    "recent_button_events": "Πρόσφατα Συμβάντα Κουμπιών",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "Σάρωση",
     "scan_again": "Νέα Σάρωση",
     "scan_error_message": "Δεν είναι δυνατή η σάρωση για συσκευές Bluetooth",
@@ -44,9 +74,14 @@
     "selected": "Επιλεγμένη",
     "selection_error_message": "Δεν είναι δυνατή η αποθήκευση της προτιμώμενης συσκευής",
     "selection_error_title": "Σφάλμα Επιλογής",
+    "start_scanning": "Έναρξη Σάρωσης",
+    "stop_scan": "Διακοπή Σάρωσης",
     "supports_mic_control": "Έλεγχος Μικροφώνου",
     "tap_scan_to_find_devices": "Πατήστε «Σάρωση» για να βρείτε συσκευές ήχου Bluetooth",
-    "unknown_device": "Άγνωστη Συσκευή"
+    "title": "Ήχος Bluetooth",
+    "unauthorized_message": "Άρνηση άδειας Bluetooth. Χορηγήστε τις άδειες Bluetooth στις Ρυθμίσεις.",
+    "unknown_device": "Άγνωστη Συσκευή",
+    "unmute": "Κατάργηση σίγασης"
   },
   "calendar": {
     "allDay": "Ολοήμερο",
@@ -144,7 +179,8 @@
     "title": "Εικόνες Κλήσης",
     "upload": "Μεταφόρτωση",
     "upload_error": "Αποτυχία μεταφόρτωσης εικόνας. Δοκιμάστε ξανά.",
-    "upload_success": "Η εικόνα μεταφορτώθηκε με επιτυχία"
+    "upload_success": "Η εικόνα μεταφορτώθηκε με επιτυχία",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "Προσθήκη Σημείωσης",
@@ -320,6 +356,10 @@
     "required_fields_missing": "Το τμήμα σας απαιτεί αυτά τα πεδία πριν δημιουργηθεί κλήση: {{fields}}",
     "roles": "Ρόλοι",
     "search": "Αναζήτηση κλήσεων...",
+    "search_address": "Αναζήτηση διεύθυνσης",
+    "search_coordinates": "Αναζήτηση συντεταγμένων",
+    "search_plus_code": "Αναζήτηση plus code",
+    "search_what3words": "Αναζήτηση διεύθυνσης what3words",
     "select_active_call": "Επιλογή Ενεργής Κλήσης",
     "select_address": "Επιλογή Διεύθυνσης",
     "select_address_placeholder": "Επιλέξτε τη διεύθυνση της κλήσης",
@@ -391,6 +431,7 @@
     "message_deleted": "Αυτό το μήνυμα διαγράφηκε",
     "moderator_delete": "Αφαίρεση (συντονιστής)",
     "moderator_removed": "Αφαιρέθηκε από συντονιστή",
+    "new_conversation": "Νέα συνομιλία",
     "new_direct_message": "Νέο Άμεσο Μήνυμα",
     "new_group": "Νέα Ομάδα",
     "no_gifs": "Δεν βρέθηκαν GIF",
@@ -468,6 +509,7 @@
     "all": "Όλα",
     "back": "Πίσω",
     "cancel": "Ακύρωση",
+    "clear_search": "Καθαρισμός αναζήτησης",
     "close": "Κλείσιμο",
     "confirm": "Επιβεβαίωση",
     "confirm_location": "Επιβεβαίωση Τοποθεσίας",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "Προσθήκη Σημείωσης",
       "confirm_staffing": "Επιβεβαίωση Στελέχωσης: {{staffing}}",
+      "missing_required_info": "Λείπουν απαιτούμενες πληροφορίες",
       "no_options_available": "Δεν υπάρχουν διαθέσιμες επιλογές στελέχωσης",
       "no_staffing_options": "Δεν υπάρχουν διαθέσιμες επιλογές στελέχωσης",
       "note": "Σημείωση",
@@ -727,6 +770,7 @@
     "audio_settings": "Ρυθμίσεις Ήχου",
     "connected_to_room": "Συνδεδεμένος στο Κανάλι",
     "connecting": "Σύνδεση...",
+    "connection_failed": "Δεν ήταν δυνατή η σύνδεση στο φωνητικό κανάλι",
     "disconnect": "Αποσύνδεση",
     "double_click_action": "Ενέργεια Διπλού Κλικ",
     "headset_button_ptt": "PTT με Κουμπί Ακουστικών",
@@ -897,6 +941,11 @@
       "subject_required": "Το θέμα είναι υποχρεωτικό"
     }
   },
+  "not_found": {
+    "go_home": "Μετάβαση στην αρχική οθόνη!",
+    "message": "Αυτή η οθόνη δεν υπάρχει.",
+    "title": "Ωχ!"
+  },
   "notes": {
     "actions": {
       "add": "Προσθήκη Σημείωσης",
@@ -917,6 +966,7 @@
     "title": "Σημειώσεις"
   },
   "notifications": {
+    "additionalInformation": "Πρόσθετες Πληροφορίες",
     "bulkDeleteError": "Αποτυχία αφαίρεσης ειδοποιήσεων",
     "bulkDeleteSuccess": "Αφαιρέθηκαν {{count}} ειδοποίηση(εις)",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "Αποεπιλογή Όλων",
     "empty": "Δεν υπάρχουν διαθέσιμες ενημερώσεις",
     "loadError": "Δεν είναι δυνατή η φόρτωση ειδοποιήσεων",
+    "notAvailable": "Μ/Δ",
+    "notification": "Ειδοποίηση",
     "selectAll": "Επιλογή Όλων",
     "selectedCount": "{{count}} επιλεγμένα",
-    "title": "Ειδοποιήσεις"
+    "title": "Ειδοποιήσεις",
+    "viewReference": "Προβολή {{referenceType}}"
   },
   "onboarding": {
-    "message": "Καλώς ήρθατε στον ιστότοπο της εφαρμογής obytes"
+    "get_started": "Ας ξεκινήσουμε",
+    "message": "Καλώς ήρθατε στον ιστότοπο της εφαρμογής obytes",
+    "skip": "Παράλειψη",
+    "slides": {
+      "calls": {
+        "description": "Δείτε εύκολα τις πληροφορίες κλήσης και συνεργαστείτε με την ομάδα σας για αποτελεσματική ανταπόκριση",
+        "title": "Αλληλεπίδραση με τις κλήσεις"
+      },
+      "notifications": {
+        "description": "Λάβετε άμεσες ειδοποιήσεις για επείγοντα περιστατικά και σημαντικές ενημερώσεις από την υπηρεσία σας",
+        "title": "Άμεσες ειδοποιήσεις"
+      },
+      "responder": {
+        "description": "Διαχειριστείτε την κατάστασή σας και τη στελέχωση και αλληλεπιδράστε με τον οργανισμό σας σε πραγματικό χρόνο",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "Στοιχεία Επικοινωνίας",
@@ -1050,15 +1119,6 @@
     "view_chat": "Προβολή συνομιλίας",
     "view_message": "Προβολή μηνυμάτων"
   },
-  "roles": {
-    "modal": {
-      "title": "Αναθέσεις Ρόλων Μονάδας"
-    },
-    "selectUser": "Επιλογή χρήστη",
-    "status": "{{active}} από {{total}} Ρόλοι Ενεργοί",
-    "tap_to_manage": "Πατήστε για διαχείριση ρόλων",
-    "unassigned": "Χωρίς ανάθεση"
-  },
   "settings": {
     "about": "Σχετικά",
     "account": "Λογαριασμός",
@@ -1092,6 +1152,8 @@
     "french": "Γαλλικά",
     "general": "Γενικά",
     "generale": "Γενικά",
+    "geolocation_hub_connected": "Συνδέθηκε στον διανομέα.",
+    "geolocation_hub_connecting": "Σύνδεση στον διανομέα...",
     "german": "Γερμανικά",
     "github": "Github",
     "greek": "Ελληνικά",
@@ -1325,6 +1387,8 @@
       "effective": "Ισχύει Από",
       "expires": "Λήγει",
       "instructions": "Οδηγίες",
+      "load_error": "Η ειδοποίηση δεν είναι διαθέσιμη",
+      "load_error_description": "Δεν ήταν δυνατή η φόρτωση αυτής της καιρικής ειδοποίησης. Ενδέχεται να έχει λήξει ή το αίτημα απέτυχε.",
       "metadata": "Λεπτομέρειες",
       "onset": "Έναρξη",
       "sender": "Αποστολέας",

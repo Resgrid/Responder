@@ -6,7 +6,6 @@ import { type UnitRoleResultData } from '@/models/v4/unitRoles/unitRoleResultDat
 export interface CallAssignmentContext {
   userId: string | null;
   groupId: string | null;
-  activeUnitId: string | null;
   roleIds: string[];
   roleNames: string[];
 }
@@ -33,7 +32,7 @@ const uniqueValues = (values: unknown[]): string[] => {
   return [...new Set(values.map((value) => String(value ?? '').trim()).filter((value) => value.length > 0))];
 };
 
-export const buildCallAssignmentContext = (currentUser: PersonnelInfoResultData | null, roles: UnitRoleResultData[], activeUnitId: string | null): CallAssignmentContext => {
+export const buildCallAssignmentContext = (currentUser: PersonnelInfoResultData | null, roles: UnitRoleResultData[]): CallAssignmentContext => {
   const normalizedRoleNames = new Set((currentUser?.Roles ?? []).map((roleName) => normalizeValue(roleName)).filter((roleName) => roleName.length > 0));
 
   const roleIds = roles
@@ -44,7 +43,6 @@ export const buildCallAssignmentContext = (currentUser: PersonnelInfoResultData 
   return {
     userId: currentUser?.UserId ?? null,
     groupId: currentUser?.GroupId ?? null,
-    activeUnitId,
     roleIds: uniqueValues(roleIds),
     roleNames: uniqueValues(currentUser?.Roles ?? []),
   };
@@ -105,7 +103,6 @@ export const isDispatchAssignedToUser = (dispatch: DispatchedEventResultData, co
   const normalizedDispatchGroupId = normalizeValue(dispatch.GroupId);
   const normalizedUserId = normalizeValue(context.userId);
   const normalizedGroupId = normalizeValue(context.groupId);
-  const normalizedActiveUnitId = normalizeValue(context.activeUnitId);
   const roleIdSet = new Set(context.roleIds.map((roleId) => normalizeValue(roleId)));
   const roleNameSet = new Set(context.roleNames.map((roleName) => normalizeValue(roleName)));
 
@@ -121,8 +118,11 @@ export const isDispatchAssignedToUser = (dispatch: DispatchedEventResultData, co
     return roleIdSet.has(normalizedDispatchId) || roleNameSet.has(normalizedDispatchName);
   }
 
+  // Responder is a personnel app: it never signs this device onto an apparatus, so a dispatch
+  // aimed at a unit is never an assignment for the current user. Matched explicitly so unit
+  // dispatches cannot fall through to the identifier comparison below.
   if (normalizedType.includes('unit')) {
-    return normalizedActiveUnitId.length > 0 && normalizedDispatchId === normalizedActiveUnitId;
+    return false;
   }
 
   return normalizedDispatchId === normalizedUserId || normalizedDispatchId === normalizedGroupId || roleIdSet.has(normalizedDispatchId) || roleNameSet.has(normalizedDispatchName);

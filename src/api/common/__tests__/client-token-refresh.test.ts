@@ -246,14 +246,81 @@ describe('API Client - Token Refresh', () => {
       expect(authState.status).toBe('signedOut');
       expect(authState.accessToken).toBe(null);
 
-      // Verify error was logged
+      // The interceptor delegates to the auth store, so the store owns the
+      // permanent-vs-transient decision and logs the forced logout.
       expect(mockedLogger.error).toHaveBeenCalledWith({
-        message: 'Permanent token refresh failure, forcing logout',
+        message: 'Failed to refresh access token, forcing logout',
         context: {
           error: 'Invalid refresh token',
           userId: 'test-user',
         },
       });
+    });
+
+    it('shares the auth store single-flight refresh instead of refreshing on its own', async () => {
+      useAuthStore.setState({
+        accessToken: 'old-access-token',
+        refreshToken: 'valid-refresh-token',
+        accessTokenObtainedAt: Date.now() - 1000,
+        refreshTokenObtainedAt: Date.now() - 1000,
+        status: 'signedIn',
+        profile: { sub: 'test-user' } as any,
+        userId: 'test-user',
+      });
+
+      mockAxios.onGet('/first').replyOnce(401, { error: 'Unauthorized' }).onGet('/first').reply(200, { success: true });
+      mockAxios.onGet('/second').replyOnce(401, { error: 'Unauthorized' }).onGet('/second').reply(200, { success: true });
+
+      // A one-time-use refresh token: only the first exchange can succeed. A second concurrent
+      // refresh would come back invalid_grant and force a logout mid-shift.
+      mockedRefreshTokenRequest.mockResolvedValueOnce({
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+        id_token: 'new-id-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+        expiration_date: new Date(Date.now() + 3600 * 1000).toISOString(),
+      });
+
+      const [first, second] = await Promise.all([api.get('/first'), api.get('/second')]);
+
+      expect(mockedRefreshTokenRequest).toHaveBeenCalledTimes(1);
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(useAuthStore.getState().status).toBe('signedIn');
+      expect(useAuthStore.getState().accessToken).toBe('new-access-token');
+    });
+
+    it('marks a queued replay as retried so a second 401 does not start another refresh', async () => {
+      useAuthStore.setState({
+        accessToken: 'old-access-token',
+        refreshToken: 'valid-refresh-token',
+        accessTokenObtainedAt: Date.now() - 1000,
+        refreshTokenObtainedAt: Date.now() - 1000,
+        status: 'signedIn',
+        profile: { sub: 'test-user' } as any,
+        userId: 'test-user',
+      });
+
+      mockAxios.onGet('/leader').replyOnce(401, { error: 'Unauthorized' }).onGet('/leader').reply(200, { success: true });
+      // The queued request keeps 401ing; without `_retry` on the replay it would fall back into
+      // the refresh branch and start a whole second refresh cycle.
+      mockAxios.onGet('/queued').reply(401, { error: 'Unauthorized' });
+
+      mockedRefreshTokenRequest.mockResolvedValueOnce({
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+        id_token: 'new-id-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+        expiration_date: new Date(Date.now() + 3600 * 1000).toISOString(),
+      });
+
+      const results = await Promise.allSettled([api.get('/leader'), api.get('/queued')]);
+
+      expect(results[0].status).toBe('fulfilled');
+      expect(results[1].status).toBe('rejected');
+      expect(mockedRefreshTokenRequest).toHaveBeenCalledTimes(1);
     });
 
     it('should logout when refresh token is expired', async () => {

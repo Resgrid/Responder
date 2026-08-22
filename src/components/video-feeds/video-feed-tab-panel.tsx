@@ -29,7 +29,16 @@ export const VideoFeedTabPanel: React.FC<VideoFeedTabPanelProps> = ({ callId, ca
   const [editingFeed, setEditingFeed] = useState<CallVideoFeedResultData | undefined>(undefined);
   const [watchingFeed, setWatchingFeed] = useState<CallVideoFeedResultData | null>(null);
 
-  const { videoFeeds, isLoading, isSaving, fetchVideoFeeds, saveVideoFeed, editVideoFeed, deleteVideoFeed, reset } = useVideoFeedStore();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, re-rendering the panel whether or not anything it reads actually changed.
+  const videoFeeds = useVideoFeedStore((state) => state.videoFeeds);
+  const isLoading = useVideoFeedStore((state) => state.isLoading);
+  const isSaving = useVideoFeedStore((state) => state.isSaving);
+  const fetchVideoFeeds = useVideoFeedStore((state) => state.fetchVideoFeeds);
+  const saveVideoFeed = useVideoFeedStore((state) => state.saveVideoFeed);
+  const editVideoFeed = useVideoFeedStore((state) => state.editVideoFeed);
+  const deleteVideoFeed = useVideoFeedStore((state) => state.deleteVideoFeed);
+  const reset = useVideoFeedStore((state) => state.reset);
 
   useEffect(() => {
     fetchVideoFeeds(callId);

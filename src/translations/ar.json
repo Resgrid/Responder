@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "افتح القائمة",
+    "realtime_offline_description": "جارٍ إعادة الاتصال. قد لا تظهر المكالمات والرسائل الجديدة.",
+    "realtime_offline_title": "التحديثات المباشرة غير متاحة",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "النوع"
   },
   "bluetooth": {
+    "audio": "صوت",
+    "audio_active": "الصوت نشط",
+    "audio_capable": "يدعم الصوت",
     "audio_device": "سماعة BT",
     "available_devices": "الأجهزة المتاحة",
     "bluetooth_not_ready": "البلوتوث {{state}}. يرجى تمكين البلوتوث.",
+    "button_control_available": "التحكم بالأزرار متاح",
+    "button_event": {
+      "double_press": "{{button}} مزدوج",
+      "long_press": "{{button}} طويل"
+    },
+    "button_event_applied": "مطبق",
+    "buttons": {
+      "mute": "كتم",
+      "ptt_start": "بدء PTT",
+      "ptt_stop": "إيقاف PTT",
+      "unknown": "غير معروف",
+      "volume_down": "الصوت -",
+      "volume_up": "الصوت +"
+    },
+    "checking_status": "جارٍ التحقق من حالة البلوتوث...",
     "clear": "مسح",
+    "connect": "اتصال",
     "connected": "متصل",
+    "connection_error": "خطأ في الاتصال",
     "current_selection": "الاختيار الحالي",
+    "disconnect": "قطع الاتصال",
+    "livekit_active": "LiveKit نشط",
+    "mute": "كتم",
     "no_device_selected": "لم يتم اختيار جهاز",
     "no_devices_found": "لم يتم العثور على أجهزة صوت بلوتوث",
     "not_connected": "غير متصل",
+    "powered_off_message": "البلوتوث مغلق. يرجى تفعيل البلوتوث لتوصيل أجهزة الصوت.",
+    "recent_button_events": "أحداث الأزرار الأخيرة",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "بحث",
     "scan_again": "بحث مرة أخرى",
     "scan_error_message": "غير قادر على البحث عن أجهزة البلوتوث",
@@ -44,9 +74,14 @@
     "selected": "مختار",
     "selection_error_message": "غير قادر على حفظ الجهاز المفضل",
     "selection_error_title": "خطأ في الاختيار",
+    "start_scanning": "بدء البحث",
+    "stop_scan": "إيقاف البحث",
     "supports_mic_control": "تحكم بالمايك",
     "tap_scan_to_find_devices": "اضغط 'بحث' للعثور على أجهزة صوت البلوتوث",
-    "unknown_device": "جهاز غير معروف"
+    "title": "صوت بلوتوث",
+    "unauthorized_message": "تم رفض إذن البلوتوث. يرجى منح أذونات البلوتوث في الإعدادات.",
+    "unknown_device": "جهاز غير معروف",
+    "unmute": "إلغاء الكتم"
   },
   "calendar": {
     "allDay": "طوال اليوم",
@@ -144,7 +179,8 @@
     "title": "صور المكالمة",
     "upload": "رفع",
     "upload_error": "فشل في رفع الصورة. يرجى المحاولة مرة أخرى.",
-    "upload_success": "تم رفع الصورة بنجاح"
+    "upload_success": "تم رفع الصورة بنجاح",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "إضافة ملاحظة",
@@ -320,6 +356,10 @@
     "required_fields_missing": "يطلب قسمك هذه الحقول قبل إنشاء البلاغ: {{fields}}",
     "roles": "الأدوار",
     "search": "البحث في المكالمات...",
+    "search_address": "البحث عن العنوان",
+    "search_coordinates": "البحث عن الإحداثيات",
+    "search_plus_code": "البحث عن Plus Code",
+    "search_what3words": "البحث عن عنوان what3words",
     "select_active_call": "اختر مكالمة نشطة",
     "select_address": "اختر العنوان",
     "select_address_placeholder": "اختر عنوان المكالمة",
@@ -391,6 +431,7 @@
     "message_deleted": "تم حذف هذه الرسالة",
     "moderator_delete": "إزالة (مشرف)",
     "moderator_removed": "تمت الإزالة بواسطة المشرف",
+    "new_conversation": "محادثة جديدة",
     "new_direct_message": "رسالة مباشرة جديدة",
     "new_group": "مجموعة جديدة",
     "no_gifs": "لم يتم العثور على GIF",
@@ -468,6 +509,7 @@
     "all": "الكل",
     "back": "رجوع",
     "cancel": "إلغاء",
+    "clear_search": "مسح البحث",
     "close": "إغلاق",
     "confirm": "تأكيد",
     "confirm_location": "تأكيد الموقع",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "إضافة ملاحظة",
       "confirm_staffing": "تأكيد التوظيف: {{staffing}}",
+      "missing_required_info": "المعلومات المطلوبة مفقودة",
       "no_options_available": "لا توجد خيارات توظيف متاحة",
       "no_staffing_options": "لا توجد خيارات توظيف متاحة",
       "note": "ملاحظة",
@@ -727,6 +770,7 @@
     "audio_settings": "إعدادات الصوت",
     "connected_to_room": "متصل بالقناة",
     "connecting": "جاري الاتصال...",
+    "connection_failed": "تعذر الانضمام إلى القناة الصوتية",
     "disconnect": "قطع الاتصال",
     "double_click_action": "إجراء النقر المزدوج",
     "headset_button_ptt": "PTT بزر السماعة",
@@ -897,6 +941,11 @@
       "subject_required": "الموضوع مطلوب"
     }
   },
+  "not_found": {
+    "go_home": "اذهب إلى الشاشة الرئيسية!",
+    "message": "هذه الشاشة غير موجودة.",
+    "title": "عذرًا!"
+  },
   "notes": {
     "actions": {
       "add": "إضافة ملاحظة",
@@ -917,6 +966,7 @@
     "title": "الملاحظات"
   },
   "notifications": {
+    "additionalInformation": "معلومات إضافية",
     "bulkDeleteError": "فشل في حذف الإشعارات",
     "bulkDeleteSuccess": "تم حذف {{count}} إشعار{{count, plural, one {} other {ات}}}",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "إلغاء تحديد الكل",
     "empty": "لا توجد تحديثات متاحة",
     "loadError": "غير قادر على تحميل الإشعارات",
+    "notAvailable": "غير متوفر",
+    "notification": "إشعار",
     "selectAll": "تحديد الكل",
     "selectedCount": "{{count}} محدد",
-    "title": "الإشعارات"
+    "title": "الإشعارات",
+    "viewReference": "عرض {{referenceType}}"
   },
   "onboarding": {
-    "message": "مرحبًا بك في تطبيق obytes"
+    "get_started": "لنبدأ",
+    "message": "مرحبًا بك في تطبيق obytes",
+    "skip": "تخطي",
+    "slides": {
+      "calls": {
+        "description": "اطّلع بسهولة على معلومات البلاغ وتفاعل مع أعضاء فريقك لاستجابة طارئة فعّالة",
+        "title": "التفاعل مع البلاغات"
+      },
+      "notifications": {
+        "description": "احصل على تنبيهات فورية للحالات الطارئة والتحديثات المهمة من إدارتك",
+        "title": "إشعارات فورية"
+      },
+      "responder": {
+        "description": "أدر حالتك وملاك الأفراد وتفاعل مع مؤسستك في الوقت الفعلي",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "معلومات الاتصال",
@@ -1050,15 +1119,6 @@
     "view_chat": "عرض المحادثة",
     "view_message": "عرض الرسائل"
   },
-  "roles": {
-    "modal": {
-      "title": "تعيينات أدوار الوحدة"
-    },
-    "selectUser": "اختر المستخدم",
-    "status": "{{active}} من {{total}} أدوار نشطة",
-    "tap_to_manage": "انقر لإدارة الأدوار",
-    "unassigned": "غير معين"
-  },
   "settings": {
     "about": "حول التطبيق",
     "account": "الحساب",
@@ -1092,6 +1152,8 @@
     "french": "فرنسي",
     "general": "عام",
     "generale": "عام",
+    "geolocation_hub_connected": "متصل بالمركز.",
+    "geolocation_hub_connecting": "جارٍ الاتصال بالمركز...",
     "german": "ألماني",
     "github": "جيثب",
     "greek": "اليونانية",
@@ -1325,6 +1387,8 @@
       "effective": "ساري المفعول",
       "expires": "ينتهي",
       "instructions": "التعليمات",
+      "load_error": "التنبيه غير متاح",
+      "load_error_description": "تعذّر تحميل تنبيه الطقس هذا. ربما انتهت صلاحيته أو فشل الطلب.",
       "metadata": "التفاصيل",
       "onset": "البداية",
       "sender": "المرسل",

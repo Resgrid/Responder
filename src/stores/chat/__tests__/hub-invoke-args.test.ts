@@ -192,6 +192,72 @@ describe('incoming message normalization', () => {
   });
 });
 
+describe('message list maintenance', () => {
+  const message = (seq: number, overrides: Record<string, unknown> = {}) => ({
+    ChatMessageId: `m${seq}`,
+    ChatChannelId: 'channel-1',
+    MessageSeq: seq,
+    SenderParticipantType: 0,
+    SenderUserId: 'user-2',
+    SenderDisplayName: 'Other',
+    Body: `body ${seq}`,
+    MessageType: 0,
+    Priority: 0,
+    ThreadRootMessageId: null,
+    ThreadReplyCount: 0,
+    AlsoSendToChannel: false,
+    MetadataJson: null,
+    // Clamped so the pending-sentinel sequences below stay inside the Date range.
+    SentOn: new Date(Math.min(seq, 4_000_000_000) * 1000).toISOString(),
+    Reactions: [],
+    Attachments: [],
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    useChatStore.setState({ messagesByChannel: {}, channels: [], hasMoreByChannel: {} });
+  });
+
+  it('keeps the list ascending no matter what order the hub delivers', () => {
+    [30, 10, 40, 20].forEach((seq) => useChatStore.getState().handleMessageReceived(message(seq)));
+
+    expect(useChatStore.getState().messagesByChannel['channel-1']?.map((m) => m.MessageSeq)).toEqual([10, 20, 30, 40]);
+  });
+
+  it('re-positions an optimistic send when its server row reconciles', () => {
+    useChatStore.getState().handleMessageReceived(message(10));
+    useChatStore.getState().handleMessageReceived(message(30));
+
+    // Optimistic sends carry a sentinel sequence that sorts to the very end of the list.
+    const pendingSeq = 9_000_000_000_001;
+    const pending = message(pendingSeq, { ChatMessageId: 'local-c1', ClientMessageId: 'c1', SentOn: new Date(pendingSeq).toISOString() });
+    useChatStore.setState((state) => ({
+      messagesByChannel: {
+        ...state.messagesByChannel,
+        'channel-1': [...(state.messagesByChannel['channel-1'] ?? []), pending as unknown as (typeof state.messagesByChannel)['channel-1'][number]],
+      },
+    }));
+
+    useChatStore.getState().handleMessageReceived(message(20, { ChatMessageId: 'm-server', ClientMessageId: 'c1' }));
+
+    const list = useChatStore.getState().messagesByChannel['channel-1'] ?? [];
+    expect(list.map((m) => m.MessageSeq)).toEqual([10, 20, 30]);
+    expect(list.filter((m) => m.ClientMessageId === 'c1')).toHaveLength(1);
+  });
+
+  it('caps in-memory retention per channel and reopens pagination when it evicts', () => {
+    for (let seq = 1; seq <= 520; seq += 1) {
+      useChatStore.getState().handleMessageReceived(message(seq));
+    }
+
+    const list = useChatStore.getState().messagesByChannel['channel-1'] ?? [];
+    expect(list).toHaveLength(500);
+    expect(list[0]?.MessageSeq).toBe(21);
+    expect(list[list.length - 1]?.MessageSeq).toBe(520);
+    expect(useChatStore.getState().hasMoreByChannel['channel-1']).toBe(true);
+  });
+});
+
 describe('chat presence events', () => {
   beforeEach(() => {
     useChatStore.setState({ presence: new Set<string>() });

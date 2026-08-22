@@ -101,13 +101,6 @@ jest.mock('@/stores/roles/store', () => ({
   }),
 }));
 
-jest.mock('@/stores/app/core-store', () => ({
-  useCoreStore: jest.fn((selector?: (state: { activeUnitId: null }) => unknown) => {
-    const state = { activeUnitId: null };
-    return selector ? selector(state) : state;
-  }),
-}));
-
 const mockFetchCallExtraData = jest.fn();
 
 jest.mock('@/stores/calls/store', () => ({

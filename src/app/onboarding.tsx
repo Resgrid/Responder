@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { GestureResponderEvent } from 'react-native';
 import { Dimensions, Image, ScrollView, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -60,26 +61,32 @@ const styles = StyleSheet.create({
   },
 });
 
-type OnboardingItemProps = {
+interface OnboardingItemProps {
   title: string;
   description: string;
   icon: React.ReactNode;
-};
+}
 
-const onboardingData: OnboardingItemProps[] = [
+interface OnboardingSlide {
+  titleKey: string;
+  descriptionKey: string;
+  icon: React.ReactNode;
+}
+
+const onboardingData: OnboardingSlide[] = [
   {
-    title: 'Resgrid Responder',
-    description: 'Manage your status, staffing, and interact with your organization in real-time',
+    titleKey: 'onboarding.slides.responder.title',
+    descriptionKey: 'onboarding.slides.responder.description',
     icon: <MapPin size={80} color={COLORS.primary} />,
   },
   {
-    title: 'Instant Notifications',
-    description: 'Receive immediate alerts for emergencies and important updates from your department',
+    titleKey: 'onboarding.slides.notifications.title',
+    descriptionKey: 'onboarding.slides.notifications.description',
     icon: <Bell size={80} color={COLORS.primary} />,
   },
   {
-    title: 'Interact with Calls',
-    description: 'Seamlessly view call information and interact with your team members for efficient emergency response',
+    titleKey: 'onboarding.slides.calls.title',
+    descriptionKey: 'onboarding.slides.calls.description',
     icon: <Users size={80} color={COLORS.primary} />,
   },
 ];
@@ -105,17 +112,18 @@ const OnboardingItem: React.FC<OnboardingItemProps> = ({ title, description, ico
   );
 };
 
-const Pagination: React.FC<{ currentIndex: number; items: OnboardingItemProps[] }> = ({ currentIndex, items }) => {
+const Pagination: React.FC<{ currentIndex: number; items: OnboardingSlide[] }> = ({ currentIndex, items }) => {
   return (
     <View className="mt-8 flex-row justify-center">
       {items.map((item, index) => (
-        <View key={item.title} className={`mx-1 h-2.5 rounded-full ${currentIndex === index ? 'w-6 bg-primary-500' : 'w-2.5 bg-primary-300'}`} />
+        <View key={item.titleKey} className={`mx-1 h-2.5 rounded-full ${currentIndex === index ? 'w-6 bg-primary-500' : 'w-2.5 bg-primary-300'}`} />
       ))}
     </View>
   );
 };
 
 export default function Onboarding() {
+  const { t } = useTranslation();
   const [_, setIsFirstTime] = useIsFirstTime();
   //const { setIsOnboarding } = useAuthStore();
   const { trackEvent } = useAnalytics();
@@ -161,16 +169,25 @@ export default function Onboarding() {
     router.replace('/login');
   }, [trackEvent, setIsFirstTime, router]);
 
+  const getSlideTitle = useCallback(
+    (index: number) => {
+      const titleKey = onboardingData[index]?.titleKey;
+
+      return titleKey ? t(titleKey) : 'Unknown';
+    },
+    [t]
+  );
+
   const trackSlideChange = useCallback(
     (fromSlide: number, toSlide: number) => {
       trackEvent('onboarding_slide_changed', {
         timestamp: new Date().toISOString(),
         fromSlide,
         toSlide,
-        slideTitle: onboardingData[toSlide]?.title || 'Unknown',
+        slideTitle: getSlideTitle(toSlide),
       });
     },
-    [trackEvent]
+    [trackEvent, getSlideTitle]
   );
 
   const goToSlide = useCallback(
@@ -193,12 +210,12 @@ export default function Onboarding() {
       trackEvent('onboarding_next_clicked', {
         timestamp: new Date().toISOString(),
         currentSlide: currentIndex,
-        slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
+        slideTitle: getSlideTitle(currentIndex),
       });
 
       goToSlide(nextIndex);
     }
-  }, [currentIndex, goToSlide, trackEvent]);
+  }, [currentIndex, goToSlide, trackEvent, getSlideTitle]);
 
   const handleSlideTouchStart = useCallback((event: GestureResponderEvent) => {
     swipeStartXRef.current = typeof event.nativeEvent.pageX === 'number' ? event.nativeEvent.pageX : null;
@@ -244,13 +261,25 @@ export default function Onboarding() {
     trackEvent('onboarding_skip_clicked', {
       timestamp: new Date().toISOString(),
       currentSlide: currentIndex,
-      slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
+      slideTitle: getSlideTitle(currentIndex),
       skipLocation: 'top_right',
     });
 
     setIsFirstTime(false);
     router.replace('/login');
-  }, [trackEvent, currentIndex, setIsFirstTime, router]);
+  }, [trackEvent, currentIndex, setIsFirstTime, router, getSlideTitle]);
+
+  const handleSkipBottom = useCallback(() => {
+    // Analytics: Track skip button clicks
+    trackEvent('onboarding_skip_clicked', {
+      timestamp: new Date().toISOString(),
+      currentSlide: currentIndex,
+      slideTitle: getSlideTitle(currentIndex),
+    });
+
+    setIsFirstTime(false);
+    router.replace('/login');
+  }, [trackEvent, currentIndex, setIsFirstTime, router, getSlideTitle]);
 
   const actionTextColor = colorScheme === 'dark' ? '#000000' : '#FFFFFF';
   const currentSlide = onboardingData[currentIndex];
@@ -263,14 +292,14 @@ export default function Onboarding() {
           <Image style={{ width: '96%' }} resizeMode="contain" source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} />
 
           {/* Skip button in upper right corner */}
-          <Pressable onPress={handleSkip} className="absolute right-8 top-4" testID="skip-button-top">
-            <Text className="text-base font-semibold text-primary-500">Skip</Text>
+          <Pressable onPress={handleSkip} className="absolute right-8 top-4" testID="skip-button-top" accessibilityRole="button" accessibilityLabel={t('onboarding.skip')}>
+            <Text className="text-base font-semibold text-primary-500">{t('onboarding.skip')}</Text>
           </Pressable>
         </View>
 
         <View style={styles.flexContainer}>
           <View testID="onboarding-flatlist" onTouchStart={handleSlideTouchStart} onTouchEnd={handleSlideTouchEnd}>
-            <OnboardingItem key={currentSlide.title} {...currentSlide} />
+            <OnboardingItem key={currentSlide.titleKey} title={t(currentSlide.titleKey)} description={t(currentSlide.descriptionKey)} icon={currentSlide.icon} />
           </View>
         </View>
 
@@ -279,34 +308,28 @@ export default function Onboarding() {
         <View className="mb-8 mt-4 px-8">
           {currentIndex < onboardingData.length - 1 ? (
             <View className="flex-row items-center justify-between">
-              <Pressable
-                onPress={() => {
-                  // Analytics: Track skip button clicks
-                  trackEvent('onboarding_skip_clicked', {
-                    timestamp: new Date().toISOString(),
-                    currentSlide: currentIndex,
-                    slideTitle: onboardingData[currentIndex]?.title || 'Unknown',
-                  });
-
-                  setIsFirstTime(false);
-                  router.replace('/login');
-                }}
-              >
-                <Text className="text-gray-500">Skip</Text>
+              <Pressable onPress={handleSkipBottom} accessibilityRole="button" accessibilityLabel={t('onboarding.skip')}>
+                <Text className="text-gray-500">{t('onboarding.skip')}</Text>
               </Pressable>
 
-              <Pressable accessibilityRole="button" className="h-11 flex-row items-center justify-center rounded bg-primary-500 px-6" onPress={nextSlide} testID="next-button">
+              <Pressable accessibilityRole="button" accessibilityLabel={t('common.next')} className="h-11 flex-row items-center justify-center rounded bg-primary-500 px-6" onPress={nextSlide} testID="next-button">
                 <Text style={{ color: actionTextColor }} className="text-base font-semibold">
-                  Next
+                  {t('common.next')}
                 </Text>
                 <ChevronRight size={20} color={colorScheme === 'dark' ? 'black' : 'white'} />
               </Pressable>
             </View>
           ) : (
             <Animated.View style={buttonAnimatedStyle}>
-              <Pressable accessibilityRole="button" className="h-11 w-full flex-row items-center justify-center rounded bg-primary-500" testID="get-started-button" onPress={handleGetStarted}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('onboarding.get_started')}
+                className="h-11 w-full flex-row items-center justify-center rounded bg-primary-500"
+                testID="get-started-button"
+                onPress={handleGetStarted}
+              >
                 <Text style={{ color: actionTextColor }} className="text-base font-semibold">
-                  Let's Get Started
+                  {t('onboarding.get_started')}
                 </Text>
               </Pressable>
             </Animated.View>

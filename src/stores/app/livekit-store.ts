@@ -7,12 +7,14 @@ import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import { create } from 'zustand';
 
 import { getCanConnectToVoiceSession, getDepartmentVoiceSettings } from '../../api/voice';
+import { translate } from '../../lib/i18n/utils';
 import { logger } from '../../lib/logging';
 import { type DepartmentVoiceChannelResultData } from '../../models/v4/voice/departmentVoiceResultData';
 import { audioService } from '../../services/audio.service';
 import { callKeepService } from '../../services/callkeep.service';
 import { headsetButtonService } from '../../services/headset-button.service';
 import { toggleMicrophone } from '../../utils/microphone-toggle';
+import { useToastStore } from '../toast/store';
 import { useBluetoothAudioStore } from './bluetooth-audio-store';
 
 // Module level timestamp for debounce
@@ -130,7 +132,7 @@ interface LiveKitState {
 
   // Room operations
   connectToRoom: (roomInfo: DepartmentVoiceChannelResultData, token: string) => Promise<void>;
-  disconnectFromRoom: () => void;
+  disconnectFromRoom: () => Promise<void>;
   fetchVoiceSettings: () => Promise<void>;
   fetchCanConnectToVoice: () => Promise<void>;
   requestPermissions: () => Promise<void>;
@@ -231,9 +233,11 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         });
       }
 
-      // Disconnect from current room if connected
+      // Disconnect from current room if connected. Clearing the reference matters: if this
+      // connect attempt fails, the failure teardown below must not find the room we just left.
       if (currentRoom) {
         currentRoom.disconnect();
+        set({ currentRoom: null, currentRoomInfo: null, isConnected: false });
       }
 
       set({ isConnecting: true });
@@ -322,6 +326,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       // Connect to the room
       await room.connect(voipServerWebsocketSslAddress, token);
+
+      // The shared audio session is playback-only until something asks for capture, so it has to
+      // be put into record-capable mode here -- before the first PTT unmute can reach the mic.
+      await audioService.enableRecordingSession();
 
       set({
         currentRoom: room,
@@ -428,7 +436,27 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         message: 'Failed to connect to room',
         context: { error },
       });
-      set({ isConnecting: false });
+
+      // The room goes live at room.connect(), but the steps after it -- initial mute, audio
+      // routing, CallKeep, the foreground service -- can still throw. Returning from here with
+      // isConnected already true would leave a joined channel that the UI shows as idle and that
+      // nothing can hang up, so the session is torn down before the failure is surfaced.
+      try {
+        await get().disconnectFromRoom();
+      } catch (teardownError) {
+        logger.warn({
+          message: 'Failed to tear down the room after a failed connect',
+          context: { error: teardownError },
+        });
+      }
+
+      // disconnectFromRoom is a no-op when room.connect() itself threw, so release explicitly:
+      // a failed join must never leave iOS holding a record-capable session.
+      await audioService.releaseRecordingSession();
+
+      set({ isConnecting: false, isConnected: false, currentRoom: null, currentRoomInfo: null });
+      // Tapping a voice channel and getting nothing back is indistinguishable from a hung app.
+      useToastStore.getState().showToast('error', translate('livekit.connection_failed'));
     }
   },
 
@@ -473,6 +501,11 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
           context: { error },
         });
       }
+
+      // Drop back to a playback-only session now that the disconnect chime has played, so iOS
+      // stops holding the microphone for a room nobody is in.
+      await audioService.releaseRecordingSession();
+
       set({
         currentRoom: null,
         currentRoomInfo: null,

@@ -17,7 +17,6 @@ import { RefreshControl } from '@/components/ui/refresh-control';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { buildCallAssignmentContext, isCurrentUserOnCall } from '@/lib/call-dispatch';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useRolesStore } from '@/stores/roles/store';
@@ -31,15 +30,16 @@ export default function Calls() {
   const fetchCallPriorities = useCallsStore((state) => state.fetchCallPriorities);
   const callPriorities = useCallsStore((state) => state.callPriorities);
   const callExtrasById = useCallsStore((state) => state.callExtrasById);
+  // useSecurityStore is a hook that already selects per field and memoizes its result.
   const { canUserCreateCalls } = useSecurityStore();
   const { trackEvent } = useAnalytics();
   const { t } = useTranslation();
   const currentUser = useHomeStore((state) => state.currentUser);
   const roles = useRolesStore((state) => state.roles);
-  const activeUnitId = useCoreStore((state) => state.activeUnitId);
   const { filter } = useLocalSearchParams<{ filter?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyCallsImOn, setOnlyCallsImOn] = useState(filter === 'mine');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setOnlyCallsImOn(filter === 'mine');
@@ -56,16 +56,20 @@ export default function Calls() {
     }, [fetchCallPriorities, fetchCalls, trackEvent])
   );
 
-  const handleRefresh = () => {
-    void fetchCalls();
-    void fetchCallPriorities();
-  };
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([fetchCalls(), fetchCallPriorities()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchCalls, fetchCallPriorities]);
 
-  const handleNewCall = () => {
+  const handleNewCall = useCallback(() => {
     router.push('/call/new/');
-  };
+  }, []);
 
-  const assignmentContext = useMemo(() => buildCallAssignmentContext(currentUser, roles, activeUnitId), [activeUnitId, currentUser, roles]);
+  const assignmentContext = useMemo(() => buildCallAssignmentContext(currentUser, roles), [currentUser, roles]);
 
   const priorityById = useMemo(() => {
     const map = new Map<number, (typeof callPriorities)[number]>();
@@ -103,11 +107,17 @@ export default function Calls() {
   );
 
   const renderContent = () => {
-    if (isLoading) {
+    // isLoading/error are shared with the priorities fetch and with every background refresh, and
+    // this screen refetches on each tab focus. Only take over the screen when there is nothing
+    // cached to show -- otherwise the department's most-used list blanks and loses its scroll
+    // position on every visit.
+    const hasCachedCalls = calls.length > 0;
+
+    if (isLoading && !hasCachedCalls) {
       return <Loading text={t('calls.loading')} />;
     }
 
-    if (error) {
+    if (error && !hasCachedCalls) {
       return <ZeroState heading={t('common.errorOccurred')} description={error} isError={true} />;
     }
 
@@ -116,7 +126,7 @@ export default function Calls() {
         data={filteredCalls}
         renderItem={renderCallItem}
         keyExtractor={keyExtractor}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListEmptyComponent={<ZeroState heading={t('calls.no_calls')} description={t('calls.no_calls_description')} icon={RefreshCcwDotIcon} />}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
@@ -133,7 +143,7 @@ export default function Calls() {
             </InputSlot>
             <InputField placeholder={t('calls.search')} value={searchQuery} onChangeText={setSearchQuery} />
             {searchQuery ? (
-              <InputSlot className="pr-3" onPress={() => setSearchQuery('')}>
+              <InputSlot className="pr-3" onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel={t('common.clear_search')}>
                 <InputIcon as={X} />
               </InputSlot>
             ) : null}
@@ -151,7 +161,7 @@ export default function Calls() {
         <Box className="flex-1">{renderContent()}</Box>
 
         {canUserCreateCalls ? (
-          <Fab placement="bottom right" size="lg" onPress={handleNewCall} testID="new-call-fab">
+          <Fab placement="bottom right" size="lg" onPress={handleNewCall} testID="new-call-fab" accessibilityRole="button" accessibilityLabel={t('calls.new_call')}>
             <FabIcon as={PlusIcon} size="lg" />
           </Fab>
         ) : null}

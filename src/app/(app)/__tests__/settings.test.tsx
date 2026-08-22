@@ -73,9 +73,10 @@ const mockUnits = [
 ];
 
 jest.mock('@/stores/units/store', () => ({
-  useUnitsStore: () => ({
-    units: mockUnits,
-  }),
+  useUnitsStore: (selector?: (state: { units: unknown[] }) => unknown) => {
+    const state = { units: mockUnits };
+    return selector ? selector(state) : state;
+  },
 }));
 
 // Mock settings components
@@ -174,13 +175,6 @@ jest.mock('@/components/settings/theme-item', () => ({
   ThemeItem: () => {
     const { View } = require('react-native');
     return <View testID="theme-item" />;
-  },
-}));
-
-jest.mock('@/components/settings/toggle-item', () => ({
-  ToggleItem: () => {
-    const { View } = require('react-native');
-    return <View testID="toggle-item" />;
   },
 }));
 

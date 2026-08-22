@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +10,7 @@ import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useCheckInPolling } from '@/hooks/use-check-in-polling';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
 import { type ResolvedCheckInTimerResultData } from '@/models/v4/checkIn/resolvedCheckInTimerResultData';
 import { useActiveCallStore } from '@/stores/calls/active-call-store';
@@ -23,8 +23,10 @@ import { useUnitsStore } from '@/stores/units/store';
 
 export const ActiveCallTab: React.FC = () => {
   const { t } = useTranslation();
-  const { colorScheme } = useColorScheme();
-  const { activeCall, clearActiveCall } = useActiveCallStore();
+  // Selected field by field: an object selector builds a new reference on every store
+  // write, re-rendering this always-mounted tab whether or not anything it reads changed.
+  const activeCall = useActiveCallStore((state) => state.activeCall);
+  const clearActiveCall = useActiveCallStore((state) => state.clearActiveCall);
   const showToast = useToastStore((state) => state.showToast);
   const currentUser = useHomeStore((state) => state.currentUser);
   const dispatchUnits = useDispatchStore((state) => state.data.units);
@@ -32,19 +34,25 @@ export const ActiveCallTab: React.FC = () => {
   const units = useUnitsStore((state) => state.units);
   const fetchUnits = useUnitsStore((state) => state.fetchUnits);
   const users = useRolesStore((state) => state.users);
-  const { timerStatuses, resolvedTimers, isCheckingIn, fetchTimerStatuses, fetchResolvedTimers, performCheckIn: storePerformCheckIn, startPolling, stopPolling } = useCheckInStore();
+  const timerStatuses = useCheckInStore((state) => state.timerStatuses);
+  const resolvedTimers = useCheckInStore((state) => state.resolvedTimers);
+  const isCheckingIn = useCheckInStore((state) => state.isCheckingIn);
+  const fetchTimerStatuses = useCheckInStore((state) => state.fetchTimerStatuses);
+  const fetchResolvedTimers = useCheckInStore((state) => state.fetchResolvedTimers);
+  const storePerformCheckIn = useCheckInStore((state) => state.performCheckIn);
+
+  const activeCallId = activeCall ? parseInt(activeCall.CallId, 10) : null;
 
   useEffect(() => {
-    if (activeCall) {
-      const callId = parseInt(activeCall.CallId, 10);
-      fetchTimerStatuses(callId);
-      fetchResolvedTimers(callId);
-      startPolling(callId);
+    if (activeCallId !== null && !Number.isNaN(activeCallId)) {
+      fetchTimerStatuses(activeCallId);
+      fetchResolvedTimers(activeCallId);
     }
-    return () => {
-      stopPolling();
-    };
-  }, [activeCall, fetchResolvedTimers, fetchTimerStatuses, startPolling, stopPolling]);
+  }, [activeCallId, fetchResolvedTimers, fetchTimerStatuses]);
+
+  // Refcounted: this tab stays mounted while call detail (and its own check-in tab) is
+  // pushed, so it must not have its shared poll torn down when that screen pops.
+  useCheckInPolling(activeCallId);
 
   useEffect(() => {
     if (dispatchUnits.length === 0) {
@@ -141,7 +149,7 @@ export const ActiveCallTab: React.FC = () => {
     );
   }
 
-  const bgColor = colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-white';
+  const bgColor = 'bg-white dark:bg-neutral-800';
 
   const renderTimerItem = (status: CheckInTimerStatusResultData) => (
     <CheckInTimerCard key={`${status.TargetEntityId}-${status.TargetType}`} status={status} resolvedTargetName={getResolvedTargetName(status)} onCheckIn={handleCheckIn} isCurrentUser={true} />

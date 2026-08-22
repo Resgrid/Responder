@@ -21,7 +21,7 @@ import FullScreenLocationPicker from '@/components/maps/full-screen-location-pic
 import LocationPicker from '@/components/maps/location-picker';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Box } from '@/components/ui/box';
-import { Button, ButtonText } from '@/components/ui/button';
+import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormControl, FormControlError, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField } from '@/components/ui/input';
@@ -142,8 +142,15 @@ interface What3WordsResponse {
 export default function NewCall() {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const { callPriorities, callTypes, isLoading, error, fetchCallPriorities, fetchCallTypes } = useCallsStore();
-  const { config } = useCoreStore();
+  // Per-field selectors: subscribing to the whole store re-rendered this form on every unrelated
+  // calls-store write (background list refreshes, SignalR updates) while it was being filled in.
+  const callPriorities = useCallsStore((state) => state.callPriorities);
+  const callTypes = useCallsStore((state) => state.callTypes);
+  const isLoading = useCallsStore((state) => state.isLoading);
+  const error = useCallsStore((state) => state.error);
+  const fetchCallPriorities = useCallsStore((state) => state.fetchCallPriorities);
+  const fetchCallTypes = useCallsStore((state) => state.fetchCallTypes);
+  const config = useCoreStore((state) => state.config);
   const { trackEvent } = useAnalytics();
   const toast = useToast();
   const toastRef = useRef(toast);
@@ -157,6 +164,10 @@ export default function NewCall() {
   const [isGeocodingCoordinates, setIsGeocodingCoordinates] = useState(false);
   const [isGeocodingWhat3Words, setIsGeocodingWhat3Words] = useState(false);
   const [isDestinationPoisLoading, setIsDestinationPoisLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Mirrors isSubmitting so a second tap is rejected synchronously, before React has re-rendered
+  // the disabled button. Without it a double-tap creates and dispatches two identical calls.
+  const isSubmittingRef = useRef(false);
   const [addressResults, setAddressResults] = useState<GeocodingResult[]>([]);
   const [destinationPois, setDestinationPois] = useState<PoiResultData[]>([]);
   const [destinationPoiTypes, setDestinationPoiTypes] = useState<PoiTypeResultData[]>([]);
@@ -266,6 +277,15 @@ export default function NewCall() {
   );
 
   const onSubmit = async (data: FormValues) => {
+    // Creating a call dispatches it to the whole department, so a duplicate is not recoverable
+    // by the dispatcher. Reject re-entry outright rather than relying on the disabled button.
+    if (isSubmittingRef.current) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       // The policy arrives asynchronously and reads as "nothing required" until it lands, so a
       // submit in that window would skip every field the department marked required. Hold the call
@@ -389,6 +409,9 @@ export default function NewCall() {
 
       // Show error toast
       toast.error(t('calls.create_error'));
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -867,11 +890,16 @@ export default function NewCall() {
     }
   };
 
-  if (isLoading) {
+  // The calls store's isLoading/error are shared with the background call-list fetches that run on
+  // app resume and active-call selection. Gate only on what this form actually needs, so a
+  // background refetch (or a failure in one) can never replace a half-filled form.
+  const isMissingFormData = callPriorities.length === 0;
+
+  if (isLoading && isMissingFormData) {
     return <Loading />;
   }
 
-  if (error) {
+  if (error && isMissingFormData) {
     return (
       <View className="size-full flex-1">
         <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
@@ -909,11 +937,11 @@ export default function NewCall() {
                     </Input>
                   )}
                 />
-                {errors.name && (
+                {errors.name ? (
                   <FormControlError>
                     <Text className="text-red-500">{errors.name.message}</Text>
                   </FormControlError>
-                )}
+                ) : null}
               </FormControl>
             </Card>
 
@@ -931,11 +959,11 @@ export default function NewCall() {
                     </Textarea>
                   )}
                 />
-                {errors.nature && (
+                {errors.nature ? (
                   <FormControlError>
                     <Text className="text-red-500">{errors.nature.message}</Text>
                   </FormControlError>
-                )}
+                ) : null}
               </FormControl>
             </Card>
 
@@ -964,11 +992,11 @@ export default function NewCall() {
                     </Select>
                   )}
                 />
-                {errors.priority && (
+                {errors.priority ? (
                   <FormControlError>
                     <Text className="text-red-500">{errors.priority.message}</Text>
                   </FormControlError>
-                )}
+                ) : null}
               </FormControl>
             </Card>
 
@@ -997,11 +1025,11 @@ export default function NewCall() {
                     </Select>
                   )}
                 />
-                {errors.type && (
+                {errors.type ? (
                   <FormControlError>
                     <Text className="text-red-500">{errors.type.message}</Text>
                   </FormControlError>
-                )}
+                ) : null}
               </FormControl>
             </Card>
 
@@ -1075,7 +1103,16 @@ export default function NewCall() {
                           <InputField testID="address-input" placeholder={t('calls.address_placeholder')} value={value} onChangeText={onChange} onBlur={onBlur} />
                         </Input>
                       </Box>
-                      <Button testID="address-search-button" size="sm" variant="outline" className="ml-2" onPress={() => handleAddressSearch(value || '')} disabled={isGeocodingAddress || !value?.trim()}>
+                      <Button
+                        testID="address-search-button"
+                        accessibilityRole="button"
+                        accessibilityLabel={t('calls.search_address')}
+                        size="sm"
+                        variant="outline"
+                        className="ml-2"
+                        onPress={() => handleAddressSearch(value || '')}
+                        disabled={isGeocodingAddress || !value?.trim()}
+                      >
                         {isGeocodingAddress ? <Text>...</Text> : <SearchIcon size={16} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />}
                       </Button>
                     </Box>
@@ -1098,7 +1135,16 @@ export default function NewCall() {
                           <InputField testID="coordinates-input" placeholder={t('calls.coordinates_placeholder')} value={value} onChangeText={onChange} onBlur={onBlur} />
                         </Input>
                       </Box>
-                      <Button testID="coordinates-search-button" size="sm" variant="outline" className="ml-2" onPress={() => handleCoordinatesSearch(value || '')} disabled={isGeocodingCoordinates || !value?.trim()}>
+                      <Button
+                        testID="coordinates-search-button"
+                        accessibilityRole="button"
+                        accessibilityLabel={t('calls.search_coordinates')}
+                        size="sm"
+                        variant="outline"
+                        className="ml-2"
+                        onPress={() => handleCoordinatesSearch(value || '')}
+                        disabled={isGeocodingCoordinates || !value?.trim()}
+                      >
                         {isGeocodingCoordinates ? <Text>...</Text> : <SearchIcon size={16} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />}
                       </Button>
                     </Box>
@@ -1121,7 +1167,16 @@ export default function NewCall() {
                           <InputField testID="what3words-input" placeholder={t('calls.what3words_placeholder')} value={value} onChangeText={onChange} onBlur={onBlur} />
                         </Input>
                       </Box>
-                      <Button testID="what3words-search-button" size="sm" variant="outline" className="ml-2" onPress={() => handleWhat3WordsSearch(value || '')} disabled={isGeocodingWhat3Words || !value?.trim()}>
+                      <Button
+                        testID="what3words-search-button"
+                        accessibilityRole="button"
+                        accessibilityLabel={t('calls.search_what3words')}
+                        size="sm"
+                        variant="outline"
+                        className="ml-2"
+                        onPress={() => handleWhat3WordsSearch(value || '')}
+                        disabled={isGeocodingWhat3Words || !value?.trim()}
+                      >
                         {isGeocodingWhat3Words ? <Text>...</Text> : <SearchIcon size={16} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />}
                       </Button>
                     </Box>
@@ -1144,7 +1199,16 @@ export default function NewCall() {
                           <InputField testID="plus-code-input" placeholder={t('calls.plus_code_placeholder')} value={value} onChangeText={onChange} onBlur={onBlur} />
                         </Input>
                       </Box>
-                      <Button testID="plus-code-search-button" size="sm" variant="outline" className="ml-2" onPress={() => handlePlusCodeSearch(value || '')} disabled={isGeocodingPlusCode || !value?.trim()}>
+                      <Button
+                        testID="plus-code-search-button"
+                        accessibilityRole="button"
+                        accessibilityLabel={t('calls.search_plus_code')}
+                        size="sm"
+                        variant="outline"
+                        className="ml-2"
+                        onPress={() => handlePlusCodeSearch(value || '')}
+                        disabled={isGeocodingPlusCode || !value?.trim()}
+                      >
                         {isGeocodingPlusCode ? <Text>...</Text> : <SearchIcon size={16} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />}
                       </Button>
                     </Box>
@@ -1213,9 +1277,9 @@ export default function NewCall() {
               <Button className="mr-10 flex-1" variant="outline" onPress={() => router.back()}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button testID="create-call-button" className="ml-10 flex-1" variant="solid" action="primary" isDisabled={!fieldPolicy.isLoaded} onPress={handleSubmit(onSubmit)}>
-                <PlusIcon size={18} className="mr-2" />
-                <ButtonText>{t('calls.create')}</ButtonText>
+              <Button testID="create-call-button" className="ml-10 flex-1" variant="solid" action="primary" isDisabled={!fieldPolicy.isLoaded || isSubmitting} onPress={handleSubmit(onSubmit)}>
+                {isSubmitting ? <ButtonSpinner className="mr-2" /> : <PlusIcon size={18} className="mr-2" />}
+                <ButtonText>{isSubmitting ? t('common.submitting') : t('calls.create')}</ButtonText>
               </Button>
             </Box>
           </ScrollView>
@@ -1223,7 +1287,7 @@ export default function NewCall() {
       </View>
 
       {/* Full-screen location picker overlay */}
-      {showLocationPicker && (
+      {showLocationPicker ? (
         <View
           style={{
             position: 'absolute',
@@ -1242,7 +1306,7 @@ export default function NewCall() {
             onClose={() => setShowLocationPicker(false)}
           />
         </View>
-      )}
+      ) : null}
 
       {/* Dispatch selection modal */}
       <DispatchSelectionModal isVisible={showDispatchModal} onClose={() => setShowDispatchModal(false)} onConfirm={handleDispatchSelection} initialSelection={dispatchSelection} />

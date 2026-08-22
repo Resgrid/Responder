@@ -30,6 +30,21 @@ jest.mock('react-native-edge-to-edge', () => ({
   },
 }));
 
+// Resolve translation keys against the real English catalogue: the app's i18n instance is not
+// initialised in this suite, so an unmocked useTranslation would echo the keys back.
+jest.mock('react-i18next', () => {
+  const en = require('@/translations/en.json');
+  const translate = (key: string): string => {
+    const value = key.split('.').reduce<unknown>((node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined), en);
+    return typeof value === 'string' ? value : key;
+  };
+
+  return {
+    useTranslation: () => ({ t: translate, i18n: { language: 'en', changeLanguage: jest.fn() } }),
+    initReactI18next: { type: '3rdParty', init: jest.fn() },
+  };
+});
+
 const mockTrackEvent = jest.fn();
 jest.mock('@/hooks/use-analytics', () => ({
   useAnalytics: () => ({

@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { VStack } from '@/components/ui/vstack';
 
@@ -15,13 +14,15 @@ export const ToastMessage: React.FC<{
   duration?: number;
 }> = ({ /*id,*/ type, title, message /*, position, duration*/ }) => {
   //const { removeToast } = useToastStore();
-  const { t } = useTranslation();
 
+  // Rendered verbatim: callers already pass text through t(). Re-translating here made
+  // i18next parse any toast text containing ':' as `namespace:key` and silently strip
+  // the prefix.
   return (
     <Toast className="mx-4 rounded-lg border" action={type}>
       <VStack space="xs">
-        {title && <ToastTitle className="font-medium">{t(title)}</ToastTitle>}
-        <ToastDescription>{t(message)}</ToastDescription>
+        {title ? <ToastTitle className="font-medium">{title}</ToastTitle> : null}
+        <ToastDescription>{message}</ToastDescription>
       </VStack>
     </Toast>
   );

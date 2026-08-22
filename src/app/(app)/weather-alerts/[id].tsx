@@ -6,8 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ScreenHeader } from '@/components/common/screen-header';
+import ZeroState from '@/components/common/zero-state';
 import FullScreenMapModal from '@/components/maps/full-screen-map-modal';
 import { Box } from '@/components/ui/box';
+import { Button, ButtonText } from '@/components/ui/button';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
@@ -64,7 +66,11 @@ export default function WeatherAlertDetail() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { selectedAlert, isLoadingDetail, fetchAlertDetail, selectAlertByIdentity } = useWeatherAlertsStore();
+  const selectedAlert = useWeatherAlertsStore((state) => state.selectedAlert);
+  const isLoadingDetail = useWeatherAlertsStore((state) => state.isLoadingDetail);
+  const fetchAlertDetail = useWeatherAlertsStore((state) => state.fetchAlertDetail);
+  const fetchActiveAlerts = useWeatherAlertsStore((state) => state.fetchActiveAlerts);
+  const selectAlertByIdentity = useWeatherAlertsStore((state) => state.selectAlertByIdentity);
   const alertIdentity = typeof id === 'string' ? decodeURIComponent(id).trim() : '';
 
   const handleBack = useCallback(() => {
@@ -79,7 +85,7 @@ export default function WeatherAlertDetail() {
     setIsMapModalOpen(false);
   }, []);
 
-  useEffect(() => {
+  const loadAlertDetail = useCallback(() => {
     if (alertIdentity.length === 0) {
       return;
     }
@@ -88,9 +94,20 @@ export default function WeatherAlertDetail() {
     const requestId = matchedAlert ? getWeatherAlertRequestId(matchedAlert) : '';
 
     if (requestId.length > 0) {
-      fetchAlertDetail(requestId);
+      void fetchAlertDetail(requestId);
     }
   }, [alertIdentity, fetchAlertDetail, selectAlertByIdentity]);
+
+  useEffect(() => {
+    loadAlertDetail();
+  }, [loadAlertDetail]);
+
+  // A deep link or push can land before the alert list has been fetched, in which case the
+  // identity matches nothing and there is no request id to fetch -- refresh the list first.
+  const handleRetry = useCallback(async () => {
+    await fetchActiveAlerts();
+    loadAlertDetail();
+  }, [fetchActiveAlerts, loadAlertDetail]);
 
   const polygonCoords = useMemo(() => {
     if (!selectedAlert?.Polygon) return null;
@@ -156,11 +173,25 @@ export default function WeatherAlertDetail() {
     };
   }, [polygonExtrema, polygonCoords]);
 
+  // The header always renders: the fetch can fail (the store leaves selectedAlert null) and a deep
+  // link whose identity matches nothing never fetches at all, which stranded the user on a bare
+  // spinner with no way back.
   if (isLoadingDetail || !selectedAlert) {
     return (
-      <VStack className="size-full flex-1 items-center justify-center">
+      <VStack className="size-full flex-1 bg-gray-50 dark:bg-gray-900" testID="weather-alert-detail">
         <FocusAwareStatusBar />
-        <ActivityIndicator size="large" />
+        <ScreenHeader title={t('weatherAlerts.title')} onBack={handleBack} />
+        {isLoadingDetail ? (
+          <VStack className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" />
+          </VStack>
+        ) : (
+          <ZeroState heading={t('weatherAlerts.detail.load_error')} description={t('weatherAlerts.detail.load_error_description')} isError={true}>
+            <Button onPress={handleRetry} testID="weather-alert-retry">
+              <ButtonText>{t('common.retry')}</ButtonText>
+            </Button>
+          </ZeroState>
+        )}
       </VStack>
     );
   }

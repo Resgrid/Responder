@@ -25,8 +25,8 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
 }));
 
-jest.mock('@/stores/calls/check-in-store', () => ({
-  useCheckInStore: () => ({
+jest.mock('@/stores/calls/check-in-store', () => {
+  const state = {
     timerStatuses: [],
     resolvedTimers: [],
     isCheckingIn: false,
@@ -35,8 +35,11 @@ jest.mock('@/stores/calls/check-in-store', () => ({
     performCheckIn: jest.fn(),
     startPolling: jest.fn(),
     stopPolling: jest.fn(),
-  }),
-}));
+  };
+  // The component selects field by field, and use-check-in-polling reads getState().
+  const useCheckInStore = Object.assign(jest.fn((selector?: (s: any) => any) => (selector ? selector(state) : state)), { getState: () => state });
+  return { useCheckInStore };
+});
 
 jest.mock('@/stores/toast/store', () => ({
   useToastStore: () => jest.fn(),

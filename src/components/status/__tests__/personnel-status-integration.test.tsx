@@ -168,6 +168,16 @@ jest.mock('@/components/ui/textarea', () => ({
 
 const mockUseCoreStore = useCoreStore as jest.MockedFunction<typeof useCoreStore>;
 const mockUseCallsStore = useCallsStore as jest.MockedFunction<typeof useCallsStore>;
+
+// The component selects field by field, so the mocked store hook must apply the selector
+// rather than hand back the whole state object.
+const applySelector = (mock: unknown, state: unknown): void => {
+  (mock as jest.Mock).mockImplementation((...args: unknown[]) => {
+    const selector = args[0] as ((s: unknown) => unknown) | undefined;
+    return selector ? selector(state) : state;
+  });
+};
+
 const mockUsePersonnelStatusBottomSheetStore = usePersonnelStatusBottomSheetStore as jest.MockedFunction<typeof usePersonnelStatusBottomSheetStore>;
 const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
@@ -241,11 +251,11 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
       trackEvent: mockTrackEvent,
     });
 
-    mockUseCoreStore.mockReturnValue({
+    applySelector(mockUseCoreStore, {
       activeCall: null,
     });
 
-    mockUseCallsStore.mockReturnValue(mockCallsStore);
+    applySelector(mockUseCallsStore, mockCallsStore);
   });
 
   describe('Next button functionality', () => {

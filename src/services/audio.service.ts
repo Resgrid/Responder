@@ -16,6 +16,7 @@ class AudioService {
   private isInitialized = false;
   private isPlayingSound: Set<string> = new Set();
   private isNativeAudioInitialized = false;
+  private isRecordingSessionActive = false;
 
   private constructor() {
     this.initializeAudio();
@@ -38,14 +39,10 @@ class AudioService {
     }
 
     try {
-      // Configure audio mode for production builds
-      await setAudioModeAsync({
-        allowsRecording: true,
-        shouldPlayInBackground: true,
-        playsInSilentMode: true,
-        shouldRouteThroughEarpiece: true,
-        interruptionMode: Platform.OS === 'android' ? 'duckOthers' : 'mixWithOthers',
-      });
+      // Configure audio mode for production builds. Recording stays off until LiveKit
+      // connects: a record-capable session held for the whole app lifetime costs battery
+      // and changes audio routing app-wide on iOS.
+      await this.applyAudioMode(false);
 
       // Initialize native audio module on Android
       if (Platform.OS === 'android') {
@@ -66,6 +63,64 @@ class AudioService {
     } catch (error) {
       logger.error({
         message: 'Failed to initialize audio service',
+        context: { error },
+      });
+    }
+  }
+
+  private async applyAudioMode(allowsRecording: boolean): Promise<void> {
+    await setAudioModeAsync({
+      allowsRecording,
+      shouldPlayInBackground: true,
+      playsInSilentMode: true,
+      shouldRouteThroughEarpiece: true,
+      interruptionMode: Platform.OS === 'android' ? 'duckOthers' : 'mixWithOthers',
+    });
+  }
+
+  /**
+   * Put the audio session into record-capable mode. Call this when a LiveKit room is
+   * connected, before PTT transmission is possible.
+   */
+  public async enableRecordingSession(): Promise<void> {
+    if (this.isRecordingSessionActive) {
+      return;
+    }
+
+    try {
+      await this.applyAudioMode(true);
+      this.isRecordingSessionActive = true;
+
+      logger.info({
+        message: 'Recording audio session enabled',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to enable recording audio session',
+        context: { error },
+      });
+    }
+  }
+
+  /**
+   * Drop back to a playback-only audio session. Call this when the LiveKit room
+   * disconnects so iOS stops holding a record-capable session.
+   */
+  public async releaseRecordingSession(): Promise<void> {
+    if (!this.isRecordingSessionActive) {
+      return;
+    }
+
+    try {
+      await this.applyAudioMode(false);
+      this.isRecordingSessionActive = false;
+
+      logger.info({
+        message: 'Recording audio session released',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to release recording audio session',
         context: { error },
       });
     }
@@ -346,6 +401,7 @@ class AudioService {
       }
 
       this.isInitialized = false;
+      this.isRecordingSessionActive = false;
 
       logger.info({
         message: 'Audio service cleaned up',

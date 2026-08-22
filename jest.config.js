@@ -12,7 +12,8 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest-setup.ts'],
   testMatch: ['**/?(*.)+(spec|test).ts?(x)'],
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '\\.\\._.*'],
-  collectCoverage: true,
+  // Coverage is driven by the CLI flag in the `test`/`test:ci` scripts, not forced here,
+  // so ad-hoc and watch runs skip the instrumentation cost.
   collectCoverageFrom: ['src/**/*.{ts,tsx}', '!**/coverage/**', '!**/node_modules/**', '!**/babel.config.js', '!**/jest.setup.js', '!**/docs/**', '!**/cli/**', '!**/ios/**', '!**/android/**', '!**/_*', '!**/._*'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleDirectories: ['node_modules', '<rootDir>/'],

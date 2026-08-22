@@ -9,6 +9,13 @@ import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type CallTypeResultData } from '@/models/v4/callTypes/callTypeResultData';
 import type { ApiResponse } from '@/types/api';
 
+/**
+ * Extras are prefetched after every fetchCalls(), which runs on each `callsUpdated` push and
+ * every setActiveCall. Firing one request per open call at once buries the connection on a busy
+ * department, so they go out a few at a time instead.
+ */
+const CALL_EXTRAS_PREFETCH_CONCURRENCY = 5;
+
 interface CallsState {
   calls: CallResultData[];
   callPriorities: CallPriorityResultData[];
@@ -122,11 +129,30 @@ export const useCallsStore = create<CallsState>((set, get) => ({
     }
   },
   prefetchCallExtras: async (callIds, force = false) => {
+    // Extras for calls that have closed are dead weight; drop them here rather than letting the
+    // map grow for the life of the process.
+    set((state) => {
+      const openCallIds = new Set(callIds);
+      const cachedIds = Object.keys(state.callExtrasById);
+      const retained = cachedIds.filter((id) => openCallIds.has(id));
+      if (retained.length === cachedIds.length) {
+        return {};
+      }
+      const callExtrasById: Record<string, CallExtraDataResultData> = {};
+      for (const id of retained) {
+        callExtrasById[id] = state.callExtrasById[id];
+      }
+      return { callExtrasById };
+    });
+
     if (callIds.length === 0) {
       return;
     }
 
-    await Promise.all(callIds.map((callId) => get().fetchCallExtraData(callId, force)));
+    for (let index = 0; index < callIds.length; index += CALL_EXTRAS_PREFETCH_CONCURRENCY) {
+      const chunk = callIds.slice(index, index + CALL_EXTRAS_PREFETCH_CONCURRENCY);
+      await Promise.all(chunk.map((callId) => get().fetchCallExtraData(callId, force)));
+    }
   },
   fetchCallPriorities: async () => {
     set({ isLoading: true, error: null });

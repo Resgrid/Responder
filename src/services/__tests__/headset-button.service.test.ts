@@ -102,6 +102,26 @@ describe('HeadsetButtonService', () => {
       await headsetButtonService.initialize();
       // Should not throw
     });
+
+    it('should set up listeners once when two callers initialize concurrently', async () => {
+      // Reset so this test exercises a cold start.
+      (headsetButtonService as any).isInitialized = false;
+      (headsetButtonService as any).initializePromise = null;
+      (headsetButtonService as any).subscriptions = [];
+
+      // Resolve on a later microtask so both callers are in flight at the same time.
+      const setupSpy = jest.spyOn(headsetButtonService as any, 'setupPlatformListeners').mockImplementation(() => Promise.resolve().then(() => Promise.resolve()));
+
+      // livekit-store and use-headset-button-ptt both call initialize() on mount.
+      await Promise.all([headsetButtonService.initialize(), headsetButtonService.initialize()]);
+
+      // Without the in-flight promise both callers passed the isInitialized guard and each
+      // registered its own 'headset-button' listener, so every press was handled twice.
+      expect(setupSpy).toHaveBeenCalledTimes(1);
+      expect((headsetButtonService as any).isInitialized).toBe(true);
+
+      setupSpy.mockRestore();
+    });
   });
 
   describe('Configuration', () => {

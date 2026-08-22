@@ -1,5 +1,8 @@
 {
   "app": {
+    "open_menu": "Abrir menú",
+    "realtime_offline_description": "Reconectando. Es posible que no aparezcan nuevas llamadas ni mensajes.",
+    "realtime_offline_title": "Actualizaciones en vivo no disponibles",
     "title": "Resgrid Responder"
   },
   "audio_streams": {
@@ -26,15 +29,42 @@
     "type": "Tipo"
   },
   "bluetooth": {
+    "audio": "Audio",
+    "audio_active": "Audio Activo",
+    "audio_capable": "Compatible con Audio",
     "audio_device": "Auricular BT",
     "available_devices": "Dispositivos Disponibles",
     "bluetooth_not_ready": "Bluetooth está {{state}}. Por favor habilita Bluetooth.",
+    "button_control_available": "Control por botones disponible",
+    "button_event": {
+      "double_press": "{{button}} doble",
+      "long_press": "{{button}} largo"
+    },
+    "button_event_applied": "Aplicado",
+    "buttons": {
+      "mute": "Silenciar",
+      "ptt_start": "Inicio PTT",
+      "ptt_stop": "Fin PTT",
+      "unknown": "Desconocido",
+      "volume_down": "Volumen -",
+      "volume_up": "Volumen +"
+    },
+    "checking_status": "Comprobando el estado del Bluetooth...",
     "clear": "Limpiar",
+    "connect": "Conectar",
     "connected": "Conectado",
+    "connection_error": "Error de Conexión",
     "current_selection": "Selección Actual",
+    "disconnect": "Desconectar",
+    "livekit_active": "LiveKit Activo",
+    "mute": "Silenciar",
     "no_device_selected": "Ningún dispositivo seleccionado",
     "no_devices_found": "No se encontraron dispositivos de audio Bluetooth",
     "not_connected": "No conectado",
+    "powered_off_message": "El Bluetooth está desactivado. Actívalo para conectar dispositivos de audio.",
+    "recent_button_events": "Eventos de botones recientes",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
     "scan": "Escanear",
     "scan_again": "Escanear de Nuevo",
     "scan_error_message": "No se pueden escanear dispositivos Bluetooth",
@@ -44,9 +74,14 @@
     "selected": "Seleccionado",
     "selection_error_message": "No se puede guardar el dispositivo preferido",
     "selection_error_title": "Error de Selección",
+    "start_scanning": "Iniciar Escaneo",
+    "stop_scan": "Detener Escaneo",
     "supports_mic_control": "Control de Micrófono",
     "tap_scan_to_find_devices": "Toca 'Escanear' para encontrar dispositivos de audio Bluetooth",
-    "unknown_device": "Dispositivo Desconocido"
+    "title": "Audio Bluetooth",
+    "unauthorized_message": "Permiso de Bluetooth denegado. Concede los permisos de Bluetooth en Ajustes.",
+    "unknown_device": "Dispositivo Desconocido",
+    "unmute": "Activar sonido"
   },
   "calendar": {
     "allDay": "Todo el día",
@@ -144,7 +179,8 @@
     "title": "Imágenes de la llamada",
     "upload": "Subir",
     "upload_error": "Error al subir la imagen. Por favor, inténtalo de nuevo.",
-    "upload_success": "Imagen subida exitosamente"
+    "upload_success": "Imagen subida exitosamente",
+    "url_label": "URL: {{url}}"
   },
   "callNotes": {
     "addNote": "Añadir nota",
@@ -320,6 +356,10 @@
     "required_fields_missing": "Tu departamento exige estos campos antes de poder crear un aviso: {{fields}}",
     "roles": "Roles",
     "search": "Buscar llamadas...",
+    "search_address": "Buscar dirección",
+    "search_coordinates": "Buscar coordenadas",
+    "search_plus_code": "Buscar plus code",
+    "search_what3words": "Buscar dirección what3words",
     "select_active_call": "Seleccionar llamada activa",
     "select_address": "Seleccionar dirección",
     "select_address_placeholder": "Selecciona la dirección de la llamada",
@@ -391,6 +431,7 @@
     "message_deleted": "Este mensaje fue eliminado",
     "moderator_delete": "Eliminar (moderador)",
     "moderator_removed": "Eliminado por el moderador",
+    "new_conversation": "Nueva conversación",
     "new_direct_message": "Nuevo mensaje directo",
     "new_group": "Nuevo grupo",
     "no_gifs": "No se encontraron GIF",
@@ -468,6 +509,7 @@
     "all": "Todo",
     "back": "Atrás",
     "cancel": "Cancelar",
+    "clear_search": "Borrar búsqueda",
     "close": "Cerrar",
     "confirm": "Confirmar",
     "confirm_location": "Confirmar ubicación",
@@ -618,6 +660,7 @@
     "staffing": {
       "add_note": "Agregar Nota",
       "confirm_staffing": "Confirmar Personal: {{staffing}}",
+      "missing_required_info": "Falta información requerida",
       "no_options_available": "No hay opciones de personal disponibles",
       "no_staffing_options": "No hay opciones de personal disponibles",
       "note": "Nota",
@@ -727,6 +770,7 @@
     "audio_settings": "Configuración de audio",
     "connected_to_room": "Conectado al canal",
     "connecting": "Conectando...",
+    "connection_failed": "No se pudo unir al canal de voz",
     "disconnect": "Desconectar",
     "double_click_action": "Acción de doble clic",
     "headset_button_ptt": "PTT con auriculares",
@@ -897,6 +941,11 @@
       "subject_required": "El asunto es obligatorio"
     }
   },
+  "not_found": {
+    "go_home": "¡Ir a la pantalla de inicio!",
+    "message": "Esta pantalla no existe.",
+    "title": "¡Ups!"
+  },
   "notes": {
     "actions": {
       "add": "Añadir nota",
@@ -917,6 +966,7 @@
     "title": "Notas"
   },
   "notifications": {
+    "additionalInformation": "Información adicional",
     "bulkDeleteError": "Error al eliminar las notificaciones",
     "bulkDeleteSuccess": "{{count}} notificación{{count, plural, one {} other {es}}} eliminada{{count, plural, one {} other {s}}}",
     "confirmDelete": {
@@ -928,12 +978,31 @@
     "deselectAll": "Deseleccionar Todo",
     "empty": "No hay actualizaciones disponibles",
     "loadError": "No se pueden cargar las notificaciones",
+    "notAvailable": "N/D",
+    "notification": "Notificación",
     "selectAll": "Seleccionar Todo",
     "selectedCount": "{{count}} seleccionadas",
-    "title": "Notificaciones"
+    "title": "Notificaciones",
+    "viewReference": "Ver {{referenceType}}"
   },
   "onboarding": {
-    "message": "Bienvenido al sitio de la aplicación obytes"
+    "get_started": "Comencemos",
+    "message": "Bienvenido al sitio de la aplicación obytes",
+    "skip": "Omitir",
+    "slides": {
+      "calls": {
+        "description": "Consulta sin esfuerzo la información de las llamadas e interactúa con tu equipo para una respuesta de emergencia eficiente",
+        "title": "Interactúa con las llamadas"
+      },
+      "notifications": {
+        "description": "Recibe alertas inmediatas de emergencias y actualizaciones importantes de tu departamento",
+        "title": "Notificaciones instantáneas"
+      },
+      "responder": {
+        "description": "Gestiona tu estado y tu dotación e interactúa con tu organización en tiempo real",
+        "title": "Resgrid Responder"
+      }
+    }
   },
   "personnel": {
     "contactInformation": "Información de Contacto",
@@ -1050,15 +1119,6 @@
     "view_chat": "Ver chat",
     "view_message": "Ver mensajes"
   },
-  "roles": {
-    "modal": {
-      "title": "Asignaciones de roles de unidad"
-    },
-    "selectUser": "Seleccionar usuario",
-    "status": "{{active}} de {{total}} roles activos",
-    "tap_to_manage": "Toca para gestionar roles",
-    "unassigned": "Sin asignar"
-  },
   "settings": {
     "about": "Acerca de",
     "account": "Cuenta",
@@ -1092,6 +1152,8 @@
     "french": "Francés",
     "general": "General",
     "generale": "General",
+    "geolocation_hub_connected": "Conectado al concentrador.",
+    "geolocation_hub_connecting": "Conectando al concentrador...",
     "german": "Alemán",
     "github": "Github",
     "greek": "Griego",
@@ -1325,6 +1387,8 @@
       "effective": "Vigente",
       "expires": "Expira",
       "instructions": "Instrucciones",
+      "load_error": "Alerta no disponible",
+      "load_error_description": "No se pudo cargar esta alerta meteorológica. Puede que haya caducado o que la solicitud fallara.",
       "metadata": "Detalles",
       "onset": "Inicio",
       "sender": "Remitente",

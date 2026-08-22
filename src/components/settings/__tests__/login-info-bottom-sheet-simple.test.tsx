@@ -205,15 +205,16 @@ describe('LoginInfoBottomSheet', () => {
     expect(passwordField.props.placeholder).toBe('settings.enter_password');
   });
 
-  it('uses KeyboardAvoidingView for iOS', () => {
+  it('pads the sheet by the keyboard height instead of nesting a KeyboardAvoidingView', () => {
     render(<LoginInfoBottomSheet {...defaultProps} />);
 
-    // KeyboardAvoidingView should be present in the rendered output
-    // We can verify it exists by checking the component tree structure
-    const vstack = screen.getByTestId('vstack');
-    expect(vstack).toBeTruthy();
-    // The VStack is wrapped by RNKeyboardAvoidingView, so we need to go up one more level
-    expect(vstack.parent?.parent?.type).toBe('RNKeyboardAvoidingView');
+    // Sheets live in their own native modal window, so a nested KeyboardAvoidingView would
+    // shift the content a second keyboard-height out of view. Padding ActionsheetContent is
+    // the single sanctioned mechanism — see src/hooks/use-keyboard-height.ts.
+    expect(screen.queryByTestId('vstack')?.parent?.parent?.type).not.toBe('RNKeyboardAvoidingView');
+
+    const content = screen.getByTestId('actionsheet-content');
+    expect(content.props.style).toEqual(expect.objectContaining({ paddingBottom: expect.any(Number) }));
   });
 
   it('renders cancel and save buttons', () => {

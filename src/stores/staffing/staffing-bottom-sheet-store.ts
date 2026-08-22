@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { savePersonnelStaffing } from '@/api/personnel/personnelStaffing';
 import { useAuthStore } from '@/lib/auth';
+import { translate } from '@/lib/i18n/utils';
 import { SavePersonStaffingInput } from '@/models/v4/personnelStaffing/savePersonStaffingInput';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -86,7 +87,7 @@ export const useStaffingBottomSheetStore = create<StaffingBottomSheetStore>((set
     const { fetchCurrentUserInfo } = useHomeStore.getState();
 
     if (!userId || !selectedStaffing) {
-      showToast('error', 'Missing required information');
+      showToast('error', translate('home.staffing.missing_required_info'));
       return;
     }
 
@@ -105,10 +106,10 @@ export const useStaffingBottomSheetStore = create<StaffingBottomSheetStore>((set
       await savePersonnelStaffing(staffing);
       await fetchCurrentUserInfo();
 
-      showToast('success', 'Staffing updated successfully');
+      showToast('success', translate('home.staffing.updated_successfully'));
       get().reset();
     } catch (error) {
-      showToast('error', 'Failed to update staffing');
+      showToast('error', translate('home.staffing.update_failed'));
     } finally {
       set({ isLoading: false });
     }

@@ -15,7 +15,6 @@ import { LoginInfoBottomSheet } from '@/components/settings/login-info-bottom-sh
 import { RealtimeGeolocationItem } from '@/components/settings/realtime-geolocation-item';
 import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { ThemeItem } from '@/components/settings/theme-item';
-import { ToggleItem } from '@/components/settings/toggle-item';
 import { FocusAwareStatusBar, ScrollView } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Card } from '@/components/ui/card';
@@ -40,7 +39,7 @@ export default function Settings() {
   const [showServerUrl, setShowServerUrl] = React.useState(false);
   const [showUnitSelection, setShowUnitSelection] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { units } = useUnitsStore();
+  const units = useUnitsStore((state) => state.units);
 
   // Track analytics when view becomes visible
   useFocusEffect(

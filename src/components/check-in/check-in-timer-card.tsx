@@ -1,5 +1,4 @@
 import { Timer } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
@@ -22,7 +21,6 @@ interface CheckInTimerCardProps {
 
 export const CheckInTimerCard: React.FC<CheckInTimerCardProps> = React.memo(({ status, resolvedTargetName, onCheckIn, isCurrentUser }) => {
   const { t } = useTranslation();
-  const { colorScheme } = useColorScheme();
   const { progressPercent, formattedTime, statusColor, isOverdue, isWarning } = useCheckInTimer({
     elapsedMinutes: status.ElapsedMinutes,
     durationMinutes: status.DurationMinutes,
@@ -38,7 +36,7 @@ export const CheckInTimerCard: React.FC<CheckInTimerCardProps> = React.memo(({ s
   const checkInTitle = resolvedTitle || t('check_in.unknown_unit');
   const lastCheckInText = status.LastCheckIn ? t('check_in.minutes_ago', { count: status.ElapsedMinutes }) : t('check_in.status_ok');
 
-  const bgColor = colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-white';
+  const bgColor = 'bg-white dark:bg-neutral-800';
   const borderStyle = isOverdue ? { borderLeftColor: '#EF4444', borderLeftWidth: 4 } : isWarning ? { borderLeftColor: '#F59E0B', borderLeftWidth: 4 } : { borderLeftColor: '#22C55E', borderLeftWidth: 4 };
 
   return (

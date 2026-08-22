@@ -17,7 +17,6 @@ import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPrio
 import { type CallExtraDataResultData } from '@/models/v4/calls/callExtraDataResultData';
 import type { CallResultData } from '@/models/v4/calls/callResultData';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useRolesStore } from '@/stores/roles/store';
@@ -135,7 +134,6 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({ 
   const { t } = useTranslation();
   const currentUser = useHomeStore((state) => state.currentUser);
   const roles = useRolesStore((state) => state.roles);
-  const activeUnitId = useCoreStore((state) => state.activeUnitId);
   const fetchCallExtraData = useCallsStore((state) => state.fetchCallExtraData);
   const cachedCallExtraData = useCallsStore((state) => state.callExtrasById[call.CallId]);
   const textColor = invertColor(getColor(call, priority), true);
@@ -147,7 +145,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({ 
     }
   }, [cachedCallExtraData, call.CallId, callExtraData, fetchCallExtraData]);
 
-  const assignmentContext = useMemo(() => buildCallAssignmentContext(currentUser, roles, activeUnitId), [activeUnitId, currentUser, roles]);
+  const assignmentContext = useMemo(() => buildCallAssignmentContext(currentUser, roles), [currentUser, roles]);
   const isAssignedToCurrentUser = useMemo(() => isCurrentUserOnCall(resolvedCallExtraData, assignmentContext), [assignmentContext, resolvedCallExtraData]);
 
   return (

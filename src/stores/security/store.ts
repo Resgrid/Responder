@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -60,17 +61,28 @@ export const securityStore = create<SecurityState>()(
   )
 );
 
+/**
+ * Field-level selectors plus a memoized result: subscribing to the whole store and rebuilding
+ * the permission object (and its `isUserGroupAdmin` closure) on every render handed every call
+ * site a fresh identity each pass, defeating the memoization downstream of it.
+ */
 export const useSecurityStore = () => {
-  const store = securityStore();
-  return {
-    error: store.error,
-    getRights: store.getRights,
-    isUserDepartmentAdmin: store.rights?.IsAdmin,
-    isUserGroupAdmin: (groupId: number) => store.rights?.Groups.some((right) => right.GroupId === groupId && right.IsGroupAdmin),
-    canUserCreateCalls: store.rights?.CanCreateCalls,
-    canUserCreateNotes: store.rights?.CanAddNote,
-    canUserCreateMessages: store.rights?.CanCreateMessage,
-    canUserViewPII: store.rights?.CanViewPII,
-    departmentCode: store.rights?.DepartmentCode,
-  };
+  const error = securityStore((state) => state.error);
+  const getRights = securityStore((state) => state.getRights);
+  const rights = securityStore((state) => state.rights);
+
+  return useMemo(
+    () => ({
+      error,
+      getRights,
+      isUserDepartmentAdmin: rights?.IsAdmin,
+      isUserGroupAdmin: (groupId: number) => rights?.Groups.some((right) => right.GroupId === groupId && right.IsGroupAdmin),
+      canUserCreateCalls: rights?.CanCreateCalls,
+      canUserCreateNotes: rights?.CanAddNote,
+      canUserCreateMessages: rights?.CanCreateMessage,
+      canUserViewPII: rights?.CanViewPII,
+      departmentCode: rights?.DepartmentCode,
+    }),
+    [error, getRights, rights]
+  );
 };

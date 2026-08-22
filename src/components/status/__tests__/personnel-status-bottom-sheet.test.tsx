@@ -202,6 +202,16 @@ jest.mock('lucide-react-native', () => ({
 
 const mockUseCoreStore = useCoreStore as jest.MockedFunction<typeof useCoreStore>;
 const mockUseCallsStore = useCallsStore as jest.MockedFunction<typeof useCallsStore>;
+
+// The component selects field by field, so the mocked store hook must apply the selector
+// rather than hand back the whole state object.
+const applySelector = (mock: unknown, state: unknown): void => {
+  (mock as jest.Mock).mockImplementation((...args: unknown[]) => {
+    const selector = args[0] as ((s: unknown) => unknown) | undefined;
+    return selector ? selector(state) : state;
+  });
+};
+
 const mockUsePersonnelStatusBottomSheetStore = usePersonnelStatusBottomSheetStore as jest.MockedFunction<typeof usePersonnelStatusBottomSheetStore>;
 const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
 
@@ -326,11 +336,11 @@ describe('PersonnelStatusBottomSheet', () => {
       trackEvent: mockTrackEvent,
     });
 
-    mockUseCoreStore.mockReturnValue({
+    applySelector(mockUseCoreStore, {
       activeCall: null,
     });
 
-    mockUseCallsStore.mockReturnValue({
+    applySelector(mockUseCallsStore, {
       ...mockCallsStore,
       calls: mockCalls,
     });
@@ -545,7 +555,7 @@ describe('PersonnelStatusBottomSheet', () => {
     });
 
     it('should render "no calls available" when no calls exist', () => {
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: [],
         isLoading: false,
@@ -879,7 +889,7 @@ describe('PersonnelStatusBottomSheet', () => {
       const mockSetSelectedCall = jest.fn();
       const activeCall = mockCalls[0];
 
-      mockUseCoreStore.mockReturnValue({
+      applySelector(mockUseCoreStore, {
         activeCall: activeCall,
       });
 
@@ -906,7 +916,7 @@ describe('PersonnelStatusBottomSheet', () => {
       const mockFetchCalls = jest.fn();
       const mockFetchGroups = jest.fn();
 
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: mockCalls,
         fetchCalls: mockFetchCalls,
@@ -931,7 +941,7 @@ describe('PersonnelStatusBottomSheet', () => {
       const mockFetchCalls = jest.fn();
       const mockFetchGroups = jest.fn();
 
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: mockCalls,
         fetchCalls: mockFetchCalls,
@@ -952,7 +962,7 @@ describe('PersonnelStatusBottomSheet', () => {
     });
 
     it('should display loading spinner when fetching calls', () => {
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: [],
         isLoading: true,
@@ -974,7 +984,7 @@ describe('PersonnelStatusBottomSheet', () => {
     });
 
     it('should hide loading spinner and show calls when loading is complete', () => {
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: mockCalls,
         isLoading: false,
@@ -998,7 +1008,7 @@ describe('PersonnelStatusBottomSheet', () => {
     });
 
     it('should show loading spinner instead of "no calls available" message when loading', () => {
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: [],
         isLoading: true,
@@ -1130,7 +1140,7 @@ describe('PersonnelStatusBottomSheet', () => {
     it('should track analytics when call is selected', () => {
       const mockSetSelectedCall = jest.fn();
 
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: mockCalls,
       });
@@ -1165,7 +1175,7 @@ describe('PersonnelStatusBottomSheet', () => {
     it('should track analytics when group is selected', () => {
       const mockSetSelectedGroup = jest.fn();
 
-      mockUseCallsStore.mockReturnValue({
+      applySelector(mockUseCallsStore, {
         ...mockCallsStore,
         calls: mockCalls,
       });

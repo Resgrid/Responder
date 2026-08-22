@@ -2,20 +2,8 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { saveCallImage } from '@/api/calls/callFiles';
 import { performCheckIn } from '@/api/calls/check-in-timers';
-import { setUnitLocation } from '@/api/units/unitLocation';
-import { saveUnitStatus } from '@/api/units/unitStatuses';
 import { logger } from '@/lib/logging';
-import {
-  type QueuedCallImageUploadEvent,
-  type QueuedCheckInEvent,
-  type QueuedEvent,
-  QueuedEventStatus,
-  QueuedEventType,
-  type QueuedLocationUpdateEvent,
-  type QueuedUnitStatusEvent,
-} from '@/models/offline-queue/queued-event';
-import { SaveUnitLocationInput } from '@/models/v4/unitLocation/saveUnitLocationInput';
-import { SaveUnitStatusInput, SaveUnitStatusRoleInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
+import { type QueuedCallImageUploadEvent, type QueuedCheckInEvent, type QueuedEvent, QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
 
 class OfflineEventManager {
@@ -39,18 +27,29 @@ class OfflineEventManager {
   }
 
   /**
-   * Initialize the offline event manager
+   * Initialize the offline event manager. Safe to call more than once: the store's network
+   * listener registration and startProcessing are both idempotent.
    */
   public initialize(): void {
     logger.info({
       message: 'Initializing offline event manager',
     });
 
-    // Initialize network listener
+    // Initialize network listener (idempotent in the store)
     useOfflineQueueStore.getState().initializeNetworkListener();
 
     // Start processing when app becomes active
     this.handleAppStateChange(AppState.currentState);
+  }
+
+  /**
+   * Bring the manager online the first time work is queued. Without this the processing
+   * loop only started on an AppState transition to 'active', so an event queued while
+   * offline sat untouched until the user backgrounded and reopened the app.
+   */
+  private ensureProcessing(): void {
+    useOfflineQueueStore.getState().initializeNetworkListener();
+    this.startProcessing();
   }
 
   /**
@@ -101,67 +100,6 @@ class OfflineEventManager {
   }
 
   /**
-   * Add a unit status event to the queue
-   */
-  public queueUnitStatusEvent(
-    unitId: string,
-    statusType: string,
-    note?: string,
-    respondingTo?: string,
-    roles?: { roleId: string; userId: string }[],
-    gpsData?: {
-      latitude?: string;
-      longitude?: string;
-      accuracy?: string;
-      altitude?: string;
-      altitudeAccuracy?: string;
-      speed?: string;
-      heading?: string;
-    },
-    respondingToType?: number | null,
-    eventId?: string
-  ): string {
-    const date = new Date();
-    const data = {
-      unitId,
-      statusType,
-      note,
-      respondingTo,
-      respondingToType,
-      timestamp: date.toISOString(),
-      timestampUtc: date.toUTCString().replace('UTC', 'GMT'),
-      eventId,
-      roles,
-      latitude: gpsData?.latitude,
-      longitude: gpsData?.longitude,
-      accuracy: gpsData?.accuracy,
-      altitude: gpsData?.altitude,
-      altitudeAccuracy: gpsData?.altitudeAccuracy,
-      speed: gpsData?.speed,
-      heading: gpsData?.heading,
-    };
-
-    return useOfflineQueueStore.getState().addEvent(QueuedEventType.UNIT_STATUS, data);
-  }
-
-  /**
-   * Add a location update event to the queue
-   */
-  public queueLocationUpdateEvent(unitId: string, latitude: number, longitude: number, accuracy?: number, heading?: number, speed?: number): string {
-    const data = {
-      unitId,
-      latitude,
-      longitude,
-      accuracy,
-      heading,
-      speed,
-      timestamp: new Date().toISOString(),
-    };
-
-    return useOfflineQueueStore.getState().addEvent(QueuedEventType.LOCATION_UPDATE, data);
-  }
-
-  /**
    * Add a call image upload event to the queue
    */
   public queueCallImageUploadEvent(callId: string, userId: string, note: string, name: string, filePath: string, latitude?: number, longitude?: number): string {
@@ -175,7 +113,9 @@ class OfflineEventManager {
       filePath,
     };
 
-    return useOfflineQueueStore.getState().addEvent(QueuedEventType.CALL_IMAGE_UPLOAD, data);
+    const queuedId = useOfflineQueueStore.getState().addEvent(QueuedEventType.CALL_IMAGE_UPLOAD, data);
+    this.ensureProcessing();
+    return queuedId;
   }
 
   /**
@@ -245,12 +185,6 @@ class OfflineEventManager {
 
     try {
       switch (event.type) {
-        case QueuedEventType.UNIT_STATUS:
-          await this.processUnitStatusEvent(event as QueuedUnitStatusEvent);
-          break;
-        case QueuedEventType.LOCATION_UPDATE:
-          await this.processLocationUpdateEvent(event as QueuedLocationUpdateEvent);
-          break;
         case QueuedEventType.CALL_IMAGE_UPLOAD:
           await this.processCallImageUploadEvent(event as QueuedCallImageUploadEvent);
           break;
@@ -286,68 +220,6 @@ class OfflineEventManager {
   }
 
   /**
-   * Process unit status event
-   */
-  private async processUnitStatusEvent(event: QueuedUnitStatusEvent): Promise<void> {
-    const input = new SaveUnitStatusInput();
-    input.Id = event.data.unitId;
-    input.Type = event.data.statusType;
-    input.Note = event.data.note || '';
-    input.RespondingTo = event.data.respondingTo || '0';
-    input.RespondingToType = event.data.respondingToType ?? null;
-    input.Timestamp = event.data.timestamp;
-    input.TimestampUtc = event.data.timestampUtc;
-    input.EventId = event.data.eventId || '';
-
-    // Always set GPS coordinates (even if empty)
-    if (event.data.latitude && event.data.longitude) {
-      input.Latitude = event.data.latitude;
-      input.Longitude = event.data.longitude;
-      input.Accuracy = event.data.accuracy || '0';
-      input.Altitude = event.data.altitude || '0';
-      input.AltitudeAccuracy = event.data.altitudeAccuracy || '0';
-      input.Speed = event.data.speed || '0';
-      input.Heading = event.data.heading || '0';
-    } else {
-      // Set empty strings when GPS data is not available
-      input.Latitude = '';
-      input.Longitude = '';
-      input.Accuracy = '';
-      input.Altitude = '';
-      input.AltitudeAccuracy = '';
-      input.Speed = '';
-      input.Heading = '';
-    }
-
-    if (event.data.roles) {
-      input.Roles = event.data.roles.map((role) => {
-        const roleInput = new SaveUnitStatusRoleInput();
-        roleInput.RoleId = role.roleId;
-        roleInput.UserId = role.userId;
-        return roleInput;
-      });
-    }
-
-    await saveUnitStatus(input);
-  }
-
-  /**
-   * Process location update event
-   */
-  private async processLocationUpdateEvent(event: QueuedLocationUpdateEvent): Promise<void> {
-    const input = new SaveUnitLocationInput();
-    input.UnitId = event.data.unitId;
-    input.Latitude = event.data.latitude.toString();
-    input.Longitude = event.data.longitude.toString();
-    input.Accuracy = event.data.accuracy?.toString() || '';
-    input.Heading = event.data.heading?.toString() || '';
-    input.Speed = event.data.speed?.toString() || '';
-    input.Timestamp = event.data.timestamp;
-
-    await setUnitLocation(input);
-  }
-
-  /**
    * Process call image upload event
    */
   private async processCallImageUploadEvent(event: QueuedCallImageUploadEvent): Promise<void> {
@@ -368,7 +240,9 @@ class OfflineEventManager {
       timestamp: new Date().toISOString(),
     };
 
-    return useOfflineQueueStore.getState().addEvent(QueuedEventType.CHECK_IN, data);
+    const queuedId = useOfflineQueueStore.getState().addEvent(QueuedEventType.CHECK_IN, data);
+    this.ensureProcessing();
+    return queuedId;
   }
 
   /**

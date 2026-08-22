@@ -1,4 +1,3 @@
-import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -45,7 +44,6 @@ const CARD_ONLY_CHECK_IN_TYPES = new Set([1]);
 
 export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, onClose, callId, onSubmit, isLoading, defaultCheckInType = 0, defaultUnitId, targetName, availableCheckInTypes }) => {
   const { t } = useTranslation();
-  const { colorScheme } = useColorScheme();
   const [selectedType, setSelectedType] = useState(defaultCheckInType);
   const [note, setNote] = useState('');
   const latitude = useLocationStore((state) => state.latitude);
@@ -78,8 +76,8 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
     onClose();
   }, [callId, selectedType, defaultUnitId, latitude, longitude, note, onSubmit, onClose]);
 
-  const activeBg = colorScheme === 'dark' ? 'bg-primary-700' : 'bg-primary-100';
-  const inactiveBg = colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-gray-100';
+  const activeBg = 'bg-primary-100 dark:bg-primary-700';
+  const inactiveBg = 'bg-gray-100 dark:bg-neutral-800';
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={onClose} isLoading={isLoading} loadingText={t('check_in.confirm_check_in')} testID="check-in-bottom-sheet">

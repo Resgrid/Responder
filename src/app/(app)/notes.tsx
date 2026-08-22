@@ -15,11 +15,17 @@ import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
 import { RefreshControl } from '@/components/ui/refresh-control';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { type NoteResultData } from '@/models/v4/notes/noteResultData';
 import { useNotesStore } from '@/stores/notes/store';
 
 export default function Notes() {
   const { t } = useTranslation();
-  const { notes, searchQuery, setSearchQuery, selectNote, isLoading, fetchNotes } = useNotesStore();
+  const notes = useNotesStore((state) => state.notes);
+  const searchQuery = useNotesStore((state) => state.searchQuery);
+  const setSearchQuery = useNotesStore((state) => state.setSearchQuery);
+  const selectNote = useNotesStore((state) => state.selectNote);
+  const isLoading = useNotesStore((state) => state.isLoading);
+  const fetchNotes = useNotesStore((state) => state.fetchNotes);
   const { trackEvent } = useAnalytics();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -90,6 +96,10 @@ export default function Notes() {
     [selectNote, trackEvent]
   );
 
+  const keyExtractor = React.useCallback((item: NoteResultData) => item.NoteId, []);
+
+  const renderNoteItem = React.useCallback(({ item }: { item: NoteResultData }) => <NoteCard note={item} onPress={handleNoteSelect} />, [handleNoteSelect]);
+
   return (
     <View className="flex-1 bg-gray-50 dark:bg-gray-900">
       <FocusAwareStatusBar />
@@ -100,7 +110,7 @@ export default function Notes() {
           </InputSlot>
           <InputField placeholder={t('notes.search')} value={searchQuery} onChangeText={handleSearchChange} />
           {searchQuery ? (
-            <InputSlot className="pr-3" onPress={handleClearSearch}>
+            <InputSlot className="pr-3" onPress={handleClearSearch} accessibilityRole="button" accessibilityLabel={t('common.clear_search')}>
               <InputIcon as={X} />
             </InputSlot>
           ) : null}
@@ -111,8 +121,8 @@ export default function Notes() {
         ) : filteredNotes.length > 0 ? (
           <FlashList
             data={filteredNotes}
-            keyExtractor={(item) => item.NoteId}
-            renderItem={({ item }) => <NoteCard note={item} onPress={handleNoteSelect} />}
+            keyExtractor={keyExtractor}
+            renderItem={renderNoteItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}

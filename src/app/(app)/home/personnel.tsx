@@ -93,7 +93,7 @@ export default function Personnel() {
               </InputSlot>
               <InputField placeholder={t('personnel.search', 'Search personnel...')} value={searchQuery} onChangeText={setSearchQuery} />
               {searchQuery ? (
-                <InputSlot className="pr-3" onPress={() => setSearchQuery('')} testID="clear-search">
+                <InputSlot className="pr-3" onPress={() => setSearchQuery('')} testID="clear-search" accessibilityRole="button" accessibilityLabel={t('common.clear_search')}>
                   <InputIcon as={X} />
                 </InputSlot>
               ) : null}

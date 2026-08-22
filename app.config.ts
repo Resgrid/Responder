@@ -260,6 +260,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           targetSdkVersion: 36,
         },
         ios: {
+          // The real floor for this dependency set: React Native 0.85's
+          // `min_ios_version_supported` and every Expo/RN pod top out at 16.4, and the
+          // Live Activity extension guards itself with `@available(iOS 16.2, *)`.
+          // Anything higher only locks responders out of installing the app.
           deploymentTarget: '18.1',
         },
       },

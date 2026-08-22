@@ -13,7 +13,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { extractDatePart, resolveAllDayEndDate } from '@/lib/utils';
+import { extractDatePart, parseDateISOString, resolveAllDayEndDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { defaultWebViewProps, generateWebViewHtml } from '@/utils/webview-html';
 
@@ -23,12 +23,27 @@ interface CalendarCardProps {
   testID?: string;
 }
 
+// API timestamps may omit a timezone designator — parseDateISOString reads those as local time,
+// while new Date() shifts them by the device offset or yields "Invalid Date" on Hermes.
+const safeParseDate = (dateString: string): Date | null => {
+  try {
+    const date = parseDateISOString(dateString);
+    return Number.isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
+};
+
 export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testID }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], {
+    const date = safeParseDate(dateString);
+    if (!date) {
+      return '';
+    }
+    return date.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -36,16 +51,20 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
 
   // For all-day events the API stores midnight UTC as the date portion.
   // Extract the date string directly to avoid timezone-induced day shifts.
-  const parseDateForDisplay = (dateString: string, isAllDay: boolean): Date => {
+  const parseDateForDisplay = (dateString: string, isAllDay: boolean): Date | null => {
     if (isAllDay) {
       const parts = extractDatePart(dateString).split('-');
       return new Date(parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10) - 1, parseInt(parts[2] ?? '0', 10));
     }
-    return new Date(dateString);
+    return safeParseDate(dateString);
   };
 
   const formatDate = (dateString: string, isAllDay: boolean = false) => {
-    return parseDateForDisplay(dateString, isAllDay).toLocaleDateString([], {
+    const date = parseDateForDisplay(dateString, isAllDay);
+    if (!date) {
+      return '';
+    }
+    return date.toLocaleDateString([], {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

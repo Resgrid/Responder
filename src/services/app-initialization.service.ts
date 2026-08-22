@@ -103,7 +103,7 @@ class AppInitializationService {
   private async _initializeCallKeep(): Promise<void> {
     try {
       await callKeepService.setup({
-        appName: 'Resgrid Unit',
+        appName: 'Resgrid Responder',
         maximumCallGroups: 1,
         maximumCallsPerCallGroup: 1,
         includesCallsInRecents: false,

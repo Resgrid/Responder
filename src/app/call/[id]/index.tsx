@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { RouteIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
@@ -41,6 +41,30 @@ import { useSecurityStore } from '@/stores/security/store';
 import { useToastStore } from '@/stores/toast/store';
 import { generateWebViewHtml, sanitizeHtmlContent } from '@/utils/webview-html';
 
+// Shared shell for the call's own rich-text blocks. `body` must already be sanitized.
+const buildRichTextHtml = (body: string, textColor: string, padding: string): string => `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+      <style>
+        body {
+          color: ${textColor};
+          font-family: system-ui, -apple-system, sans-serif;
+          margin: 0;
+          padding: ${padding};
+          font-size: 16px;
+          line-height: 1.5;
+        }
+        * {
+          max-width: 100%;
+        }
+      </style>
+    </head>
+    <body>${body}</body>
+  </html>
+`;
+
 export default function CallDetail() {
   const { id } = useLocalSearchParams();
   const callId = Array.isArray(id) ? id[0] : (id as string | undefined);
@@ -56,7 +80,16 @@ export default function CallDetail() {
     latitude: null,
     longitude: null,
   });
-  const { call, callExtraData, callPriority, isLoading, error, fetchCallDetail, reset } = useCallDetailStore();
+  // Per-field selectors: an object destructure subscribes to every store write, so unrelated
+  // updates re-rendered this screen (and with it two WebViews).
+  const call = useCallDetailStore((state) => state.call);
+  const callExtraData = useCallDetailStore((state) => state.callExtraData);
+  const callPriority = useCallDetailStore((state) => state.callPriority);
+  const isLoading = useCallDetailStore((state) => state.isLoading);
+  const error = useCallDetailStore((state) => state.error);
+  const fetchCallDetail = useCallDetailStore((state) => state.fetchCallDetail);
+  const reset = useCallDetailStore((state) => state.reset);
+  // useSecurityStore is a hook that already selects per field and memoizes its result.
   const { canUserCreateCalls } = useSecurityStore();
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
@@ -74,11 +107,13 @@ export default function CallDetail() {
   const hasDestination = destinationDisplayName.length > 0;
   const hasDestinationCoordinates = isValidCoordinates(call?.DestinationLatitude ?? undefined, call?.DestinationLongitude ?? undefined);
 
-  // Get current user location from the location store. Selected field by field: an object
-  // selector builds a new reference on every store write, so the whole screen re-rendered
-  // on each GPS fix.
-  const userLatitude = useLocationStore((state) => state.latitude);
-  const userLongitude = useLocationStore((state) => state.longitude);
+  // The user's location is only ever read at the moment a route is opened. Subscribing to it --
+  // even field by field -- re-rendered the whole screen, tabs and WebViews included, on every GPS
+  // fix, which is continuous while responding. Read it non-reactively from the handlers instead.
+
+  // Overdue check-in count for the tab badge. A primitive selector keeps the subscription cheap
+  // and lets the badge stay live now that the tab list is memoized.
+  const overdueCheckInCount = useCheckInStore((state) => state.timerStatuses.filter((status) => status.Status === 'Overdue').length);
 
   const handleBack = () => {
     router.back();
@@ -149,26 +184,36 @@ export default function CallDetail() {
     }
   }, [callId, fetchCallDetail, reset]);
 
-  // Track analytics when view becomes visible
+  // Track analytics when view becomes visible. Keyed on the call id and read through getState():
+  // depending on the call/coordinates/extra-data object identities fired three or four duplicate
+  // "viewed" events per visit as each piece of data landed.
   useFocusEffect(
     useCallback(() => {
-      if (call) {
-        trackEvent('call_detail_viewed', {
-          timestamp: new Date().toISOString(),
-          callId: call.CallId,
-          callNumber: call.Number,
-          callType: call.Type,
-          priority: callPriority?.Name || 'Unknown',
-          hasCoordinates: coordinates.latitude != null && coordinates.longitude != null,
-          notesCount: call.NotesCount || 0,
-          imagesCount: call.ImgagesCount || 0,
-          filesCount: call.FileCount || 0,
-          hasProtocols: !!callExtraData?.Protocols?.length,
-          hasDispatches: !!callExtraData?.Dispatches?.length,
-          hasActivity: !!callExtraData?.Activity?.length,
-        });
+      const viewedCall = useCallDetailStore.getState().call;
+
+      if (!viewedCall) {
+        return;
       }
-    }, [trackEvent, call, callPriority, coordinates, callExtraData])
+
+      const { callPriority: viewedPriority, callExtraData: viewedExtraData } = useCallDetailStore.getState();
+
+      trackEvent('call_detail_viewed', {
+        timestamp: new Date().toISOString(),
+        callId: viewedCall.CallId,
+        callNumber: viewedCall.Number,
+        callType: viewedCall.Type,
+        priority: viewedPriority?.Name || 'Unknown',
+        hasCoordinates: !!(viewedCall.Latitude && viewedCall.Longitude) || !!viewedCall.Geolocation,
+        notesCount: viewedCall.NotesCount || 0,
+        imagesCount: viewedCall.ImgagesCount || 0,
+        filesCount: viewedCall.FileCount || 0,
+        hasProtocols: !!viewedExtraData?.Protocols?.length,
+        hasDispatches: !!viewedExtraData?.Dispatches?.length,
+        hasActivity: !!viewedExtraData?.Activity?.length,
+      });
+      // Deliberately keyed on the call id only -- one event per call, per focus.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [trackEvent, call?.CallId])
   );
 
   useEffect(() => {
@@ -188,126 +233,15 @@ export default function CallDetail() {
     }
   }, [call]);
 
-  // Early return if callId is undefined
-  if (!callId) {
-    return (
-      <>
-        <Stack.Screen
-          options={{
-            title: t('call_detail.title'),
-            headerShown: true,
-            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
-            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
-          }}
-        />
-        <SafeAreaView className="size-full flex-1">
-          <FocusAwareStatusBar hidden={true} />
-          <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
-            <ZeroState heading={t('call_detail.invalid_call')} description={t('call_detail.call_id_missing')} isError={true} />
-            <Button onPress={handleBack} className="self-center">
-              <ButtonText>{t('common.go_back')}</ButtonText>
-            </Button>
-          </Box>
-        </SafeAreaView>
-      </>
-    );
-  }
-
-  /**
-   * Validates if coordinates are valid for routing
-   */
-  function isValidCoordinates(lat: number | null | undefined, lng: number | null | undefined): boolean {
-    // Check if coordinates exist and are valid numbers
-    if (lat === null || lat === undefined || lng === null || lng === undefined) {
-      return false;
-    }
-
-    // Check if coordinates are within valid ranges
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return false;
-    }
-
-    // Check if coordinates are not NaN
-    if (isNaN(lat) || isNaN(lng)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Opens the device's native maps application with directions to the call location
-   */
-  const handleRoute = async () => {
-    try {
-      // Track analytics for route action
-      trackEvent('call_route_opened', {
-        timestamp: new Date().toISOString(),
-        callId: call?.CallId || callId || '',
-        hasUserLocation: !!(userLatitude && userLongitude),
-        destinationAddress: call?.Address || '',
-      });
-
-      const latitude = coordinates.latitude ?? (call?.Latitude ? parseFloat(call.Latitude) : undefined);
-      const longitude = coordinates.longitude ?? (call?.Longitude ? parseFloat(call.Longitude) : undefined);
-
-      // Guard against invalid or missing coordinates
-      if (!isValidCoordinates(latitude, longitude)) {
-        const reason = latitude === undefined || longitude === undefined ? 'missing_coordinates' : latitude === 0 && longitude === 0 ? 'zeroed_coordinates' : 'invalid_coordinates';
-
-        logger.warn({
-          message: 'Cannot route to call: invalid coordinates',
-          context: { callId, latitude, longitude, address: call?.Address },
-        });
-
-        showToast('error', t('call_detail.no_location_for_routing'));
-
-        // Track failed route attempt with specific reason
-        trackEvent('call_route_failed', {
-          timestamp: new Date().toISOString(),
-          callId: call?.CallId || callId || '',
-          reason,
-          latitude: latitude?.toString() || 'undefined',
-          longitude: longitude?.toString() || 'undefined',
-        });
-        return;
-      }
-
-      const destinationName = call?.Address || t('call_detail.call_location');
-      const success = await openMapsWithDirections(latitude as number, longitude as number, destinationName, userLatitude ?? undefined, userLongitude ?? undefined);
-
-      if (!success) {
-        showToast('error', t('call_detail.failed_to_open_maps'));
-        // Track failed route attempt
-        trackEvent('call_route_failed', {
-          timestamp: new Date().toISOString(),
-          callId: call?.CallId || callId || '',
-          reason: 'failed_to_open_maps',
-        });
-      }
-    } catch (error) {
-      logger.error({
-        message: 'Failed to open maps for routing',
-        context: { error, callId, coordinates },
-      });
-      showToast('error', t('call_detail.failed_to_open_maps'));
-      // Track failed route attempt
-      trackEvent('call_route_failed', {
-        timestamp: new Date().toISOString(),
-        callId: call?.CallId || callId || '',
-        reason: 'exception',
-        error: error instanceof Error ? error.message : 'unknown_error',
-      });
-    }
-  };
-
-  const handleDestinationRoute = async () => {
+  const handleDestinationRoute = useCallback(async () => {
     if (!call || !hasDestinationCoordinates || call.DestinationLatitude == null || call.DestinationLongitude == null) {
       showToast('error', t('call_detail.no_location_for_routing'));
       return;
     }
 
     try {
+      const { latitude: userLatitude, longitude: userLongitude } = useLocationStore.getState();
+
       trackEvent('call_destination_route_opened', {
         timestamp: new Date().toISOString(),
         callId: call.CallId,
@@ -332,74 +266,22 @@ export default function CallDetail() {
       });
       showToast('error', t('call_detail.failed_to_open_maps'));
     }
-  };
+  }, [call, hasDestinationCoordinates, showToast, t, trackEvent, destinationTypeName, destinationDisplayName, callId]);
 
-  if (isLoading) {
-    return (
-      <>
-        <Stack.Screen
-          options={{
-            title: t('call_detail.title'),
-            headerShown: true,
-            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
-            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
-          }}
-        />
-        <View className="size-full flex-1">
-          <FocusAwareStatusBar hidden={true} />
-          <Loading />
-        </View>
-      </>
-    );
-  }
+  // The call's own rich-text blocks. Held in memos so the WebView `source` objects keep their
+  // identity across renders -- a fresh object makes the WebView reload its content.
+  const noteWebViewSource = useMemo(() => ({ html: buildRichTextHtml(sanitizeHtmlContent(call?.Note ?? ''), textColor, '0') }), [call?.Note, textColor]);
 
-  if (error) {
-    return (
-      <>
-        <Stack.Screen
-          options={{
-            title: t('call_detail.title'),
-            headerShown: true,
-            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
-            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
-          }}
-        />
-        <View className="size-full flex-1">
-          <FocusAwareStatusBar hidden={true} />
-          <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
-            <ZeroState heading={t('call_detail.not_found')} description={error} isError={true} />
-          </Box>
-        </View>
-      </>
-    );
-  }
+  const natureWebViewSource = useMemo(() => ({ html: buildRichTextHtml(sanitizeHtmlContent(call?.Nature ?? ''), textColor, '4px 0 16px') }), [call?.Nature, textColor]);
 
-  if (!call) {
-    return (
-      <>
-        <Stack.Screen
-          options={{
-            title: t('call_detail.title'),
-            headerShown: true,
-            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
-            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
-          }}
-        />
-        <SafeAreaView className="size-full flex-1">
-          <FocusAwareStatusBar hidden={true} />
-          <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
-            <Text className="text-center">{t('call_detail.not_found')}</Text>
-            <Button onPress={handleBack} className="self-center">
-              <ButtonText>{t('common.go_back')}</ButtonText>
-            </Button>
-          </Box>
-        </SafeAreaView>
-      </>
-    );
-  }
+  // Memoized: rebuilding this array on every render remounted two or more WebViews, which was
+  // visible jank for the whole time location streaming was active.
+  const tabs = useMemo<TabItem[]>(() => {
+    if (!call) {
+      return [];
+    }
 
-  const renderTabs = () => {
-    const tabs: TabItem[] = [
+    const builtTabs: TabItem[] = [
       {
         key: 'info',
         title: t('call_detail.tabs.info'),
@@ -444,36 +326,13 @@ export default function CallDetail() {
                 <Text className="text-sm text-gray-500">{t('call_detail.note')}</Text>
                 <Box>
                   <WebView
-                    style={[styles.container, { height: 200 }]}
+                    style={[styles.container, styles.noteWebView]}
                     originWhitelist={['*']}
                     javaScriptEnabled={false}
                     scrollEnabled={true}
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled={true}
-                    source={{
-                      html: `
-                                <!DOCTYPE html>
-                                <html>
-                                  <head>
-                                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-                                    <style>
-                                      body {
-                                        color: ${textColor};
-                                        font-family: system-ui, -apple-system, sans-serif;
-                                        margin: 0;
-                                        padding: 0;
-                                        font-size: 16px;
-                                        line-height: 1.5;
-                                      }
-                                      * {
-                                        max-width: 100%;
-                                      }
-                                    </style>
-                                  </head>
-                                  <body>${sanitizeHtmlContent(call.Note)}</body>
-                                </html>
-                              `,
-                    }}
+                    source={noteWebViewSource}
                     androidLayerType="software"
                   />
                 </Box>
@@ -521,7 +380,7 @@ export default function CallDetail() {
                     <Text className="text-sm text-gray-600 dark:text-gray-400">{protocol.Description}</Text>
                     <Box>
                       <WebView
-                        style={[styles.container, { height: 200 }]}
+                        style={[styles.container, styles.noteWebView]}
                         originWhitelist={['*']}
                         javaScriptEnabled={false}
                         scrollEnabled={false}
@@ -602,30 +461,223 @@ export default function CallDetail() {
       },
     ];
 
-    tabs.push({
+    builtTabs.push({
       key: 'video',
       title: t('call_detail.tabs.video'),
       content: <VideoFeedTabPanel callId={parseInt(call.CallId)} canEdit={canUserCreateCalls ?? false} />,
     });
 
-    tabs.push({
+    builtTabs.push({
       key: 'command',
       title: t('call_detail.tabs.command'),
       content: <IncidentCommandTabPanel callId={parseInt(call.CallId)} />,
     });
 
     if (call.CheckInTimersEnabled) {
-      const overdueCount = useCheckInStore.getState().timerStatuses.filter((s) => s.Status === 'Overdue').length;
-      tabs.push({
+      builtTabs.push({
         key: 'checkin',
         title: t('check_in.tab_title'),
-        badge: overdueCount > 0 ? overdueCount : undefined,
+        badge: overdueCheckInCount > 0 ? overdueCheckInCount : undefined,
         content: <CheckInTabPanel callId={parseInt(call.CallId)} checkInTimersEnabled={true} />,
       });
     }
 
-    return tabs;
+    return builtTabs;
+  }, [
+    call,
+    callExtraData,
+    callPriority,
+    canUserCreateCalls,
+    colorScheme,
+    destinationAddress,
+    destinationDisplayName,
+    destinationTypeName,
+    handleDestinationRoute,
+    hasDestination,
+    hasDestinationCoordinates,
+    noteWebViewSource,
+    overdueCheckInCount,
+    t,
+  ]);
+
+  // Early return if callId is undefined
+  if (!callId) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: t('call_detail.title'),
+            headerShown: true,
+            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
+          }}
+        />
+        <SafeAreaView className="size-full flex-1">
+          <FocusAwareStatusBar hidden={true} />
+          <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
+            <ZeroState heading={t('call_detail.invalid_call')} description={t('call_detail.call_id_missing')} isError={true} />
+            <Button onPress={handleBack} className="self-center">
+              <ButtonText>{t('common.go_back')}</ButtonText>
+            </Button>
+          </Box>
+        </SafeAreaView>
+      </>
+    );
+  }
+
+  /**
+   * Validates if coordinates are valid for routing
+   */
+  function isValidCoordinates(lat: number | null | undefined, lng: number | null | undefined): boolean {
+    // Check if coordinates exist and are valid numbers
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+      return false;
+    }
+
+    // Check if coordinates are within valid ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return false;
+    }
+
+    // Check if coordinates are not NaN
+    if (isNaN(lat) || isNaN(lng)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Opens the device's native maps application with directions to the call location
+   */
+  const handleRoute = async () => {
+    try {
+      const { latitude: userLatitude, longitude: userLongitude } = useLocationStore.getState();
+
+      // Track analytics for route action
+      trackEvent('call_route_opened', {
+        timestamp: new Date().toISOString(),
+        callId: call?.CallId || callId || '',
+        hasUserLocation: !!(userLatitude && userLongitude),
+        destinationAddress: call?.Address || '',
+      });
+
+      const latitude = coordinates.latitude ?? (call?.Latitude ? parseFloat(call.Latitude) : undefined);
+      const longitude = coordinates.longitude ?? (call?.Longitude ? parseFloat(call.Longitude) : undefined);
+
+      // Guard against invalid or missing coordinates
+      if (!isValidCoordinates(latitude, longitude)) {
+        const reason = latitude === undefined || longitude === undefined ? 'missing_coordinates' : latitude === 0 && longitude === 0 ? 'zeroed_coordinates' : 'invalid_coordinates';
+
+        logger.warn({
+          message: 'Cannot route to call: invalid coordinates',
+          context: { callId, latitude, longitude, address: call?.Address },
+        });
+
+        showToast('error', t('call_detail.no_location_for_routing'));
+
+        // Track failed route attempt with specific reason
+        trackEvent('call_route_failed', {
+          timestamp: new Date().toISOString(),
+          callId: call?.CallId || callId || '',
+          reason,
+          latitude: latitude?.toString() || 'undefined',
+          longitude: longitude?.toString() || 'undefined',
+        });
+        return;
+      }
+
+      const destinationName = call?.Address || t('call_detail.call_location');
+      const success = await openMapsWithDirections(latitude as number, longitude as number, destinationName, userLatitude ?? undefined, userLongitude ?? undefined);
+
+      if (!success) {
+        showToast('error', t('call_detail.failed_to_open_maps'));
+        // Track failed route attempt
+        trackEvent('call_route_failed', {
+          timestamp: new Date().toISOString(),
+          callId: call?.CallId || callId || '',
+          reason: 'failed_to_open_maps',
+        });
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Failed to open maps for routing',
+        context: { error, callId, coordinates },
+      });
+      showToast('error', t('call_detail.failed_to_open_maps'));
+      // Track failed route attempt
+      trackEvent('call_route_failed', {
+        timestamp: new Date().toISOString(),
+        callId: call?.CallId || callId || '',
+        reason: 'exception',
+        error: error instanceof Error ? error.message : 'unknown_error',
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: t('call_detail.title'),
+            headerShown: true,
+            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
+          }}
+        />
+        <View className="size-full flex-1">
+          <FocusAwareStatusBar hidden={true} />
+          <Loading />
+        </View>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: t('call_detail.title'),
+            headerShown: true,
+            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
+          }}
+        />
+        <View className="size-full flex-1">
+          <FocusAwareStatusBar hidden={true} />
+          <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
+            <ZeroState heading={t('call_detail.not_found')} description={error} isError={true} />
+          </Box>
+        </View>
+      </>
+    );
+  }
+
+  if (!call) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: t('call_detail.title'),
+            headerShown: true,
+            headerLeft: () => <HeaderBackButton onPress={handleBack} />,
+            headerRight: () => <HeaderRightMenuButton canEdit={canEdit} onPress={openMenu} />,
+          }}
+        />
+        <SafeAreaView className="size-full flex-1">
+          <FocusAwareStatusBar hidden={true} />
+          <Box className="m-3 mt-5 min-h-[200px] w-full max-w-[600px] gap-5 self-center rounded-lg bg-background-50 p-5 lg:min-w-[700px]">
+            <Text className="text-center">{t('call_detail.not_found')}</Text>
+            <Button onPress={handleBack} className="self-center">
+              <ButtonText>{t('common.go_back')}</ButtonText>
+            </Button>
+          </Box>
+        </SafeAreaView>
+      </>
+    );
+  }
 
   return (
     <>
@@ -654,30 +706,7 @@ export default function CallDetail() {
                 scrollEnabled={true}
                 showsVerticalScrollIndicator={true}
                 nestedScrollEnabled={true}
-                source={{
-                  html: `
-                                <!DOCTYPE html>
-                                <html>
-                                  <head>
-                                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-                                    <style>
-                                      body {
-                                        color: ${textColor};
-                                        font-family: system-ui, -apple-system, sans-serif;
-                                        margin: 0;
-                                        padding: 4px 0 16px;
-                                        font-size: 16px;
-                                        line-height: 1.5;
-                                      }
-                                      * {
-                                        max-width: 100%;
-                                      }
-                                    </style>
-                                  </head>
-                                  <body>${sanitizeHtmlContent(call.Nature)}</body>
-                                </html>
-                              `,
-                }}
+                source={natureWebViewSource}
                 androidLayerType="software"
               />
             </Box>
@@ -732,7 +761,7 @@ export default function CallDetail() {
 
         {/* Tabs */}
         <Box className="mx-4 mb-4 mt-3 flex-1 overflow-hidden rounded-xl bg-white pb-8 shadow-xs dark:bg-gray-800">
-          <SharedTabs tabs={renderTabs()} variant="underlined" size={isLandscape ? 'lg' : 'md'} tabClassName="min-h-11" scrollable={true} />
+          <SharedTabs tabs={tabs} variant="underlined" size={isLandscape ? 'lg' : 'md'} tabClassName="min-h-11" scrollable={true} />
         </Box>
       </ScrollView>
       {isMapModalOpen && coordinates.latitude != null && coordinates.longitude != null ? (
@@ -755,6 +784,9 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     backgroundColor: 'transparent',
+  },
+  noteWebView: {
+    height: 200,
   },
   natureContainer: {
     minHeight: 132,
