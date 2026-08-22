@@ -1,8 +1,8 @@
-import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';

@@ -804,6 +804,13 @@
     "pleaseWait": "Por favor, espere",
     "processingRequest": "Procesando su solicitud..."
   },
+  "location": {
+    "fix_permission_denied": "Se requiere permiso de ubicación. Active el acceso a la ubicación en los ajustes del dispositivo e inténtelo de nuevo.",
+    "fix_services_disabled": "Los servicios de ubicación están desactivados. Actívelos en los ajustes del dispositivo e inténtelo de nuevo.",
+    "fix_unavailable": "No se pudo obtener la ubicación. Diríjase a una zona con mejor visibilidad del cielo e inténtelo de nuevo.",
+    "tracking_notification_body": "Compartiendo su ubicación con su departamento.",
+    "tracking_notification_title": "Seguimiento de ubicación"
+  },
   "login": {
     "change_server_url": "Cambiar URL del servidor",
     "errorModal": {

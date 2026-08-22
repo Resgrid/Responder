@@ -1,9 +1,9 @@
-import { Check, Filter, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
+import { Check, Filter, X } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { type FilterResultData } from '@/models/v4/personnel/filterResultData';
 import { useUnitsStore } from '@/stores/units/store';

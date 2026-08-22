@@ -1,6 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
 import { useFocusEffect } from 'expo-router';
-import { Filter, Search, Truck, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +14,7 @@ import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { Input } from '@/components/ui/input';
 import { InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { Filter, Search, Truck, X } from '@/components/ui/lucide-icons';
 import { RefreshControl } from '@/components/ui/refresh-control';
 import { Text } from '@/components/ui/text';
 import { UnitCard } from '@/components/units/unit-card';

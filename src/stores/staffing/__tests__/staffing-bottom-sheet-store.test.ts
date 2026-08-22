@@ -1,5 +1,7 @@
 import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
 
+import { acquireLocationFix } from '@/services/location-fix';
+
 import { useStaffingBottomSheetStore } from '../staffing-bottom-sheet-store';
 
 // Mock the dependencies
@@ -7,6 +9,12 @@ jest.mock('@/api/personnel/personnelStaffing');
 jest.mock('@/lib/auth');
 jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/toast/store');
+// A factory mock, not an automock: automocking loads the real module to derive its shape, which
+// would pull expo-location's native surface into this node-environment suite.
+jest.mock('@/services/location-fix', () => ({
+	acquireLocationFix: jest.fn(),
+	getLocationFixErrorMessage: jest.fn(),
+}));
 
 // The app's i18n instance isn't initialized in this suite, so resolve keys against
 // the real en.json to keep the assertions on user-visible English.
@@ -14,6 +22,7 @@ jest.mock('@/lib/i18n/utils', () => ({
 	translate: (key: string) => key.split('.').reduce<unknown>((acc, part) => (acc as Record<string, unknown> | undefined)?.[part], require('@/translations/en.json')) ?? key,
 }));
 
+const mockAcquireLocationFix = acquireLocationFix as jest.MockedFunction<typeof acquireLocationFix>;
 const mockSavePersonnelStaffing = jest.fn();
 const mockShowToast = jest.fn();
 const mockFetchCurrentUserInfo = jest.fn();
@@ -205,6 +214,17 @@ describe('useStaffingBottomSheetStore', () => {
 			jest.clearAllMocks();
 			mockSavePersonnelStaffing.mockImplementation(() => Promise.resolve());
 			mockFetchCurrentUserInfo.mockImplementation(() => Promise.resolve());
+		});
+
+		it('should submit a GPS-flagged staffing level without taking a location fix', async () => {
+			// Staffing carries the same `Gps` flag as statuses, but SavePersonStaffing has no
+			// coordinate fields on the server, so the flag is deliberately not enforced here.
+			useStaffingBottomSheetStore.getState().setSelectedStaffing({ ...mockStaffing, Gps: true } as any);
+
+			await useStaffingBottomSheetStore.getState().submitStaffing();
+
+			expect(mockAcquireLocationFix).not.toHaveBeenCalled();
+			expect(mockSavePersonnelStaffing).toHaveBeenCalled();
 		});
 
 		it('should successfully submit staffing', async () => {

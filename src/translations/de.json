@@ -804,6 +804,13 @@
     "pleaseWait": "Bitte warten",
     "processingRequest": "Ihre Anfrage wird verarbeitet..."
   },
+  "location": {
+    "fix_permission_denied": "Standortberechtigung erforderlich. Aktivieren Sie den Standortzugriff in den Geräteeinstellungen und versuchen Sie es erneut.",
+    "fix_services_disabled": "Standortdienste sind deaktiviert. Aktivieren Sie sie in den Geräteeinstellungen und versuchen Sie es erneut.",
+    "fix_unavailable": "Standort konnte nicht ermittelt werden. Begeben Sie sich an einen Ort mit freier Sicht zum Himmel und versuchen Sie es erneut.",
+    "tracking_notification_body": "Ihr Standort wird mit Ihrer Abteilung geteilt.",
+    "tracking_notification_title": "Standortverfolgung"
+  },
   "login": {
     "change_server_url": "Server-URL ändern",
     "errorModal": {

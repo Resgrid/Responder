@@ -804,6 +804,13 @@
     "pleaseWait": "Proszę czekać",
     "processingRequest": "Przetwarzanie żądania..."
   },
+  "location": {
+    "fix_permission_denied": "Wymagane jest uprawnienie do lokalizacji. Włącz dostęp do lokalizacji w ustawieniach urządzenia i spróbuj ponownie.",
+    "fix_services_disabled": "Usługi lokalizacji są wyłączone. Włącz je w ustawieniach urządzenia i spróbuj ponownie.",
+    "fix_unavailable": "Nie udało się ustalić lokalizacji. Przejdź w miejsce z lepszą widocznością nieba i spróbuj ponownie.",
+    "tracking_notification_body": "Udostępnianie Twojej lokalizacji jednostce organizacyjnej.",
+    "tracking_notification_title": "Śledzenie lokalizacji"
+  },
   "login": {
     "change_server_url": "Zmień URL serwera",
     "errorModal": {

@@ -1,4 +1,3 @@
-import { Calendar, CheckCircle, Clock, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +9,7 @@ import { Box } from '@/components/ui/box';
 import { Card } from '@/components/ui/card';
 import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
+import { Calendar, CheckCircle, Clock, MapPin, Users } from '@/components/ui/lucide-icons';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';

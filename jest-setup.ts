@@ -724,6 +724,18 @@ jest.mock('react-native-mmkv', () => {
   };
 });
 // Mock expo-modules-core for NativeUnimoduleProxy
+// expo-location imports `createPermissionHook` from the `expo` package root, and jest-expo's
+// preset does not provide it — so any suite that so much as transitively imports expo-location
+// dies at import time with "createPermissionHook is not a function". Patch that single export and
+// leave the rest of the package real.
+jest.mock('expo', () => {
+  const actual = jest.requireActual('expo');
+  return {
+    ...actual,
+    createPermissionHook: jest.fn(() => () => [null, jest.fn(), jest.fn()]),
+  };
+});
+
 jest.mock('expo-modules-core', () => {
   class MockCodedError extends Error {
     code: string;

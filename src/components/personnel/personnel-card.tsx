@@ -1,7 +1,7 @@
-import { Mail, Phone, Users } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable } from 'react-native';
 
+import { Mail, Phone, Users } from '@/components/ui/lucide-icons';
 import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { useSecurityStore } from '@/stores/security/store';

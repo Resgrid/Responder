@@ -1,8 +1,8 @@
-import { ChevronDownIcon, FilterIcon, RotateCcwIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ChevronDownIcon, FilterIcon, RotateCcwIcon, XIcon } from '@/components/ui/lucide-icons';
 import { type PoiTypeResultData } from '@/models/v4/mapping/poiTypeResultData';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';

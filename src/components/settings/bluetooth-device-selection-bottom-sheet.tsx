@@ -1,4 +1,3 @@
-import { BluetoothIcon, RefreshCwIcon, WifiIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWindowDimensions } from 'react-native';
@@ -8,6 +7,7 @@ import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
 import { FlatList } from '@/components/ui/flat-list';
 import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
+import { BluetoothIcon, RefreshCwIcon, WifiIcon } from '@/components/ui/lucide-icons';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';

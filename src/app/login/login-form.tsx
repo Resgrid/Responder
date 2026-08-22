@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertTriangle, ChevronDownIcon, EyeIcon, EyeOffIcon, GlobeIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
 import type { SubmitHandler } from 'react-hook-form';
@@ -13,6 +12,7 @@ import { View } from '@/components/ui';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { FormControl, FormControlError, FormControlErrorIcon, FormControlErrorText, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
+import { AlertTriangle, ChevronDownIcon, EyeIcon, EyeOffIcon, GlobeIcon } from '@/components/ui/lucide-icons';
 import { Pressable } from '@/components/ui/pressable';
 import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';

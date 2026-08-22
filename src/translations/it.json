@@ -804,6 +804,13 @@
     "pleaseWait": "Attendere prego",
     "processingRequest": "Elaborazione della richiesta in corso..."
   },
+  "location": {
+    "fix_permission_denied": "È necessaria l'autorizzazione alla posizione. Attiva l'accesso alla posizione nelle impostazioni del dispositivo e riprova.",
+    "fix_services_disabled": "I servizi di localizzazione sono disattivati. Attivali nelle impostazioni del dispositivo e riprova.",
+    "fix_unavailable": "Impossibile ottenere la posizione. Spostati in un'area con una visuale del cielo più libera e riprova.",
+    "tracking_notification_body": "Condivisione della tua posizione con il tuo dipartimento.",
+    "tracking_notification_title": "Tracciamento della posizione"
+  },
   "login": {
     "change_server_url": "Modifica URL server",
     "errorModal": {

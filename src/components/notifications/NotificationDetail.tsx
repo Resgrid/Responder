@@ -29,6 +29,9 @@ const createThemedStyles = (isDark: boolean) =>
     timeText: {
       color: isDark ? '#9ca3af' : '#6b7280',
     },
+    typeTagText: {
+      color: isDark ? '#f3f4f6' : '#111827',
+    },
     typeTagDefault: {
       backgroundColor: isDark ? '#374151' : '#e5e7eb',
     },
@@ -74,7 +77,6 @@ const createThemedStyles = (isDark: boolean) =>
     },
     referenceButtonIcon: {
       marginRight: 8,
-      color: isDark ? '#3b82f6' : '#2563eb',
     },
   });
 
@@ -83,6 +85,20 @@ type ThemedStyles = ReturnType<typeof createThemedStyles>;
 const useThemedStyles = () => {
   const { colorScheme } = useColorScheme();
   return React.useMemo(() => createThemedStyles(colorScheme === 'dark'), [colorScheme]);
+};
+
+// lucide-react-native icons default to `stroke="currentColor"`, which react-native-svg resolves
+// from the `color` *prop* only — a nativewind `className` (or a `color` key in a style object)
+// lands in `style` and is dropped, so the icons rendered near-black on the dark sidebar.
+const createIconColors = (isDark: boolean) => ({
+  accent: isDark ? '#60a5fa' : '#3b82f6',
+  danger: isDark ? '#f87171' : '#ef4444',
+  muted: isDark ? '#9ca3af' : '#6b7280',
+});
+
+const useIconColors = () => {
+  const { colorScheme } = useColorScheme();
+  return React.useMemo(() => createIconColors(colorScheme === 'dark'), [colorScheme]);
 };
 
 // Define the interface directly in this file
@@ -108,6 +124,7 @@ interface NotificationDetailProps {
 export const NotificationDetail = ({ notification, onClose, onDelete, onNavigateToReference }: NotificationDetailProps) => {
   const { t } = useTranslation();
   const themed = useThemedStyles();
+  const iconColors = useIconColors();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -190,18 +207,18 @@ export const NotificationDetail = ({ notification, onClose, onDelete, onNavigate
         <SafeAreaView style={styles.safeArea}>
           <View style={[styles.header, themed.header, headerInsetStyle]}>
             <Pressable onPress={handleClose} style={styles.backButton}>
-              <ArrowLeft size={24} className="text-primary-500 dark:text-primary-400" strokeWidth={2} />
+              <ArrowLeft size={24} color={iconColors.accent} strokeWidth={2} />
             </Pressable>
             <Text style={[styles.headerTitle, themed.headerTitle]}>{t('notifications.notification')}</Text>
             <Pressable onPress={handleDelete} style={styles.deleteButton}>
-              <Trash2 size={24} className="text-red-500 dark:text-red-400" strokeWidth={2} />
+              <Trash2 size={24} color={iconColors.danger} strokeWidth={2} />
             </Pressable>
           </View>
 
           <View style={styles.content}>
             <View style={styles.metadataContainer}>
               <View style={styles.dateContainer}>
-                <Calendar size={16} className="text-gray-500 dark:text-gray-400" strokeWidth={2} />
+                <Calendar size={16} color={iconColors.muted} strokeWidth={2} />
                 <Text style={[styles.dateText, themed.dateText]}>{formattedDate}</Text>
               </View>
               <Text style={[styles.timeText, themed.timeText]}>{formattedTime}</Text>
@@ -209,7 +226,7 @@ export const NotificationDetail = ({ notification, onClose, onDelete, onNavigate
 
             {notification.type ? (
               <View style={[styles.typeTag, getTypeTagStyle(notification.type, themed)]}>
-                <Text style={styles.typeTagText}>{notification.type}</Text>
+                <Text style={[styles.typeTagText, themed.typeTagText]}>{notification.type}</Text>
               </View>
             ) : null}
 
@@ -233,7 +250,7 @@ export const NotificationDetail = ({ notification, onClose, onDelete, onNavigate
 
             {notification.referenceType && notification.referenceId ? (
               <Pressable onPress={handleNavigateToReference} style={[styles.referenceButton, themed.referenceButton]}>
-                <ExternalLink size={18} style={themed.referenceButtonIcon} />
+                <ExternalLink size={18} color={iconColors.accent} strokeWidth={2} style={themed.referenceButtonIcon} />
                 <Text style={[styles.buttonText, themed.buttonText]}>{t('notifications.viewReference', { referenceType: notification.referenceType })}</Text>
               </Pressable>
             ) : null}

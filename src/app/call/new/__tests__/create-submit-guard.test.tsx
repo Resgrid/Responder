@@ -99,7 +99,7 @@ jest.mock('lucide-react-native', () => ({
 jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'light' }),
   cssInterop: jest.fn(),
-  styled: jest.fn(() => (Component: unknown) => Component),
+  styled: jest.fn((Component: unknown) => Component),
 }));
 
 jest.mock('react-native-safe-area-context', () => ({

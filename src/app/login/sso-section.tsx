@@ -1,4 +1,3 @@
-import { AlertTriangle, ChevronLeft, LogIn } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -11,6 +10,7 @@ import { View } from '@/components/ui';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { FormControl, FormControlError, FormControlErrorIcon, FormControlErrorText, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField } from '@/components/ui/input';
+import { AlertTriangle, ChevronLeft, LogIn } from '@/components/ui/lucide-icons';
 import { Text } from '@/components/ui/text';
 import colors from '@/constants/colors';
 import type { DepartmentSsoConfig } from '@/services/sso-discovery';

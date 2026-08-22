@@ -804,6 +804,13 @@
     "pleaseWait": "يرجى الانتظار",
     "processingRequest": "جاري معالجة طلبك..."
   },
+  "location": {
+    "fix_permission_denied": "إذن الموقع مطلوب. فعّل الوصول إلى الموقع في إعدادات جهازك ثم أعد المحاولة.",
+    "fix_services_disabled": "خدمات الموقع معطّلة. فعّلها في إعدادات جهازك ثم أعد المحاولة.",
+    "fix_unavailable": "تعذّر تحديد الموقع. انتقل إلى منطقة ذات رؤية أوضح للسماء ثم أعد المحاولة.",
+    "tracking_notification_body": "تتم مشاركة موقعك مع إدارتك.",
+    "tracking_notification_title": "تتبع الموقع"
+  },
   "login": {
     "change_server_url": "تغيير عنوان URL للخادم",
     "errorModal": {
