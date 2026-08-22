@@ -576,6 +576,44 @@ describe('LocationService', () => {
       expect(mockLocation.watchPositionAsync).toHaveBeenCalled();
     });
 
+    it('discards a watcher that resolves after the app has already gone to the background', async () => {
+      let resolveWatcher: (subscription: Location.LocationSubscription) => void;
+      const watcherPromise = new Promise<Location.LocationSubscription>((resolve) => {
+        resolveWatcher = resolve;
+      });
+      mockLocation.watchPositionAsync.mockReturnValue(watcherPromise);
+
+      const pendingStart = locationService.startLocationUpdates();
+      // Backgrounding lands while watchPositionAsync is still in flight, so there is no
+      // subscription to release yet — the pending one has to release itself.
+      await emitAppState('background');
+
+      const lateSubscription = { remove: jest.fn() } as jest.Mocked<Location.LocationSubscription>;
+      resolveWatcher!(lateSubscription);
+      await pendingStart;
+
+      expect(lateSubscription.remove).toHaveBeenCalledTimes(1);
+      expect((locationService as any).locationSubscription).toBeNull();
+    });
+
+    it('re-subscribes on return to the foreground after a start that was discarded mid-flight', async () => {
+      let resolveWatcher: (subscription: Location.LocationSubscription) => void;
+      const watcherPromise = new Promise<Location.LocationSubscription>((resolve) => {
+        resolveWatcher = resolve;
+      });
+      mockLocation.watchPositionAsync.mockReturnValue(watcherPromise);
+
+      const pendingStart = locationService.startLocationUpdates();
+      await emitAppState('background');
+      resolveWatcher!({ remove: jest.fn() } as jest.Mocked<Location.LocationSubscription>);
+      await pendingStart;
+
+      mockLocation.watchPositionAsync.mockResolvedValue(mockLocationSubscription);
+      await emitAppState('active');
+
+      expect((locationService as any).locationSubscription).toBe(mockLocationSubscription);
+    });
+
     it('does not start watching on foreground for a session that never started tracking', async () => {
       await locationService.stopLocationUpdates();
       mockLocation.watchPositionAsync.mockClear();

@@ -185,6 +185,10 @@ class LocationService {
   // Set once a start has succeeded, so returning to the foreground only re-subscribes for a session
   // that was actually tracking — not for one that is signed out or was denied permission.
   private hasStartedLocationUpdates = false;
+  // Bumped whenever a backgrounding releases the foreground watcher. `watchPositionAsync` is async,
+  // so a start that was in flight at that moment resolves with a live watcher that nothing asked
+  // for any more; comparing generations is how that start knows to throw it away.
+  private foregroundWatchGeneration = 0;
 
   private constructor() {
     // Register this service's update function to avoid circular dependency
@@ -221,6 +225,11 @@ class LocationService {
   };
 
   private removeForegroundSubscription(): void {
+    // Invalidate first, and unconditionally: the watcher being released may still be in flight
+    // inside `startLocationUpdatesInternal`, in which case there is nothing here to remove yet but
+    // that pending start must still be told its result is stale.
+    this.foregroundWatchGeneration += 1;
+
     if (!this.locationSubscription) {
       return;
     }
@@ -273,6 +282,11 @@ class LocationService {
   }
 
   private async startLocationUpdatesInternal(): Promise<void> {
+    // Captured before the first await: a backgrounding at any point during the start — the
+    // permission prompt and the settings reads are all async — has to invalidate the watcher this
+    // call is about to create, not just one that lands after `watchPositionAsync` was reached.
+    const generation = this.foregroundWatchGeneration;
+
     const hasPermissions = await this.requestPermissions();
     if (!hasPermissions) {
       throw new Error('Location permissions not granted');
@@ -311,7 +325,7 @@ class LocationService {
     this.lastForegroundLocationSentAt = 0;
 
     // Start foreground updates
-    this.locationSubscription = await Location.watchPositionAsync(
+    const subscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Balanced,
         timeInterval: 15000,
@@ -350,7 +364,20 @@ class LocationService {
       }
     );
 
+    // The start itself succeeded — permissions, settings and the background task are all in place —
+    // so the session counts as tracking and a return to the foreground should re-subscribe.
     this.hasStartedLocationUpdates = true;
+
+    // The app went to the background while this call was in flight. Adopting the watcher now would
+    // hold the GPS on exactly where handleAppStateChange just released it, and with background
+    // tracking off it would track a responder who asked not to be.
+    if (generation !== this.foregroundWatchGeneration) {
+      subscription.remove();
+      logger.info({ message: 'Discarded foreground location watcher that resolved after backgrounding' });
+      return;
+    }
+
+    this.locationSubscription = subscription;
 
     logger.info({
       message: 'Foreground location updates started',

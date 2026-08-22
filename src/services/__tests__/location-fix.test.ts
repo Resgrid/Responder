@@ -118,6 +118,15 @@ describe('acquireLocationFix', () => {
     jest.useRealTimers();
   });
 
+  it('still returns the acquired fix when the store write throws', async () => {
+    mockSetLocation.mockImplementation(() => {
+      throw new Error('store unavailable');
+    });
+
+    await expect(acquireLocationFix()).resolves.toEqual({ outcome: 'acquired', location: position });
+    expect(mockSetLocation).toHaveBeenCalledWith(position);
+  });
+
   it('treats an unanswerable permission check as denied', async () => {
     mockLocation.getForegroundPermissionsAsync.mockRejectedValue(new Error('module unavailable'));
 

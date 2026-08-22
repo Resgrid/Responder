@@ -148,7 +148,16 @@ export const acquireLocationFix = async (): Promise<LocationFixResult> => {
   }
 
   // Feed the store so the map and anything else reading it benefit from the fix we just paid for.
-  useLocationStore.getState().setLocation(location);
+  // A store write is a side benefit, not the point of the call: if it throws, the caller still has
+  // a real fix and a GPS-required status must not be refused over it.
+  try {
+    useLocationStore.getState().setLocation(location);
+  } catch (error) {
+    logger.warn({
+      message: 'Failed to write acquired location fix to the store',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
+  }
 
   return { outcome: 'acquired', location };
 };
