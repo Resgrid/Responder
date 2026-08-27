@@ -102,10 +102,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.POST_NOTIFICATIONS',
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_MICROPHONE',
-      'android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE',
       'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
     ],
-    blockedPermissions: ['android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO'],
+    // FOREGROUND_SERVICE_CONNECTED_DEVICE is blocked, not merely absent: Bluetooth PTT handsets
+    // route through the microphone FGS session, so the type is unused, and Play rejects any
+    // declared foreground-service type whose use case cannot be demonstrated in the app.
+    blockedPermissions: ['android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE'],
   },
   web: {
     favicon: './assets/favicon.png',
@@ -224,13 +226,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-location',
       {
         locationWhenInUsePermission:
-          'Resgrid Responder uses your location while you use the app to show your position on the department map and to attach your coordinates when you set a status or respond to a call. For example, when you respond to a call, your location is shared with dispatch so they can see which responder is closest to the scene.',
+          'Resgrid Responder uses your location while you use the app to show your position on the department map and to attach your coordinates when you set a status or respond to a call. For example, when you mark yourself responding, dispatch sees which responders are closest to the scene.',
         locationAlwaysAndWhenInUsePermission:
-          'Resgrid Responder uses your location, including in the background, to keep your department dispatch map updated with your position. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival and coordinate resources, even when the app is not on screen.',
+          'Resgrid Responder uses your location, including in the background, to keep your department dispatch map updated with your position. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival, even when the app is not on screen.',
         locationAlwaysPermission:
-          'Resgrid Responder uses your location in the background to keep your department dispatch map updated with your position. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival and coordinate resources, even when the app is not on screen.',
-        // Motion activity APIs (getMotionActivityAsync) are not used; omit NSMotionUsageDescription.
-        motionUsagePermission: false,
+          'Resgrid Responder uses your location in the background to keep your department dispatch map updated with your position. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival, even when the app is not on screen.',
+        // Required even though getMotionActivityAsync() is never called: expo-location links
+        // CoreMotion (MotionActivityPermissionRequester), and App Store static analysis rejects
+        // the binary with ITMS-90683 whenever the framework is referenced and the string is absent.
+        motionUsagePermission:
+          'Resgrid Responder uses motion data to improve the accuracy of the location shown on the department map. For example, while you are driving to a call, motion data helps distinguish travel from a stop so dispatchers see an accurate position and heading.',
         isIosBackgroundLocationEnabled: true,
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,
@@ -331,8 +336,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-secure-store',
       {
-        // Biometric-gated secure storage is not used; omit NSFaceIDUsageDescription.
-        faceIDPermission: false,
+        // Required even though biometric-gated storage is not used: expo-secure-store
+        // instantiates LAContext() unconditionally (SecureStoreModule.swift), so App Store
+        // static analysis flags a missing NSFaceIDUsageDescription with ITMS-90683.
+        faceIDPermission:
+          'Resgrid Responder uses Face ID to unlock the securely stored credentials that keep you signed in to your department. For example, after your device locks, Face ID confirms it is you before the app restores your session.',
       },
     ],
     'expo-web-browser',
