@@ -17,6 +17,10 @@ import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage'
 
 export const PENDING_SAML_STATE_KEY = 'pending_saml_state';
 
+// Last SSO exchange that failed with a 2FA challenge, retained IN MEMORY ONLY (module scope,
+// never the persisted store) so the OTP prompt can retry the same IdP token with a code.
+let pendingSsoMfaCredentials: ExternalTokenCredentials | null = null;
+
 // Helper function to determine if a refresh error is transient (network issues, rate limiting, etc.)
 // Transient errors should not force logout as they might resolve on retry
 const isTransientRefreshError = (error: unknown): boolean => {
@@ -61,6 +65,8 @@ interface AuthState {
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
   loginWithSso: (credentials: ExternalTokenCredentials) => Promise<void>;
+  /** Retries the pending SSO exchange with the user's authenticator code (2FA challenge). */
+  retrySsoWithOtp: (otpCode: string) => Promise<void>;
   logout: (reason?: string) => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   hydrate: () => void;
@@ -141,6 +147,17 @@ const useAuthStore = create<AuthState>()(
                 refreshTokenObtainedAt: now,
               },
             });
+          } else if (response.mfaRequired) {
+            // 2FA challenge: the login screen prompts for the authenticator code and calls
+            // login() again with otpCode. Credentials are never retained here.
+            logger.info({
+              message: 'Login requires two-factor verification',
+              context: { username: credentials.username, invalidOtp: !!response.invalidOtp },
+            });
+            set({
+              status: 'mfaRequired',
+              error: response.invalidOtp ? 'invalid_totp' : null,
+            });
           } else {
             logger.error({
               message: 'Login failed - unsuccessful response',
@@ -213,12 +230,25 @@ const useAuthStore = create<AuthState>()(
               isFirstTime: false,
             });
 
+            pendingSsoMfaCredentials = null;
             logger.info({
               message: 'SSO login successful',
               context: {
                 provider: credentials.provider,
                 userId: profileData.sub,
               },
+            });
+          } else if (response.mfaRequired) {
+            // 2FA challenge: retain the exchange in module memory (never the persisted store)
+            // so retrySsoWithOtp can replay it with the authenticator code.
+            pendingSsoMfaCredentials = credentials;
+            logger.info({
+              message: 'SSO login requires two-factor verification',
+              context: { provider: credentials.provider, invalidOtp: !!response.invalidOtp },
+            });
+            set({
+              status: 'mfaRequired',
+              error: response.invalidOtp ? 'invalid_totp' : null,
             });
           } else {
             logger.error({
@@ -240,6 +270,15 @@ const useAuthStore = create<AuthState>()(
             error: error instanceof Error ? error.message : 'SSO login failed',
           });
         }
+      },
+
+      retrySsoWithOtp: async (otpCode: string) => {
+        if (!pendingSsoMfaCredentials) {
+          set({ status: 'error', error: 'No pending SSO sign-in to verify' });
+          return;
+        }
+
+        await get().loginWithSso({ ...pendingSsoMfaCredentials, otpCode });
       },
 
       logout: async (reason?: string) => {

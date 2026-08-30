@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { SsoDepartmentForm, SsoLoginButtons } from '@/app/login/sso-section';
+import { LoginOtpModal } from '@/components/auth/login-otp-modal';
 import { FocusAwareStatusBar } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
@@ -15,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import type { DepartmentSsoConfig } from '@/services/sso-discovery';
 import { fetchUserSsoConfig } from '@/services/sso-discovery';
+import useAuthStore from '@/stores/auth/store';
 
 type SsoPhase = 'department' | 'login';
 
@@ -28,6 +30,7 @@ export default function SsoLogin() {
   const [username, setUsername] = useState('');
   const [ssoConfig, setSsoConfig] = useState<DepartmentSsoConfig | null>(null);
   const [isErrorModalVisible, setIsErrorModalVisible] = useState(false);
+  const [otpDismissed, setOtpDismissed] = useState(false);
 
   // OIDC hook — called unconditionally; empty strings until config resolved
   const oidc = useOidcLogin({
@@ -50,6 +53,17 @@ export default function SsoLogin() {
       router.replace('/(app)');
     }
   }, [status, isAuthenticated, router, trackEvent]);
+
+  // Re-arm the OTP prompt whenever a fresh 2FA challenge arrives
+  useEffect(() => {
+    if (status === 'mfaRequired') {
+      setOtpDismissed(false);
+    }
+  }, [status]);
+
+  const handleOtpSubmit = useCallback(async (code: string) => {
+    await useAuthStore.getState().retrySsoWithOtp(code);
+  }, []);
 
   // Show error modal on auth failure
   useEffect(() => {
@@ -154,6 +168,15 @@ export default function SsoLogin() {
           </Button>
         </View>
       )}
+
+      {/* Two-factor challenge: SSO exchange answered mfa_required / invalid_totp */}
+      <LoginOtpModal
+        isOpen={status === 'mfaRequired' && !otpDismissed}
+        isSubmitting={status === 'loading'}
+        invalidCode={error === 'invalid_totp'}
+        onSubmit={handleOtpSubmit}
+        onClose={() => setOtpDismissed(true)}
+      />
 
       {/* Error modal */}
       <Modal isOpen={isErrorModalVisible} onClose={() => setIsErrorModalVisible(false)} size="full">

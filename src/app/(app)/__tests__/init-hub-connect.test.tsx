@@ -71,7 +71,15 @@ jest.mock('@/lib/env', () => ({ Env: { RESPOND_MAPBOX_PUBKEY: 'pk.test' } }));
 jest.mock('@/lib/logging', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
-jest.mock('@/lib/storage', () => ({ useIsFirstTime: () => [false, jest.fn()] }));
+// getItem is needed as well: the layout now initialises the data-protection store, and that store
+// reaches the API client, which resolves the base URL from storage. A partial mock of a module the
+// graph actually uses fails the whole suite at import time rather than at the call.
+jest.mock('@/lib/storage', () => ({
+  useIsFirstTime: () => [false, jest.fn()],
+  getItem: jest.fn(() => null),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+}));
 
 const mockLoadRealtimeGeolocationState = jest.fn<Promise<boolean>, []>();
 jest.mock('@/lib/storage/realtime-geolocation', () => ({

@@ -30,6 +30,8 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
       grant_type: 'password',
       username: credentials.username,
       password: credentials.password,
+      // Accounts with Resgrid 2FA enabled must supply the current authenticator code.
+      ...(credentials.otpCode ? { totp_code: credentials.otpCode.trim() } : {}),
       scope: Env.IS_MOBILE_APP ? 'openid profile offline_access mobile' : 'openid profile offline_access',
     });
 
@@ -59,6 +61,24 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
       };
     }
   } catch (error) {
+    // The OAuth error body distinguishes the 2FA challenge from a bad password. Neither the
+    // password nor any code is ever logged.
+    const oauthError = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+    if (oauthError === 'mfa_required' || oauthError === 'invalid_totp') {
+      logger.info({
+        message: 'Login requires two-factor code',
+        context: { username: credentials.username, invalidOtp: oauthError === 'invalid_totp' },
+      });
+
+      return {
+        successful: false,
+        message: 'Two-factor authentication required',
+        authResponse: null,
+        mfaRequired: true,
+        invalidOtp: oauthError === 'invalid_totp',
+      };
+    }
+
     logger.error({
       message: 'Login failed',
       context: { error, username: credentials.username },
@@ -97,6 +117,8 @@ export const externalTokenRequest = async (credentials: ExternalTokenCredentials
       provider: credentials.provider,
       external_token: credentials.externalToken,
       department_code: credentials.departmentCode,
+      // Accounts with Resgrid 2FA enabled must supply the current authenticator code even via SSO.
+      ...(credentials.otpCode ? { totp_code: credentials.otpCode.trim() } : {}),
       scope: Env.IS_MOBILE_APP ? 'openid email profile offline_access mobile' : 'openid email profile offline_access',
     });
 
@@ -126,6 +148,24 @@ export const externalTokenRequest = async (credentials: ExternalTokenCredentials
       authResponse: null,
     };
   } catch (error) {
+    // The error body distinguishes the 2FA challenge from a real failure. Neither the IdP
+    // token nor any code is ever logged.
+    const oauthError = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+    if (oauthError === 'mfa_required' || oauthError === 'invalid_totp') {
+      logger.info({
+        message: 'SSO login requires two-factor code',
+        context: { provider: credentials.provider, invalidOtp: oauthError === 'invalid_totp' },
+      });
+
+      return {
+        successful: false,
+        message: 'Two-factor authentication required',
+        authResponse: null,
+        mfaRequired: true,
+        invalidOtp: oauthError === 'invalid_totp',
+      };
+    }
+
     logger.error({
       message: 'External token exchange error',
       context: { error, provider: credentials.provider },

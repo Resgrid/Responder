@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
 
+import { ProtectedText } from '@/components/data-protection/protected-text';
+import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { Loading } from '@/components/common/loading';
 import { Badge } from '@/components/ui/badge';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
@@ -240,7 +242,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
           <VStack className="mb-6">
             <HStack className="mb-2 items-start justify-between">
               <Heading size="lg" className="flex-1 text-gray-900 dark:text-white">
-                {item.Title}
+                {isRedactedValue(item.Title) ? <ProtectedText value={item.Title} fieldId={ProtectedFieldIds.calendarTitle} size="lg" /> : item.Title}
               </Heading>
               {isSignedUp && canSignUp ? <CheckCircle size={24} color="#10B981" className="ml-2" /> : null}
             </HStack>
@@ -268,7 +270,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
           {item.Location ? (
             <HStack className="mb-6 items-center">
               <MapPin size={18} color="#6B7280" />
-              <Text className="ml-2 text-gray-600 dark:text-gray-300">{item.Location}</Text>
+              <ProtectedText value={item.Location} fieldId={ProtectedFieldIds.calendarLocation} className="ml-2 text-gray-600 dark:text-gray-300" />
             </HStack>
           ) : null}
 
@@ -281,6 +283,16 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                   {t('calendar.description')}
                 </Heading>
               </HStack>
+              {/*
+                A withheld description is not HTML. Passing the sentinel through the WebView would
+                render the bare word REDACTED as the description's body copy, where it reads as
+                content rather than as an absence — so the whole renderer is replaced.
+              */}
+              {isRedactedValue(item.Description) ? (
+                <Box className="w-full rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                  <ProtectedText value={item.Description} fieldId={ProtectedFieldIds.calendarDescription} />
+                </Box>
+              ) : (
               <Box className="w-full rounded-lg bg-gray-50 p-1 dark:bg-gray-700">
                 <WebView
                   style={[styles.container, { height: webViewHeight }]}
@@ -368,6 +380,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                   testID="webview"
                 />
               </Box>
+              )}
             </VStack>
           ) : null}
 

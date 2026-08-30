@@ -35,6 +35,8 @@ import { offlineEventManager } from '@/services/offline-event-manager.service';
 import { offlineQueueService } from '@/services/offline-queue.service';
 import { usePushNotifications } from '@/services/push-notification';
 import { useCoreStore } from '@/stores/app/core-store';
+import { StepUpPromptHost } from '@/components/data-protection/step-up-prompt-host';
+import { dataProtectionStore } from '@/stores/data-protection/store';
 import { useCalendarStore } from '@/stores/calendar/store';
 import { useCallsStore } from '@/stores/calls/store';
 import { FeatureFlagKeys, featureFlagsStore } from '@/stores/feature-flags/store';
@@ -131,7 +133,7 @@ export default function TabLayout() {
 
       // Feature flags must follow rights: the identity key that decides whether persisted
       // flags belong to this account reads securityStore.rights.DepartmentId.
-      await featureFlagsStore.getState().fetchFlags();
+      await featureFlagsStore.getState().fetchFlags(), dataProtectionStore.getState().fetchCapabilities();
       if (!isCurrentRun()) return;
 
       // Realtime feeds. Every one of them has to follow the Promise.all above: opening a hub reads
@@ -398,6 +400,13 @@ export default function TabLayout() {
 
   const content = (
     <View style={styles.container}>
+      {/*
+        The app's single Advanced Data Protection prompt. Mounted here so any screen can trigger it
+        through the store without carrying a modal of its own, and so two screens can never stack
+        two prompts over each other.
+      */}
+      <StepUpPromptHost />
+
       {/* Top Navigation Bar */}
       <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
         <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} onBack={backHandler} />

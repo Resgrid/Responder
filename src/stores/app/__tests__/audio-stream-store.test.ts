@@ -17,11 +17,12 @@ jest.mock('expo-audio', () => ({
 }));
 
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import base64 from 'react-native-base64';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { getDepartmentAudioStreams } from '@/api/voice';
 import { logger } from '@/lib/logging';
 import { type DepartmentAudioResultStreamData } from '@/models/v4/voice/departmentAudioResultStreamData';
-import { useAudioStreamStore } from '../audio-stream-store';
+import { redactStreamUrl, resolveStreamSource, useAudioStreamStore } from '../audio-stream-store';
 
 const mockGetDepartmentAudioStreams = getDepartmentAudioStreams as jest.MockedFunction<typeof getDepartmentAudioStreams>;
 const mockCreateAudioPlayer = createAudioPlayer as jest.MockedFunction<typeof createAudioPlayer>;
@@ -42,6 +43,7 @@ describe('AudioStreamStore', () => {
     muted: false,
     play: jest.fn(),
     pause: jest.fn(),
+    replace: jest.fn(),
     remove: jest.fn(),
     seekTo: jest.fn(() => Promise.resolve()),
     addListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -242,7 +244,7 @@ describe('AudioStreamStore', () => {
         shouldRouteThroughEarpiece: false,
       });
       
-      expect(mockCreateAudioPlayer).toHaveBeenCalledWith(mockStream.Url, {
+      expect(mockCreateAudioPlayer).toHaveBeenCalledWith({ uri: mockStream.Url }, {
         updateInterval: 1000,
         keepAudioSessionActive: true,
         preferredForwardBufferDuration: 5,
@@ -491,5 +493,44 @@ describe('AudioStreamStore', () => {
         context: { error: mockError },
       });
     });
+  });
+});
+
+describe('resolveStreamSource', () => {
+  it('leaves a credential-free URL untouched', () => {
+    expect(resolveStreamSource('https://audio.broadcastify.com/12345.mp3')).toEqual({
+      uri: 'https://audio.broadcastify.com/12345.mp3',
+    });
+  });
+
+  it('hoists inline credentials into an Authorization header', () => {
+    expect(resolveStreamSource('https://scanner:s3cret@audio.broadcastify.com/12345.mp3')).toEqual({
+      uri: 'https://audio.broadcastify.com/12345.mp3',
+      headers: { Authorization: `Basic ${base64.encode('scanner:s3cret')}` },
+    });
+  });
+
+  it('percent-decodes credentials before encoding them', () => {
+    expect(resolveStreamSource('http://user%40dept.org:p%40ss@relay.example.com/live')).toEqual({
+      uri: 'http://relay.example.com/live',
+      headers: { Authorization: `Basic ${base64.encode('user@dept.org:p@ss')}` },
+    });
+  });
+
+  it('treats a username without a password as an empty password', () => {
+    expect(resolveStreamSource('https://token@relay.example.com/live')).toEqual({
+      uri: 'https://relay.example.com/live',
+      headers: { Authorization: `Basic ${base64.encode('token:')}` },
+    });
+  });
+});
+
+describe('redactStreamUrl', () => {
+  it('returns a credential-free URL unchanged', () => {
+    expect(redactStreamUrl('https://audio.broadcastify.com/12345.mp3')).toBe('https://audio.broadcastify.com/12345.mp3');
+  });
+
+  it('masks inline credentials', () => {
+    expect(redactStreamUrl('https://scanner:s3cret@audio.broadcastify.com/12345.mp3')).toBe('https://***@audio.broadcastify.com/12345.mp3');
   });
 });

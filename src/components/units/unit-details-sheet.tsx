@@ -4,6 +4,8 @@ import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable } from 'react-native';
 
+import { ProtectedText } from '@/components/data-protection/protected-text';
+import { ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
@@ -243,7 +245,7 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
               {selectedUnit.Note && (
                 <Box className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
                   <Text className="mb-2 font-medium text-gray-800 dark:text-gray-200">{t('units.notes')}</Text>
-                  <Text className="text-sm text-gray-700 dark:text-gray-300">{selectedUnit.Note}</Text>
+                  <ProtectedText value={selectedUnit.Note} fieldId={ProtectedFieldIds.userStateNote} size="sm" className="text-gray-700 dark:text-gray-300" />
                 </Box>
               )}
 
