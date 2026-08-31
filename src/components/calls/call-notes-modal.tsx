@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProtectedText } from '@/components/data-protection/protected-text';
 import { showErrorMessage } from '@/components/ui/utils';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
+import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import type { CallNoteResultData } from '@/models/v4/callNotes/callNoteResultData';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 
@@ -183,7 +185,7 @@ function CallNotesModal({ isOpen, onClose, callId }: CallNotesModalProps) {
   const renderNoteItem = useCallback(
     ({ item: note }: { item: CallNoteResultData }) => (
       <Box className="mb-3 w-full rounded-lg bg-gray-50 p-4 shadow-xs dark:bg-gray-700">
-        <Text className="mb-2 text-gray-800 dark:text-gray-200">{note.Note}</Text>
+        <ProtectedText value={note.Note} fieldId={ProtectedFieldIds.callNote} className="mb-2 text-gray-800 dark:text-gray-200" />
         <HStack className="w-full justify-between">
           <Text className="text-xs text-gray-500 dark:text-gray-400">{note.FullName}</Text>
           <Text className="text-xs text-gray-500 dark:text-gray-400">{note.TimestampFormatted}</Text>

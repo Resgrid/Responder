@@ -57,8 +57,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ITSAppUsesNonExemptEncryption: false,
       UIViewControllerBasedStatusBarAppearance: false,
       NSSupportsLiveActivities: true,
-      NSBluetoothAlwaysUsageDescription: 'Allow Resgrid Responder to connect to bluetooth devices for PTT.',
-      NSMicrophoneUsageDescription: 'Allow Resgrid Responder to access the microphone for voice communication and push-to-talk functionality during emergency response.',
+      NSBluetoothAlwaysUsageDescription:
+        'Resgrid Responder uses Bluetooth to connect to wireless headsets and speaker-microphone accessories for Push-to-Talk audio. For example, when you pair a Bluetooth speaker-mic, pressing its talk button transmits your voice to your department audio channel.',
+      NSMicrophoneUsageDescription:
+        'Resgrid Responder uses the microphone to capture your voice for Push-to-Talk and voice communication with your department. For example, when you press and hold the talk button, your voice is transmitted live to dispatchers and other responders on the channel.',
       LSApplicationQueriesSchemes: ['resgrid'],
     },
     entitlements: {
@@ -100,10 +102,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.POST_NOTIFICATIONS',
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_MICROPHONE',
-      'android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE',
       'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
     ],
-    blockedPermissions: ['android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO'],
+    // FOREGROUND_SERVICE_CONNECTED_DEVICE is blocked, not merely absent: Bluetooth PTT handsets
+    // route through the microphone FGS session, so the type is unused, and Play rejects any
+    // declared foreground-service type whose use case cannot be demonstrated in the app.
+    blockedPermissions: ['android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE'],
   },
   web: {
     favicon: './assets/favicon.png',
@@ -221,9 +225,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-location',
       {
-        locationWhenInUsePermission: 'Allow Resgrid Responder to show current location on map.',
-        locationAlwaysAndWhenInUsePermission: 'Allow Resgrid Responder to use your location.',
-        locationAlwaysPermission: 'Resgrid Responder needs to track your location',
+        locationWhenInUsePermission:
+          'Resgrid Responder uses your location while you use the app to show your position on the department map and to attach your coordinates when you set a status or respond to a call. For example, when you mark yourself responding, dispatch sees which responders are closest to the scene.',
+        locationAlwaysAndWhenInUsePermission:
+          'Resgrid Responder uses your location, including in the background, to keep your department dispatch map updated with your position. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival, even when the app is not on screen.',
+        locationAlwaysPermission:
+          'Resgrid Responder uses your location in the background to keep your department dispatch map updated with your position. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival, even when the app is not on screen.',
+        // Required even though getMotionActivityAsync() is never called: expo-location links
+        // CoreMotion (MotionActivityPermissionRequester), and App Store static analysis rejects
+        // the binary with ITMS-90683 whenever the framework is referenced and the string is absent.
+        motionUsagePermission:
+          'Resgrid Responder uses motion data to improve the accuracy of the location shown on the department map. For example, while you are driving to a call, motion data helps distinguish travel from a stop so dispatchers see an accurate position and heading.',
         isIosBackgroundLocationEnabled: true,
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,
@@ -306,25 +318,47 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-audio',
       {
-        microphonePermission: 'Allow Resgrid Responder to access the microphone for audio input used in PTT and calls.',
+        microphonePermission:
+          'Resgrid Responder uses the microphone to capture your voice for Push-to-Talk and voice communication with your department. For example, when you press and hold the talk button, your voice is transmitted live to dispatchers and other responders on the channel.',
       },
     ],
     'expo-video',
     [
       'expo-image-picker',
       {
-        cameraPermission: 'Allow Resgrid Responder to access the camera to take photos for call documentation.',
-        photosPermission: 'Allow Resgrid Responder to access your photos library to attach images to calls.',
+        cameraPermission:
+          'Resgrid Responder uses the camera to take photos that you attach to calls. For example, you can photograph an incident scene and attach the image to the active call for dispatchers and other responders to see.',
+        photosPermission:
+          'Resgrid Responder uses your photo library so you can attach existing photos to calls and chat messages. For example, you can select a saved photo of an incident scene and share it with dispatch and other responders on the call.',
       },
     ],
     'react-native-ble-manager',
-    'expo-secure-store',
+    [
+      'expo-secure-store',
+      {
+        // Required even though biometric-gated storage is not used: expo-secure-store
+        // instantiates LAContext() unconditionally (SecureStoreModule.swift), so App Store
+        // static analysis flags a missing NSFaceIDUsageDescription with ITMS-90683.
+        faceIDPermission:
+          'Resgrid Responder uses Face ID to unlock the securely stored credentials that keep you signed in to your department. For example, after your device locks, Face ID confirms it is you before the app restores your session.',
+      },
+    ],
     'expo-web-browser',
     'expo-image',
     'expo-sharing',
     'expo-status-bar',
     '@livekit/react-native-expo-plugin',
-    '@config-plugins/react-native-webrtc',
+    [
+      // Explicit strings so the plugin's vague "$(PRODUCT_NAME) needs access" defaults
+      // can never surface if plugin ordering changes (it only writes keys that are unset).
+      '@config-plugins/react-native-webrtc',
+      {
+        cameraPermission:
+          'Resgrid Responder uses the camera to take photos that you attach to calls. For example, you can photograph an incident scene and attach the image to the active call for dispatchers and other responders to see.',
+        microphonePermission:
+          'Resgrid Responder uses the microphone to capture your voice for Push-to-Talk and voice communication with your department. For example, when you press and hold the talk button, your voice is transmitted live to dispatchers and other responders on the channel.',
+      },
+    ],
     '@config-plugins/react-native-callkeep',
     './customGradle.plugin.js',
     './customManifest.plugin.js',

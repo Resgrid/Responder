@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { ProtectedText } from '@/components/data-protection/protected-text';
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { securityStore } from '@/stores/security/store';
@@ -112,9 +114,14 @@ export const PersonnelDetailsSheet: React.FC = () => {
               {selectedPersonnel.IdentificationNumber ? (
                 <HStack space="xs" className="items-center">
                   <IdCard size={18} className="text-gray-600 dark:text-gray-400" />
-                  <Text className="text-gray-700 dark:text-gray-300">
-                    {t('personnel.id')}: {selectedPersonnel.IdentificationNumber}
-                  </Text>
+                  {/*
+                    The LABEL stays put and only the number is replaced, so a member can still see
+                    that an identification number exists on this record without it being readable.
+                  */}
+                  <HStack space="xs" className="items-center">
+                    <Text className="text-gray-700 dark:text-gray-300">{t('personnel.id')}:</Text>
+                    <ProtectedText value={selectedPersonnel.IdentificationNumber} fieldId={ProtectedFieldIds.personnelIdentificationNumber} size="md" className="text-gray-700 dark:text-gray-300" />
+                  </HStack>
                 </HStack>
               ) : null}
 

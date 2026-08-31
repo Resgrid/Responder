@@ -17,11 +17,12 @@ jest.mock('expo-audio', () => ({
 }));
 
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import base64 from 'react-native-base64';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { getDepartmentAudioStreams } from '@/api/voice';
 import { logger } from '@/lib/logging';
 import { type DepartmentAudioResultStreamData } from '@/models/v4/voice/departmentAudioResultStreamData';
-import { useAudioStreamStore } from '../audio-stream-store';
+import { redactStreamUrl, resolveStreamSource, useAudioStreamStore } from '../audio-stream-store';
 
 const mockGetDepartmentAudioStreams = getDepartmentAudioStreams as jest.MockedFunction<typeof getDepartmentAudioStreams>;
 const mockCreateAudioPlayer = createAudioPlayer as jest.MockedFunction<typeof createAudioPlayer>;
@@ -42,6 +43,7 @@ describe('AudioStreamStore', () => {
     muted: false,
     play: jest.fn(),
     pause: jest.fn(),
+    replace: jest.fn(),
     remove: jest.fn(),
     seekTo: jest.fn(() => Promise.resolve()),
     addListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -49,7 +51,7 @@ describe('AudioStreamStore', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Reset store state
     useAudioStreamStore.setState({
       availableStreams: [],
@@ -77,7 +79,7 @@ describe('AudioStreamStore', () => {
   describe('initial state', () => {
     it('should have the correct initial state', () => {
       const state = useAudioStreamStore.getState();
-      
+
       expect(state.availableStreams).toEqual([]);
       expect(state.isLoadingStreams).toBe(false);
       expect(state.currentStream).toBeNull();
@@ -93,43 +95,43 @@ describe('AudioStreamStore', () => {
     it('should set available streams', () => {
       const streams = [mockStream];
       useAudioStreamStore.getState().setAvailableStreams(streams);
-      
+
       expect(useAudioStreamStore.getState().availableStreams).toEqual(streams);
     });
 
     it('should set loading streams state', () => {
       useAudioStreamStore.getState().setIsLoadingStreams(true);
-      
+
       expect(useAudioStreamStore.getState().isLoadingStreams).toBe(true);
     });
 
     it('should set current stream', () => {
       useAudioStreamStore.getState().setCurrentStream(mockStream);
-      
+
       expect(useAudioStreamStore.getState().currentStream).toEqual(mockStream);
     });
 
     it('should set playing state', () => {
       useAudioStreamStore.getState().setIsPlaying(true);
-      
+
       expect(useAudioStreamStore.getState().isPlaying).toBe(true);
     });
 
     it('should set loading state', () => {
       useAudioStreamStore.getState().setIsLoading(true);
-      
+
       expect(useAudioStreamStore.getState().isLoading).toBe(true);
     });
 
     it('should set buffering state', () => {
       useAudioStreamStore.getState().setIsBuffering(true);
-      
+
       expect(useAudioStreamStore.getState().isBuffering).toBe(true);
     });
 
     it('should set bottom sheet visibility', () => {
       useAudioStreamStore.getState().setIsBottomSheetVisible(true);
-      
+
       expect(useAudioStreamStore.getState().isBottomSheetVisible).toBe(true);
     });
   });
@@ -146,11 +148,11 @@ describe('AudioStreamStore', () => {
         Environment: '',
         Data: [mockStream],
       };
-      
+
       mockGetDepartmentAudioStreams.mockResolvedValue(mockResponse);
-      
+
       await useAudioStreamStore.getState().fetchAvailableStreams();
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.availableStreams).toEqual([mockStream]);
       expect(state.isLoadingStreams).toBe(false);
@@ -163,9 +165,9 @@ describe('AudioStreamStore', () => {
     it('should handle fetch error', async () => {
       const mockError = new Error('Fetch failed');
       mockGetDepartmentAudioStreams.mockRejectedValue(mockError);
-      
+
       await useAudioStreamStore.getState().fetchAvailableStreams();
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.availableStreams).toEqual([]);
       expect(state.isLoadingStreams).toBe(false);
@@ -186,11 +188,11 @@ describe('AudioStreamStore', () => {
         Environment: '',
         Data: null,
       };
-      
+
       mockGetDepartmentAudioStreams.mockResolvedValue(mockResponse as any);
-      
+
       await useAudioStreamStore.getState().fetchAvailableStreams();
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.availableStreams).toEqual([]);
       expect(mockLogger.debug).toHaveBeenCalledWith({
@@ -226,14 +228,14 @@ describe('AudioStreamStore', () => {
 
     it('should play stream successfully', async () => {
       await useAudioStreamStore.getState().playStream(mockStream);
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.currentStream).toEqual(mockStream);
       expect(state.soundObject).toEqual(mockSoundObject);
       expect(state.isPlaying).toBe(true);
       expect(state.isLoading).toBe(false);
       expect(state.isBuffering).toBe(false);
-      
+
       expect(mockSetAudioModeAsync).toHaveBeenCalledWith({
         allowsRecording: false,
         shouldPlayInBackground: true,
@@ -241,21 +243,24 @@ describe('AudioStreamStore', () => {
         interruptionMode: 'duckOthers',
         shouldRouteThroughEarpiece: false,
       });
-      
-      expect(mockCreateAudioPlayer).toHaveBeenCalledWith(mockStream.Url, {
-        updateInterval: 1000,
-        keepAudioSessionActive: true,
-        preferredForwardBufferDuration: 5,
-      });
+
+      expect(mockCreateAudioPlayer).toHaveBeenCalledWith(
+        { uri: mockStream.Url },
+        {
+          updateInterval: 1000,
+          keepAudioSessionActive: true,
+          preferredForwardBufferDuration: 5,
+        }
+      );
       expect(mockSoundObject.addListener).toHaveBeenCalledWith('playbackStatusUpdate', expect.any(Function));
-      
+
       expect(mockSoundObject.play).toHaveBeenCalled();
-      
+
       expect(mockLogger.debug).toHaveBeenCalledWith({
         message: 'Starting audio stream',
         context: { streamName: mockStream.Name, streamUrl: mockStream.Url },
       });
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Audio stream started successfully',
         context: { streamName: mockStream.Name },
@@ -269,11 +274,11 @@ describe('AudioStreamStore', () => {
         currentStream: mockStream,
         isPlaying: true,
       });
-      
+
       const newStream = { ...mockStream, Id: '2', Name: 'New Stream' };
-      
+
       await useAudioStreamStore.getState().playStream(newStream);
-      
+
       expect(mockSoundObject.pause).toHaveBeenCalled();
       expect(mockSoundObject.remove).toHaveBeenCalled();
     });
@@ -283,16 +288,16 @@ describe('AudioStreamStore', () => {
       mockCreateAudioPlayer.mockImplementationOnce(() => {
         throw mockError;
       });
-      
+
       await useAudioStreamStore.getState().playStream(mockStream);
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.soundObject).toBeNull();
       expect(state.currentStream).toBeNull();
       expect(state.isPlaying).toBe(false);
       expect(state.isLoading).toBe(false);
       expect(state.isBuffering).toBe(false);
-      
+
       expect(mockLogger.error).toHaveBeenCalledWith({
         message: 'Failed to play audio stream',
         context: { error: mockError, streamName: mockStream.Name },
@@ -381,19 +386,19 @@ describe('AudioStreamStore', () => {
         currentStream: mockStream,
         isPlaying: true,
       });
-      
+
       await useAudioStreamStore.getState().stopStream();
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.soundObject).toBeNull();
       expect(state.currentStream).toBeNull();
       expect(state.isPlaying).toBe(false);
       expect(state.isLoading).toBe(false);
       expect(state.isBuffering).toBe(false);
-      
+
       expect(mockSoundObject.pause).toHaveBeenCalled();
       expect(mockSoundObject.remove).toHaveBeenCalled();
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith({
         message: 'Audio stream stopped',
         context: { streamName: mockStream.Name },
@@ -405,15 +410,15 @@ describe('AudioStreamStore', () => {
       mockSoundObject.pause.mockImplementationOnce(() => {
         throw mockError;
       });
-      
+
       useAudioStreamStore.setState({
         soundObject: mockSoundObject,
         currentStream: mockStream,
         isPlaying: true,
       });
-      
+
       await useAudioStreamStore.getState().stopStream();
-      
+
       expect(mockLogger.error).toHaveBeenCalledWith({
         message: 'Failed to stop audio stream',
         context: { error: mockError },
@@ -434,14 +439,14 @@ describe('AudioStreamStore', () => {
         currentStream: mockStream,
         isPlaying: true,
       });
-      
+
       await useAudioStreamStore.getState().stopStream();
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.soundObject).toBeNull();
       expect(state.currentStream).toBeNull();
       expect(state.isPlaying).toBe(false);
-      
+
       expect(mockSoundObject.pause).not.toHaveBeenCalled();
       expect(mockSoundObject.remove).not.toHaveBeenCalled();
     });
@@ -454,17 +459,17 @@ describe('AudioStreamStore', () => {
         currentStream: mockStream,
         isPlaying: true,
       });
-      
+
       await useAudioStreamStore.getState().cleanup();
-      
+
       const state = useAudioStreamStore.getState();
       expect(state.soundObject).toBeNull();
       expect(state.currentStream).toBeNull();
       expect(state.isPlaying).toBe(false);
-      
+
       expect(mockSoundObject.pause).toHaveBeenCalled();
       expect(mockSoundObject.remove).toHaveBeenCalled();
-      
+
       expect(mockLogger.debug).toHaveBeenCalledWith({
         message: 'Audio stream store cleaned up',
       });
@@ -475,15 +480,15 @@ describe('AudioStreamStore', () => {
       mockSoundObject.pause.mockImplementationOnce(() => {
         throw mockError;
       });
-      
+
       useAudioStreamStore.setState({
         soundObject: mockSoundObject,
         currentStream: mockStream,
         isPlaying: true,
       });
-      
+
       await useAudioStreamStore.getState().cleanup();
-      
+
       // The cleanup method calls stopStream, which catches its own errors
       // So we expect the stopStream error message, not the cleanup error message
       expect(mockLogger.error).toHaveBeenCalledWith({
@@ -491,5 +496,67 @@ describe('AudioStreamStore', () => {
         context: { error: mockError },
       });
     });
+  });
+});
+
+describe('resolveStreamSource', () => {
+  it('leaves a credential-free URL untouched', () => {
+    expect(resolveStreamSource('https://audio.broadcastify.com/12345.mp3')).toEqual({
+      uri: 'https://audio.broadcastify.com/12345.mp3',
+    });
+  });
+
+  it('hoists inline credentials into an Authorization header', () => {
+    expect(resolveStreamSource('https://scanner:s3cret@audio.broadcastify.com/12345.mp3')).toEqual({
+      uri: 'https://audio.broadcastify.com/12345.mp3',
+      headers: { Authorization: `Basic ${base64.encode('scanner:s3cret')}` },
+    });
+  });
+
+  it('percent-decodes credentials before encoding them', () => {
+    expect(resolveStreamSource('http://user%40dept.org:p%40ss@relay.example.com/live')).toEqual({
+      uri: 'http://relay.example.com/live',
+      headers: { Authorization: `Basic ${base64.encode('user@dept.org:p@ss')}` },
+    });
+  });
+
+  it('treats a username without a password as an empty password', () => {
+    expect(resolveStreamSource('https://token@relay.example.com/live')).toEqual({
+      uri: 'https://relay.example.com/live',
+      headers: { Authorization: `Basic ${base64.encode('token:')}` },
+    });
+  });
+
+  it('splits at the last @ so an unencoded @ in the password survives', () => {
+    // RFC 3986 wants that @ percent-encoded, but departments paste raw passwords. Splitting at
+    // the first @ sent 'scanner:p' as the credentials and left 'ss@relay...' in the playback URI.
+    expect(resolveStreamSource('https://scanner:p@ss@relay.example.com/live')).toEqual({
+      uri: 'https://relay.example.com/live',
+      headers: { Authorization: `Basic ${base64.encode('scanner:p@ss')}` },
+    });
+  });
+
+  it('does not treat an @ in the path as credentials', () => {
+    expect(resolveStreamSource('https://relay.example.com/live@2x.mp3')).toEqual({ uri: 'https://relay.example.com/live@2x.mp3' });
+  });
+});
+
+describe('redactStreamUrl', () => {
+  it('returns a credential-free URL unchanged', () => {
+    expect(redactStreamUrl('https://audio.broadcastify.com/12345.mp3')).toBe('https://audio.broadcastify.com/12345.mp3');
+  });
+
+  it('masks inline credentials', () => {
+    expect(redactStreamUrl('https://scanner:s3cret@audio.broadcastify.com/12345.mp3')).toBe('https://***@audio.broadcastify.com/12345.mp3');
+  });
+
+  it('masks a password containing an unencoded @ without leaking its tail', () => {
+    // Splitting at the FIRST @ used to leave 'ss@relay...' in the redacted output, publishing
+    // part of the password to the log.
+    expect(redactStreamUrl('https://scanner:p@ss@relay.example.com/live')).toBe('https://***@relay.example.com/live');
+  });
+
+  it('leaves an @ in the path alone', () => {
+    expect(redactStreamUrl('https://relay.example.com/live@2x.mp3')).toBe('https://relay.example.com/live@2x.mp3');
   });
 });
