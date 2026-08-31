@@ -130,7 +130,6 @@ export default function Login() {
         onClose={() => setOtpDismissed(true)}
       />
 
-
       {/* Error modal */}
       {isErrorModalVisible ? (
         <Modal isOpen={isErrorModalVisible} onClose={() => setIsErrorModalVisible(false)} size="full">

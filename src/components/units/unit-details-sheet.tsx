@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable } from 'react-native';
 
 import { ProtectedText } from '@/components/data-protection/protected-text';
-import { ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useToastStore } from '@/stores/toast/store';

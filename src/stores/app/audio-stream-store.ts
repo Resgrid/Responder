@@ -45,7 +45,12 @@ export interface ResolvedStreamSource {
 // `scheme://user:pass@host/rest`. Icecast relays (Broadcastify and most department scanner
 // feeds) put premium feeds behind HTTP Basic auth, and departments store those credentials
 // inline in the stream URL.
-const CREDENTIALED_URL = /^(https?:\/\/)([^/?#@]*)@([\s\S]*)$/i;
+// The userinfo group is greedy within the authority (`[^/?#]*`) so it splits at the LAST `@`
+// before the path, not the first. RFC 3986 requires a literal `@` in a password to be
+// percent-encoded, but departments paste raw passwords: `https://scanner:p@ss@relay/live` must
+// yield `p@ss`, not credentials of `scanner:p` with `ss@relay` left in the playback URI (which
+// also leaked half the password through redactStreamUrl).
+const CREDENTIALED_URL = /^(https?:\/\/)([^/?#]*)@([\s\S]*)$/i;
 
 const decodeUrlComponent = (value: string): string => {
   try {

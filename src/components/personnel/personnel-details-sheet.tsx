@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
 import { ProtectedText } from '@/components/data-protection/protected-text';
-import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { securityStore } from '@/stores/security/store';
@@ -120,12 +120,7 @@ export const PersonnelDetailsSheet: React.FC = () => {
                   */}
                   <HStack space="xs" className="items-center">
                     <Text className="text-gray-700 dark:text-gray-300">{t('personnel.id')}:</Text>
-                    <ProtectedText
-                      value={selectedPersonnel.IdentificationNumber}
-                      fieldId={ProtectedFieldIds.personnelIdentificationNumber}
-                      size="md"
-                      className="text-gray-700 dark:text-gray-300"
-                    />
+                    <ProtectedText value={selectedPersonnel.IdentificationNumber} fieldId={ProtectedFieldIds.personnelIdentificationNumber} size="md" className="text-gray-700 dark:text-gray-300" />
                   </HStack>
                 </HStack>
               ) : null}

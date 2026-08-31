@@ -61,6 +61,12 @@ interface AuthState {
   profile: ProfileModel | null;
   userId: string | null;
   isFirstTime: boolean;
+  /**
+   * True only while an SSO exchange is waiting on an authenticator code. `status === 'mfaRequired'`
+   * cannot stand in for this: the password login sets the same status, and the SSO screen must not
+   * open its OTP prompt for a challenge it has no pending exchange to retry.
+   */
+  isSsoMfaPending: boolean;
 
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -92,6 +98,7 @@ const useAuthStore = create<AuthState>()(
       profile: null,
       userId: null,
       isFirstTime: true,
+      isSsoMfaPending: false,
       login: async (credentials: LoginCredentials) => {
         try {
           set({ status: 'loading' });
@@ -231,6 +238,7 @@ const useAuthStore = create<AuthState>()(
             });
 
             pendingSsoMfaCredentials = null;
+            set({ isSsoMfaPending: false });
             logger.info({
               message: 'SSO login successful',
               context: {
@@ -241,7 +249,13 @@ const useAuthStore = create<AuthState>()(
           } else if (response.mfaRequired) {
             // 2FA challenge: retain the exchange in module memory (never the persisted store)
             // so retrySsoWithOtp can replay it with the authenticator code.
-            pendingSsoMfaCredentials = credentials;
+            //
+            // The code itself is deliberately dropped. On an invalid_totp retry `credentials`
+            // still carries the rejected otpCode, and keeping it would hold a known-bad secret in
+            // module state until the next successful SSO login. retrySsoWithOtp supplies the new
+            // code on every attempt, so nothing needs it here.
+            const { otpCode: _rejectedOtpCode, ...ssoExchange } = credentials;
+            pendingSsoMfaCredentials = ssoExchange;
             logger.info({
               message: 'SSO login requires two-factor verification',
               context: { provider: credentials.provider, invalidOtp: !!response.invalidOtp },
@@ -249,13 +263,15 @@ const useAuthStore = create<AuthState>()(
             set({
               status: 'mfaRequired',
               error: response.invalidOtp ? 'invalid_totp' : null,
+              isSsoMfaPending: true,
             });
           } else {
             logger.error({
               message: 'SSO login failed - unsuccessful response',
               context: { provider: credentials.provider, message: response.message },
             });
-            set({ status: 'error', error: response.message });
+            pendingSsoMfaCredentials = null;
+            set({ status: 'error', error: response.message, isSsoMfaPending: false });
           }
         } catch (error) {
           logger.error({
@@ -265,9 +281,11 @@ const useAuthStore = create<AuthState>()(
               error: error instanceof Error ? error.message : 'Unknown error',
             },
           });
+          pendingSsoMfaCredentials = null;
           set({
             status: 'error',
             error: error instanceof Error ? error.message : 'SSO login failed',
+            isSsoMfaPending: false,
           });
         }
       },
@@ -341,6 +359,8 @@ const useAuthStore = create<AuthState>()(
           });
         }
 
+        // The retained IdP exchange is a credential; it must not outlive the session.
+        pendingSsoMfaCredentials = null;
         set({
           accessToken: null,
           refreshToken: null,
@@ -351,6 +371,7 @@ const useAuthStore = create<AuthState>()(
           profile: null,
           isFirstTime: false,
           userId: null,
+          isSsoMfaPending: false,
         });
       },
 
@@ -643,6 +664,9 @@ const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => zustandStorage),
+      // The pending SSO exchange lives in module memory and dies with the process, so a rehydrated
+      // `true` here would open the OTP prompt with nothing to retry. Force it back to false.
+      merge: (persisted, current) => ({ ...current, ...(persisted as Partial<AuthState>), isSsoMfaPending: false }),
     }
   )
 );

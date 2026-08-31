@@ -57,7 +57,6 @@ const isTransientRefreshError = (error: unknown): boolean => {
   return true;
 };
 
-
 // Request interceptor for API calls
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {

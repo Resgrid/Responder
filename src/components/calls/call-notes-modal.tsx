@@ -6,10 +6,10 @@ import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleSheet, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProtectedText } from '@/components/data-protection/protected-text';
-import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { showErrorMessage } from '@/components/ui/utils';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
+import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import type { CallNoteResultData } from '@/models/v4/callNotes/callNoteResultData';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 

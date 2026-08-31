@@ -24,6 +24,10 @@ export default function SsoLogin() {
   const { t } = useTranslation();
   const router = useRouter();
   const { status, error, isAuthenticated } = useAuth();
+  // 'mfaRequired' is also how the password login reports its own 2FA challenge. Opening this
+  // screen's prompt on that status alone means retrySsoWithOtp fires with no pending SSO
+  // exchange, which drops the user into an error state instead of a code prompt.
+  const isSsoMfaPending = useAuthStore((s) => s.isSsoMfaPending);
   const { trackEvent } = useAnalytics();
 
   const [ssoPhase, setSsoPhase] = useState<SsoPhase>('department');
@@ -54,12 +58,12 @@ export default function SsoLogin() {
     }
   }, [status, isAuthenticated, router, trackEvent]);
 
-  // Re-arm the OTP prompt whenever a fresh 2FA challenge arrives
+  // Re-arm the OTP prompt whenever a fresh SSO 2FA challenge arrives
   useEffect(() => {
-    if (status === 'mfaRequired') {
+    if (status === 'mfaRequired' && isSsoMfaPending) {
       setOtpDismissed(false);
     }
-  }, [status]);
+  }, [status, isSsoMfaPending]);
 
   const handleOtpSubmit = useCallback(async (code: string) => {
     await useAuthStore.getState().retrySsoWithOtp(code);
@@ -171,7 +175,7 @@ export default function SsoLogin() {
 
       {/* Two-factor challenge: SSO exchange answered mfa_required / invalid_totp */}
       <LoginOtpModal
-        isOpen={status === 'mfaRequired' && !otpDismissed}
+        isOpen={status === 'mfaRequired' && isSsoMfaPending && !otpDismissed}
         isSubmitting={status === 'loading'}
         invalidCode={error === 'invalid_totp'}
         onSubmit={handleOtpSubmit}

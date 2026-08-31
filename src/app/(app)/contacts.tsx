@@ -4,11 +4,11 @@ import { ContactIcon, Search, X } from 'lucide-react-native';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ProtectedRevealBar } from '@/components/data-protection/protected-reveal-bar';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import { ContactCard } from '@/components/contacts/contact-card';
 import { ContactDetailsSheet } from '@/components/contacts/contact-details-sheet';
+import { ProtectedRevealBar } from '@/components/data-protection/protected-reveal-bar';
 import { FocusAwareStatusBar } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';

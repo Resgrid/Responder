@@ -8,9 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 
-import { ProtectedRevealBar } from '@/components/data-protection/protected-reveal-bar';
-import { ProtectedText } from '@/components/data-protection/protected-text';
-import { isFieldRedacted, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { CallDetailActionSheetPanel, HeaderRightMenuButton, useCallDetailMenu } from '@/components/calls/call-detail-menu';
 import CallFilesModal from '@/components/calls/call-files-modal';
 import CallImagesModal from '@/components/calls/call-images-modal';
@@ -20,6 +17,8 @@ import { CheckInTabPanel } from '@/components/check-in/check-in-tab-panel';
 import { HeaderBackButton } from '@/components/common/header-back-button';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import { ProtectedRevealBar } from '@/components/data-protection/protected-reveal-bar';
+import { ProtectedText } from '@/components/data-protection/protected-text';
 import { IncidentCommandTabPanel } from '@/components/incident-command/incident-command-tab-panel';
 import FullScreenMapModal from '@/components/maps/full-screen-map-modal';
 // Import a static map component instead of react-native-maps
@@ -34,6 +33,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { VideoFeedTabPanel } from '@/components/video-feeds/video-feed-tab-panel';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { isFieldRedacted, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { useLocationStore } from '@/stores/app/location-store';
@@ -733,7 +733,15 @@ export default function CallDetail() {
         {/* Map */}
         {coordinates.latitude != null && coordinates.longitude != null ? (
           <Box className="mx-4 mt-3 overflow-hidden rounded-xl shadow-xs">
-            <StaticMap latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} height={200} showUserLocation={true} onPress={() => setIsMapModalOpen(true)} />
+            <StaticMap
+              latitude={coordinates.latitude}
+              longitude={coordinates.longitude}
+              address={isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callAddress, call.Address) ? undefined : call.Address}
+              zoom={15}
+              height={200}
+              showUserLocation={true}
+              onPress={() => setIsMapModalOpen(true)}
+            />
           </Box>
         ) : null}
 
@@ -782,7 +790,15 @@ export default function CallDetail() {
         </Box>
       </ScrollView>
       {isMapModalOpen && coordinates.latitude != null && coordinates.longitude != null ? (
-        <FullScreenMapModal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)} latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} showUserLocation={true} />
+        <FullScreenMapModal
+          isOpen={isMapModalOpen}
+          onClose={() => setIsMapModalOpen(false)}
+          latitude={coordinates.latitude}
+          longitude={coordinates.longitude}
+          address={isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callAddress, call.Address) ? undefined : call.Address}
+          zoom={15}
+          showUserLocation={true}
+        />
       ) : null}
       <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId || ''} />
       <CallImagesModal isOpen={isImagesModalOpen} onClose={() => setIsImagesModalOpen(false)} callId={callId || ''} />
