@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { DueChecksCard } from '@/components/checklists/due-checks-card';
 import { ActiveCallTab } from '@/components/home/active-call-tab';
 import { DepartmentStats } from '@/components/home/department-stats';
 import { StaffingButtons } from '@/components/home/staffing-buttons';
@@ -95,6 +96,7 @@ export default function HomeDashboard() {
         <FocusAwareStatusBar />
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <DueChecksCard />
           {/* Weather Alert Banner */}
           <WeatherAlertBanner />
 

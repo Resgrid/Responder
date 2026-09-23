@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { useNotifications } from '@novu/react-native';
 import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { NotificationInbox } from '../NotificationInbox';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useToastStore } from '@/stores/toast/store';
@@ -9,6 +10,9 @@ import { useAuthStore } from '@/lib/auth';
 import { deleteMessage } from '@/api/novu/inbox';
 
 // Mock dependencies
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+const mockFetchMessageDetails = jest.fn();
+jest.mock('@/stores/messages/store', () => ({ useMessagesStore: { getState: () => ({ fetchMessageDetails: mockFetchMessageDetails }) } }));
 jest.mock('@novu/react-native');
 jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/toast/store');
@@ -187,6 +191,83 @@ describe('NotificationInbox', () => {
     );
 
     expect(queryByText('Notifications')).toBeNull();
+  });
+
+  describe('reference navigation', () => {
+    const workOrderId = '0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11';
+
+    const withNotifications = (notifications: unknown[]) =>
+      mockUseNotifications.mockReturnValue({
+        notifications: notifications as any,
+        isLoading: false,
+        fetchMore: mockFetchMore,
+        hasMore: false,
+        refetch: mockRefetch,
+        isFetching: false,
+        readAll: jest.fn(),
+        archiveAll: jest.fn(),
+        archiveAllRead: jest.fn(),
+      });
+
+    it('opens the work order an inbox notification refers to and closes the inbox', () => {
+      withNotifications([{ id: 'wo-1', subject: 'Work order', body: 'WO-2026-000019: needs your attention', createdAt: '2026-09-22T10:00:00Z', isRead: false, data: { eventCode: `NWO:${workOrderId}` } }]);
+
+      const { getByTestId } = render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+      fireEvent.press(getByTestId('notification-reference-wo-1'));
+
+      expect(router.push).toHaveBeenCalledWith({ pathname: '/work-orders/[id]', params: { id: workOrderId } });
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('opens the chat conversation an inbox notification refers to', () => {
+      withNotifications([{ id: 'chat-1', subject: 'Jane in Engine 6', body: 'On scene', createdAt: '2026-09-22T10:00:00Z', isRead: false, data: { eventCode: 'g:7f1c' } }]);
+
+      const { getByTestId } = render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+      fireEvent.press(getByTestId('notification-reference-chat-1'));
+
+      expect(router.push).toHaveBeenCalledWith({ pathname: '/chat/[channelId]', params: { channelId: '7f1c' } });
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('opens the call a dispatch notification refers to', () => {
+      withNotifications([{ id: 'call-1', subject: 'Structure Fire', body: 'Engine 6 respond', createdAt: '2026-09-22T10:00:00Z', isRead: false, data: { eventCode: 'C1234' } }]);
+
+      const { getByTestId } = render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+      fireEvent.press(getByTestId('notification-reference-call-1'));
+
+      expect(router.push).toHaveBeenCalledWith({ pathname: '/call/[id]', params: { id: '1234' } });
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('opens the department message a notification refers to', () => {
+      withNotifications([{ id: 'msg-1', subject: 'Staff meeting', body: 'Tuesday 1900', createdAt: '2026-09-22T10:00:00Z', isRead: false, data: { eventCode: 'M5678' } }]);
+
+      const { getByTestId } = render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+      fireEvent.press(getByTestId('notification-reference-msg-1'));
+
+      expect(router.push).toHaveBeenCalledWith('/(app)/messages');
+      expect(mockFetchMessageDetails).toHaveBeenCalledWith('5678');
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('does not navigate for reference types that have no screen yet', () => {
+      withNotifications([{ id: 'note-1', subject: 'Note', body: 'A note', createdAt: '2026-09-22T10:00:00Z', isRead: false, data: { referenceType: 'note', referenceId: 'n-9' } }]);
+
+      const { getByTestId } = render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+      fireEvent.press(getByTestId('notification-reference-note-1'));
+
+      expect(router.push).not.toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('offers no reference for a plain notification code', () => {
+      withNotifications([{ id: 'n-1', subject: 'Notification', body: 'Plain', createdAt: '2026-09-22T10:00:00Z', isRead: false, data: { eventCode: 'N0' } }]);
+
+      const { queryByTestId, getByText } = render(<NotificationInbox isOpen={true} onClose={mockOnClose} />);
+
+      expect(getByText('Plain')).toBeTruthy();
+      expect(queryByTestId('notification-reference-n-1')).toBeNull();
+    });
   });
 
   it('renders notifications when open', () => {

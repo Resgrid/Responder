@@ -185,6 +185,13 @@ class OfflineEventManager {
 
     try {
       switch (event.type) {
+        case QueuedEventType.CHECKLIST_COMPLETION: {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { flushChecklistDraft } = require('@/stores/checklists/store') as typeof import('@/stores/checklists/store');
+          if (typeof event.data.scope !== 'string' || typeof event.data.id !== 'string') throw new Error('checklist_invalid_reference');
+          await flushChecklistDraft(event.data.scope, event.data.id);
+          break;
+        }
         case QueuedEventType.CALL_IMAGE_UPLOAD:
           await this.processCallImageUploadEvent(event as QueuedCallImageUploadEvent);
           break;

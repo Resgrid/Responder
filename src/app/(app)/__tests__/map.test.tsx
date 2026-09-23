@@ -280,10 +280,15 @@ jest.mock('@/services/location', () => ({
   },
 }));
 
-jest.mock('@/stores/app/core-store', () => ({
-  useCoreStore: jest.fn(() => ({
-    setActiveCall: jest.fn(),
-  })),
+// The map pin's "Set as current call" writes the shared active call store.
+const mockSetActiveCallById = jest.fn();
+
+jest.mock('@/stores/calls/active-call-store', () => ({
+  useActiveCallStore: {
+    getState: () => ({
+      setActiveCallById: mockSetActiveCallById,
+    }),
+  },
 }));
 
 jest.mock('@/stores/app/location-store', () => {
@@ -487,18 +492,6 @@ describe('HomeMap', () => {
   });
 
   it('handles setting pin as current call', async () => {
-    const mockSetActiveCall = jest.fn();
-
-    // Mock the core store for this test
-    const mockCoreStore = require('@/stores/app/core-store');
-    mockCoreStore.useCoreStore.mockReturnValue({
-      setActiveCall: mockSetActiveCall,
-    });
-
-    // Also mock getState to return the same setActiveCall function
-    mockCoreStore.useCoreStore.getState = jest.fn(() => ({
-      setActiveCall: mockSetActiveCall,
-    }));
 
     render(<HomeMap />);
 
@@ -517,7 +510,7 @@ describe('HomeMap', () => {
     fireEvent.press(screen.getByTestId('set-current-call'));
 
     await waitFor(() => {
-      expect(mockSetActiveCall).toHaveBeenCalledWith('1');
+      expect(mockSetActiveCallById).toHaveBeenCalledWith('1');
     });
   });
 
@@ -641,18 +634,6 @@ describe('HomeMap', () => {
     });
 
     it('tracks set as current call action', async () => {
-      const mockSetActiveCall = jest.fn();
-
-      // Mock the core store for this test
-      const mockCoreStore = require('@/stores/app/core-store');
-      mockCoreStore.useCoreStore.mockReturnValue({
-        setActiveCall: mockSetActiveCall,
-      });
-
-      // Also mock getState to return the same setActiveCall function
-      mockCoreStore.useCoreStore.getState = jest.fn(() => ({
-        setActiveCall: mockSetActiveCall,
-      }));
 
       render(<HomeMap />);
 
@@ -674,7 +655,7 @@ describe('HomeMap', () => {
       fireEvent.press(screen.getByTestId('set-current-call'));
 
       await waitFor(() => {
-        expect(mockSetActiveCall).toHaveBeenCalledWith('1');
+        expect(mockSetActiveCallById).toHaveBeenCalledWith('1');
       });
 
       // Check analytics tracking for set as current call

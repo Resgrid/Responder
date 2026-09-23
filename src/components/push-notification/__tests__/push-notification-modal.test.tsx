@@ -111,6 +111,8 @@ jest.mock('react-i18next', () => ({
         'push_notifications.unknown_type_warning': 'Unknown notification type',
         'push_notifications.view_alert': 'View Alert',
         'push_notifications.view_chat': 'View chat',
+        'push_notifications.types.work_order': 'Work Order',
+        'push_notifications.view_work_order': 'View Work Order',
         'common.dismiss': 'Close',
       };
       return translations[key] || key;
@@ -391,6 +393,49 @@ describe('PushNotificationModal', () => {
     expect(router.push).not.toHaveBeenCalled();
     expect(hideNotificationModalMock).not.toHaveBeenCalled();
     expect(mockAnalytics.trackEvent).not.toHaveBeenCalledWith('push_notification_view_chat_pressed', expect.any(Object));
+  });
+
+  it('should open the work order from a work-order notification', async () => {
+    const hideNotificationModalMock = jest.fn();
+    const workOrderId = '0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11';
+
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: {
+        type: 'work-order' as const,
+        id: workOrderId,
+        eventCode: `NWO:${workOrderId}`,
+        title: 'Work order',
+        body: 'Work order WO-2026-000019: needs your attention',
+      },
+      hideNotificationModal: hideNotificationModalMock,
+    });
+
+    render(<PushNotificationModal />);
+
+    expect(screen.getByText('Work Order')).toBeTruthy();
+    expect(screen.queryByText('Unknown notification type')).toBeNull();
+    fireEvent.press(screen.getByText('View Work Order'));
+
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith({ pathname: '/work-orders/[id]', params: { id: workOrderId } });
+      expect(hideNotificationModalMock).toHaveBeenCalled();
+      expect(mockAnalytics.trackEvent).toHaveBeenCalledWith('push_notification_view_work_order_pressed', { id: workOrderId, eventCode: `NWO:${workOrderId}` });
+    });
+  });
+
+  it('should not offer the work-order button for an unsafe id', () => {
+    (usePushNotificationModalStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStore,
+      isOpen: true,
+      notification: { type: 'work-order' as const, id: '../settings', eventCode: 'NWO:../settings', title: 'Work order', body: 'Body' },
+    });
+
+    render(<PushNotificationModal />);
+
+    expect(screen.queryByText('View Work Order')).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it('should render weather alert notification with a view button', () => {

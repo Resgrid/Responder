@@ -5,16 +5,24 @@ import { getPois, getPoiTypes } from '@/api/mapping/mapping';
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { useAuthStore } from '@/lib/auth';
 import { translate } from '@/lib/i18n/utils';
+import { logger } from '@/lib/logging';
+import { getResponseStatus, isConnectivityError } from '@/lib/request-errors';
 import {
   areCallsAllowedForDetail,
   arePoisAllowedForStatus,
   areStationsAllowedForDetail,
   getCallDestinationPayload,
   getDefaultDestinationTabForDetail,
+  getDefaultStatusCall,
   getNoneDestinationPayload,
+  getPersonnelStatusSteps,
   getPoiDestinationPayload,
   getStationDestinationPayload,
+  hasDestinationChoicesForDetail,
+  hasNoteStepForStatus,
   isDestinationRequiredForDetail,
+  isNoteRequiredForStatus,
+  type PersonnelStatusStep,
   type StatusDestinationTab,
   type StatusDestinationType,
 } from '@/lib/status-destinations';
@@ -26,11 +34,14 @@ import { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonS
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { acquireLocationFix, getLocationFixErrorMessage } from '@/services/location-fix';
 import { offlineQueueProcessor } from '@/services/offline-queue-processor';
+import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
+import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useToastStore } from '@/stores/toast/store';
 
-export type PersonnelStatusStep = 'select-status' | 'select-responding-to' | 'add-note' | 'confirm';
+export type { PersonnelStatusStep };
 export type ResponseTab = StatusDestinationTab;
 export type ResponseType = StatusDestinationType;
 
@@ -99,6 +110,20 @@ const getTranslatedMessage = (key: Parameters<typeof translate>[0], fallback: st
 const isStationGroup = (group: GroupResultData) => {
   // DepartmentGroupTypes: Orginizational = 1, Station = 2
   return `${group.TypeId ?? ''}` === '2';
+};
+
+const getStepsForStatus = (selectedStatus: StatusesResultData | null, requiresStatusSelection: boolean): PersonnelStatusStep[] =>
+  getPersonnelStatusSteps({
+    requiresStatusSelection,
+    hasStatus: selectedStatus != null,
+    hasDestinationChoices: hasDestinationChoicesForDetail(selectedStatus?.Detail),
+    hasNoteStep: hasNoteStepForStatus(selectedStatus),
+  });
+
+/** Same inputs the sheet renders its default from, so what it shows is what gets sent. */
+const getDefaultCallFromStores = (): CallResultData | null => {
+  const currentStatus = useHomeStore.getState().currentUserStatus ?? useCoreStore.getState().currentStatus;
+  return getDefaultStatusCall(useCallsStore.getState().calls, useActiveCallStore.getState().activeCall, currentStatus);
 };
 
 const getClearedDestinationState = (selectedTab: ResponseTab = 'calls'): DestinationSelectionState => ({
@@ -193,11 +218,12 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
           }
         : getClearedDestinationState()
     );
+    const requiresStatusSelection = !status && preselectedPoi != null;
 
     set({
       isOpen: true,
-      requiresStatusSelection: !status && preselectedPoi != null,
-      currentStep: status || preselectedPoi == null ? 'select-responding-to' : 'select-status',
+      requiresStatusSelection,
+      currentStep: getStepsForStatus(status || null, requiresStatusSelection)[0],
       selectedStatus: status || null,
       note: '',
       ...destinationState,
@@ -311,39 +337,31 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
     }
   },
   nextStep: () => {
-    const { currentStep } = get();
+    const { currentStep, selectedStatus, requiresStatusSelection } = get();
+    const steps = getStepsForStatus(selectedStatus, requiresStatusSelection);
+    const index = steps.indexOf(currentStep);
 
-    switch (currentStep) {
-      case 'select-status':
-        set({ currentStep: 'select-responding-to' });
-        break;
-      case 'select-responding-to':
-        set({ currentStep: 'add-note' });
-        break;
-      case 'add-note':
-        set({ currentStep: 'confirm' });
-        break;
+    // The last step saves instead of advancing.
+    if (index >= 0 && index < steps.length - 1) {
+      set({ currentStep: steps[index + 1] });
     }
   },
   goToNextStep: () => {
     return get().nextStep();
   },
   previousStep: () => {
-    const { currentStep, requiresStatusSelection } = get();
+    const { currentStep, selectedStatus, requiresStatusSelection } = get();
+    const steps = getStepsForStatus(selectedStatus, requiresStatusSelection);
+    const index = steps.indexOf(currentStep);
 
-    switch (currentStep) {
-      case 'select-responding-to':
-        set({ currentStep: requiresStatusSelection ? 'select-status' : 'select-responding-to' });
-        break;
-      case 'add-note':
-        set({ currentStep: 'select-responding-to' });
-        break;
-      case 'confirm':
-        set({ currentStep: 'add-note' });
-        break;
+    if (index > 0) {
+      set({ currentStep: steps[index - 1] });
     }
   },
   submitStatus: async () => {
+    // When the user committed the status. Taken before the location fix (which can take
+    // seconds) so the recorded time -- and the time an offline replay sends -- is the tap.
+    const tappedAt = new Date();
     const { selectedStatus, note, selectedCall, selectedGroup, selectedPoi, responseType, respondingTo, getRequiredGpsAccuracy } = get();
     const showToast = useToastStore.getState().showToast;
     const { userId } = useAuthStore.getState();
@@ -361,6 +379,11 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
         showToast('error', getTranslatedMessage('personnel.status.destination_required', 'A destination is required for this status'));
         return;
       }
+    }
+
+    if (isNoteRequiredForStatus(selectedStatus) && note.trim().length === 0) {
+      showToast('error', getTranslatedMessage('personnel.status.note_required', 'A note is required for this status'));
+      return;
     }
 
     set({ isLoading: true });
@@ -392,7 +415,9 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
 
     try {
       const status = new SavePersonStatusInput();
-      const date = new Date();
+      // A status with no destination to pick still carries the default open call, so the call
+      // report can show who was on scene when a department's "On Scene" has destination None.
+      const implicitCall = hasDestinationChoicesForDetail(selectedStatus.Detail) ? null : getDefaultCallFromStores();
       const destinationPayload =
         responseType === 'call' && selectedCall
           ? getCallDestinationPayload(selectedCall)
@@ -400,12 +425,14 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
             ? getStationDestinationPayload(selectedGroup)
             : responseType === 'poi' && selectedPoi
               ? getPoiDestinationPayload(selectedPoi)
-              : getNoneDestinationPayload();
+              : implicitCall
+                ? getCallDestinationPayload(implicitCall)
+                : getNoneDestinationPayload();
 
       status.UserId = userId;
       status.Type = selectedStatus.Id.toString();
-      status.Timestamp = date.toISOString();
-      status.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
+      status.Timestamp = tappedAt.toISOString();
+      status.TimestampUtc = tappedAt.toUTCString().replace('UTC', 'GMT');
       status.Note = note;
       status.RespondingTo = respondingTo || destinationPayload.respondingTo;
       status.RespondingToType = destinationPayload.respondingToType;
@@ -420,14 +447,30 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
 
       try {
         await savePersonnelStatus(status);
-        await fetchCurrentUserInfo();
-        showToast('success', getTranslatedMessage('home.status.updated_successfully', 'Status updated successfully'));
-        get().reset();
       } catch (error) {
-        offlineQueueProcessor.addPersonnelStatusToQueue(status);
-        showToast('info', getTranslatedMessage('personnel.status.saved_offline', 'Status saved offline and will be submitted when connection is restored'));
-        get().reset();
+        if (isConnectivityError(error)) {
+          // Never reached a working API. The queue replays this exact payload, tap time included.
+          offlineQueueProcessor.addPersonnelStatusToQueue(status);
+          showToast('info', getTranslatedMessage('personnel.status.saved_offline', 'Status saved offline and will be submitted when connection is restored'));
+          get().reset();
+          return;
+        }
+
+        // The server answered and refused it. Queueing would only replay a request it refuses
+        // again while telling the user it was saved, so say so and keep the sheet open to adjust.
+        logger.warn({ message: 'Personnel status rejected by the server', context: { httpStatus: getResponseStatus(error) } });
+        showToast('error', getTranslatedMessage('home.status.update_failed', 'Failed to update status'));
+        return;
       }
+
+      try {
+        await fetchCurrentUserInfo();
+      } catch (error) {
+        // The status is saved; a failed refresh of the Home card must not report otherwise.
+      }
+
+      showToast('success', getTranslatedMessage('home.status.updated_successfully', 'Status updated successfully'));
+      get().reset();
     } catch (error) {
       showToast('error', getTranslatedMessage('home.status.update_failed', 'Failed to update status'));
     } finally {

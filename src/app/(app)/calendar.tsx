@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,7 @@ type TabType = 'today' | 'upcoming' | 'calendar';
 
 export default function CalendarScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { trackEvent } = useAnalytics();
   const [activeTab, setActiveTab] = useState<TabType>('today');
   const [selectedItem, setSelectedItem] = useState<CalendarItemResultData | null>(null);
@@ -79,6 +80,10 @@ export default function CalendarScreen() {
 
   const handleItemPress = React.useCallback(
     (item: CalendarItemResultData) => {
+      if (item.IsVirtual && item.SourceId) {
+        router.push({ pathname: '/checklists', params: { occurrenceId: item.SourceId } });
+        return;
+      }
       setSelectedItem(item);
       viewCalendarItemAction(item); // Update store state to match Angular
       setIsDetailsSheetOpen(true);
@@ -92,7 +97,7 @@ export default function CalendarScreen() {
         tab: activeTab,
       });
     },
-    [activeTab, trackEvent, viewCalendarItemAction]
+    [activeTab, trackEvent, viewCalendarItemAction, router]
   );
 
   const handleMonthChange = (startDate: string, endDate: string) => {

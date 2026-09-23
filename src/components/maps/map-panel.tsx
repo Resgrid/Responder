@@ -14,8 +14,8 @@ import { isPoiMarker } from '@/lib/poi';
 import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useToastStore } from '@/stores/toast/store';
 
 import MapPins from './map-pins';
@@ -281,7 +281,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const handleSetAsCurrentCall = useCallback(
     async (pin: MapMakerInfoData) => {
       try {
-        await useCoreStore.getState().setActiveCall(pin.Id);
+        await useActiveCallStore.getState().setActiveCallById(pin.Id);
         useToastStore.getState().showToast('success', t('map.call_set_as_current'));
 
         trackEvent('map_pin_set_as_current_call', {

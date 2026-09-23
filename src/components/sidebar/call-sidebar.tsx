@@ -10,7 +10,7 @@ import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { openMapsWithAddress, openMapsWithDirections } from '@/lib/navigation';
-import { useCoreStore } from '@/stores/app/core-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useCallsStore } from '@/stores/calls/store';
 
 import { CallCard } from '../calls/call-card';
@@ -22,9 +22,10 @@ export const SidebarCallCard = () => {
   const { colorScheme } = useColorScheme();
   // Selected field by field: an object selector builds a new reference on every store
   // write, re-rendering the card whether or not anything it reads actually changed.
-  const activeCall = useCoreStore((state) => state.activeCall);
-  const activePriority = useCoreStore((state) => state.activePriority);
-  const setActiveCall = useCoreStore((state) => state.setActiveCall);
+  const activeCall = useActiveCallStore((state) => state.activeCall);
+  const setActiveCall = useActiveCallStore((state) => state.setActiveCall);
+  const clearActiveCall = useActiveCallStore((state) => state.clearActiveCall);
+  const activePriority = useCallsStore((state) => state.callPriorities.find((priority) => priority.Id === activeCall?.Priority) ?? null);
 
   const [isBottomSheetOpen, setIsBottomSheetOpen] = React.useState(false);
   const { t } = useTranslation();
@@ -52,7 +53,7 @@ export const SidebarCallCard = () => {
         },
         {
           text: t('common.confirm'),
-          onPress: () => setActiveCall(null),
+          onPress: () => clearActiveCall(),
           style: 'destructive',
         },
       ],
@@ -143,17 +144,8 @@ export const SidebarCallCard = () => {
                 <Pressable
                   key={call.CallId}
                   onPress={() => {
-                    const handleCallSelect = async () => {
-                      try {
-                        await setActiveCall(call.CallId);
-                        setIsBottomSheetOpen(false);
-                      } catch (error) {
-                        console.error('Failed to set active call:', error);
-                      }
-                    };
-                    handleCallSelect().catch((error) => {
-                      console.error('Failed to handle call selection:', error);
-                    });
+                    setActiveCall(call);
+                    setIsBottomSheetOpen(false);
                   }}
                   className={`rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'} ${
                     activeCall?.CallId === call.CallId ? (colorScheme === 'dark' ? 'bg-primary-900' : 'bg-primary-50') : ''

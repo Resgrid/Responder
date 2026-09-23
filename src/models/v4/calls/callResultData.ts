@@ -1,3 +1,5 @@
+import { type CallContactResultData } from './callSiteInfoResult';
+
 export class CallResultData {
   public CallId: string = '';
   public Priority: number = 0;
@@ -34,6 +36,11 @@ export class CallResultData {
   public Latitude: string = '';
   public Longitude: string = '';
   public CheckInTimersEnabled: boolean = false;
+  /**
+   * Contacts linked to the call (primary first) with pre-plan / alert / hazard indicators. Populated by
+   * GetCall and GetActiveCalls; absent on other list endpoints. GetCallSiteInfo carries the full site knowledge.
+   */
+  public Contacts?: CallContactResultData[];
   /**
    * Catalog field ids the server withheld from this response (ADP plan 7.2). Empty for a
    * department without the addon, and empty again once a grant reveals the record.

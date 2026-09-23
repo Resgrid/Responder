@@ -12,6 +12,18 @@ import { securityStore } from '../security/store';
 // Well-known feature flag keys. Keep values in sync with Resgrid.Model.FeatureFlagKeys.
 export const FeatureFlagKeys = {
   ChatSystem: 'Chat.System',
+  ChecklistsSystem: 'Checklists.System',
+  RecordsSystem: 'Records.System',
+  /** Field Records in this app. Depends on Records.System and is seeded off (RMS plan RMS-1D). */
+  RecordsFieldResponder: 'Records.Field.Responder',
+  /** Deployments, daily time reports and resource usage (Workforce & Business Operations plan, Phase C). */
+  Deployments: 'Operations.Deployments',
+  /** CAL OES MARS cost recovery (F-42) on top of Deployments. */
+  CalOesMars: 'CostRecovery.CalOesMars',
+  /** Internal field costing and usage capture (Phase E). */
+  WorkforceInternalCosting: 'Workforce.InternalCosting',
+  /** Maintenance work orders (report a problem, work what is assigned). Writes also need Readiness Pro. */
+  MaintenanceWorkOrders: 'Maintenance.WorkOrders',
 } as const;
 
 export type FeatureFlagKey = (typeof FeatureFlagKeys)[keyof typeof FeatureFlagKeys];
@@ -126,3 +138,39 @@ export const useFeatureFlagStatus = (key: string): FeatureFlagStatus =>
   });
 
 export const useChatSystemStatus = (): FeatureFlagStatus => useFeatureFlagStatus(FeatureFlagKeys.ChatSystem);
+
+// Field Records is gated by the parent Records.System flag and this app's own child flag; both must
+// be on. Unknown resolves fail-closed, so the surface stays hidden until the server confirms it.
+export const useIsRecordsFieldEnabled = () => {
+  // Both hooks run unconditionally: `&&` would skip the second one whenever the parent is off,
+  // and the hook count changing between renders is a rules-of-hooks violation.
+  const system = useFeatureFlag(FeatureFlagKeys.RecordsSystem);
+  const field = useFeatureFlag(FeatureFlagKeys.RecordsFieldResponder);
+  return system && field;
+};
+
+export const useRecordsFieldStatus = (): FeatureFlagStatus => {
+  const parent = useFeatureFlagStatus(FeatureFlagKeys.RecordsSystem);
+  const child = useFeatureFlagStatus(FeatureFlagKeys.RecordsFieldResponder);
+  if (parent === 'disabled' || child === 'disabled') {
+    return 'disabled';
+  }
+  if (parent === 'unknown' || child === 'unknown') {
+    return 'unknown';
+  }
+  return 'enabled';
+};
+
+export const useIsChecklistsEnabled = () => useFeatureFlag(FeatureFlagKeys.ChecklistsSystem);
+
+// Deployments (DTR / usage / F-42) are gated by Operations.Deployments alone; the cost-recovery and
+// costing add-ons are answered per department by the server's access calls, not by a flag here.
+export const useIsDeploymentsEnabled = () => useFeatureFlag(FeatureFlagKeys.Deployments);
+
+export const useDeploymentsStatus = (): FeatureFlagStatus => useFeatureFlagStatus(FeatureFlagKeys.Deployments);
+
+// Work orders are gated by Maintenance.WorkOrders; the paid Readiness Pro write gate is answered by the
+// server (Readiness/GetAccess and each page's CanWrite), so reading stays available when it lapses.
+export const useIsWorkOrdersEnabled = () => useFeatureFlag(FeatureFlagKeys.MaintenanceWorkOrders);
+
+export const useWorkOrdersStatus = (): FeatureFlagStatus => useFeatureFlagStatus(FeatureFlagKeys.MaintenanceWorkOrders);

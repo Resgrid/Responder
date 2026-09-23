@@ -4,7 +4,9 @@ import React from 'react';
 
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useCoreStore } from '@/stores/app/core-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useCallsStore } from '@/stores/calls/store';
+import { useHomeStore } from '@/stores/home/home-store';
 // Mock offline-queue-processor to avoid syntax errors
 jest.mock('@/services/offline-queue-processor', () => ({
   offlineQueueProcessor: { processQueue: jest.fn(), addPersonnelStatusToQueue: jest.fn(), cleanup: jest.fn(), startProcessing: jest.fn(), startBackgroundProcessing: jest.fn() },
@@ -50,7 +52,9 @@ jest.mock('nativewind', () => ({
 
 // Mock the stores
 jest.mock('@/stores/app/core-store');
+jest.mock('@/stores/calls/active-call-store');
 jest.mock('@/stores/calls/store');
+jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/status/personnel-status-store');
 
 // Mock UI components
@@ -201,7 +205,9 @@ jest.mock('lucide-react-native', () => ({
 }));
 
 const mockUseCoreStore = useCoreStore as jest.MockedFunction<typeof useCoreStore>;
+const mockUseActiveCallStore = useActiveCallStore as jest.MockedFunction<typeof useActiveCallStore>;
 const mockUseCallsStore = useCallsStore as jest.MockedFunction<typeof useCallsStore>;
+const mockUseHomeStore = useHomeStore as jest.MockedFunction<typeof useHomeStore>;
 
 // The component selects field by field, so the mocked store hook must apply the selector
 // rather than hand back the whole state object.
@@ -316,11 +322,14 @@ describe('PersonnelStatusBottomSheet', () => {
     },
   ];
 
+  // Destination options come from the mocked store helpers below; Note 1 (optional) gives the
+  // sheet a note step, so the flow is destination -> note.
   const mockStatus = {
     Id: 1,
     Text: 'Available',
     BColor: '#00FF00',
     Detail: 0, // 0 = No destination needed, 1 = Station only, 2 = Call only, 3 = Both
+    Note: 1, // 0 = None, 1 = Optional, 2 = Required
   };
 
   beforeEach(() => {
@@ -337,7 +346,16 @@ describe('PersonnelStatusBottomSheet', () => {
     });
 
     applySelector(mockUseCoreStore, {
+      activeStatuses: [],
+      currentStatus: null,
+    });
+
+    applySelector(mockUseActiveCallStore, {
       activeCall: null,
+    });
+
+    applySelector(mockUseHomeStore, {
+      currentUserStatus: null,
     });
 
     applySelector(mockUseCallsStore, {
@@ -374,7 +392,7 @@ describe('PersonnelStatusBottomSheet', () => {
     it('should render step 1 correctly', () => {
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('common.step 1 common.of 3')).toBeTruthy();
+      expect(screen.getByText('common.step 1 common.of 2')).toBeTruthy();
       expect(screen.getByText('personnel.status.select_responding_to')).toBeTruthy();
       expect(screen.getByText('personnel.status.select_destination')).toBeTruthy();
       expect(screen.getByTestId('x-icon')).toBeTruthy(); // Close button should be visible
@@ -532,6 +550,54 @@ describe('PersonnelStatusBottomSheet', () => {
       render(<PersonnelStatusBottomSheet />);
 
       expect(screen.getByText('common.next')).toBeTruthy();
+      expect(screen.queryByText('common.save')).toBeNull();
+      // The summary only appears on the last step.
+      expect(screen.queryByTestId('personnel-status-summary')).toBeNull();
+    });
+
+    it('should carry Save instead of Next when the status has no note step', () => {
+      const mockSubmitStatus = jest.fn();
+      const mockNextStep = jest.fn();
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Detail: 2, Note: 0 },
+        currentStep: 'select-responding-to',
+        responseType: 'call',
+        selectedCall: mockCalls[0],
+        submitStatus: mockSubmitStatus,
+        nextStep: mockNextStep,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('common.step 1 common.of 1')).toBeTruthy();
+      expect(screen.queryByText('common.next')).toBeNull();
+      expect(screen.getByTestId('personnel-status-summary')).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-summary-destination').props.children).toBe('CALL-001 - Test Call 1');
+
+      fireEvent.press(screen.getByText('common.save'));
+
+      expect(mockSubmitStatus).toHaveBeenCalled();
+      expect(mockNextStep).not.toHaveBeenCalled();
+    });
+
+    it('should disable Save on the destination step until a required destination is picked', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Detail: 2, Note: 0 },
+        currentStep: 'select-responding-to',
+        responseType: 'none',
+        selectedCall: null,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByTestId('personnel-status-save').props.disabled).toBe(true);
     });
 
     it('should handle next button press', () => {
@@ -599,7 +665,7 @@ describe('PersonnelStatusBottomSheet', () => {
     });
   });
 
-  describe('step 2 - add note', () => {
+  describe('step 2 - add note (last step)', () => {
     beforeEach(() => {
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
         ...mockStore,
@@ -617,15 +683,16 @@ describe('PersonnelStatusBottomSheet', () => {
     it('should render step 2 correctly', () => {
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('common.step 2 common.of 3')).toBeTruthy();
+      expect(screen.getByText('common.step 2 common.of 2')).toBeTruthy();
       expect(screen.getByText('personnel.status.add_note')).toBeTruthy();
     });
 
-    it('should display selected call info', () => {
+    it('should display a one-line summary of the status and selected call', () => {
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('personnel.status.selected_destination:')).toBeTruthy();
-      expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-summary')).toBeTruthy();
+      expect(screen.getByText('Available')).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-summary-destination').props.children).toBe('CALL-001 - Test Call 1');
     });
 
     it('should display selected station info when station is selected', () => {
@@ -643,8 +710,7 @@ describe('PersonnelStatusBottomSheet', () => {
 
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('personnel.status.selected_destination:')).toBeTruthy();
-      expect(screen.getByText('Station 1')).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-summary-destination').props.children).toBe('Station 1');
     });
 
     it('should display no destination when none is selected', () => {
@@ -663,8 +729,7 @@ describe('PersonnelStatusBottomSheet', () => {
 
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('personnel.status.selected_destination:')).toBeTruthy();
-      expect(screen.getByText('personnel.status.no_destination')).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-summary-destination').props.children).toBe('personnel.status.no_destination');
     });
 
     it('should render note textarea', () => {
@@ -696,11 +761,94 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(mockSetNote).toHaveBeenCalledWith('Test note');
     });
 
-    it('should render previous and next buttons', () => {
+    it('should render previous and save buttons, with no confirmation step after it', () => {
       render(<PersonnelStatusBottomSheet />);
 
       expect(screen.getByText('common.previous')).toBeTruthy();
-      expect(screen.getByText('common.next')).toBeTruthy();
+      expect(screen.getByText('common.save')).toBeTruthy();
+      expect(screen.queryByText('common.next')).toBeNull();
+    });
+
+    it('should submit from the note step', () => {
+      const mockSubmitStatus = jest.fn();
+      const mockNextStep = jest.fn();
+
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'add-note',
+        selectedCall: mockCalls[0],
+        responseType: 'call',
+        note: 'Test note',
+        submitStatus: mockSubmitStatus,
+        nextStep: mockNextStep,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      fireEvent.press(screen.getByText('common.save'));
+
+      expect(mockSubmitStatus).toHaveBeenCalled();
+      expect(mockNextStep).not.toHaveBeenCalled();
+    });
+
+    it('should show submitting text and disable both buttons while saving', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: mockStatus,
+        currentStep: 'add-note',
+        selectedCall: mockCalls[0],
+        responseType: 'call',
+        isLoading: true,
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('common.submitting')).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-save').props.disabled).toBe(true);
+    });
+
+    it('should require a note before saving when the status note type is Required', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Note: 2 },
+        currentStep: 'add-note',
+        selectedCall: mockCalls[0],
+        responseType: 'call',
+        note: '   ',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByText('personnel.status.note:')).toBeTruthy();
+      expect(screen.queryByText('personnel.status.note (common.optional):')).toBeNull();
+      expect(screen.getByPlaceholderText('personnel.status.note_required')).toBeTruthy();
+      // The mocked TouchableOpacity ignores `disabled` on press, so the prop is the assertion;
+      // submitStatus rejects an empty required note on its own (store tests).
+      expect(screen.getByTestId('personnel-status-save').props.disabled).toBe(true);
+    });
+
+    it('should enable Save once a required note is entered', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Note: 2 },
+        currentStep: 'add-note',
+        selectedCall: mockCalls[0],
+        responseType: 'call',
+        note: 'Arrived at the north entrance',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByTestId('personnel-status-save').props.disabled).toBe(false);
     });
 
     it('should handle previous button press', () => {
@@ -724,174 +872,85 @@ describe('PersonnelStatusBottomSheet', () => {
     });
   });
 
-  describe('step 3 - confirm', () => {
-    beforeEach(() => {
+  describe('statuses with no destination to pick (Detail 0)', () => {
+    const noDestinationStore = {
+      ...mockStore,
+      isOpen: true,
+      isDestinationRequired: jest.fn(() => false),
+      areCallsAllowed: jest.fn(() => false),
+      areStationsAllowed: jest.fn(() => false),
+      arePoisAllowed: jest.fn(() => false),
+      groups: mockGroups,
+    };
+
+    it('should open straight on the note step with Cancel instead of Previous', () => {
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'confirm',
-        selectedCall: mockCalls[0],
-        responseType: 'call',
-        respondingTo: 'Test responding to',
-        note: 'Test note',
-        isLoading: false,
-        groups: mockGroups,
-      });
-    });
-
-    it('should render step 3 correctly', () => {
-      render(<PersonnelStatusBottomSheet />);
-
-      expect(screen.getByText('common.step 3 common.of 3')).toBeTruthy();
-      expect(screen.getByText('personnel.status.confirm_status')).toBeTruthy();
-      expect(screen.getByText('personnel.status.review_and_confirm')).toBeTruthy();
-    });
-
-    it('should display review information for call', () => {
-      render(<PersonnelStatusBottomSheet />);
-
-      expect(screen.getByText('personnel.status.status:')).toBeTruthy();
-      expect(screen.getByText('Available')).toBeTruthy();
-      expect(screen.getByText('personnel.status.responding_to:')).toBeTruthy();
-      expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
-      expect(screen.getByText('personnel.status.note:')).toBeTruthy();
-      expect(screen.getByText('Test note')).toBeTruthy();
-    });
-
-    it('should display review information for station', () => {
-      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'confirm',
-        selectedGroup: mockGroups[0],
-        responseType: 'station',
-        respondingTo: 'Test responding to',
-        note: 'Test note',
-        isLoading: false,
-        groups: mockGroups,
+        ...noDestinationStore,
+        selectedStatus: { ...mockStatus, Detail: 0, Note: 1 },
+        currentStep: 'add-note',
       });
 
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('personnel.status.status:')).toBeTruthy();
-      expect(screen.getByText('Available')).toBeTruthy();
-      expect(screen.getByText('personnel.status.responding_to:')).toBeTruthy();
-      expect(screen.getByText('Station 1')).toBeTruthy();
+      expect(screen.getByText('common.step 1 common.of 1')).toBeTruthy();
+      expect(screen.getByText('common.cancel')).toBeTruthy();
+      expect(screen.queryByText('common.previous')).toBeNull();
+      expect(screen.getByText('common.save')).toBeTruthy();
     });
 
-    it('should not show custom responding to when empty', () => {
-      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'confirm',
-        selectedCall: mockCalls[0],
-        responseType: 'call',
-        respondingTo: '',
-        note: 'Test note',
-        groups: mockGroups,
-      });
-
-      render(<PersonnelStatusBottomSheet />);
-
-      expect(screen.queryByText('personnel.status.custom_responding_to')).toBeNull();
-    });
-
-    it('should not show note when empty', () => {
-      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'confirm',
-        selectedCall: mockCalls[0],
-        responseType: 'call',
-        respondingTo: 'Test responding to',
-        note: '',
-        groups: mockGroups,
-      });
-
-      render(<PersonnelStatusBottomSheet />);
-
-      expect(screen.queryByText('personnel.status.note')).toBeNull();
-    });
-
-    it('should render previous and submit buttons', () => {
-      render(<PersonnelStatusBottomSheet />);
-
-      expect(screen.getByText('common.previous')).toBeTruthy();
-      expect(screen.getByText('common.submit')).toBeTruthy();
-    });
-
-    it('should handle submit button press', () => {
+    it('should show the destination step as the save screen, without a picker, when there is no note', () => {
       const mockSubmitStatus = jest.fn();
 
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'confirm',
-        selectedCall: mockCalls[0],
-        responseType: 'call',
+        ...noDestinationStore,
+        selectedStatus: { ...mockStatus, Detail: 0, Note: 0 },
+        currentStep: 'select-responding-to',
         submitStatus: mockSubmitStatus,
-        groups: mockGroups,
       });
 
       render(<PersonnelStatusBottomSheet />);
 
-      fireEvent.press(screen.getByText('common.submit'));
+      expect(screen.queryByText('personnel.status.select_destination')).toBeNull();
+      expect(screen.queryByText('personnel.status.general_status')).toBeNull();
+      expect(screen.queryByText('CALL-001 - Test Call 1')).toBeNull();
+      expect(screen.getByTestId('personnel-status-summary-destination').props.children).toBe('personnel.status.no_destination');
+
+      fireEvent.press(screen.getByText('common.save'));
       expect(mockSubmitStatus).toHaveBeenCalled();
     });
 
-    it('should show submitting text when loading', () => {
+    it('should show the open default call it will send silently in the summary', () => {
+      applySelector(mockUseActiveCallStore, { activeCall: { CallId: '2' } });
+
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'confirm',
-        selectedCall: mockCalls[0],
-        responseType: 'call',
-        isLoading: true,
-        groups: mockGroups,
+        ...noDestinationStore,
+        selectedStatus: { ...mockStatus, Detail: 0, Note: 0 },
+        currentStep: 'select-responding-to',
       });
 
       render(<PersonnelStatusBottomSheet />);
 
-      expect(screen.getByText('common.submitting')).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-summary-destination').props.children).toBe('CALL-002 - Test Call 2');
     });
 
-    it('should disable buttons when loading', () => {
+    it('should not show a default call that is no longer open', () => {
+      applySelector(mockUseActiveCallStore, { activeCall: { CallId: '99' } });
+
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
-        ...mockStore,
-        isOpen: true,
-        selectedStatus: mockStatus,
-        currentStep: 'confirm',
-        selectedCall: mockCalls[0],
-        responseType: 'call',
-        isLoading: true,
-        groups: mockGroups,
+        ...noDestinationStore,
+        selectedStatus: { ...mockStatus, Detail: 0, Note: 0 },
+        currentStep: 'select-responding-to',
       });
 
       render(<PersonnelStatusBottomSheet />);
 
-      const previousButton = screen.getByText('common.previous').parent;
-      const submitButton = screen.getByText('common.submitting').parent;
-
-      // Note: Testing disabled state would require checking props or accessibility
-      expect(previousButton).toBeTruthy();
-      expect(submitButton).toBeTruthy();
+      expect(screen.getByTestId('personnel-status-summary-destination').props.children).toBe('personnel.status.no_destination');
     });
   });
 
   describe('auto-selection behavior', () => {
-    it('should auto-select active call when available and no destination is selected', () => {
+    const renderDestinationStep = (overrides: Record<string, unknown> = {}) => {
       const mockSetSelectedCall = jest.fn();
-      const activeCall = mockCalls[0];
-
-      applySelector(mockUseCoreStore, {
-        activeCall: activeCall,
-      });
 
       mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
         ...mockStore,
@@ -901,13 +960,87 @@ describe('PersonnelStatusBottomSheet', () => {
         responseType: 'none',
         setSelectedCall: mockSetSelectedCall,
         groups: mockGroups,
+        ...overrides,
       });
 
       render(<PersonnelStatusBottomSheet />);
 
-      // Note: The useEffect auto-selection would be tested in integration tests
-      // Here we just verify the component renders correctly
-      expect(screen.getByText('CALL-001 - Test Call 1')).toBeTruthy();
+      return mockSetSelectedCall;
+    };
+
+    it('should preselect the call set active from call detail / Home (active call store)', () => {
+      // The persisted active call is a stale snapshot; the sheet selects the open list's copy.
+      applySelector(mockUseActiveCallStore, { activeCall: { CallId: '2', Name: 'Stale name' } });
+
+      const mockSetSelectedCall = renderDestinationStep();
+
+      expect(mockSetSelectedCall).toHaveBeenCalledWith(mockCalls[1]);
+    });
+
+    it('should ignore the legacy core store copy of the active call', () => {
+      applySelector(mockUseCoreStore, { activeStatuses: [], currentStatus: null, activeCall: mockCalls[0] });
+
+      const mockSetSelectedCall = renderDestinationStep();
+
+      expect(mockSetSelectedCall).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to the call the current status points at when no active call is set', () => {
+      applySelector(mockUseHomeStore, { currentUserStatus: { DestinationId: 2, DestinationType: 2 } });
+
+      const mockSetSelectedCall = renderDestinationStep();
+
+      expect(mockSetSelectedCall).toHaveBeenCalledWith(mockCalls[1]);
+    });
+
+    it('should fall back to the core store current status when the home store has none', () => {
+      applySelector(mockUseCoreStore, { activeStatuses: [], currentStatus: { DestinationId: '1', DestinationType: null } });
+
+      const mockSetSelectedCall = renderDestinationStep();
+
+      expect(mockSetSelectedCall).toHaveBeenCalledWith(mockCalls[0]);
+    });
+
+    it('should prefer the active call over the current status destination', () => {
+      applySelector(mockUseActiveCallStore, { activeCall: { CallId: '1' } });
+      applySelector(mockUseHomeStore, { currentUserStatus: { DestinationId: 2, DestinationType: 2 } });
+
+      const mockSetSelectedCall = renderDestinationStep();
+
+      expect(mockSetSelectedCall).toHaveBeenCalledWith(mockCalls[0]);
+    });
+
+    it('should not default to a current status destination that is a station', () => {
+      applySelector(mockUseHomeStore, { currentUserStatus: { DestinationId: 2, DestinationType: 1 } });
+
+      const mockSetSelectedCall = renderDestinationStep();
+
+      expect(mockSetSelectedCall).not.toHaveBeenCalled();
+    });
+
+    it('should not default to a call that is no longer open', () => {
+      applySelector(mockUseActiveCallStore, { activeCall: { CallId: '99' } });
+      applySelector(mockUseHomeStore, { currentUserStatus: { DestinationId: 98, DestinationType: 2 } });
+
+      const mockSetSelectedCall = renderDestinationStep();
+
+      expect(mockSetSelectedCall).not.toHaveBeenCalled();
+    });
+
+    it('should not default to a call when the status does not allow calls', () => {
+      applySelector(mockUseActiveCallStore, { activeCall: { CallId: '1' } });
+
+      const mockSetSelectedCall = renderDestinationStep({ areCallsAllowed: jest.fn(() => false), selectedTab: 'stations' });
+
+      expect(mockSetSelectedCall).not.toHaveBeenCalled();
+    });
+
+    it('should not override a destination the user already picked', () => {
+      applySelector(mockUseActiveCallStore, { activeCall: { CallId: '1' } });
+
+      const mockSetSelectedCall = renderDestinationStep({ responseType: 'station', selectedGroup: mockGroups[0], selectedTab: 'stations' });
+
+      expect(mockSetSelectedCall).not.toHaveBeenCalled();
     });
   });
 
@@ -1335,7 +1468,7 @@ describe('PersonnelStatusBottomSheet', () => {
         ...mockStore,
         isOpen: true,
         selectedStatus: mockStatus,
-        currentStep: 'confirm',
+        currentStep: 'add-note',
         responseType: 'call',
         selectedCall: mockCalls[0],
         note: 'Test note',
@@ -1349,7 +1482,7 @@ describe('PersonnelStatusBottomSheet', () => {
       // Clear initial analytics call
       mockTrackEvent.mockClear();
 
-      fireEvent.press(screen.getByText('common.submit'));
+      fireEvent.press(screen.getByText('common.save'));
 
       expect(mockTrackEvent).toHaveBeenCalledWith(
         'personnel_status_submitted',

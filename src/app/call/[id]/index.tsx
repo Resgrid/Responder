@@ -8,10 +8,12 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 
+import { ActivityLinkMarker } from '@/components/calls/activity-link-marker';
 import { CallDetailActionSheetPanel, HeaderRightMenuButton, useCallDetailMenu } from '@/components/calls/call-detail-menu';
 import CallFilesModal from '@/components/calls/call-files-modal';
 import CallImagesModal from '@/components/calls/call-images-modal';
 import CallNotesModal from '@/components/calls/call-notes-modal';
+import { CallSiteInfoTabPanel } from '@/components/calls/call-site-info-tab-panel';
 import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
 import { CheckInTabPanel } from '@/components/check-in/check-in-tab-panel';
 import { HeaderBackButton } from '@/components/common/header-back-button';
@@ -23,6 +25,7 @@ import { IncidentCommandTabPanel } from '@/components/incident-command/incident-
 import FullScreenMapModal from '@/components/maps/full-screen-map-modal';
 // Import a static map component instead of react-native-maps
 import StaticMap from '@/components/maps/static-map';
+import { RecordsQuickCreate } from '@/components/records/records-quick-create';
 import { FocusAwareStatusBar, SafeAreaView } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
@@ -325,6 +328,8 @@ export default function CallDetail() {
                   </VStack>
                 </Box>
               ) : null}
+              {/* Contextual create: the button hides itself unless the server offers something here. */}
+              <RecordsQuickCreate context={{ CallId: Number.parseInt(call.CallId, 10) }} className="self-start" />
               <Box className="border-b border-outline-100 pb-2">
                 <Text className="text-sm text-gray-500">{t('call_detail.note')}</Text>
                 <Box>
@@ -445,9 +450,13 @@ export default function CallDetail() {
               <VStack className="space-y-3">
                 {callExtraData.Activity.map((event, index) => (
                   <Box key={index} className="border-l-4 border-blue-500 py-1 pl-3">
-                    <Text className="font-semibold" style={{ color: event.StatusColor }}>
-                      {event.StatusText}
-                    </Text>
+                    <HStack className="flex-wrap items-center gap-2">
+                      <Text className="shrink font-semibold" style={{ color: event.StatusColor }}>
+                        {event.StatusText}
+                      </Text>
+                      {/* Marks a status the sender did not explicitly attach to this call. */}
+                      <ActivityLinkMarker source={event.DestinationSource} />
+                    </HStack>
                     <Text className="text-sm text-gray-600">
                       {event.Name} - {event.Group}
                     </Text>
@@ -468,6 +477,13 @@ export default function CallDetail() {
       key: 'video',
       title: t('call_detail.tabs.video'),
       content: <VideoFeedTabPanel callId={parseInt(call.CallId)} canEdit={canUserCreateCalls ?? false} />,
+    });
+
+    // Site Info tab: pre-plans, hazards, alert notes and files of the contacts linked to the call.
+    builtTabs.push({
+      key: 'site',
+      title: t('call_detail.tabs.site'),
+      content: <CallSiteInfoTabPanel callId={call.CallId} />,
     });
 
     builtTabs.push({

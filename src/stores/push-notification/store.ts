@@ -9,7 +9,7 @@ export interface PushNotificationData {
   data?: Record<string, unknown>;
 }
 
-export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'weather' | 'communication-test' | 'unknown';
+export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'weather' | 'communication-test' | 'work-order' | 'unknown';
 
 export interface ParsedNotification {
   type: NotificationType;
@@ -30,9 +30,11 @@ interface PushNotificationModalState {
 
 // Whole event code prefixes. Checked before EVENT_CODE_PREFIXES below so a multi-letter code is
 // not collapsed to its first character — "CT:" (communication test) would otherwise read as "C"
-// and be handled as a call.
+// and be handled as a call. "NWO:" (work order) leads with "n" so builds without this entry fall back
+// to a plain notification rather than reading "WO" as a weather alert.
 const EVENT_CODE_TYPES: Record<string, NotificationType> = {
   ct: 'communication-test',
+  nwo: 'work-order',
 };
 
 // First character of the event code prefix sent by the Resgrid backend, e.g.

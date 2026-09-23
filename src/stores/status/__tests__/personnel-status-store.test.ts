@@ -6,7 +6,10 @@ import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { useAuthStore } from '@/lib/auth';
 import { acquireLocationFix, getLocationFixErrorMessage } from '@/services/location-fix';
 import { offlineQueueProcessor } from '@/services/offline-queue-processor';
+import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
+import { useCallsStore } from '@/stores/calls/store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useToastStore } from '@/stores/toast/store';
 
@@ -58,6 +61,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 		// Reset store state
 		usePersonnelStatusBottomSheetStore.setState({
 			isOpen: false,
+			requiresStatusSelection: false,
 			currentStep: 'select-responding-to',
 			selectedCall: null,
 			selectedGroup: null,
@@ -91,6 +95,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 		// Reset store state completely to ensure clean state for next test
 		usePersonnelStatusBottomSheetStore.setState({
 			isOpen: false,
+			requiresStatusSelection: false,
 			currentStep: 'select-responding-to',
 			selectedCall: null,
 			selectedGroup: null,
@@ -177,39 +182,40 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 	});
 
 	describe('step navigation', () => {
-		it('should navigate to next step correctly', () => {
+		const buildStatus = (overrides: Record<string, unknown> = {}) => ({
+			Id: 1,
+			Text: 'Responding',
+			BColor: '#00FF00',
+			Type: 1,
+			StateId: 1,
+			Color: '#00FF00',
+			Gps: false,
+			Note: 1,
+			Detail: 3,
+			...overrides,
+		});
+
+		it('should navigate to next step correctly and stop on the note step (no confirmation step)', () => {
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
 
-			// Test progression through all steps
 			act(() => {
 				result.current.nextStep(); // select-responding-to -> add-note
 			});
 			expect(result.current.currentStep).toBe('add-note');
 
-			act(() => {
-				result.current.nextStep(); // add-note -> confirm
-			});
-			expect(result.current.currentStep).toBe('confirm');
-
-			// Should not progress beyond confirm
+			// The note step is last: it saves rather than advancing.
 			act(() => {
 				result.current.nextStep();
 			});
-			expect(result.current.currentStep).toBe('confirm');
+			expect(result.current.currentStep).toBe('add-note');
 		});
 
 		it('should navigate to previous step correctly', () => {
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
 
-			// Start at confirm step
 			act(() => {
-				result.current.setCurrentStep('confirm');
+				result.current.setCurrentStep('add-note');
 			});
-
-			act(() => {
-				result.current.previousStep(); // confirm -> add-note
-			});
-			expect(result.current.currentStep).toBe('add-note');
 
 			act(() => {
 				result.current.previousStep(); // add-note -> select-responding-to
@@ -226,22 +232,85 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 		it('should ensure goToNextStep behaves identically to nextStep', () => {
 			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
 
-			// Test that goToNextStep progresses through steps the same way as nextStep
 			act(() => {
 				result.current.goToNextStep(); // select-responding-to -> add-note
 			});
 			expect(result.current.currentStep).toBe('add-note');
 
 			act(() => {
-				result.current.goToNextStep(); // add-note -> confirm
-			});
-			expect(result.current.currentStep).toBe('confirm');
-
-			// Should not progress beyond confirm
-			act(() => {
 				result.current.goToNextStep();
 			});
-			expect(result.current.currentStep).toBe('confirm');
+			expect(result.current.currentStep).toBe('add-note');
+		});
+
+		it('should keep the destination step as the last step when the status has no note', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, buildStatus({ Note: 0 }) as any);
+			});
+			expect(result.current.currentStep).toBe('select-responding-to');
+
+			act(() => {
+				result.current.nextStep();
+			});
+			expect(result.current.currentStep).toBe('select-responding-to');
+		});
+
+		it('should open straight on the note step for a status with no destination to pick', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, buildStatus({ Detail: 0, Note: 1 }) as any);
+			});
+			expect(result.current.currentStep).toBe('add-note');
+
+			// Nothing before it to go back to.
+			act(() => {
+				result.current.previousStep();
+			});
+			expect(result.current.currentStep).toBe('add-note');
+		});
+
+		it('should open on the destination step as the only step when there is neither a destination nor a note', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+
+			act(() => {
+				result.current.setIsOpen(true, buildStatus({ Detail: 0, Note: 0 }) as any);
+			});
+			expect(result.current.currentStep).toBe('select-responding-to');
+
+			act(() => {
+				result.current.nextStep();
+			});
+			expect(result.current.currentStep).toBe('select-responding-to');
+		});
+
+		it('should walk status -> destination -> note when the status must be picked first (POI flow)', () => {
+			const { result } = renderHook(() => usePersonnelStatusBottomSheetStore());
+			const poi = { PoiId: 7, PoiTypeId: 1, PoiTypeName: 'Hospital', Name: 'Memorial', Address: '1 Main St' };
+
+			act(() => {
+				result.current.setIsOpen(true, undefined, { preselectedPoi: poi as any });
+			});
+			expect(result.current.currentStep).toBe('select-status');
+
+			act(() => {
+				result.current.setSelectedStatus(buildStatus({ Detail: 7 }) as any);
+				result.current.nextStep();
+			});
+			expect(result.current.currentStep).toBe('select-responding-to');
+
+			act(() => {
+				result.current.nextStep();
+			});
+			expect(result.current.currentStep).toBe('add-note');
+
+			act(() => {
+				result.current.previousStep();
+				result.current.previousStep();
+			});
+			expect(result.current.currentStep).toBe('select-status');
 		});
 	});
 
@@ -577,7 +646,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			// Set some state
 			act(() => {
 				result.current.setIsOpen(true, mockStatus as any);
-				result.current.setCurrentStep('confirm');
+				result.current.setCurrentStep('add-note');
 				result.current.setSelectedCall(mockCall as any);
 				result.current.setSelectedGroup(mockGroup as any);
 				result.current.setResponseType('call');
@@ -1355,6 +1424,166 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 				})
 			);
 			expect(mockShowToast).toHaveBeenCalledWith('info', 'Status saved offline and will be submitted when connection is restored');
+		});
+	});
+
+	describe('default call, save errors and timestamps', () => {
+		// A department's custom "On Scene" configured with destination None and no note.
+		const onSceneNoDestination = {
+			Id: 5,
+			Text: 'On Scene',
+			BColor: '#000000',
+			Type: 1,
+			StateId: 5,
+			Color: '#FFFFFF',
+			Gps: false,
+			Note: 0,
+			Detail: 0,
+		};
+		const openCall = { CallId: '321', Number: 'C-321', Name: 'Structure Fire', Address: '9 Elm St' };
+		let mockShowToast: jest.Mock;
+
+		const setHomeStatus = (currentUserStatus: unknown) => {
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: jest.fn(() => Promise.resolve()), currentUserStatus });
+		};
+
+		const submit = async (status: Record<string, unknown>, configure?: () => void) => {
+			act(() => {
+				usePersonnelStatusBottomSheetStore.getState().setIsOpen(true, status as any);
+				configure?.();
+			});
+
+			await act(async () => {
+				await usePersonnelStatusBottomSheetStore.getState().submitStatus();
+			});
+		};
+
+		beforeEach(() => {
+			mockShowToast = jest.fn();
+			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			setHomeStatus(null);
+			(mockOfflineQueueProcessor.addPersonnelStatusToQueue as jest.MockedFunction<any>) = jest.fn().mockReturnValue('queued-1');
+			mockSavePersonnelStatus.mockResolvedValue({} as any);
+			useCallsStore.setState({ calls: [openCall as any] });
+			useActiveCallStore.setState({ activeCall: null, activeCallId: null });
+			useCoreStore.setState({ currentStatus: null });
+		});
+
+		afterEach(() => {
+			useCallsStore.setState({ calls: [] });
+			useActiveCallStore.setState({ activeCall: null, activeCallId: null });
+			useCoreStore.setState({ currentStatus: null });
+			jest.useRealTimers();
+		});
+
+		it('should send the open active call silently for a Detail 0 status', async () => {
+			useActiveCallStore.setState({ activeCall: { ...openCall, Name: 'stale persisted copy' } as any, activeCallId: '321' });
+
+			await submit(onSceneNoDestination);
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ Type: '5', RespondingTo: '321', RespondingToType: 2, EventId: '321' }));
+		});
+
+		it('should fall back to the call the current status points at for a Detail 0 status', async () => {
+			setHomeStatus({ DestinationId: 321, DestinationType: 2 });
+
+			await submit(onSceneNoDestination);
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ RespondingTo: '321', RespondingToType: 2, EventId: '321' }));
+		});
+
+		it('should fall back to the core store current status (untyped legacy destination) when the home store has none', async () => {
+			useCoreStore.setState({ currentStatus: { DestinationId: '321', DestinationType: null } as any });
+
+			await submit(onSceneNoDestination);
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ RespondingTo: '321', RespondingToType: 2 }));
+		});
+
+		it('should send no destination for a Detail 0 status when the default call is no longer open', async () => {
+			useActiveCallStore.setState({ activeCall: { CallId: '999' } as any, activeCallId: '999' });
+			setHomeStatus({ DestinationId: 998, DestinationType: 2 });
+
+			await submit(onSceneNoDestination);
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ RespondingTo: '', RespondingToType: null, EventId: '' }));
+		});
+
+		it('should not use a current status station destination as a call', async () => {
+			setHomeStatus({ DestinationId: 321, DestinationType: 1 });
+
+			await submit(onSceneNoDestination);
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ RespondingTo: '', RespondingToType: null }));
+		});
+
+		it('should keep an explicitly picked destination over the default call', async () => {
+			useActiveCallStore.setState({ activeCall: openCall as any, activeCallId: '321' });
+			const stationStatus = { ...onSceneNoDestination, Detail: 1 };
+			const station = { GroupId: '456', Name: 'Station 1', TypeId: 2 };
+
+			await submit(stationStatus, () => usePersonnelStatusBottomSheetStore.getState().setSelectedGroup(station as any));
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ RespondingTo: '456', RespondingToType: 1, EventId: '456' }));
+		});
+
+		it('should refuse to save an empty note when the status requires one', async () => {
+			await submit({ ...onSceneNoDestination, Note: 2 }, () => usePersonnelStatusBottomSheetStore.getState().setNote('   '));
+
+			expect(mockShowToast).toHaveBeenCalledWith('error', 'A note is required for this status');
+			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+		});
+
+		it('should save when a required note is provided', async () => {
+			await submit({ ...onSceneNoDestination, Note: 2 }, () => usePersonnelStatusBottomSheetStore.getState().setNote('Arrived at the north entrance'));
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ Note: 'Arrived at the north entrance' }));
+		});
+
+		it.each([[400], [403], [404], [500]])('should show an error and not queue when the server answers %s', async (httpStatus) => {
+			mockSavePersonnelStatus.mockRejectedValue(Object.assign(new Error(`Request failed with status code ${httpStatus}`), { response: { status: httpStatus } }));
+
+			await submit(onSceneNoDestination);
+
+			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).not.toHaveBeenCalled();
+			expect(mockShowToast).toHaveBeenCalledWith('error', 'Failed to update status');
+			expect(mockShowToast).not.toHaveBeenCalledWith('info', expect.anything());
+			// Left open so the user can change the destination and try again.
+			expect(usePersonnelStatusBottomSheetStore.getState().isOpen).toBe(true);
+			expect(usePersonnelStatusBottomSheetStore.getState().isLoading).toBe(false);
+		});
+
+		it.each([
+			['no response (offline)', Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' })],
+			['client timeout', Object.assign(new Error('timeout of 15000ms exceeded'), { code: 'ECONNABORTED' })],
+			['503 from the gateway', Object.assign(new Error('Request failed with status code 503'), { response: { status: 503 } })],
+		])('should queue the status offline on a connectivity failure: %s', async (_label, error) => {
+			mockSavePersonnelStatus.mockRejectedValue(error);
+
+			await submit(onSceneNoDestination);
+
+			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).toHaveBeenCalledTimes(1);
+			expect(mockShowToast).toHaveBeenCalledWith('info', 'Status saved offline and will be submitted when connection is restored');
+			expect(usePersonnelStatusBottomSheetStore.getState().isOpen).toBe(false);
+		});
+
+		it('should stamp the tap time (ISO-8601 UTC) rather than when the location fix returned, and queue it unchanged', async () => {
+			jest.useFakeTimers({ now: new Date('2026-09-23T10:00:00.000Z') });
+			// The on-demand fix takes 8 seconds.
+			mockAcquireLocationFix.mockImplementation(async () => {
+				jest.setSystemTime(new Date('2026-09-23T10:00:08.000Z'));
+				return buildFix(40.7128, -74.006);
+			});
+			mockSavePersonnelStatus.mockRejectedValue(new Error('Network Error'));
+
+			await submit(onSceneNoDestination);
+
+			const sent = mockSavePersonnelStatus.mock.calls[0][0];
+			expect(sent.Timestamp).toBe('2026-09-23T10:00:00.000Z');
+			expect(sent.TimestampUtc).toBe('Wed, 23 Sep 2026 10:00:00 GMT');
+			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).toHaveBeenCalledWith(
+				expect.objectContaining({ Timestamp: '2026-09-23T10:00:00.000Z', TimestampUtc: 'Wed, 23 Sep 2026 10:00:00 GMT' })
+			);
 		});
 	});
 });

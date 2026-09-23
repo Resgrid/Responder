@@ -72,6 +72,48 @@ describe('mapNovuNotification', () => {
     expect(result.referenceType).toBeUndefined();
   });
 
+  it('resolves a work-order reference from the push event code the bridge copies into data', () => {
+    const result = mapNovuNotification(buildNotification({ data: { eventCode: 'NWO:0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11' } }));
+
+    expect(result.referenceType).toBe('work-order');
+    expect(result.referenceId).toBe('0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11');
+    // Routing, not "Additional information".
+    expect(result.metadata).toEqual({});
+  });
+
+  it('resolves a call dispatch code, which has no separator, to the call', () => {
+    expect(mapNovuNotification(buildNotification({ data: { eventCode: 'C1234' } }))).toEqual(expect.objectContaining({ referenceType: 'call', referenceId: '1234', metadata: {} }));
+    // A communication-test token is not a call, whatever its first letter.
+    expect(mapNovuNotification(buildNotification({ data: { eventCode: 'CT:9f2c' } })).referenceType).toBeUndefined();
+  });
+
+  it('resolves a department message code to the message', () => {
+    expect(mapNovuNotification(buildNotification({ data: { eventCode: 'M5678' } }))).toEqual(expect.objectContaining({ referenceType: 'message', referenceId: '5678', metadata: {} }));
+  });
+
+  it('resolves direct and group chat codes to the conversation', () => {
+    expect(mapNovuNotification(buildNotification({ data: { eventCode: 't:9a2b' } }))).toEqual(expect.objectContaining({ referenceType: 'chat', referenceId: '9a2b', metadata: {} }));
+    expect(mapNovuNotification(buildNotification({ data: { eventCode: 'g:7f1c' } }))).toEqual(expect.objectContaining({ referenceType: 'chat', referenceId: '7f1c' }));
+    expect(mapNovuNotification(buildNotification({ data: { eventCode: 'g:../call/9' } })).referenceType).toBeUndefined();
+    // The bridge sends an empty code when a trigger carried none.
+    expect(mapNovuNotification(buildNotification({ data: { eventCode: '' } })).referenceType).toBeUndefined();
+  });
+
+  it('ignores a work-order event code whose id could steer the router', () => {
+    const result = mapNovuNotification(buildNotification({ data: { eventCode: 'NWO:../settings' } }));
+
+    expect(result.referenceType).toBeUndefined();
+    expect(result.referenceId).toBeUndefined();
+  });
+
+  it('keeps an explicit reference when the event code is not one the inbox opens', () => {
+    const result = mapNovuNotification(buildNotification({ data: { eventCode: 'N0', referenceId: 'call-42', referenceType: 'call', type: 'alert' } }));
+
+    expect(result.referenceType).toBe('call');
+    expect(result.referenceId).toBe('call-42');
+    expect(result.metadata).toEqual({ referenceId: 'call-42', referenceType: 'call', type: 'alert' });
+  });
+
   it('tolerates a notification with no data bag', () => {
     const result = mapNovuNotification(buildNotification({ data: undefined }));
 

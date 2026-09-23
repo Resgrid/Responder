@@ -8,15 +8,19 @@ import { getAllPersonnelStaffings, getCurrentPersonStaffing } from '@/api/staffi
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import { zustandStorage } from '@/lib/storage';
-import { setActiveCallId } from '@/lib/storage/app';
-import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
 import { type GetCurrentStaffingResultData } from '@/models/v4/personnelStaffing/getCurrentStaffingResultData';
 import { type GetCurrentStatusResultData } from '@/models/v4/personnelStatuses/getCurrentStatusResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 
-import { useCallsStore } from '../calls/store';
+import { useActiveCallStore } from '../calls/active-call-store';
+
+// The active call lives in useActiveCallStore. Version 0 of this store kept a second copy
+// (written only by the map pin) that the personnel status sheet read, so a call set from call
+// detail never reached the sheet. Version 1 drops that copy.
+const CORE_STORAGE_VERSION = 1;
+const LEGACY_ACTIVE_CALL_KEYS = ['activeCallId', 'activeCall', 'activePriority'] as const;
 
 interface CoreState {
   activeStatuses: StatusesResultData[] | null;
@@ -26,10 +30,6 @@ interface CoreState {
   currentStaffing: GetCurrentStaffingResultData | null;
   currentStaffingValue: StatusesResultData | null;
 
-  activeCallId: string | null;
-  activeCall: CallResultData | null;
-  activePriority: CallPriorityResultData | null;
-
   config: GetConfigResultData | null;
 
   isLoading: boolean;
@@ -38,16 +38,37 @@ interface CoreState {
   error: string | null;
   init: () => Promise<void>;
   getStatusesAndStaffing: () => Promise<void>;
-  setActiveCall: (callId: string | null) => Promise<void>;
   fetchConfig: () => Promise<void>;
 }
+
+type PersistedCoreState = Pick<CoreState, 'config' | 'isInitialized' | 'activeStatuses' | 'activeStaffing' | 'currentStatus' | 'currentStatusValue' | 'currentStaffing' | 'currentStaffingValue'>;
+
+/**
+ * Moves a version-0 blob's own active call into useActiveCallStore (only when that store has
+ * none, so a call set from call detail wins) and strips the legacy fields. MMKV is synchronous,
+ * so the active call store has already rehydrated by the time this runs.
+ */
+const migrateCoreStorage = (persistedState: unknown, version: number): PersistedCoreState => {
+  const state = { ...((persistedState as Record<string, unknown> | null | undefined) ?? {}) };
+
+  if (version < 1) {
+    const legacyActiveCall = state.activeCall as CallResultData | null | undefined;
+
+    if (legacyActiveCall?.CallId && !useActiveCallStore.getState().activeCall) {
+      useActiveCallStore.getState().setActiveCall(legacyActiveCall);
+    }
+  }
+
+  LEGACY_ACTIVE_CALL_KEYS.forEach((key) => {
+    delete state[key];
+  });
+
+  return state as unknown as PersistedCoreState;
+};
 
 export const useCoreStore = create<CoreState>()(
   persist(
     (set, get) => ({
-      activeCallId: null,
-      activeCall: null,
-      activePriority: null,
       config: null,
       isLoading: false,
       isInitialized: false,
@@ -140,38 +161,6 @@ export const useCoreStore = create<CoreState>()(
           });
         }
       },
-      setActiveCall: async (callId: string | null) => {
-        if (!callId) {
-          // Deselect the call
-          set({
-            activeCall: null,
-            activePriority: null,
-            activeCallId: null,
-          });
-          return;
-        }
-
-        set({ isLoading: true, error: null, activeCallId: callId });
-        try {
-          await setActiveCallId(callId);
-          const callStore = useCallsStore.getState();
-          await callStore.fetchCalls();
-          await callStore.fetchCallPriorities();
-          const activeCall = callStore.calls.find((call) => call.CallId === callId);
-          const activePriority = callStore.callPriorities.find((priority) => priority.Id === activeCall?.Priority);
-          set({
-            activeCall: activeCall ?? null,
-            activePriority: activePriority ?? null,
-            isLoading: false,
-          });
-        } catch (error) {
-          set({ error: 'Failed to set active call', isLoading: false });
-          logger.error({
-            message: `Failed to set active call: ${JSON.stringify(error)}`,
-            context: { error },
-          });
-        }
-      },
       fetchConfig: async () => {
         try {
           const config = await getConfig(Env.APP_KEY);
@@ -188,12 +177,11 @@ export const useCoreStore = create<CoreState>()(
     {
       name: 'core-storage',
       storage: createJSONStorage(() => zustandStorage),
+      version: CORE_STORAGE_VERSION,
+      migrate: migrateCoreStorage,
       // Transient flags describe a single run of init(), never a saved session, so they are
       // kept out of storage entirely.
-      partialize: (state) => ({
-        activeCallId: state.activeCallId,
-        activeCall: state.activeCall,
-        activePriority: state.activePriority,
+      partialize: (state): PersistedCoreState => ({
         config: state.config,
         isInitialized: state.isInitialized,
         activeStatuses: state.activeStatuses,

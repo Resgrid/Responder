@@ -736,6 +736,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
           eventingUrl: eventingUrl,
           hubName: Env.CHANNEL_HUB_NAME,
           methods: [
+            'checklistUpdated',
             'personnelStatusUpdated',
             'personnelStaffingUpdated',
             'unitStatusUpdated',

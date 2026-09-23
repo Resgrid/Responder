@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { AlertCircle, Bell, CloudLightning, MailIcon, MessageCircle, Phone, RadioTower, Users } from 'lucide-react-native';
+import { type Href, router } from 'expo-router';
+import { AlertCircle, Bell, CloudLightning, MailIcon, MessageCircle, Phone, RadioTower, Users, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -41,6 +41,8 @@ const NotificationIcon = ({ type }: { type: NotificationType }) => {
       return <CloudLightning {...iconProps} />;
     case 'communication-test':
       return <RadioTower {...iconProps} />;
+    case 'work-order':
+      return <Wrench {...iconProps} />;
     default:
       return <Bell {...iconProps} />;
   }
@@ -131,6 +133,18 @@ export const PushNotificationModal: React.FC = () => {
     }
   };
 
+  const handleViewWorkOrder = () => {
+    if (notification?.type === 'work-order' && isSafeRouteId(notification.id)) {
+      trackEvent('push_notification_view_work_order_pressed', {
+        id: notification.id,
+        eventCode: notification.eventCode,
+      });
+
+      hideNotificationModal();
+      router.push({ pathname: '/work-orders/[id]', params: { id: notification.id } } as Href);
+    }
+  };
+
   const handleViewWeatherAlert = async () => {
     if (notification?.type !== 'weather' || !notification.id) {
       return;
@@ -198,6 +212,8 @@ export const PushNotificationModal: React.FC = () => {
         return t('push_notifications.types.weather');
       case 'communication-test':
         return t('push_notifications.types.communication_test');
+      case 'work-order':
+        return t('push_notifications.types.work_order');
       default:
         return t('push_notifications.types.notification');
     }
@@ -217,6 +233,8 @@ export const PushNotificationModal: React.FC = () => {
         return '#F59E0B'; // Amber for weather alerts
       case 'communication-test':
         return '#0EA5E9'; // Sky blue for communication tests
+      case 'work-order':
+        return '#F97316'; // Orange for work orders
       default:
         return '#6B7280'; // Gray for unknown
     }
@@ -296,6 +314,12 @@ export const PushNotificationModal: React.FC = () => {
             {notification.type === 'message' ? (
               <Button className="flex-1" onPress={handleViewMessages} testID="view-messages-button">
                 <ButtonText>{t('push_notifications.view_message')}</ButtonText>
+              </Button>
+            ) : null}
+
+            {notification.type === 'work-order' && isSafeRouteId(notification.id) ? (
+              <Button className="flex-1" onPress={handleViewWorkOrder} testID="view-work-order-button">
+                <ButtonText>{t('push_notifications.view_work_order')}</ButtonText>
               </Button>
             ) : null}
 

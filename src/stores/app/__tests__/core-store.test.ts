@@ -90,9 +90,6 @@ describe('Core Store', () => {
 
 		// Reset store state between tests
 		useCoreStore.setState({
-			activeCallId: null,
-			activeCall: null,
-			activePriority: null,
 			config: null,
 			isLoading: false,
 			isInitialized: false,
@@ -226,9 +223,6 @@ describe('Core Store', () => {
 
 		// Reset store state by creating a fresh instance
 		useCoreStore.setState({
-			activeCallId: null,
-			activeCall: null,
-			activePriority: null,
 			config: null,
 			isLoading: false,
 			isInitialized: false,
@@ -431,9 +425,10 @@ describe('Core Store', () => {
 		it('should have correct initial state', () => {
 			const { result } = renderHook(() => useCoreStore());
 
-			expect(result.current.activeCallId).toBe(null);
-			expect(result.current.activeCall).toBe(null);
-			expect(result.current.activePriority).toBe(null);
+			// The active call lives in useActiveCallStore; the core store no longer keeps a copy.
+			expect(result.current).not.toHaveProperty('activeCall');
+			expect(result.current).not.toHaveProperty('activeCallId');
+			expect(result.current).not.toHaveProperty('activePriority');
 			expect(result.current.config).toBe(null);
 			expect(result.current.isLoading).toBe(false);
 			expect(result.current.isInitialized).toBe(false);
@@ -450,7 +445,7 @@ describe('Core Store', () => {
 
 			expect(typeof result.current.init).toBe('function');
 			expect(typeof result.current.getStatusesAndStaffing).toBe('function');
-			expect(typeof result.current.setActiveCall).toBe('function');
+			expect(result.current).not.toHaveProperty('setActiveCall');
 			expect(typeof result.current.fetchConfig).toBe('function');
 		});
 	});
@@ -535,18 +530,6 @@ describe('Core Store', () => {
 					Detail: 0,
 				},
 			]);
-		});
-
-		it('should clear active call when setting null', async () => {
-			const { result } = renderHook(() => useCoreStore());
-
-			await act(async () => {
-				await result.current.setActiveCall(null);
-			});
-
-			expect(result.current.activeCall).toBe(null);
-			expect(result.current.activePriority).toBe(null);
-			expect(result.current.activeCallId).toBe(null);
 		});
 	});
 });

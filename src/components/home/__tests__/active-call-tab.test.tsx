@@ -61,6 +61,11 @@ jest.mock('@/stores/units/store', () => ({
   useUnitsStore: jest.fn((selector: (state: any) => any) => selector({ units: [], fetchUnits: jest.fn() })),
 }));
 
+// The active call store resolves call ids against the calls store; this tab never does.
+jest.mock('@/stores/calls/store', () => ({
+  useCallsStore: { getState: () => ({ calls: [], fetchCalls: jest.fn() }) },
+}));
+
 jest.mock('@/lib/storage', () => ({
   zustandStorage: {
     getItem: jest.fn(() => null),

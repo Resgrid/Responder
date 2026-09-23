@@ -11,6 +11,14 @@ jest.mock('@/lib/storage', () => ({
   },
 }));
 
+const mockCallsState: { calls: unknown[]; fetchCalls: jest.Mock } = { calls: [], fetchCalls: jest.fn() };
+
+jest.mock('../store', () => ({
+  useCallsStore: {
+    getState: () => mockCallsState,
+  },
+}));
+
 const mockCall = {
   CallId: '123',
   Priority: 1,
@@ -96,6 +104,45 @@ describe('useActiveCallStore', () => {
     it('should return false when no active call', () => {
       const { result } = renderHook(() => useActiveCallStore());
       expect(result.current.isActiveCall('123')).toBe(false);
+    });
+  });
+
+  describe('setActiveCallById', () => {
+    beforeEach(() => {
+      mockCallsState.calls = [];
+      mockCallsState.fetchCalls = jest.fn(async () => {
+        // The fetch replaces the list; the store must read it after the fetch, not before.
+        mockCallsState.calls = [mockCall];
+      });
+    });
+
+    it('should resolve the id against the refreshed open calls list and set it active', async () => {
+      await act(async () => {
+        await useActiveCallStore.getState().setActiveCallById('123');
+      });
+
+      expect(mockCallsState.fetchCalls).toHaveBeenCalled();
+      expect(useActiveCallStore.getState().activeCallId).toBe('123');
+      expect(useActiveCallStore.getState().activeCall?.Name).toBe('Structure Fire');
+    });
+
+    it('should reject and leave the active call unchanged when the call is not open', async () => {
+      await expect(useActiveCallStore.getState().setActiveCallById('999')).rejects.toThrow();
+
+      expect(useActiveCallStore.getState().activeCallId).toBeNull();
+    });
+
+    it('should clear the active call when given null', async () => {
+      act(() => {
+        useActiveCallStore.getState().setActiveCall(mockCall as any);
+      });
+
+      await act(async () => {
+        await useActiveCallStore.getState().setActiveCallById(null);
+      });
+
+      expect(useActiveCallStore.getState().activeCall).toBeNull();
+      expect(mockCallsState.fetchCalls).not.toHaveBeenCalled();
     });
   });
 });

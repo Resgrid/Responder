@@ -9,6 +9,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const SIDEBAR_WIDTH_RATIO = 0.85;
 const SIDEBAR_MAX_WIDTH = 400;
 
+// Reference types the inbox can open get a worded button; anything else falls back to viewReference.
+const REFERENCE_LABEL_KEYS: Partial<Record<string, string>> = {
+  call: 'notifications.viewCall',
+  message: 'notifications.viewMessage',
+  'work-order': 'notifications.viewWorkOrder',
+  chat: 'notifications.viewChat',
+};
+
 // Color-dependent rules live here instead of the module-level StyleSheet so they follow the
 // app theme (nativewind) rather than the system theme captured once at app launch.
 const createThemedStyles = (isDark: boolean) =>
@@ -249,9 +257,11 @@ export const NotificationDetail = ({ notification, onClose, onDelete, onNavigate
             ) : null}
 
             {notification.referenceType && notification.referenceId ? (
-              <Pressable onPress={handleNavigateToReference} style={[styles.referenceButton, themed.referenceButton]}>
+              <Pressable onPress={handleNavigateToReference} style={[styles.referenceButton, themed.referenceButton]} testID="notification-detail-reference">
                 <ExternalLink size={18} color={iconColors.accent} strokeWidth={2} style={themed.referenceButtonIcon} />
-                <Text style={[styles.buttonText, themed.buttonText]}>{t('notifications.viewReference', { referenceType: notification.referenceType })}</Text>
+                <Text style={[styles.buttonText, themed.buttonText]}>
+                  {REFERENCE_LABEL_KEYS[notification.referenceType] ? t(REFERENCE_LABEL_KEYS[notification.referenceType]!) : t('notifications.viewReference', { referenceType: notification.referenceType })}
+                </Text>
               </Pressable>
             ) : null}
           </View>

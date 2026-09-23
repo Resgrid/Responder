@@ -1,3 +1,6 @@
+jest.mock('@/stores/auth/store', () => { const { create } = jest.requireActual('zustand'); return { __esModule: true, default: create(() => ({ userId: 'author' })) }; });
+jest.mock('@/stores/security/store', () => { const { create } = jest.requireActual('zustand'); return { securityStore: create(() => ({ rights: { DepartmentId: '77' } })) }; });
+jest.mock('@/stores/data-protection/store', () => { const { create } = jest.requireActual('zustand'); return { dataProtectionStore: create(() => ({ grantToken: null, capabilities: null, isStepUpActive: () => false, stepUpExpiresAt: null })) }; });
 // Mock date-fns
 jest.mock('date-fns', () => ({
 	addDays: jest.fn(),
@@ -823,4 +826,32 @@ describe('Calendar Store', () => {
 			});
 		});
 	});
+});
+
+
+describe('Checklist calendar protection lifecycle', () => {
+  it('drops a virtual entry returned after the user changes', async () => {
+    const auth = jest.requireMock('@/stores/auth/store').default;
+    auth.setState({ userId: 'author' });
+    let release!: (response: unknown) => void;
+    mockedApi.getCalendarItemsForDateRange.mockReturnValue(new Promise(resolve => { release = resolve; }) as never);
+    const pending = useCalendarStore.getState().loadCalendarItemsForDateRange('2026-09-08', '2026-09-09');
+    auth.setState({ userId: 'other' });
+    release({ Data: [{ ...mockCalendarItem, IsVirtual: true, Title: 'SYNTHETIC PRIVATE' }, mockCalendarItem] });
+    await pending;
+    expect(useCalendarStore.getState().selectedMonthItems).toHaveLength(1);
+    expect(JSON.stringify(useCalendarStore.getState().selectedMonthItems)).not.toContain('SYNTHETIC PRIVATE');
+  });
+  it('drops a response if its grant expires before the timer callback runs', async () => {
+    const protection = jest.requireMock('@/stores/data-protection/store').dataProtectionStore;
+    protection.setState({ grantToken: 'synthetic-grant', isStepUpActive: () => true });
+    let release!: (response: unknown) => void;
+    mockedApi.getCalendarItemsForDateRange.mockReturnValue(new Promise(resolve => { release = resolve; }) as never);
+    const pending = useCalendarStore.getState().loadCalendarItemsForDateRange('2026-09-08', '2026-09-09');
+    protection.getState().isStepUpActive = () => false;
+    release({ Data: [{ ...mockCalendarItem, IsVirtual: true, Title: 'SYNTHETIC PRIVATE' }] });
+    await pending;
+    expect(useCalendarStore.getState().selectedMonthItems).toEqual([]);
+    protection.setState({ grantToken: null, stepUpExpiresAt: null });
+  });
 });

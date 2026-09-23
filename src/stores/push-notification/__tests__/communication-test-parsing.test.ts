@@ -45,4 +45,15 @@ describe('communication test event code parsing', () => {
     expect(parseNotificationData({ eventCode: '' }).type).toBe('unknown');
     expect(parseNotificationData({ eventCode: ':1234' }).type).toBe('unknown');
   });
+
+  it('parses the three letter NWO prefix as a work order carrying the order id', () => {
+    const parsed = parseNotificationData({ eventCode: 'NWO:0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11' });
+
+    expect(parsed.type).toBe('work-order');
+    expect(parsed.id).toBe('0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11');
+    // Lowercase, as the chat codes already arrive.
+    expect(parseNotificationData({ eventCode: 'nwo:abc' }).type).toBe('work-order');
+    // Other "n" codes stay plain notifications, which is what builds without the NWO entry show.
+    expect(parseNotificationData({ eventCode: 'NX:abc' }).type).toBe('unknown');
+  });
 });

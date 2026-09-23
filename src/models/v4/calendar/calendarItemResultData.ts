@@ -1,4 +1,9 @@
 export class CalendarItemResultData {
+  public IsVirtual?: boolean;
+  public SourceId?: string;
+  public IsRedacted?: boolean;
+  public ChecklistState?: number;
+  public DeepLinkUrl?: string;
   public CalendarItemId: string = '';
   public Title: string = '';
   public Start: string = '';

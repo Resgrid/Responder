@@ -301,7 +301,7 @@ class PushNotificationService {
     });
 
     // Tapping a push deep-links straight to the relevant screen: weather alerts, chat
-    // channels, calls, and messages all navigate directly. Anything else — and any deep-link
+    // channels, calls, messages and work orders all navigate directly. Anything else — and any deep-link
     // that never lands, e.g. a cold start where the session never hydrates — falls back to
     // the persistent modal so the notification stays visible instead of the app opening
     // to nothing.
@@ -323,6 +323,11 @@ class PushNotificationService {
         }
       } else if (parsed.type === 'message') {
         if (await PushNotificationService.deepLink('/(app)/messages', 'Failed to deep-link to messages from push notification', eventCode)) {
+          return;
+        }
+      } else if (parsed.type === 'work-order' && isSafeRouteId(parsed.id)) {
+        // "NWO:{workOrderId}": the detail screen loads the order through the authorized v4 read.
+        if (await PushNotificationService.deepLink({ pathname: '/work-orders/[id]', params: { id: parsed.id } } as Href, 'Failed to deep-link to work order from push notification', eventCode)) {
           return;
         }
       }

@@ -23,6 +23,9 @@ const createMockAudioPlayer = () => ({
   seekTo: jest.fn().mockResolvedValue(undefined),
   remove: jest.fn(),
   addListener: jest.fn(() => ({ remove: jest.fn() })),
+  setActiveForLockScreen: jest.fn(),
+  updateLockScreenMetadata: jest.fn(),
+  clearLockScreenControls: jest.fn(),
 });
 
 export const createAudioPlayer = jest.fn(createMockAudioPlayer);

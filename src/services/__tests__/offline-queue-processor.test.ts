@@ -258,4 +258,138 @@ describe('RealOfflineQueueProcessor', () => {
       }),
     ]);
   });
+
+  describe('replaying personnel statuses', () => {
+    const httpError = (status: number) => Object.assign(new Error(`Request failed with status code ${status}`), { response: { status } });
+
+    // Queued while offline at 10:00:00Z; the replay below runs much later.
+    const queuedStatus = {
+      UserId: 'user-1',
+      Type: '3',
+      RespondingTo: '321',
+      RespondingToType: 2,
+      EventId: '321',
+      Timestamp: '2026-09-23T10:00:00.000Z',
+      TimestampUtc: 'Wed, 23 Sep 2026 10:00:00 GMT',
+      Note: 'On scene at the north entrance',
+      Latitude: '40.7128',
+      Longitude: '-74.006',
+    };
+
+    const queue = (payload: Record<string, unknown>, extra: Record<string, unknown> = {}) => {
+      storage.getString.mockReturnValue(JSON.stringify([{ id: 'item-1', type: 'personnelStatus', payload, retries: 0, attempts: 0, ...extra }]));
+    };
+
+    const persistedQueue = () => JSON.parse(storage.set.mock.calls[storage.set.mock.calls.length - 1][1]);
+
+    it('sends the queued payload unchanged, keeping the original tap time rather than the replay time', async () => {
+      jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-09-23T14:30:00.000Z'));
+      queue(queuedStatus);
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledTimes(1);
+      expect(savePersonnelStatus).toHaveBeenCalledWith(queuedStatus);
+      expect(persistedQueue()).toEqual([]);
+    });
+
+    it('retries once without the destination when the server answers 400, keeping timestamp and note', async () => {
+      queue(queuedStatus);
+      savePersonnelStatus.mockRejectedValueOnce(httpError(400)).mockResolvedValueOnce(undefined);
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledTimes(2);
+      expect(savePersonnelStatus).toHaveBeenLastCalledWith({
+        ...queuedStatus,
+        RespondingTo: '',
+        RespondingToType: null,
+        EventId: '',
+      });
+      expect(persistedQueue()).toEqual([]);
+      expect(logger.warn).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('saved without it') }));
+    });
+
+    it('drops the item when the destination-less retry is also rejected, without looping to max retries', async () => {
+      queue(queuedStatus);
+      savePersonnelStatus.mockRejectedValue(httpError(400));
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledTimes(2);
+      expect(persistedQueue()).toEqual([]);
+      expect(processor.retryTimer).toBeNull();
+      expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'Dropping offline personnel status rejected by the server' }));
+    });
+
+    it('keeps the destination-less payload for a network retry when the fallback cannot reach the server', async () => {
+      const now = 100000;
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      queue(queuedStatus);
+      savePersonnelStatus.mockRejectedValueOnce(httpError(400)).mockRejectedValueOnce(new Error('Network Error'));
+
+      await processor.processQueue();
+
+      expect(persistedQueue()).toEqual([
+        expect.objectContaining({
+          id: 'item-1',
+          attempts: 1,
+          nextRetryAt: now + 2000,
+          payload: expect.objectContaining({
+            RespondingTo: '',
+            RespondingToType: null,
+            EventId: '',
+            Timestamp: queuedStatus.Timestamp,
+            TimestampUtc: queuedStatus.TimestampUtc,
+            Note: queuedStatus.Note,
+          }),
+        }),
+      ]);
+    });
+
+    it.each([['' as string], ['0' as string]])('does not retry a 400 without a destination (RespondingTo %p)', async (respondingTo) => {
+      queue({ ...queuedStatus, RespondingTo: respondingTo, RespondingToType: null, EventId: '' });
+      savePersonnelStatus.mockRejectedValue(httpError(400));
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledTimes(1);
+      expect(persistedQueue()).toEqual([]);
+    });
+
+    it.each([[401], [403], [404], [422]])('stops retrying and logs a %s instead of looping to max retries', async (status) => {
+      queue(queuedStatus);
+      savePersonnelStatus.mockRejectedValue(httpError(status));
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledTimes(1);
+      expect(persistedQueue()).toEqual([]);
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Dropping offline personnel status rejected by the server', context: expect.objectContaining({ id: 'item-1', httpStatus: status }) })
+      );
+    });
+
+    it.each([[408], [429], [500], [503]])('keeps retrying with backoff on a transient %s', async (status) => {
+      const now = 100000;
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      queue(queuedStatus);
+      savePersonnelStatus.mockRejectedValue(httpError(status));
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledTimes(1);
+      expect(persistedQueue()).toEqual([expect.objectContaining({ id: 'item-1', attempts: 1, nextRetryAt: now + 2000, payload: queuedStatus })]);
+    });
+
+    it('still drops a network failure after max retries', async () => {
+      queue(queuedStatus, { retries: 4, attempts: 4 });
+      savePersonnelStatus.mockRejectedValue(new Error('Network Error'));
+
+      await processor.processQueue();
+
+      expect(persistedQueue()).toEqual([]);
+      expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'Dropping offline queue item after max retries' }));
+    });
+  });
 });
