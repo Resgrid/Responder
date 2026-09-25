@@ -898,6 +898,34 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(screen.getByText('common.save')).toBeTruthy();
     });
 
+    it('should show why the last save failed inside the sheet, since toasts render beneath its modal', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...noDestinationStore,
+        selectedStatus: { ...mockStatus, Detail: 0, Note: 0 },
+        currentStep: 'select-responding-to',
+        submitError: 'Failed to update status',
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      const error = screen.getByTestId('personnel-status-submit-error');
+      expect(error.props.children).toBe('Failed to update status');
+      expect(error.props.accessibilityRole).toBe('alert');
+      expect(screen.getByText('common.save')).toBeTruthy();
+    });
+
+    it('should not show an error area before a save has failed', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...noDestinationStore,
+        selectedStatus: { ...mockStatus, Detail: 0, Note: 0 },
+        currentStep: 'select-responding-to',
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.queryByTestId('personnel-status-submit-error')).toBeNull();
+    });
+
     it('should show the destination step as the save screen, without a picker, when there is no note', () => {
       const mockSubmitStatus = jest.fn();
 

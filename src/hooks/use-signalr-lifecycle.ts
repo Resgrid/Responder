@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { logger } from '@/lib/logging';
+import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 
 import { useAppLifecycle } from './use-app-lifecycle';
@@ -123,15 +124,24 @@ export function useSignalRLifecycle({ isSignedIn, hasInitialized }: UseSignalRLi
     });
 
     try {
+      const hubConnects: [string, () => Promise<void>][] = [['UpdateHub', connectUpdateHub]];
+
+      // Receiving other responders' and units' positions is opt-in: follow the stored setting here
+      // exactly as app initialization does, rather than reconnecting a hub the user switched off.
+      if (await loadRealtimeGeolocationState()) {
+        hubConnects.push(['GeolocationHub', connectGeolocationHub]);
+      }
+
+      hubConnects.push(['ChatHub', connectChatHub]);
+
       // Use Promise.allSettled to prevent one failure from blocking the other
-      const hubNames = ['UpdateHub', 'GeolocationHub', 'ChatHub'];
-      const results = await Promise.allSettled([connectUpdateHub(), connectGeolocationHub(), connectChatHub()]);
+      const results = await Promise.allSettled(hubConnects.map(([, connect]) => connect()));
 
       // Log any failures without throwing
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
           logger.error({
-            message: `Failed to reconnect ${hubNames[index]} on app resume`,
+            message: `Failed to reconnect ${hubConnects[index]?.[0] ?? 'hub'} on app resume`,
             context: { error: result.reason },
           });
         }

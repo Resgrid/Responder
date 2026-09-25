@@ -50,6 +50,7 @@ export const PersonnelStatusBottomSheet = () => {
     note,
     respondingTo,
     isLoading,
+    submitError = null,
     groups,
     isLoadingGroups,
     pois = [],
@@ -491,29 +492,37 @@ export const PersonnelStatusBottomSheet = () => {
     </HStack>
   );
 
+  // Save failures are shown here rather than as a toast: the app's toasts render beneath this modal.
   const renderStepActions = () => (
-    <HStack space="sm" className="mt-4 justify-between">
-      {isFirstStep ? (
-        <Button variant="outline" onPress={handleClose} className="flex-1" isDisabled={isLoading}>
-          <ButtonText>{t('common.cancel')}</ButtonText>
-        </Button>
-      ) : (
-        <Button variant="outline" onPress={handlePrevious} className="flex-1" isDisabled={isLoading}>
-          <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-          <ButtonText>{t('common.previous')}</ButtonText>
-        </Button>
-      )}
-      {isLastStep ? (
-        <Button onPress={handleSubmit} isDisabled={isLoading || !canProceedFromCurrentStep()} className="flex-1 bg-green-600" testID="personnel-status-save">
-          <ButtonText>{isLoading ? t('common.submitting') : t('common.save')}</ButtonText>
-        </Button>
-      ) : (
-        <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-          <ButtonText>{t('common.next')}</ButtonText>
-          <ArrowRight size={16} color="#fff" />
-        </Button>
-      )}
-    </HStack>
+    <>
+      {submitError ? (
+        <Text className="text-sm text-red-600 dark:text-red-400" accessibilityRole="alert" accessibilityLiveRegion="polite" testID="personnel-status-submit-error">
+          {submitError}
+        </Text>
+      ) : null}
+      <HStack space="sm" className="mt-4 justify-between">
+        {isFirstStep ? (
+          <Button variant="outline" onPress={handleClose} className="flex-1" isDisabled={isLoading}>
+            <ButtonText>{t('common.cancel')}</ButtonText>
+          </Button>
+        ) : (
+          <Button variant="outline" onPress={handlePrevious} className="flex-1" isDisabled={isLoading}>
+            <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
+            <ButtonText>{t('common.previous')}</ButtonText>
+          </Button>
+        )}
+        {isLastStep ? (
+          <Button onPress={handleSubmit} isDisabled={isLoading || !canProceedFromCurrentStep()} className="flex-1 bg-green-600" testID="personnel-status-save">
+            <ButtonText>{isLoading ? t('common.submitting') : t('common.save')}</ButtonText>
+          </Button>
+        ) : (
+          <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
+            <ButtonText>{t('common.next')}</ButtonText>
+            <ArrowRight size={16} color="#fff" />
+          </Button>
+        )}
+      </HStack>
+    </>
   );
 
   const selectedDestinationTabBackgroundColor = colorScheme === 'dark' ? '#2563eb' : '#1d4ed8';

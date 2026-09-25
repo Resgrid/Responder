@@ -1,8 +1,6 @@
-import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
-
 // Test the analytics integration and business logic for the component
 describe('ShiftDayDetailsSheet - Analytics Integration', () => {
-  const mockShiftDay: ShiftDaysResultData = {
+  const mockShiftDay = {
     ShiftId: '1',
     ShiftName: 'Test Shift',
     ShiftDayId: 'shift-day-1',

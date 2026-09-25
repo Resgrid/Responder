@@ -71,6 +71,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			note: '',
 			respondingTo: '',
 			isLoading: false,
+			submitError: null,
 			groups: [],
 			isLoadingGroups: false,
 		});
@@ -105,6 +106,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			note: '',
 			respondingTo: '',
 			isLoading: false,
+			submitError: null,
 			groups: [],
 			isLoadingGroups: false,
 		});
@@ -1260,7 +1262,9 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 				await result.current.submitStatus();
 			});
 
-			expect(mockShowToast).toHaveBeenCalledWith('error', `fix-error:${outcome}`);
+			// In the sheet, not a toast: toasts render beneath the sheet's native modal.
+			expect(usePersonnelStatusBottomSheetStore.getState().submitError).toBe(`fix-error:${outcome}`);
+			expect(mockShowToast).not.toHaveBeenCalledWith('error', expect.anything());
 			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
 			// A blocked submission must not strand the sheet in its loading state.
 			expect(usePersonnelStatusBottomSheetStore.getState().isLoading).toBe(false);
@@ -1530,7 +1534,7 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 		it('should refuse to save an empty note when the status requires one', async () => {
 			await submit({ ...onSceneNoDestination, Note: 2 }, () => usePersonnelStatusBottomSheetStore.getState().setNote('   '));
 
-			expect(mockShowToast).toHaveBeenCalledWith('error', 'A note is required for this status');
+			expect(usePersonnelStatusBottomSheetStore.getState().submitError).toBe('A note is required for this status');
 			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
 		});
 
@@ -1546,8 +1550,8 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			await submit(onSceneNoDestination);
 
 			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).not.toHaveBeenCalled();
-			expect(mockShowToast).toHaveBeenCalledWith('error', 'Failed to update status');
-			expect(mockShowToast).not.toHaveBeenCalledWith('info', expect.anything());
+			expect(usePersonnelStatusBottomSheetStore.getState().submitError).toBe('Failed to update status');
+			expect(mockShowToast).not.toHaveBeenCalled();
 			// Left open so the user can change the destination and try again.
 			expect(usePersonnelStatusBottomSheetStore.getState().isOpen).toBe(true);
 			expect(usePersonnelStatusBottomSheetStore.getState().isLoading).toBe(false);
@@ -1584,6 +1588,229 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).toHaveBeenCalledWith(
 				expect.objectContaining({ Timestamp: '2026-09-23T10:00:00.000Z', TimestampUtc: 'Wed, 23 Sep 2026 10:00:00 GMT' })
 			);
+		});
+	});
+
+	// The sheet's X, backdrop and Android back all stay live while "Submitting...", so a slow
+	// submission (location fix + save) can be closed and followed by another status.
+	describe('back-to-back submissions', () => {
+		const responding = { Id: 2, Text: 'Responding', BColor: '#FF0000', Type: 1, StateId: 2, Color: '#FFFFFF', Gps: false, Note: 0, Detail: 0 };
+		const onScene = { ...responding, Id: 3, Text: 'On Scene' };
+		const networkError = Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' });
+		let mockShowToast: jest.Mock;
+		let mockFetchCurrentUserInfo: jest.Mock;
+
+		const deferred = <T>() => {
+			let resolve!: (value: T) => void;
+			let reject!: (reason?: unknown) => void;
+			const promise = new Promise<T>((res, rej) => {
+				resolve = res;
+				reject = rej;
+			});
+			return { promise, resolve, reject };
+		};
+
+		const store = () => usePersonnelStatusBottomSheetStore.getState();
+		const sentTypes = () => mockSavePersonnelStatus.mock.calls.map(([payload]) => payload.Type);
+
+		/** Opens the sheet for `status` and taps Save, leaving the submission in flight. */
+		const startSubmitting = (status: typeof responding): Promise<void> => {
+			let submitting!: Promise<void>;
+			act(() => {
+				store().setIsOpen(true, status as any);
+				submitting = store().submitStatus();
+			});
+			return submitting;
+		};
+
+		/** X / backdrop / Android back, then a different status from the Home buttons. */
+		const closeAndOpen = (status: typeof responding) => {
+			act(() => {
+				store().reset();
+				store().setIsOpen(true, status as any);
+			});
+		};
+
+		beforeEach(() => {
+			mockShowToast = jest.fn();
+			mockFetchCurrentUserInfo = jest.fn(() => Promise.resolve());
+			(useToastStore as any).getState = jest.fn().mockReturnValue({ showToast: mockShowToast });
+			(useHomeStore as any).getState = jest.fn().mockReturnValue({ fetchCurrentUserInfo: mockFetchCurrentUserInfo });
+			(mockOfflineQueueProcessor.addPersonnelStatusToQueue as jest.MockedFunction<any>) = jest.fn().mockReturnValue('queued-1');
+			mockSavePersonnelStatus.mockResolvedValue({} as any);
+		});
+
+		it('should not send a status whose sheet was closed while the location fix was taken', async () => {
+			const fix = deferred<ReturnType<typeof buildFix>>();
+			mockAcquireLocationFix.mockReturnValueOnce(fix.promise as any);
+
+			const submitting = startSubmitting(responding);
+			expect(store().isLoading).toBe(true);
+
+			closeAndOpen(onScene);
+
+			await act(async () => {
+				fix.resolve(buildFix(40.7128, -74.006));
+				await submitting;
+			});
+
+			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+			expect(mockShowToast).not.toHaveBeenCalled();
+			expect(store().isOpen).toBe(true);
+			expect(store().selectedStatus?.Id).toBe(3);
+			expect(store().isLoading).toBe(false);
+		});
+
+		it('should leave the sheet the user opened since alone when an earlier save finishes', async () => {
+			const saveA = deferred<unknown>();
+			mockSavePersonnelStatus.mockReturnValueOnce(saveA.promise as any);
+
+			const submitting = startSubmitting(responding);
+			await waitFor(() => expect(mockSavePersonnelStatus).toHaveBeenCalledTimes(1));
+
+			closeAndOpen(onScene);
+
+			await act(async () => {
+				saveA.resolve({});
+				await submitting;
+			});
+
+			// Already sent, so it still counts and says so -- but the newer sheet is untouched.
+			expect(sentTypes()).toEqual(['2']);
+			expect(mockShowToast).toHaveBeenCalledWith('success', 'Status updated successfully');
+			expect(mockFetchCurrentUserInfo).toHaveBeenCalled();
+			expect(store().isOpen).toBe(true);
+			expect(store().selectedStatus?.Id).toBe(3);
+		});
+
+		it("should not clear a newer submission's loading state when an earlier save finishes", async () => {
+			const saveA = deferred<unknown>();
+			const saveB = deferred<unknown>();
+			mockSavePersonnelStatus.mockReturnValueOnce(saveA.promise as any).mockReturnValueOnce(saveB.promise as any);
+
+			const submittingA = startSubmitting(responding);
+			await waitFor(() => expect(mockSavePersonnelStatus).toHaveBeenCalledTimes(1));
+
+			act(() => {
+				store().reset();
+			});
+			const submittingB = startSubmitting(onScene);
+			await waitFor(() => expect(mockSavePersonnelStatus).toHaveBeenCalledTimes(2));
+
+			await act(async () => {
+				saveA.resolve({});
+				await submittingA;
+			});
+
+			// Save stays disabled while B is in flight, so B cannot be sent twice.
+			expect(store().isOpen).toBe(true);
+			expect(store().isLoading).toBe(true);
+
+			await act(async () => {
+				saveB.resolve({});
+				await submittingB;
+			});
+
+			expect(sentTypes()).toEqual(['2', '3']);
+			expect(store().isOpen).toBe(false);
+			expect(store().isLoading).toBe(false);
+		});
+
+		it('should drop, not queue, an earlier status that fails offline after a newer one was sent', async () => {
+			const saveA = deferred<unknown>();
+			mockSavePersonnelStatus.mockReturnValueOnce(saveA.promise as any).mockResolvedValueOnce({} as any);
+
+			const submittingA = startSubmitting(responding);
+			await waitFor(() => expect(mockSavePersonnelStatus).toHaveBeenCalledTimes(1));
+
+			act(() => {
+				store().reset();
+			});
+			await act(async () => {
+				await startSubmitting(onScene);
+			});
+
+			await act(async () => {
+				saveA.reject(networkError);
+				await submittingA;
+			});
+
+			// Replaying Responding later would land on top of the On Scene that was already saved.
+			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).not.toHaveBeenCalled();
+		});
+
+		it('should still queue a status closed mid-send when nothing newer was sent', async () => {
+			const saveA = deferred<unknown>();
+			mockSavePersonnelStatus.mockReturnValueOnce(saveA.promise as any);
+
+			const submitting = startSubmitting(responding);
+			await waitFor(() => expect(mockSavePersonnelStatus).toHaveBeenCalledTimes(1));
+
+			act(() => {
+				store().reset();
+			});
+
+			await act(async () => {
+				saveA.reject(networkError);
+				await submitting;
+			});
+
+			expect(mockOfflineQueueProcessor.addPersonnelStatusToQueue).toHaveBeenCalledWith(expect.objectContaining({ Type: '2' }));
+			expect(mockShowToast).toHaveBeenCalledWith('info', 'Status saved offline and will be submitted when connection is restored');
+		});
+
+		it('should send once when Save is tapped twice before it disables', async () => {
+			act(() => {
+				store().setIsOpen(true, responding as any);
+			});
+
+			await act(async () => {
+				await Promise.all([store().submitStatus(), store().submitStatus()]);
+			});
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledTimes(1);
+		});
+
+		it('should close the sheet as soon as the status is saved, without waiting on the Home card refresh', async () => {
+			mockFetchCurrentUserInfo.mockReturnValue(new Promise(() => {}));
+
+			await act(async () => {
+				await startSubmitting(responding);
+			});
+
+			expect(store().isOpen).toBe(false);
+			expect(store().isLoading).toBe(false);
+			expect(mockShowToast).toHaveBeenCalledWith('success', 'Status updated successfully');
+			expect(mockFetchCurrentUserInfo).toHaveBeenCalled();
+		});
+
+		it('should not strand the sheet on "Submitting..." when the location step throws', async () => {
+			mockAcquireLocationFix.mockRejectedValueOnce(new Error('native module unavailable'));
+
+			await act(async () => {
+				await startSubmitting(responding);
+			});
+
+			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+			expect(store().isLoading).toBe(false);
+			expect(store().isOpen).toBe(true);
+			expect(store().submitError).toBe('Failed to update status');
+		});
+
+		it('should clear a leftover error when the destination changes or the sheet is reopened', () => {
+			act(() => {
+				store().setIsOpen(true, responding as any);
+				usePersonnelStatusBottomSheetStore.setState({ submitError: 'Failed to update status' });
+				store().setSelectedCall({ CallId: '321' } as any);
+			});
+			expect(store().submitError).toBeNull();
+
+			act(() => {
+				usePersonnelStatusBottomSheetStore.setState({ submitError: 'Failed to update status', isLoading: true });
+				store().setIsOpen(true, onScene as any);
+			});
+			expect(store().submitError).toBeNull();
+			expect(store().isLoading).toBe(false);
 		});
 	});
 });

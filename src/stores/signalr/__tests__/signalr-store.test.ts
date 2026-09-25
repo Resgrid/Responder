@@ -25,6 +25,7 @@ jest.mock('@/services/signalr.service', () => {
     off: jest.fn(),
     connectToHub: jest.fn().mockResolvedValue(undefined),
     disconnectAll: jest.fn().mockResolvedValue(undefined),
+    isHubAvailable: jest.fn().mockReturnValue(false),
   };
   return {
     signalRService: mockInstance,
@@ -143,6 +144,8 @@ describe('useSignalRStore', () => {
       expect(result.current.lastGeolocationMessage).toBeNull();
       expect(result.current.lastUpdateTimestamp).toBe(0);
       expect(result.current.lastGeolocationTimestamp).toBe(0);
+      expect(result.current.liveLocations).toEqual({});
+      expect(result.current.geolocationHubJoinedAt).toBe(0);
       expect(result.current.error).toBeNull();
     });
   });
@@ -574,7 +577,13 @@ describe('sign-out teardown', () => {
 
     expect(getRegisteredStoreNames()).toContain('signalr');
 
-    useSignalRStore.setState({ isUpdateHubConnected: true, isGeolocationHubConnected: true, isChatHubConnected: true });
+    useSignalRStore.setState({
+      isUpdateHubConnected: true,
+      isGeolocationHubConnected: true,
+      isChatHubConnected: true,
+      liveLocations: { u12: { pinId: 'u12', latitude: 1, longitude: 2, timestamp: null, receivedAt: 1 } },
+      geolocationHubJoinedAt: 123,
+    });
 
     await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false, clearSecure: false });
 
@@ -584,5 +593,8 @@ describe('sign-out teardown', () => {
     expect(useSignalRStore.getState().isUpdateHubConnected).toBe(false);
     expect(useSignalRStore.getState().isGeolocationHubConnected).toBe(false);
     expect(useSignalRStore.getState().isChatHubConnected).toBe(false);
+    // The outgoing user's department positions must not move the next user's pins.
+    expect(useSignalRStore.getState().liveLocations).toEqual({});
+    expect(useSignalRStore.getState().geolocationHubJoinedAt).toBe(0);
   });
 });

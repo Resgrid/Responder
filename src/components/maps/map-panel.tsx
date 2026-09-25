@@ -8,6 +8,7 @@ import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { Loading } from '@/components/common/loading';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useMapLiveLocations } from '@/hooks/use-map-live-locations';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { logger } from '@/lib/logging';
 import { isPoiMarker } from '@/lib/poi';
@@ -63,7 +64,10 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const isInteractionLocked = isMapLocked && focusedPoi == null;
   const showRecenterButton = !isFollowingUser && hasUserMovedMap && latitude != null && longitude != null;
 
-  useMapSignalRUpdates(setMapPins);
+  // Realtime positions move unit/personnel pins in place; every REST snapshot goes through
+  // applySnapshot so a refetch cannot roll back a position pushed while it was in flight.
+  const { applySnapshot, refreshRequestedAt } = useMapLiveLocations(setMapPins);
+  useMapSignalRUpdates(applySnapshot, refreshRequestedAt);
 
   // Keep isScreenFocused in sync with navigation focus. Stable callback so it only
   // fires on real focus/blur transitions, not on every dependency change.
@@ -178,10 +182,11 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
 
     const fetchMapDataAndMarkers = async () => {
       try {
+        const fetchStartedAt = Date.now();
         const mapDataAndMarkers = await getMapDataAndMarkers();
 
         if (isMounted && mapDataAndMarkers?.Data) {
-          setMapPins(mapDataAndMarkers.Data.MapMakerInfos);
+          applySnapshot(mapDataAndMarkers.Data.MapMakerInfos, fetchStartedAt);
         }
       } catch (error) {
         logger.error({
@@ -200,7 +205,8 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+    // applySnapshot is stable, so this still runs once per mount.
+  }, [applySnapshot]);
 
   useEffect(() => {
     Animated.loop(

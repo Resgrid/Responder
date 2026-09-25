@@ -1,233 +1,186 @@
-import { addMonths, eachDayOfInterval, endOfMonth, format, isSameDay, parseISO, startOfMonth, subMonths } from 'date-fns';
+import { addMonths, eachDayOfInterval, endOfMonth, format, getDay, isSameDay, startOfMonth, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import { useColorScheme } from 'nativewind';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { View } from '@/components/ui';
-import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
-import { Icon } from '@/components/ui/icon';
+import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
-import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
+import { formatShiftLongDate, getDateKey } from '@/lib/shift-utils';
+import { type ShiftDayResultData } from '@/models/v4/shifts/shiftDayResultData';
+import { ShiftDayMyStatus } from '@/models/v4/shifts/shiftEnums';
 
 interface ShiftCalendarViewProps {
-  shift: ShiftResultData;
-  shiftDays: ShiftDaysResultData[];
+  month: Date;
+  days: ShiftDayResultData[];
+  selectedDate: string | null;
   isLoading: boolean;
-  onShiftDayPress: (shiftDay: ShiftDaysResultData) => void;
-  onDateRangeChange: (startDate: string, endDate: string) => void;
+  onMonthChange: (month: Date) => void;
+  onSelectDate: (date: string) => void;
 }
 
-export const ShiftCalendarView: React.FC<ShiftCalendarViewProps> = ({ shift, shiftDays, isLoading, onShiftDayPress, onDateRangeChange }) => {
+interface DaySummary {
+  count: number;
+  openSlots: number;
+  hasMine: boolean;
+  allFilled: boolean;
+}
+
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+export const summarizeShiftDaysByDate = (days: ShiftDayResultData[]): Map<string, DaySummary> => {
+  const map = new Map<string, DaySummary>();
+  days.forEach((day) => {
+    const key = getDateKey(day.ShiftDay || day.Start);
+    if (!key) return;
+    const summary = map.get(key) ?? { count: 0, openSlots: 0, hasMine: false, allFilled: true };
+    summary.count += 1;
+    summary.openSlots += day.Filled ? 0 : Math.max(0, day.OpenSlots || 0);
+    summary.hasMine = summary.hasMine || day.MyStatus === ShiftDayMyStatus.OnRoster || day.MyStatus === ShiftDayMyStatus.PendingApproval;
+    summary.allFilled = summary.allFilled && day.Filled;
+    map.set(key, summary);
+  });
+  return map;
+};
+
+interface CalendarDayCellProps {
+  date: Date;
+  dateKey: string;
+  summary: DaySummary | undefined;
+  isSelected: boolean;
+  isToday: boolean;
+  onSelect: (date: string) => void;
+}
+
+const CalendarDayCell: React.FC<CalendarDayCellProps> = React.memo(({ date, dateKey, summary, isSelected, isToday, onSelect }) => {
   const { t } = useTranslation();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const daysInMonth = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start: monthStart, end: monthEnd });
-  }, [currentMonth]);
+  const handlePress = useCallback(() => {
+    onSelect(dateKey);
+  }, [dateKey, onSelect]);
 
-  const shiftDaysByDate = useMemo(() => {
-    const dayMap = new Map<string, ShiftDaysResultData[]>();
-
-    shiftDays.forEach((shiftDay) => {
-      if (shiftDay.ShiftDay) {
-        try {
-          const dayKey = format(parseISO(shiftDay.ShiftDay), 'yyyy-MM-dd');
-          const existing = dayMap.get(dayKey) || [];
-          dayMap.set(dayKey, [...existing, shiftDay]);
-        } catch (error) {
-          // Handle invalid date format
-          console.warn('Invalid shift day date:', shiftDay.ShiftDay);
-        }
-      }
-    });
-
-    return dayMap;
-  }, [shiftDays]);
-
-  const handlePreviousMonth = () => {
-    const newMonth = subMonths(currentMonth, 1);
-    setCurrentMonth(newMonth);
-
-    const startDate = format(startOfMonth(newMonth), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(newMonth), 'yyyy-MM-dd');
-    onDateRangeChange(startDate, endDate);
-  };
-
-  const handleNextMonth = () => {
-    const newMonth = addMonths(currentMonth, 1);
-    setCurrentMonth(newMonth);
-
-    const startDate = format(startOfMonth(newMonth), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(newMonth), 'yyyy-MM-dd');
-    onDateRangeChange(startDate, endDate);
-  };
-
-  const getDayStatus = (date: Date) => {
-    const dayKey = format(date, 'yyyy-MM-dd');
-    const dayShifts = shiftDaysByDate.get(dayKey) || [];
-
-    if (dayShifts.length === 0) return null;
-
-    const hasSignedUp = dayShifts.some((s) => s.SignedUp);
-    const totalSignups = dayShifts.reduce((sum, s) => sum + (s.Signups?.length || 0), 0);
-    const totalNeeds = dayShifts.reduce((sum, s) => {
-      return (
-        sum +
-        (s.Needs?.reduce((needSum, group) => {
-          return (
-            needSum +
-            (group.GroupNeeds?.reduce((roleSum, role) => {
-              return roleSum + (role.Needed || 0);
-            }, 0) || 0)
-          );
-        }, 0) || 0)
-      );
-    }, 0);
-
-    return {
-      hasShifts: true,
-      hasSignedUp,
-      signupPercentage: totalNeeds > 0 ? (totalSignups / totalNeeds) * 100 : 0,
-      shifts: dayShifts,
-    };
-  };
-
-  const renderDayItem = (date: Date) => {
-    const dayStatus = getDayStatus(date);
-    const isToday = isSameDay(date, new Date());
-    const dayNumber = format(date, 'd');
-
-    let containerClasses = 'w-full h-16 justify-center items-center border border-gray-200 dark:border-gray-700';
-    let textClasses = 'text-sm font-medium';
-
-    if (isToday) {
-      containerClasses += ' bg-primary-50 dark:bg-primary-900 border-primary-300 dark:border-primary-600';
-      textClasses += ' text-primary-700 dark:text-primary-300';
-    } else {
-      containerClasses += ' bg-white dark:bg-gray-800';
-      textClasses += ' text-gray-900 dark:text-white';
-    }
-
-    if (dayStatus?.hasShifts) {
-      containerClasses += ' border-l-4';
-      if (dayStatus.hasSignedUp) {
-        containerClasses += ' border-l-green-500';
-      } else {
-        containerClasses += ' border-l-orange-500';
-      }
-    }
-
-    const handleDayPress = () => {
-      if (dayStatus?.shifts && dayStatus.shifts.length > 0) {
-        const firstShift = dayStatus.shifts[0];
-        if (!firstShift) return;
-
-        // If there's only one shift, navigate directly to it
-        if (dayStatus.shifts.length === 1) {
-          onShiftDayPress(firstShift);
-        } else {
-          // For multiple shifts, navigate to the first one
-          // Could be enhanced to show a picker
-          onShiftDayPress(firstShift);
-        }
-      }
-    };
-
-    return (
-      <Pressable key={format(date, 'yyyy-MM-dd')} onPress={handleDayPress} disabled={!dayStatus?.hasShifts} className={containerClasses}>
-        <VStack className="items-center space-y-1">
-          <Text className={textClasses}>{dayNumber}</Text>
-
-          {dayStatus?.hasShifts && (
-            <View className="flex-row space-x-1">
-              {dayStatus.hasSignedUp && <View className="size-2 rounded-full bg-green-500" />}
-              <View className="size-2 rounded-full bg-orange-500" />
-            </View>
-          )}
-        </VStack>
-      </Pressable>
-    );
-  };
-
-  const renderCalendarGrid = () => {
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-    return (
-      <VStack className="space-y-1">
-        {/* Days of Week Header */}
-        <HStack className="space-x-1">
-          {daysOfWeek.map((day) => (
-            <View key={day} className="flex-1 items-center py-2">
-              <Text className="text-xs font-semibold text-gray-600 dark:text-gray-400">{day}</Text>
-            </View>
-          ))}
-        </HStack>
-
-        {/* Calendar Days */}
-        <View style={styles.calendarGrid}>{daysInMonth.map((date) => renderDayItem(date))}</View>
-      </VStack>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center p-8">
-        <Spinner size="large" />
-        <Text className="mt-4 text-gray-600 dark:text-gray-400">{t('shifts.loading')}</Text>
-      </View>
-    );
-  }
+  const containerClass = isSelected ? 'bg-primary-600' : isToday ? 'bg-primary-50 dark:bg-primary-900/40' : 'bg-white dark:bg-gray-800';
+  const textClass = isSelected ? 'text-white' : isToday ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white';
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-      <VStack className="space-y-4 p-4">
-        {/* Month Navigation */}
-        <HStack className="items-center justify-between">
-          <Button onPress={handlePreviousMonth} variant="outline" size="sm" className="bg-white dark:bg-gray-800">
-            <Icon as={ChevronLeft} size="sm" className="text-gray-600 dark:text-gray-400" />
-          </Button>
-
-          <Text className="text-lg font-semibold text-gray-900 dark:text-white">{format(currentMonth, 'MMMM yyyy')}</Text>
-
-          <Button onPress={handleNextMonth} variant="outline" size="sm" className="bg-white dark:bg-gray-800">
-            <Icon as={ChevronRight} size="sm" className="text-gray-600 dark:text-gray-400" />
-          </Button>
-        </HStack>
-
-        {/* Calendar */}
-        {renderCalendarGrid()}
-
-        {/* Legend */}
-        <VStack className="space-y-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-          <Text className="text-sm font-medium text-gray-900 dark:text-white">{t('shifts.legend')}</Text>
-          <HStack className="space-x-4">
-            <HStack className="items-center space-x-2">
-              <View className="size-3 rounded-full bg-green-500" />
-              <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.signed_up')}</Text>
-            </HStack>
-
-            <HStack className="items-center space-x-2">
-              <View className="size-3 rounded-full bg-orange-500" />
-              <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.available')}</Text>
-            </HStack>
+    <View style={styles.cell}>
+      <Pressable
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityLabel={t('shifts.calendar_view.day_a11y', { date: formatShiftLongDate(dateKey), count: summary?.count ?? 0, open: summary?.openSlots ?? 0 })}
+        testID={`shift-calendar-day-${dateKey}`}
+        className={`m-0.5 flex-1 items-center justify-center rounded-md ${containerClass}`}
+      >
+        <Text className={`text-sm font-medium ${textClass}`}>{format(date, 'd')}</Text>
+        {summary ? (
+          <HStack space="xs" className="mt-1">
+            {summary.hasMine ? <View className="size-1.5 rounded-full bg-green-500" testID={`shift-calendar-mine-${dateKey}`} /> : null}
+            {summary.openSlots > 0 ? <View className="size-1.5 rounded-full bg-amber-500" testID={`shift-calendar-open-${dateKey}`} /> : null}
+            {summary.allFilled ? <View className="size-1.5 rounded-full bg-gray-400" /> : null}
           </HStack>
-        </VStack>
-      </VStack>
-    </ScrollView>
+        ) : null}
+      </Pressable>
+    </View>
+  );
+});
+
+CalendarDayCell.displayName = 'CalendarDayCell';
+
+export const ShiftCalendarView: React.FC<ShiftCalendarViewProps> = ({ month, days, selectedDate, isLoading, onMonthChange, onSelectDate }) => {
+  const { t, i18n } = useTranslation();
+  const { colorScheme } = useColorScheme();
+  const arrowColor = colorScheme === 'dark' ? '#d1d5db' : '#374151';
+
+  const monthDays = useMemo(() => eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) }), [month]);
+  const leadingBlanks = useMemo(() => getDay(startOfMonth(month)), [month]);
+  const summaries = useMemo(() => summarizeShiftDaysByDate(days), [days]);
+
+  const monthLabel = useMemo(() => {
+    try {
+      return month.toLocaleDateString(i18n?.language || undefined, { month: 'long', year: 'numeric' });
+    } catch {
+      return format(month, 'MMMM yyyy');
+    }
+  }, [month, i18n?.language]);
+
+  const handlePrevious = useCallback(() => {
+    onMonthChange(subMonths(month, 1));
+  }, [month, onMonthChange]);
+
+  const handleNext = useCallback(() => {
+    onMonthChange(addMonths(month, 1));
+  }, [month, onMonthChange]);
+
+  const today = new Date();
+
+  return (
+    <VStack space="sm" className="px-4 pb-2" testID="shift-calendar-view">
+      <HStack className="items-center justify-between">
+        <Pressable onPress={handlePrevious} accessibilityRole="button" accessibilityLabel={t('shifts.calendar_view.previous_month')} testID="shift-calendar-previous" className="rounded-md p-2">
+          <ChevronLeft size={20} color={arrowColor} />
+        </Pressable>
+        <HStack space="sm" className="items-center">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-white" accessibilityRole="header">
+            {monthLabel}
+          </Text>
+          {isLoading ? <Spinner size="small" testID="shift-calendar-loading" /> : null}
+        </HStack>
+        <Pressable onPress={handleNext} accessibilityRole="button" accessibilityLabel={t('shifts.calendar_view.next_month')} testID="shift-calendar-next" className="rounded-md p-2">
+          <ChevronRight size={20} color={arrowColor} />
+        </Pressable>
+      </HStack>
+
+      <View style={styles.grid}>
+        {WEEKDAY_KEYS.map((key) => (
+          <View key={key} style={styles.headerCell}>
+            <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t(`calendar.daysOfWeek.${key}`)}</Text>
+          </View>
+        ))}
+        {Array.from({ length: leadingBlanks }, (_, index) => (
+          <View key={`blank-${index}`} style={styles.cell} />
+        ))}
+        {monthDays.map((date) => {
+          const dateKey = format(date, 'yyyy-MM-dd');
+          return <CalendarDayCell key={dateKey} date={date} dateKey={dateKey} summary={summaries.get(dateKey)} isSelected={selectedDate === dateKey} isToday={isSameDay(date, today)} onSelect={onSelectDate} />;
+        })}
+      </View>
+
+      <HStack space="md" className="flex-wrap justify-center">
+        <HStack space="xs" className="items-center">
+          <View className="size-2 rounded-full bg-green-500" />
+          <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.calendar_view.legend_mine')}</Text>
+        </HStack>
+        <HStack space="xs" className="items-center">
+          <View className="size-2 rounded-full bg-amber-500" />
+          <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.calendar_view.legend_open')}</Text>
+        </HStack>
+        <HStack space="xs" className="items-center">
+          <View className="size-2 rounded-full bg-gray-400" />
+          <Text className="text-xs text-gray-600 dark:text-gray-400">{t('shifts.calendar_view.legend_filled')}</Text>
+        </HStack>
+      </HStack>
+    </VStack>
   );
 };
 
 const styles = StyleSheet.create({
-  calendarGrid: {
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 1,
+  },
+  headerCell: {
+    width: `${100 / 7}%`,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  cell: {
+    width: `${100 / 7}%`,
+    height: 52,
   },
 });

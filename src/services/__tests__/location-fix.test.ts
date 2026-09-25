@@ -46,6 +46,10 @@ describe('acquireLocationFix', () => {
     mockLocation.getLastKnownPositionAsync.mockResolvedValue(null);
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('returns the live fix and feeds it to the location store', async () => {
     const result = await acquireLocationFix();
 
@@ -108,13 +112,59 @@ describe('acquireLocationFix', () => {
     mockLocation.getLastKnownPositionAsync.mockResolvedValue(position);
 
     const pending = acquireLocationFix();
-    // Let the permission and services awaits settle before the timer is armed.
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    jest.advanceTimersByTime(8000);
+    // The async variant lets the permission and services awaits settle before the fix timer is armed.
+    await jest.advanceTimersByTimeAsync(8000);
 
     await expect(pending).resolves.toEqual({ outcome: 'acquired', location: position });
+    jest.useRealTimers();
+  });
+
+  it('reports a permission request that never settles as denied instead of hanging the submission', async () => {
+    jest.useFakeTimers();
+    // Android: an overlapping non-Expo permission request leaves Expo's pending forever.
+    mockLocation.getForegroundPermissionsAsync.mockResolvedValue(undetermined);
+    mockLocation.requestForegroundPermissionsAsync.mockReturnValue(new Promise(() => {}) as Promise<Location.LocationPermissionResponse>);
+
+    const pending = acquireLocationFix();
+    await jest.advanceTimersByTimeAsync(30000);
+
+    await expect(pending).resolves.toEqual({ outcome: 'permission-denied', location: null });
+    expect(mockLocation.getCurrentPositionAsync).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('still waits for a permission prompt the user is answering', async () => {
+    jest.useFakeTimers();
+    mockLocation.getForegroundPermissionsAsync.mockResolvedValue(undetermined);
+    mockLocation.requestForegroundPermissionsAsync.mockImplementation(() => new Promise<Location.LocationPermissionResponse>((resolve) => setTimeout(() => resolve(granted), 20000)));
+
+    const pending = acquireLocationFix();
+    await jest.advanceTimersByTimeAsync(20000);
+
+    await expect(pending).resolves.toEqual({ outcome: 'acquired', location: position });
+    jest.useRealTimers();
+  });
+
+  it('moves past a services check that never settles and lets the position attempt decide', async () => {
+    jest.useFakeTimers();
+    mockLocation.hasServicesEnabledAsync.mockReturnValue(new Promise(() => {}) as Promise<boolean>);
+
+    const pending = acquireLocationFix();
+    await jest.advanceTimersByTimeAsync(3000);
+
+    await expect(pending).resolves.toEqual({ outcome: 'acquired', location: position });
+    jest.useRealTimers();
+  });
+
+  it('reports unavailable when neither the live fix nor the last known position ever settles', async () => {
+    jest.useFakeTimers();
+    mockLocation.getCurrentPositionAsync.mockReturnValue(new Promise(() => {}) as Promise<Location.LocationObject>);
+    mockLocation.getLastKnownPositionAsync.mockReturnValue(new Promise(() => {}) as Promise<Location.LocationObject | null>);
+
+    const pending = acquireLocationFix();
+    await jest.advanceTimersByTimeAsync(8000 + 3000);
+
+    await expect(pending).resolves.toEqual({ outcome: 'unavailable', location: null });
     jest.useRealTimers();
   });
 

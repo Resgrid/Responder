@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, act } from '@testing-library/react-
 import React from 'react';
 
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 
 import HomeMap from '../map';
 
@@ -256,6 +257,31 @@ jest.mock('@/hooks/use-map-signalr-updates', () => ({
   useMapSignalRUpdates: jest.fn(),
 }));
 
+// Live positions are covered by the hook's own tests; here only the wiring matters. applySnapshot has
+// to be stable per mount like the real one, or the initial-fetch effect would run on every render.
+const mockApplySnapshot = jest.fn();
+
+jest.mock('@/hooks/use-map-live-locations', () => {
+  type MockLiveLocationsResult = { applySnapshot: (pins: unknown[], fetchStartedAt: number) => void; refreshRequestedAt: number };
+  const results = new WeakMap<object, MockLiveLocationsResult>();
+  return {
+    useMapLiveLocations: (setPins: (pins: unknown[]) => void) => {
+      let result = results.get(setPins);
+      if (!result) {
+        result = {
+          applySnapshot: (pins: unknown[], fetchStartedAt: number) => {
+            mockApplySnapshot(pins, fetchStartedAt);
+            setPins(pins);
+          },
+          refreshRequestedAt: 0,
+        };
+        results.set(setPins, result);
+      }
+      return result;
+    },
+  };
+});
+
 jest.mock('@/lib/env', () => ({
   Env: {
     RESPOND_MAPBOX_PUBKEY: 'test-mapbox-key',
@@ -450,6 +476,20 @@ describe('HomeMap', () => {
       expect(screen.getByTestId('map-pin-1')).toBeTruthy();
       expect(screen.getByTestId('map-pin-2')).toBeTruthy();
     });
+  });
+
+  it('routes every REST snapshot through the live-location hook', async () => {
+    render(<HomeMap />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+    });
+
+    // The initial fetch hands over its start time so positions pushed meanwhile are re-applied...
+    expect(mockApplySnapshot).toHaveBeenCalledTimes(1);
+    expect(mockApplySnapshot).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ Id: '1' })]), expect.any(Number));
+    // ...and SignalR-driven refetches use the same path, plus the live-location refresh trigger.
+    expect(useMapSignalRUpdates).toHaveBeenCalledWith(expect.any(Function), 0);
   });
 
   it('opens pin detail modal when pin is pressed', async () => {

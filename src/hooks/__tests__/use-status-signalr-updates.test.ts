@@ -26,6 +26,8 @@ const createMockSignalRState = (overrides: Partial<any> = {}) => ({
   isGeolocationHubConnected: false,
   lastGeolocationMessage: null,
   lastGeolocationTimestamp: 0,
+  liveLocations: {},
+  geolocationHubJoinedAt: 0,
   isChatHubConnected: false,
   realtimeHubOutages: {},
   error: null,

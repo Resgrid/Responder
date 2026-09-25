@@ -277,6 +277,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           // Live Activity extension guards itself with `@available(iOS 16.2, *)`.
           // Anything higher only locks responders out of installing the app.
           deploymentTarget: '18.1',
+          // Apps built with the iOS 27 SDK must adopt the UIKit scene life cycle or they are
+          // killed at launch. Remove once on SDK 58, whose template adopts it by default.
+          enableSceneSupport: true,
         },
       },
     ],
@@ -311,7 +314,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-navigation-bar',
       {
         position: 'relative',
-        visibility: 'hidden',
+        hidden: true,
         behavior: 'inset-touch',
       },
     ],
@@ -363,13 +366,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './customGradle.plugin.js',
     './customManifest.plugin.js',
     './plugins/withInCallAudioModule.js',
+    './plugins/withResourceBundleDeploymentTarget.js',
     [
       './plugins/withLiveActivities.js',
       {
         appGroupId: Env.IOS_APP_GROUP,
       },
     ],
-    ['app-icon-badge', appIconBadgeConfig],
+    ['./plugins/withIconBadge.js', appIconBadgeConfig],
   ],
   extra: {
     ...ClientEnv,

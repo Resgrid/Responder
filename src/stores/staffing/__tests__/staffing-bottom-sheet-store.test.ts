@@ -9,6 +9,7 @@ jest.mock('@/api/personnel/personnelStaffing');
 jest.mock('@/lib/auth');
 jest.mock('@/stores/home/home-store');
 jest.mock('@/stores/toast/store');
+jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }));
 // A factory mock, not an automock: automocking loads the real module to derive its shape, which
 // would pull expo-location's native surface into this node-environment suite.
 jest.mock('@/services/location-fix', () => ({
@@ -307,6 +308,96 @@ describe('useStaffingBottomSheetStore', () => {
 			const callArgs = mockSavePersonnelStaffing.mock.calls[0]?.[0] as any;
 			expect(callArgs.Timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/); // ISO format
 			expect(callArgs.TimestampUtc).toMatch(/^\w{3}, \d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/); // UTC format
+		});
+	});
+
+	describe('quickSubmitStaffing (one tap)', () => {
+		const optionalNote = { ...mockStaffing, Id: 2, Text: 'Delayed', Note: 1 };
+		const requiredNote = { ...mockStaffing, Id: 3, Text: 'Unavailable', Note: 2 };
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+			useStaffingBottomSheetStore.setState({ quickSubmittingId: null });
+			mockSavePersonnelStaffing.mockImplementation(() => Promise.resolve());
+			mockFetchCurrentUserInfo.mockImplementation(() => Promise.resolve());
+		});
+
+		it('saves a level with no note type immediately, without opening the sheet', async () => {
+			const result = await useStaffingBottomSheetStore.getState().quickSubmitStaffing(mockStaffing);
+
+			expect(result).toBe('submitted');
+			expect(mockSavePersonnelStaffing).toHaveBeenCalledWith(expect.objectContaining({ UserId: 'test-user-id', Type: '1', Note: '', EventId: '' }));
+			expect(mockFetchCurrentUserInfo).toHaveBeenCalled();
+			expect(mockShowToast).toHaveBeenCalledWith('success', 'Staffing updated successfully');
+			const state = useStaffingBottomSheetStore.getState();
+			expect(state.isOpen).toBe(false);
+			expect(state.quickSubmittingId).toBeNull();
+		});
+
+		it('also saves a level whose note is optional immediately', async () => {
+			const result = await useStaffingBottomSheetStore.getState().quickSubmitStaffing(optionalNote);
+
+			expect(result).toBe('submitted');
+			expect(mockSavePersonnelStaffing).toHaveBeenCalledWith(expect.objectContaining({ Type: '2', Note: '' }));
+		});
+
+		it('opens the sheet at the note step when a note is required', async () => {
+			const result = await useStaffingBottomSheetStore.getState().quickSubmitStaffing(requiredNote);
+
+			expect(result).toBe('opened-sheet');
+			expect(mockSavePersonnelStaffing).not.toHaveBeenCalled();
+			const state = useStaffingBottomSheetStore.getState();
+			expect(state.isOpen).toBe(true);
+			expect(state.currentStep).toBe('add-note');
+			expect(state.selectedStaffing).toEqual(requiredNote);
+		});
+
+		it('marks the level as submitting while the save is in flight and ignores a second tap', async () => {
+			let finishSave: () => void = () => undefined;
+			mockSavePersonnelStaffing.mockImplementation(() => new Promise<void>((resolve) => (finishSave = resolve)));
+
+			const first = useStaffingBottomSheetStore.getState().quickSubmitStaffing(mockStaffing);
+			expect(useStaffingBottomSheetStore.getState().quickSubmittingId).toBe(1);
+
+			await expect(useStaffingBottomSheetStore.getState().quickSubmitStaffing(optionalNote)).resolves.toBe('busy');
+			expect(mockSavePersonnelStaffing).toHaveBeenCalledTimes(1);
+
+			finishSave();
+			await expect(first).resolves.toBe('submitted');
+			expect(useStaffingBottomSheetStore.getState().quickSubmittingId).toBeNull();
+		});
+
+		it('shows an error toast when the save fails', async () => {
+			mockSavePersonnelStaffing.mockImplementation(() => Promise.reject(new Error('API Error')));
+
+			const result = await useStaffingBottomSheetStore.getState().quickSubmitStaffing(mockStaffing);
+
+			expect(result).toBe('failed');
+			expect(mockShowToast).toHaveBeenCalledWith('error', 'Failed to update staffing');
+			expect(mockFetchCurrentUserInfo).not.toHaveBeenCalled();
+			expect(useStaffingBottomSheetStore.getState().quickSubmittingId).toBeNull();
+		});
+
+		it('still reports success when only the follow-up refresh fails', async () => {
+			mockFetchCurrentUserInfo.mockImplementation(() => Promise.reject(new Error('refresh failed')));
+
+			const result = await useStaffingBottomSheetStore.getState().quickSubmitStaffing(mockStaffing);
+
+			expect(result).toBe('submitted');
+			expect(mockShowToast).toHaveBeenCalledWith('success', 'Staffing updated successfully');
+			expect(mockShowToast).not.toHaveBeenCalledWith('error', expect.anything());
+		});
+
+		it('refuses without a signed-in user', async () => {
+			require('@/lib/auth').useAuthStore = {
+				getState: jest.fn(() => ({ userId: null })),
+			};
+
+			const result = await useStaffingBottomSheetStore.getState().quickSubmitStaffing(mockStaffing);
+
+			expect(result).toBe('failed');
+			expect(mockSavePersonnelStaffing).not.toHaveBeenCalled();
+			expect(mockShowToast).toHaveBeenCalledWith('error', 'Missing required information');
 		});
 	});
 
