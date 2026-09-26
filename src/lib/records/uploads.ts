@@ -100,6 +100,10 @@ export interface UploadOptions {
  * special case: the caller passes the pending upload back in and the server says where to continue.
  */
 export const runUpload = async (pending: PendingUpload, options: UploadOptions = {}): Promise<UploadOutcome> => {
+  // Held outside the try so a failure part-way through (a lost signal, an unreadable file) still reports the
+  // session and how far it got; the next attempt then resumes that session instead of opening another one.
+  let session: RecordUploadData | null = null;
+  let sent = pending.sentBytes;
   try {
     const info = await FileSystem.getInfoAsync(pending.fileUri);
     if (!info.exists) {
@@ -107,7 +111,6 @@ export const runUpload = async (pending: PendingUpload, options: UploadOptions =
       return { ok: false, code: 'file_missing', message: 'The file is no longer on this device.', uploadId: pending.uploadId };
     }
 
-    let session: RecordUploadData | null = null;
     if (pending.uploadId) {
       try {
         session = (await getRecordUpload(pending.uploadId, options.signal))?.Data ?? null;
@@ -140,10 +143,10 @@ export const runUpload = async (pending: PendingUpload, options: UploadOptions =
       return { ok: false, code: 'no_session', message: 'The server did not open an upload.', uploadId: null };
     }
 
+    // The server's count is authoritative: it is the only thing that knows what actually arrived.
+    sent = session.ReceivedBytes ?? 0;
     const chunkSize = session.ChunkSize > 0 ? session.ChunkSize : pending.byteSize;
     const bytes = Buffer.from(await FileSystem.readAsStringAsync(pending.fileUri, { encoding: FileSystem.EncodingType.Base64 }), 'base64');
-    // The server's count is authoritative: it is the only thing that knows what actually arrived.
-    let sent = session.ReceivedBytes ?? 0;
     options.onProgress?.({ sentBytes: sent, totalBytes: pending.byteSize });
 
     while (sent < pending.byteSize) {
@@ -171,8 +174,9 @@ export const runUpload = async (pending: PendingUpload, options: UploadOptions =
     return attachment?.AttachmentId ? { ok: true, attachment, sentBytes: sent, uploadId: session.UploadId } : { ok: false, code: 'complete_failed', sentBytes: sent, uploadId: session.UploadId };
   } catch (error) {
     const code = problemCode(error);
-    logger.error({ message: 'Record attachment upload failed', context: { error, recordId: pending.recordId, code } });
-    return { ok: false, code: code ?? 'failed', message: problemMessage(error), uploadId: pending.uploadId };
+    const uploadId = session?.UploadId ?? pending.uploadId;
+    logger.error({ message: 'Record attachment upload failed', context: { error, recordId: pending.recordId, uploadId, sentBytes: sent, code } });
+    return { ok: false, code: code ?? 'failed', message: problemMessage(error), sentBytes: sent, uploadId };
   }
 };
 

@@ -69,22 +69,31 @@ export const useCertificationsStore = create<CertificationsState>()((set, get) =
     }
   };
   const upsert = (record: Certification) => set({ items: sortCertifications([record, ...get().items.filter((item) => item.Id !== record.Id)]) });
+  /** Drop another sign-in's state before reading for this one, and return the identity the read belongs to. */
+  const adoptIdentity = () => {
+    const identity = currentIdentity();
+    if (get().identity !== identity) set({ ...initial, identity });
+    return identity;
+  };
+  /** The person signed out or switched while a read was in flight: its answer belongs to the old identity. */
+  const isStale = (identity: string | null) => currentIdentity() !== identity || get().identity !== identity;
 
   return {
     ...initial,
     load: async () => {
-      const identity = currentIdentity();
-      if (get().identity !== identity) set({ ...initial, identity });
+      const identity = adoptIdentity();
       await settle(async () => {
         const [items, types] = await Promise.all([getMyCertifications(), getPersonCertificationTypes().catch(() => [] as CertificationType[])]);
-        // The person signed out or switched while this was in flight: the answer belongs to the old identity.
-        if (currentIdentity() !== identity || get().identity !== identity) return;
+        if (isStale(identity)) return;
         set({ items: sortCertifications(items), types: types.filter((type) => type.IsActive) });
       });
     },
     open: async (id) => {
+      // The detail screen can be reached without the list (a deep link), so it adopts the identity itself.
+      const identity = adoptIdentity();
       await settle(async () => {
         const [detail, credits] = await Promise.all([getCertification(id), getCertificationCredits(id)]);
+        if (isStale(identity)) return;
         set({ detail, credits });
       });
     },

@@ -58,7 +58,9 @@ it('collapses a burst of keystrokes into writes of the newest note instead of on
 
   const draftWrites = jest.mocked(vaultWrite).mock.calls.filter(([, name]) => name === `draft:${run().Id}`);
   expect(draftWrites.length).toBeLessThanOrEqual(2);
-  expect(JSON.parse(mockDisk.get(`${scope}:draft:${run().Id}`)!).input.Note).toBe(typed);
+  const stored = mockDisk.get(`${scope}:draft:${run().Id}`);
+  expect(stored).toBeDefined();
+  expect(JSON.parse(stored ?? '{}').input?.Note).toBe(typed);
 });
 it('previews occurrences without starting server work and reopens prepared data offline', async () => {
   await useChecklistsStore.getState().load();

@@ -195,6 +195,25 @@ describe('Record attachment uploads', () => {
     expect(outcome.message).toBe('That file type is not accepted.');
   });
 
+  it('keeps the new session and its progress when the signal drops mid-upload, so the retry resumes it', async () => {
+    api.beginRecordUpload.mockResolvedValue(session(0));
+    api.uploadRecordChunk.mockResolvedValueOnce(session(3)).mockRejectedValueOnce(new Error('Network Error'));
+
+    const outcome = await runUpload(pending() as never);
+
+    expect(outcome).toMatchObject({ ok: false, code: 'failed', message: 'Network Error', sentBytes: 3, uploadId: 'session-1' });
+  });
+
+  it('reports the open session when the file cannot be read after it was opened', async () => {
+    api.beginRecordUpload.mockResolvedValue(session(0));
+    fs.readAsStringAsync.mockRejectedValueOnce(new Error('unreadable'));
+
+    const outcome = await runUpload(pending() as never);
+
+    expect(outcome).toMatchObject({ ok: false, code: 'failed', sentBytes: 0, uploadId: 'session-1' });
+    expect(api.uploadRecordChunk).not.toHaveBeenCalled();
+  });
+
   it('stops between chunks when the person cancels', async () => {
     api.beginRecordUpload.mockResolvedValue(session(0));
     api.uploadRecordChunk.mockResolvedValue(session(3));

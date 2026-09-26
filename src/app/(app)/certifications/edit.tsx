@@ -1,6 +1,6 @@
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
@@ -31,6 +31,7 @@ export default function EditCertificationScreen() {
   const [fetched, setFetched] = useState<Certification | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const needsFetch = !!id && !listed;
+  const goBack = useCallback(() => router.back(), [router]);
 
   useEffect(() => {
     if (useCertificationsStore.getState().types.length === 0) void useCertificationsStore.getState().load();
@@ -67,7 +68,7 @@ export default function EditCertificationScreen() {
         <Stack.Screen options={{ title: t('certifications.edit') }} />
         <VStack space="md" className="p-4">
           <HStack space="sm" className="items-center">
-            <Pressable onPress={() => router.back()} testID="certification-edit-back" accessibilityRole="button" accessibilityLabel={t('certifications.back')}>
+            <Pressable onPress={goBack} testID="certification-edit-back" accessibilityRole="button" accessibilityLabel={t('certifications.back')}>
               <ArrowLeft size={22} color="#2563eb" />
             </Pressable>
             <Text className="flex-1 text-xl font-bold">{t('certifications.edit')}</Text>

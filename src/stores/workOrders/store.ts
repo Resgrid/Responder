@@ -118,29 +118,42 @@ export const useWorkOrdersStore = create<WorkOrdersState>()((set, get) => {
     return done === true;
   };
 
+  /** Drop another sign-in's state before reading for this one, and return the identity the read belongs to. */
+  const adoptIdentity = () => {
+    const identity = currentIdentity();
+    if (get().identity !== identity) set({ ...initial, identity });
+    return identity;
+  };
+  /** The person signed out or switched while a read was in flight: its answer belongs to the old identity. */
+  const isStale = (identity: string | null) => currentIdentity() !== identity || get().identity !== identity;
+
   return {
     ...initial,
     load: async (assignedToMe = get().assignedToMe) => {
-      const identity = currentIdentity();
-      if (get().identity !== identity) set({ ...initial, identity });
+      const identity = adoptIdentity();
       await settle(async () => {
         const [access, choices, page] = await Promise.all([getReadinessAccess(), get().choices ? Promise.resolve(get().choices) : getWorkOrderChoices(), getWorkOrders({ page: 0, assignedToMe })]);
-        // The person signed out or switched while this was in flight: the answer belongs to the old identity.
-        if (currentIdentity() !== identity || get().identity !== identity) return;
+        if (isStale(identity)) return;
         set({ access, choices, assignedToMe, items: page.Items, page: 0, hasMore: page.HasMore, canWrite: page.CanWrite && access.MaintenanceEnabled });
       });
     },
     loadMore: async () => {
-      if (!get().hasMore || get().busy) return;
+      // A next page only extends a list this identity loaded; it never starts one.
+      const identity = currentIdentity();
+      if (!get().hasMore || get().busy || get().identity !== identity) return;
       await settle(async () => {
         const next = get().page + 1;
         const page = await getWorkOrders({ page: next, assignedToMe: get().assignedToMe });
+        if (isStale(identity)) return;
         set({ items: [...get().items, ...page.Items.filter((item) => !get().items.some((existing) => existing.Id === item.Id))], page: next, hasMore: page.HasMore });
       });
     },
     open: async (id) => {
+      // The detail screen can be reached without the list (a deep link), so it adopts the identity itself.
+      const identity = adoptIdentity();
       await settle(async () => {
         const [detail, choices] = await Promise.all([getWorkOrder(id), get().choices ? Promise.resolve(get().choices) : getWorkOrderChoices()]);
+        if (isStale(identity)) return;
         set({ detail, choices, images: {} });
       });
     },

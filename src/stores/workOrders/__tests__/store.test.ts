@@ -86,6 +86,38 @@ it("drops a list that arrives after the person changed, so the old identity's or
   useAuthStore.setState({ userId: 'me' });
 });
 
+it("does not append a next page that arrives after the person changed", async () => {
+  server.getWorkOrders.mockResolvedValueOnce({ Items: [summary()], HasMore: true, CanWrite: true } as never);
+  await useWorkOrdersStore.getState().load(true);
+  let answer!: (value: never) => void;
+  server.getWorkOrders.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)) as never);
+  const loadingMore = useWorkOrdersStore.getState().loadMore();
+
+  useAuthStore.setState({ userId: 'someone-else' });
+  await useWorkOrdersStore.getState().load(true);
+  answer({ Items: [{ ...summary(), Id: 'wo-old' }], HasMore: false, CanWrite: true } as never);
+  await loadingMore;
+
+  expect(useWorkOrdersStore.getState().items.map((item) => item.Id)).toEqual(['wo-1']);
+  useAuthStore.setState({ userId: 'me' });
+});
+
+it('opens an order reached without the list, and drops one that arrives after the person changed', async () => {
+  server.getWorkOrder.mockResolvedValueOnce(detail(2));
+  await useWorkOrdersStore.getState().open('wo-1');
+  expect(useWorkOrdersStore.getState().detail?.Order.Revision).toBe(2);
+
+  let answer!: (value: never) => void;
+  server.getWorkOrder.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)) as never);
+  const opening = useWorkOrdersStore.getState().open('wo-1');
+  useAuthStore.setState({ userId: 'someone-else' });
+  answer(detail(3));
+  await opening;
+
+  expect(useWorkOrdersStore.getState().detail?.Order.Revision).toBe(2);
+  useAuthStore.setState({ userId: 'me' });
+});
+
 it('sends every command at the current revision and reloads the order when someone else changed it', async () => {
   server.getWorkOrder.mockResolvedValue(detail(4));
   await useWorkOrdersStore.getState().open('wo-1');

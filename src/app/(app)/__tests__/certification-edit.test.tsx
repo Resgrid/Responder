@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
-import { getCertification, getMyCertifications, getPersonCertificationTypes, saveCertification } from '@/api/certifications/certifications';
+import { getCertification, saveCertification } from '@/api/certifications/certifications';
 import type { Certification } from '@/models/v4/certifications';
 import { useCertificationsStore } from '@/stores/certifications/store';
 
@@ -73,9 +73,8 @@ describe('EditCertificationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     delete mockParams.id;
-    useCertificationsStore.setState({ identity: 'me:77', items: [], types: [], detail: null, credits: [], busy: false, error: null });
-    jest.mocked(getMyCertifications).mockResolvedValue([]);
-    jest.mocked(getPersonCertificationTypes).mockResolvedValue([]);
+    // A loaded catalog keeps the screen from starting a list load these tests do not exercise.
+    useCertificationsStore.setState({ identity: 'me:77', items: [], types: [{ Id: 5, Name: 'EMT', IsActive: true } as never], detail: null, credits: [], busy: false, error: null });
   });
 
   it('reads a record the list does not hold, seeds the form, and saves it as an edit', async () => {

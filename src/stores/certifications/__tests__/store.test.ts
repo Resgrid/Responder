@@ -19,6 +19,7 @@ jest.mock('@/stores/security/store', () => {
 
 import * as api from '@/api/certifications/certifications';
 import { optionalDate } from '@/lib/certifications/format';
+import useAuthStore from '@/stores/auth/store';
 import { certificationError, sortCertifications, useCertificationsStore } from '@/stores/certifications/store';
 
 const server = jest.mocked(api);
@@ -56,6 +57,20 @@ it('renews, logs hours and removes the open certification', async () => {
   server.deleteCertification.mockResolvedValue({} as never);
   expect(await useCertificationsStore.getState().remove()).toBe(true);
   expect(useCertificationsStore.getState().items.some((item) => item.Id === 3)).toBe(false);
+});
+
+it("drops a detail that arrives after the person changed, so the old identity's record is never shown", async () => {
+  let answer!: (value: never) => void;
+  server.getCertification.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)) as never);
+  server.getCertificationCredits.mockResolvedValue([]);
+  const opening = useCertificationsStore.getState().open(3);
+
+  useAuthStore.setState({ userId: 'someone-else' });
+  answer(cert(3, '2026-10-01'));
+  await opening;
+
+  expect(useCertificationsStore.getState().detail).toBeNull();
+  useAuthStore.setState({ userId: 'me' });
 });
 
 it('maps refusals and validates optional dates', () => {
