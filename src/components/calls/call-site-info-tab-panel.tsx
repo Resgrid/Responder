@@ -1,7 +1,7 @@
 import { BuildingIcon, LockIcon, MapPinIcon, PhoneIcon, ShieldAlertIcon, UserIcon } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, ScrollView } from 'react-native';
+import { Alert, Linking, ScrollView } from 'react-native';
 
 import { ContactFilesList } from '@/components/contacts/contact-files-list';
 import { PreplanSummary } from '@/components/contacts/preplan-summary';
@@ -14,6 +14,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { isRedactedValue } from '@/lib/data-protection/redacted';
+import { logger } from '@/lib/logging';
 import { type CallSiteContactData } from '@/models/v4/calls/callSiteInfoResult';
 import { useSiteInfoStore } from '@/stores/calls/site-info-store';
 import { dataProtectionStore } from '@/stores/data-protection/store';
@@ -32,6 +33,14 @@ const SiteContactCard: React.FC<SiteContactCardProps> = ({ site, callId }) => {
   const nameRedacted = isRedactedValue(site.Name);
   const phoneRedacted = isRedactedValue(site.PhoneNumber);
   const hasAlerts = site.AlertNotes.length > 0 || site.Hazards.some((h) => h.ShouldAlert);
+
+  const handleCall = useCallback(() => {
+    Linking.openURL(`tel:${site.PhoneNumber}`).catch((error: unknown) => {
+      // The number itself is contact data, so only the ids go to the log.
+      logger.error({ message: 'Failed to open site contact phone link', context: { error, callId, contactId: site.ContactId } });
+      Alert.alert(t('contacts.errorTitle'), t('contacts.openAppError', { action: 'phone' }));
+    });
+  }, [callId, site.ContactId, site.PhoneNumber, t]);
 
   return (
     <Box className="mb-4 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" testID={`site-contact-${site.ContactId}`}>
@@ -52,7 +61,7 @@ const SiteContactCard: React.FC<SiteContactCardProps> = ({ site, callId }) => {
 
       <VStack className="p-3">
         {site.PhoneNumber && !phoneRedacted ? (
-          <Pressable onPress={() => Linking.openURL(`tel:${site.PhoneNumber}`).catch(() => {})} className="mb-2" testID={`site-contact-phone-${site.ContactId}`}>
+          <Pressable onPress={handleCall} className="mb-2" testID={`site-contact-phone-${site.ContactId}`}>
             <HStack space="xs" className="items-center">
               <PhoneIcon size={14} color="#6366F1" />
               <Text className="text-sm text-primary-600 dark:text-primary-400">{site.PhoneNumber}</Text>

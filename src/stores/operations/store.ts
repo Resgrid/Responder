@@ -173,6 +173,8 @@ export const useOperationsStore = create<OperationsState>()((set, get) => {
           operationsCapabilities.recordUsage ? getFieldCostAccess().catch(() => null) : Promise.resolve(null),
           operationsCapabilities.draftF42 ? getCalOesMarsAccess().catch(() => null) : Promise.resolve(null),
         ]);
+        // The person signed out or switched while this was in flight: the answer belongs to the old identity.
+        if (currentIdentity() !== identity || get().identity !== identity) return;
         set({ access, costAccess, marsAccess });
       });
     },

@@ -280,6 +280,9 @@ export default function CallDetail() {
 
   const natureWebViewSource = useMemo(() => ({ html: buildRichTextHtml(sanitizeHtmlContent(call?.Nature ?? ''), textColor, '4px 0 16px') }), [call?.Nature, textColor]);
 
+  // RecordsQuickCreate re-reads the catalog whenever this object changes, so it keeps its identity per call.
+  const recordsContext = useMemo(() => ({ CallId: call?.CallId ? Number.parseInt(call.CallId, 10) : null }), [call?.CallId]);
+
   // Memoized: rebuilding this array on every render remounted two or more WebViews, which was
   // visible jank for the whole time location streaming was active.
   const tabs = useMemo<TabItem[]>(() => {
@@ -329,7 +332,7 @@ export default function CallDetail() {
                 </Box>
               ) : null}
               {/* Contextual create: the button hides itself unless the server offers something here. */}
-              <RecordsQuickCreate context={{ CallId: Number.parseInt(call.CallId, 10) }} className="self-start" />
+              <RecordsQuickCreate context={recordsContext} className="self-start" />
               <Box className="border-b border-outline-100 pb-2">
                 <Text className="text-sm text-gray-500">{t('call_detail.note')}</Text>
                 <Box>
@@ -516,6 +519,7 @@ export default function CallDetail() {
     hasDestinationCoordinates,
     noteWebViewSource,
     overdueCheckInCount,
+    recordsContext,
     t,
   ]);
 

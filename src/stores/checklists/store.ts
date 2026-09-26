@@ -59,9 +59,18 @@ const assertOpen = (scope: string) => {
   if (!current(scope) || !state.access?.Enabled) throw new Error('denied');
   if (AppState.currentState !== 'active' || (state.access.IsProtected && !dataProtectionStore.getState().isStepUpActive())) throw new Error('locked');
 };
+// The run sheet's text fields call update() on every keystroke. Only a draft's newest copy needs to reach
+// the vault, so writes that queue up behind one in progress collapse into a single encrypted write of the
+// latest copy instead of one per keystroke. A queued write finds nothing left to do once an earlier one has
+// taken its copy; a failed write reports to its own caller, and the next edit or stage() writes again.
+const unwritten = new Map<string, ChecklistDraft>();
 const persistDraft = (draft: ChecklistDraft): Promise<void> => {
-  const copy: ChecklistDraft = JSON.parse(JSON.stringify(draft));
+  const key = `${draft.scope}:${draft.id}`;
+  unwritten.set(key, JSON.parse(JSON.stringify(draft)));
   return serializeWrite(async () => {
+    const copy = unwritten.get(key);
+    if (!copy) return;
+    unwritten.delete(key);
     const ids = (await vaultRead<string[]>(copy.scope, 'index')) ?? [];
     if (!ids.includes(copy.id) && ids.length >= 50) throw new Error('storage_full');
     await vaultWrite(copy.scope, `draft:${copy.id}`, copy);

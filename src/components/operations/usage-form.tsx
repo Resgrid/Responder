@@ -30,7 +30,9 @@ const numberOrNull = (text: string) => {
 // phase. Conflicting readings are flagged NeedsReview server-side; nothing here prices anything.
 export const UsageForm = ({ dateKey, units, defaultUnitId, readings, busy, onAdd }: UsageFormProps) => {
   const { t } = useTranslation();
-  const [unitId, setUnitId] = useState(defaultUnitId ?? (units[0] ? String(units[0].UnitId) : ''));
+  // The device's active unit is only a sensible default when it is one of the units offered here; otherwise
+  // the select would show its placeholder while the reading posted against a unit not on the deployment.
+  const [unitId, setUnitId] = useState(() => (defaultUnitId && units.some((unit) => String(unit.UnitId) === defaultUnitId) ? defaultUnitId : units[0] ? String(units[0].UnitId) : ''));
   const [phase, setPhase] = useState(String(UsagePhase.Incident));
   const [startOdometer, setStartOdometer] = useState('');
   const [endOdometer, setEndOdometer] = useState('');

@@ -22,6 +22,7 @@ jest.mock('@/stores/security/store', () => {
 });
 
 import * as api from '@/api/workOrders/workOrders';
+import useAuthStore from '@/stores/auth/store';
 import { useWorkOrdersStore } from '@/stores/workOrders/store';
 
 const server = jest.mocked(api);
@@ -69,6 +70,20 @@ it('loads the assigned list with the Readiness Pro write gate and reports a prob
   server.getReadinessAccess.mockResolvedValue({ ChecklistsEnabled: true, MaintenanceEnabled: false });
   await useWorkOrdersStore.getState().load(false);
   expect(useWorkOrdersStore.getState().canWrite).toBe(false);
+});
+
+it("drops a list that arrives after the person changed, so the old identity's orders never reach the new one", async () => {
+  let answer!: (value: never) => void;
+  server.getWorkOrders.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)) as never);
+  const loading = useWorkOrdersStore.getState().load(true);
+
+  useAuthStore.setState({ userId: 'someone-else' });
+  answer({ Items: [summary()], HasMore: false, CanWrite: true } as never);
+  await loading;
+
+  expect(useWorkOrdersStore.getState().items).toEqual([]);
+  expect(useWorkOrdersStore.getState().canWrite).toBe(false);
+  useAuthStore.setState({ userId: 'me' });
 });
 
 it('sends every command at the current revision and reloads the order when someone else changed it', async () => {

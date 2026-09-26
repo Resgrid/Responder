@@ -13,6 +13,7 @@ import {
 import { logger } from '@/lib/logging';
 import { sortDeployments, upsertDeployment } from '@/lib/records/deployments';
 import { zustandStorage } from '@/lib/storage';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import { type RecordDeploymentConnectorData, type RecordDeploymentConnectorRunData, type RecordDeploymentData, type RecordDeploymentReconciliationData } from '@/models/v4/records/deployments';
 
 // Deployments and external ordering-system connectors for this app (RMS plan section 4.1). The
@@ -211,6 +212,10 @@ export const useDeploymentsStore = create<DeploymentsState>()(
     }
   )
 );
+
+// Signing out clears the persisted copy, but the in-memory one would otherwise survive into the next
+// session and be written straight back to the device by the next update.
+registerStoreReset('records-deployments', () => useDeploymentsStore.getState().reset());
 
 export const useOpenDeploymentCount = () => useDeploymentsStore((state) => state.deployments.filter((deployment) => deployment.Status !== 'ClosedOut').length);
 

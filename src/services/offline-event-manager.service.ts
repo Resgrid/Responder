@@ -7,6 +7,9 @@ import { type QueuedCallImageUploadEvent, type QueuedCheckInEvent, type QueuedEv
 import type * as ChecklistsStore from '@/stores/checklists/store';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
 
+/** The coded error flushChecklistDraft throws while the app is backgrounded or protected data is locked. */
+const CHECKLIST_LOCKED = 'checklist_locked';
+
 class OfflineEventManager {
   private static instance: OfflineEventManager;
   private processingInterval: ReturnType<typeof setInterval> | null = null;
@@ -217,6 +220,15 @@ class OfflineEventManager {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // A checklist refuses to sync while the app is in the background or protected data is locked. That is
+      // a wait, not a failure: consuming a retry would exhaust the event within a minute, and nothing brings
+      // an exhausted event back when the app returns or the person unlocks again.
+      if (errorMessage === CHECKLIST_LOCKED) {
+        store.updateEventStatus(event.id, QueuedEventStatus.PENDING);
+        logger.debug({ message: 'Checklist sync is waiting for the app to be unlocked', context: { eventId: event.id } });
+        return;
+      }
 
       store.updateEventStatus(event.id, QueuedEventStatus.FAILED, errorMessage);
 

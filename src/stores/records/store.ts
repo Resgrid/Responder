@@ -16,6 +16,7 @@ import { logger } from '@/lib/logging';
 import { canAuthorOffline, CLIENT_CAPABILITY, toValueList, type ValueMap } from '@/lib/records/schema';
 import { type PendingUpload, type UploadOptions, type UploadOutcome } from '@/lib/records/uploads';
 import { zustandStorage } from '@/lib/storage';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import {
   type FieldRecordAssignmentData,
   type FieldRecordCatalogData,
@@ -194,7 +195,7 @@ export const useRecordsStore = create<RecordsState>()(
 
       setContext: (context) => {
         const current = get().context;
-        if (current.CallId === context.CallId && current.UnitId === context.UnitId && current.GroupId === context.GroupId && current.CommandRole === context.CommandRole) {
+        if (current.CallId === context.CallId && current.UnitId === context.UnitId && current.GroupId === context.GroupId && current.CommandRole === context.CommandRole && current.ContactId === context.ContactId) {
           return;
         }
         // The catalog is context-specific, so it is dropped rather than shown against a new context.
@@ -599,6 +600,10 @@ export const useRecordsStore = create<RecordsState>()(
     }
   )
 );
+
+// Signing out clears the persisted slice, but drafts, uploads and the sync cursor held in memory would
+// otherwise carry into the next session and be written straight back to the device by the next update.
+registerStoreReset('records', () => useRecordsStore.getState().reset());
 
 export const useRecordsDraftCount = () => useRecordsStore((state) => Object.keys(state.pendingDrafts).length);
 

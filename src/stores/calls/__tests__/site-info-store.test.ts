@@ -117,6 +117,35 @@ describe('useSiteInfoStore', () => {
     expect(useSiteInfoStore.getState().siteInfo?.CallId).toBe('43');
   });
 
+  it('keeps the newer answer when two requests for the same call resolve out of order', async () => {
+    // The tab re-fetches the same call after a grant change; the older (pre-change) answer must not win.
+    const revealed = deferred<any>();
+    const concealed = { ...makeSiteInfo('42'), IsProtected: true };
+    mockGetCallSiteInfo.mockImplementationOnce(() => revealed.promise);
+    mockGetCallSiteInfo.mockResolvedValueOnce({ Data: concealed } as any);
+
+    const olderFetch = useSiteInfoStore.getState().fetchSiteInfo('42');
+    await useSiteInfoStore.getState().fetchSiteInfo('42');
+
+    revealed.resolve({ Data: makeSiteInfo('42') });
+    await olderFetch;
+
+    expect(useSiteInfoStore.getState().siteInfo).toBe(concealed);
+  });
+
+  it('drops a response that arrives after reset', async () => {
+    const pending = deferred<any>();
+    mockGetCallSiteInfo.mockImplementationOnce(() => pending.promise);
+
+    const fetch = useSiteInfoStore.getState().fetchSiteInfo('42');
+    useSiteInfoStore.getState().reset();
+    pending.resolve({ Data: makeSiteInfo('42') });
+    await fetch;
+
+    expect(useSiteInfoStore.getState().siteInfo).toBeNull();
+    expect(useSiteInfoStore.getState().isLoading).toBe(false);
+  });
+
   it('reset clears everything', async () => {
     mockGetCallSiteInfo.mockResolvedValue({ Data: makeSiteInfo('42') } as any);
     await useSiteInfoStore.getState().fetchSiteInfo('42');

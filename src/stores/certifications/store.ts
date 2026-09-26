@@ -77,6 +77,8 @@ export const useCertificationsStore = create<CertificationsState>()((set, get) =
       if (get().identity !== identity) set({ ...initial, identity });
       await settle(async () => {
         const [items, types] = await Promise.all([getMyCertifications(), getPersonCertificationTypes().catch(() => [] as CertificationType[])]);
+        // The person signed out or switched while this was in flight: the answer belongs to the old identity.
+        if (currentIdentity() !== identity || get().identity !== identity) return;
         set({ items: sortCertifications(items), types: types.filter((type) => type.IsActive) });
       });
     },

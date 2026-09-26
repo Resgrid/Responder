@@ -48,6 +48,18 @@ it('keeps values in the dedicated vault and only references in the ordinary offl
   useChecklistsStore.getState().close(); await useChecklistsStore.getState().openDraft(run().Id);
   expect(useChecklistsStore.getState().active?.input.Note).toBe('SYNTHETIC PHI');
 });
+it('collapses a burst of keystrokes into writes of the newest note instead of one encrypted write per key', async () => {
+  await useChecklistsStore.getState().load();
+  await useChecklistsStore.getState().startDefinition(definition(), run().Target);
+  jest.mocked(vaultWrite).mockClear();
+  const typed = 'Hydrant cap missing';
+
+  await Promise.all([...typed].map((_, index) => useChecklistsStore.getState().update({ Revision: 0, Answers: [], Note: typed.slice(0, index + 1) })));
+
+  const draftWrites = jest.mocked(vaultWrite).mock.calls.filter(([, name]) => name === `draft:${run().Id}`);
+  expect(draftWrites.length).toBeLessThanOrEqual(2);
+  expect(JSON.parse(mockDisk.get(`${scope}:draft:${run().Id}`)!).input.Note).toBe(typed);
+});
 it('previews occurrences without starting server work and reopens prepared data offline', async () => {
   await useChecklistsStore.getState().load();
   server.previewChecklistOccurrence.mockResolvedValue({ ...run(), Revision: 0, IsPreview: true, OccurrenceId: 'occurrence', Input: { Revision: 0, Answers: [] } });

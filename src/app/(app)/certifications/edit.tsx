@@ -4,16 +4,19 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
+import { getCertification } from '@/api/certifications/certifications';
 import { OptionSelect } from '@/components/operations/option-select';
 import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
+import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { optionalDate } from '@/lib/certifications/format';
 import { type CapturedPhoto, capturePhoto, discardPhoto, PhotoPermissionError } from '@/lib/media/photo';
-import { useCertificationsStore } from '@/stores/certifications/store';
+import type { Certification } from '@/models/v4/certifications';
+import { certificationError, useCertificationsStore } from '@/stores/certifications/store';
 
 const OTHER = '';
 
@@ -24,8 +27,75 @@ export default function EditCertificationScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { types, items, busy, error } = useCertificationsStore();
-  const existing = id ? items.find((item) => String(item.Id) === id) : undefined;
+  const listed = useCertificationsStore((state) => (id ? state.items.find((item) => String(item.Id) === id) : undefined));
+  const [fetched, setFetched] = useState<Certification | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const needsFetch = !!id && !listed;
+
+  useEffect(() => {
+    if (useCertificationsStore.getState().types.length === 0) void useCertificationsStore.getState().load();
+  }, []);
+
+  // Opened on a record the list does not hold (a deep link, or before the list has loaded): read it directly,
+  // so edit mode never falls back to a blank "add" form whose save would create a second certification.
+  useEffect(() => {
+    if (!needsFetch) return;
+    const numeric = Number(id);
+    if (!Number.isFinite(numeric)) {
+      setFetchError('denied');
+      return;
+    }
+    let active = true;
+    setFetchError(null);
+    getCertification(numeric)
+      .then((record) => {
+        if (active) setFetched(record);
+      })
+      .catch((failure: unknown) => {
+        if (active) setFetchError(certificationError(failure));
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, needsFetch]);
+
+  const existing = listed ?? (fetched && String(fetched.Id) === id ? fetched : undefined);
+
+  if (id && !existing) {
+    return (
+      <VStack className="flex-1 bg-background-0">
+        <Stack.Screen options={{ title: t('certifications.edit') }} />
+        <VStack space="md" className="p-4">
+          <HStack space="sm" className="items-center">
+            <Pressable onPress={() => router.back()} testID="certification-edit-back" accessibilityRole="button" accessibilityLabel={t('certifications.back')}>
+              <ArrowLeft size={22} color="#2563eb" />
+            </Pressable>
+            <Text className="flex-1 text-xl font-bold">{t('certifications.edit')}</Text>
+          </HStack>
+          {fetchError ? (
+            <Text accessibilityRole="alert" className="text-error-600" testID="certification-edit-error">
+              {t(`certifications.errors.${fetchError}`, { defaultValue: t('certifications.errors.retry') })}
+            </Text>
+          ) : (
+            <Spinner testID="certification-edit-loading" />
+          )}
+        </VStack>
+      </VStack>
+    );
+  }
+
+  // Keyed by the record so the fields are seeded from it once it is known.
+  return <CertificationForm key={existing ? String(existing.Id) : 'new'} existing={existing} />;
+}
+
+interface CertificationFormProps {
+  existing?: Certification;
+}
+
+const CertificationForm: React.FC<CertificationFormProps> = ({ existing }) => {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { types, busy, error } = useCertificationsStore();
   const [typeId, setTypeId] = useState(existing?.TypeId ? String(existing.TypeId) : OTHER);
   const [name, setName] = useState(existing?.Name ?? '');
   const [number, setNumber] = useState(existing?.Number ?? '');
@@ -35,10 +105,6 @@ export default function EditCertificationScreen() {
   const [expiresOn, setExpiresOn] = useState(String(existing?.ExpiresOn ?? '').slice(0, 10));
   const [photo, setPhoto] = useState<CapturedPhoto | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (useCertificationsStore.getState().types.length === 0) void useCertificationsStore.getState().load();
-  }, []);
 
   const pick = async (source: 'camera' | 'library') => {
     try {
@@ -141,4 +207,4 @@ export default function EditCertificationScreen() {
       </ScrollView>
     </VStack>
   );
-}
+};

@@ -125,6 +125,8 @@ export const useWorkOrdersStore = create<WorkOrdersState>()((set, get) => {
       if (get().identity !== identity) set({ ...initial, identity });
       await settle(async () => {
         const [access, choices, page] = await Promise.all([getReadinessAccess(), get().choices ? Promise.resolve(get().choices) : getWorkOrderChoices(), getWorkOrders({ page: 0, assignedToMe })]);
+        // The person signed out or switched while this was in flight: the answer belongs to the old identity.
+        if (currentIdentity() !== identity || get().identity !== identity) return;
         set({ access, choices, assignedToMe, items: page.Items, page: 0, hasMore: page.HasMore, canWrite: page.CanWrite && access.MaintenanceEnabled });
       });
     },

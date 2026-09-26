@@ -14,6 +14,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { safeFileName } from '@/lib/contacts/format';
 import { isFieldRedacted } from '@/lib/data-protection/redacted';
 import { logger } from '@/lib/logging';
 import { type ContactFileResultData } from '@/models/v4/contactFiles/contactFilesResult';
@@ -53,10 +54,17 @@ export const ContactFilesList: React.FC<ContactFilesListProps> = ({ files, isLoa
       setDownloading((prev) => ({ ...prev, [file.Id]: true }));
       trackEvent('contact_file_download_started', { contextId: contextId ?? '', fileId: file.Id, fileType: file.Type, isProtected: file.IsProtected });
 
+      // A protected file's bytes were decrypted under the current grant, so they are staged in the cache (not the
+      // backed-up documents folder), in a folder of their own so two files with one name cannot collide, and
+      // removed once the share sheet returns.
+      const fallbackName = safeFileName(`contact_file_${file.Id}`, 'contact_file');
+      const directory = `${FileSystem.cacheDirectory}contact-files/${safeFileName(String(file.Id), 'file')}/`;
       try {
         const base64 = await getContactFileBase64(file);
-        const fileName = (!isFieldRedacted(file.RedactedFields, FileFieldIds.fileName, file.FileName) && file.FileName) || `contact_file_${file.Id}`;
-        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        const suppliedName = isFieldRedacted(file.RedactedFields, FileFieldIds.fileName, file.FileName) ? null : file.FileName;
+        const fileName = safeFileName(suppliedName, fallbackName);
+        const fileUri = `${directory}${fileName}`;
+        await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
         await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
 
         if (await Sharing.isAvailableAsync()) {
@@ -70,6 +78,9 @@ export const ContactFilesList: React.FC<ContactFilesListProps> = ({ files, isLoa
         logger.error({ message: 'Failed to download contact file', context: { error, fileId: file.Id } });
         Alert.alert(t('contacts.files.download_failed'));
       } finally {
+        await FileSystem.deleteAsync(directory, { idempotent: true }).catch((error: unknown) => {
+          logger.warn({ message: 'Failed to remove a staged contact file', context: { error, fileId: file.Id } });
+        });
         setDownloading((prev) => {
           const next = { ...prev };
           delete next[file.Id];

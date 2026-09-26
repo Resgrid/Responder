@@ -126,7 +126,7 @@ export const RecordAttachments: React.FC<RecordAttachmentsProps> = ({ recordId, 
       setMessage(t('records.camera_denied'));
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: false, quality: 0.8, exif: false });
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.8, exif: false });
     const asset = result.canceled ? null : result.assets?.[0];
     if (asset?.uri) {
       await stage(asset.uri, asset.fileName ?? `photo-${Date.now()}.jpg`, guessContentType(asset.fileName ?? '.jpg', asset.mimeType));
@@ -135,7 +135,7 @@ export const RecordAttachments: React.FC<RecordAttachmentsProps> = ({ recordId, 
 
   const pickFromLibrary = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: false,
       quality: 0.8,
       exif: false,

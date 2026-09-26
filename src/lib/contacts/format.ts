@@ -7,19 +7,43 @@ import { type ContactResultData } from '@/models/v4/contacts/contactResultData';
 
 const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&nbsp;': ' ' };
 
+/** Removes every match, repeating until none is left, so a removal cannot splice a new match together ("<scr<script></script>ipt>"). */
+const removeAll = (value: string, pattern: RegExp): string => {
+  let previous: string;
+  let current = value;
+  do {
+    previous = current;
+    current = current.replace(pattern, '');
+  } while (current !== previous);
+  return current;
+};
+
 /** Rich text from the web editor as plain readable text: line breaks kept, markup and scripts dropped. */
 export const htmlToText = (html: string | null | undefined): string => {
   if (!html) return '';
-  return html
-    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+  const blocks = removeAll(html, /<(script|style)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi)
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '• ')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<li[^>]*>/gi, '• ');
+  // Markup is gone at this point; a literal "<" in editor text arrives as &lt;, so any raw one left is a torn tag.
+  return removeAll(blocks, /<[^>]*>/g)
+    .replace(/</g, '')
     .replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (entity) => ENTITIES[entity] ?? entity)
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+};
+
+/**
+ * A file name the device can write. A contact file's name is the uploader's choice, so path separators, ".."
+ * and anything outside a plain file-name alphabet are replaced; an empty result falls back to `fallback`.
+ */
+export const safeFileName = (name: string | null | undefined, fallback: string): string => {
+  const cleaned = (name ?? '')
+    .replace(/[^A-Za-z0-9._ -]/g, '_')
+    .replace(/^[.\s]+|[.\s]+$/g, '')
+    .slice(0, 120);
+  return cleaned || fallback;
 };
 
 /** "lat,lng" (or "lat lng") as numbers, when it parses. */

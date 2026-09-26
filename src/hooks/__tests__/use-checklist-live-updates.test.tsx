@@ -10,7 +10,11 @@ import { AppState } from 'react-native';
 import { signalRService } from '@/services/signalr.service';
 import { useChecklistsStore } from '@/stores/checklists/store';
 import { useChecklistLiveUpdates } from '../use-checklist-live-updates';
-const event = (name: string) => jest.mocked(signalRService.on).mock.calls.find(([key]) => key === name)![1];
+const event = (name: string) => {
+ const call = jest.mocked(signalRService.on).mock.calls.find(([key]) => key === name);
+ if (!call) throw new Error(`Missing listener: ${name}`);
+ return call[1];
+};
 beforeEach(() => { jest.useFakeTimers(); jest.clearAllMocks(); jest.spyOn(AppState, 'addEventListener').mockReturnValue({ remove: jest.fn() }); Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' }); useChecklistsStore.setState({ locked: false, busy: false, active: null, access: { IsProtected: false } as any }); });
 afterEach(() => { jest.useRealTimers(); });
 it('coalesces value-free hints and cleans listeners on blur/unmount', () => {

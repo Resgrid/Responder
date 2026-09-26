@@ -1,4 +1,5 @@
 import { goldenCatalogEntry } from '@/lib/records/__tests__/fixtures';
+import { clearAllAppData } from '@/lib/storage/clear-all-data';
 import { RmsRecordState } from '@/models/v4/records';
 import { RECORDS_ORIGIN_CLIENT, useRecordsStore } from '@/stores/records/store';
 
@@ -283,5 +284,27 @@ describe('Field Records store conformance', () => {
 
     expect(useRecordsStore.getState().catalog).toBeNull();
     expect(useRecordsStore.getState().context).toEqual({ CallId: 501 });
+  });
+
+  it('treats another contact as another context even when the rest of it is unchanged', () => {
+    const catalog = { ContractVersion: 'field-catalog.v1', OriginClient: 'Responder', Ok: true, Reasons: [], ContextVerified: true, Definitions: [goldenCatalogEntry()], Exclusions: [], ServerTimestampMs: 0 };
+    useRecordsStore.getState().setContext({ CallId: 501, ContactId: 7 });
+    useRecordsStore.setState({ catalog });
+
+    useRecordsStore.getState().setContext({ CallId: 501, ContactId: 7 });
+    expect(useRecordsStore.getState().catalog).toBe(catalog);
+
+    useRecordsStore.getState().setContext({ CallId: 501, ContactId: 8 });
+    expect(useRecordsStore.getState().catalog).toBeNull();
+    expect(useRecordsStore.getState().context).toEqual({ CallId: 501, ContactId: 8 });
+  });
+
+  it('is reset with the other stores when the app signs out', async () => {
+    useRecordsStore.setState({ pendingDrafts: { local: {} as never }, context: { CallId: 501 } });
+
+    await clearAllAppData({ clearStorage: false, clearFilters: false });
+
+    expect(useRecordsStore.getState().pendingDrafts).toEqual({});
+    expect(useRecordsStore.getState().context).toEqual({});
   });
 });

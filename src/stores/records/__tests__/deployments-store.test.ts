@@ -1,3 +1,4 @@
+import { clearAllAppData } from '@/lib/storage/clear-all-data';
 import { useDeploymentsStore } from '@/stores/records/deployments-store';
 
 // Deployments and connector store conformance (RMS plan section 4.1). Identical in all four app
@@ -223,5 +224,14 @@ describe('Deployments store conformance', () => {
     expect(state.runs).toEqual({});
     expect(state.error).toBeNull();
     expect(state.connectorsError).toBeNull();
+  });
+
+  it('is reset with the other stores when the app signs out', async () => {
+    useDeploymentsStore.setState({ deployments: [deployment('o1', '2026-09-01T00:00:00Z')] as never, includeClosed: true });
+
+    await clearAllAppData({ clearStorage: false, clearFilters: false });
+
+    expect(useDeploymentsStore.getState().deployments).toEqual([]);
+    expect(useDeploymentsStore.getState().includeClosed).toBe(false);
   });
 });
