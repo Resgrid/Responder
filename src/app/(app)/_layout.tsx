@@ -131,7 +131,7 @@ export default function TabLayout() {
 
       // Feature flags must follow rights: the identity key that decides whether persisted
       // flags belong to this account reads securityStore.rights.DepartmentId.
-      await featureFlagsStore.getState().fetchFlags(), dataProtectionStore.getState().fetchCapabilities();
+      await Promise.all([featureFlagsStore.getState().fetchFlags(), dataProtectionStore.getState().fetchCapabilities()]);
       if (!isCurrentRun()) return;
 
       // Realtime feeds. Every one of them has to follow the Promise.all above: opening a hub reads

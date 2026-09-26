@@ -62,7 +62,7 @@ module.exports = {
         'i18n-json/sorted-keys': [
           2,
           {
-            order: 'asc',
+            sortFunctionPath: path.resolve('./scripts/i18next-key-sort.js'),
             indentSpaces: 2,
           },
         ],

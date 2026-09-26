@@ -9,3 +9,4 @@ ios/
 .expo-shared
 docs/
 cli/
+expo-env.d.ts

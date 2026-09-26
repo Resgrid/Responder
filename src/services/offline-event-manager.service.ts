@@ -4,6 +4,7 @@ import { saveCallImage } from '@/api/calls/callFiles';
 import { performCheckIn } from '@/api/calls/check-in-timers';
 import { logger } from '@/lib/logging';
 import { type QueuedCallImageUploadEvent, type QueuedCheckInEvent, type QueuedEvent, QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
+import type * as ChecklistsStore from '@/stores/checklists/store';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
 
 class OfflineEventManager {
@@ -187,7 +188,7 @@ class OfflineEventManager {
       switch (event.type) {
         case QueuedEventType.CHECKLIST_COMPLETION: {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { flushChecklistDraft } = require('@/stores/checklists/store') as typeof import('@/stores/checklists/store');
+          const { flushChecklistDraft } = require('@/stores/checklists/store') as typeof ChecklistsStore;
           if (typeof event.data.scope !== 'string' || typeof event.data.id !== 'string') throw new Error('checklist_invalid_reference');
           await flushChecklistDraft(event.data.scope, event.data.id);
           break;
