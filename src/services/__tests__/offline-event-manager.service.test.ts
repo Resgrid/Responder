@@ -1,8 +1,9 @@
 import { AppState } from 'react-native';
 
 import { saveCallImage } from '@/api/calls/callFiles';
-import { QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
+import { type QueuedEvent, QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
 import { offlineEventManager } from '@/services/offline-event-manager.service';
+import { flushChecklistDraft } from '@/stores/checklists/store';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
 
 // Mock AppState
@@ -23,6 +24,10 @@ jest.mock('@/stores/offline-queue/store', () => ({
   useOfflineQueueStore: {
     getState: jest.fn(),
   },
+}));
+
+jest.mock('@/stores/checklists/store', () => ({
+  flushChecklistDraft: jest.fn(),
 }));
 
 // Mock logger
@@ -266,6 +271,36 @@ describe('OfflineEventManager', () => {
       
       // Verify that getPendingEvents is called immediately when online
       expect(mockStoreState.getPendingEvents).toHaveBeenCalled();
+    });
+  });
+
+  describe('checklist completion events', () => {
+    const checklistEvent: QueuedEvent = {
+      id: 'checklist-event',
+      type: QueuedEventType.CHECKLIST_COMPLETION,
+      status: QueuedEventStatus.PENDING,
+      data: { scope: 'scope', id: 'run-1' },
+      retryCount: 4,
+      maxRetries: 5,
+      createdAt: Date.now(),
+    };
+    const processEvent = (event: QueuedEvent) => (offlineEventManager as unknown as { processEvent: (event: QueuedEvent) => Promise<void> }).processEvent(event);
+
+    it('keeps the event pending without spending a retry while the app is locked', async () => {
+      jest.mocked(flushChecklistDraft).mockRejectedValueOnce(new Error('checklist_locked'));
+
+      await processEvent(checklistEvent);
+
+      expect(mockStoreState.updateEventStatus).toHaveBeenLastCalledWith('checklist-event', QueuedEventStatus.PENDING);
+      expect(mockStoreState.updateEventStatus).not.toHaveBeenCalledWith('checklist-event', QueuedEventStatus.FAILED, expect.anything());
+    });
+
+    it('still counts any other checklist failure against the retry limit', async () => {
+      jest.mocked(flushChecklistDraft).mockRejectedValueOnce(new Error('checklist_retry'));
+
+      await processEvent(checklistEvent);
+
+      expect(mockStoreState.updateEventStatus).toHaveBeenLastCalledWith('checklist-event', QueuedEventStatus.FAILED, 'checklist_retry');
     });
   });
 

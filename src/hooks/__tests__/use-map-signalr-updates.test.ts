@@ -21,8 +21,8 @@ const mockedUseSignalRStore = useSignalRStore as jest.MockedFunction<typeof useS
 const createMockMapData = (): GetMapDataAndMarkersResult => {
   const mapMakers: MapMakerInfoData[] = [
     {
-      Id: '1',
-      Type: 1,
+      Id: 'p1',
+      Type: 3,
       Title: 'John Doe',
       Latitude: 40.7128,
       Longitude: -74.006,
@@ -32,8 +32,8 @@ const createMockMapData = (): GetMapDataAndMarkersResult => {
       Color: '#FF0000',
     } as MapMakerInfoData,
     {
-      Id: '2',
-      Type: 2,
+      Id: 'u2',
+      Type: 1,
       Title: 'Unit 1',
       Latitude: 40.7589,
       Longitude: -73.9851,
@@ -121,7 +121,56 @@ describe('useMapSignalRUpdates', () => {
         expect(mockedGetMapDataAndMarkers).toHaveBeenCalledTimes(1);
       });
 
-      expect(mockOnMarkersUpdate).toHaveBeenCalledWith(mockMapData.Data.MapMakerInfos);
+      // The second argument is when the fetch started, so live positions pushed meanwhile can be re-applied.
+      expect(mockOnMarkersUpdate).toHaveBeenCalledWith(mockMapData.Data.MapMakerInfos, expect.any(Number));
+    });
+
+    it('passes the moment the fetch started, not when it finished', async () => {
+      let now = 50_000;
+      const dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+      let resolveFetch!: (value: GetMapDataAndMarkersResult) => void;
+      mockedGetMapDataAndMarkers.mockImplementationOnce(
+        () =>
+          new Promise<GetMapDataAndMarkersResult>((resolve) => {
+            resolveFetch = resolve;
+          })
+      );
+      mockedUseSignalRStore.mockReturnValue(1000);
+
+      renderHook(() => useMapSignalRUpdates(mockOnMarkersUpdate));
+      jest.advanceTimersByTime(1000);
+      await waitFor(() => {
+        expect(mockedGetMapDataAndMarkers).toHaveBeenCalledTimes(1);
+      });
+
+      now = 60_000;
+      resolveFetch(mockMapData);
+
+      await waitFor(() => {
+        expect(mockOnMarkersUpdate).toHaveBeenCalledWith(mockMapData.Data.MapMakerInfos, 50_000);
+      });
+      dateSpy.mockRestore();
+    });
+
+    it('refetches when refreshRequestedAt is bumped', async () => {
+      mockedUseSignalRStore.mockReturnValue(0);
+
+      const { rerender } = renderHook(({ refreshRequestedAt }) => useMapSignalRUpdates(mockOnMarkersUpdate, refreshRequestedAt), { initialProps: { refreshRequestedAt: 0 } });
+
+      jest.advanceTimersByTime(1000);
+      expect(mockedGetMapDataAndMarkers).not.toHaveBeenCalled();
+
+      rerender({ refreshRequestedAt: 5000 });
+      jest.advanceTimersByTime(1000);
+
+      await waitFor(() => {
+        expect(mockedGetMapDataAndMarkers).toHaveBeenCalledTimes(1);
+      });
+
+      // Same request again: already processed, no second fetch.
+      rerender({ refreshRequestedAt: 5000 });
+      jest.advanceTimersByTime(1000);
+      expect(mockedGetMapDataAndMarkers).toHaveBeenCalledTimes(1);
     });
 
     it('should not call API again for same timestamp', async () => {
@@ -330,7 +379,7 @@ describe('useMapSignalRUpdates', () => {
         expect(mockedGetMapDataAndMarkers).toHaveBeenCalledTimes(1);
       });
 
-      expect(mockOnMarkersUpdate).toHaveBeenCalledWith(mockMapData.Data.MapMakerInfos);
+      expect(mockOnMarkersUpdate).toHaveBeenCalledWith(mockMapData.Data.MapMakerInfos, expect.any(Number));
     });
   });
 

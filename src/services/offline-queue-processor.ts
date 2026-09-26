@@ -4,10 +4,27 @@ import CryptoJS from 'crypto-js';
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { getResponseStatus, isClientRejection } from '@/lib/request-errors';
 import { getOfflineQueueStorage } from '@/lib/storage/secure-storage';
 import type { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 
 const MAX_RETRIES = 5;
+
+const hasStatusDestination = (payload: SavePersonStatusInput): boolean => {
+  const respondingTo = `${payload.RespondingTo ?? ''}`.trim();
+  return respondingTo !== '' && respondingTo !== '0';
+};
+
+/**
+ * The same status with its destination removed. Timestamps, note and location are kept, so the
+ * server still records the status at the time the user set it.
+ */
+const withoutStatusDestination = (payload: SavePersonStatusInput): SavePersonStatusInput => ({
+  ...payload,
+  RespondingTo: '',
+  RespondingToType: null,
+  EventId: '',
+});
 
 // The stub drops every item, so it must only ever stand in under test. Gating it on
 // "not production" previously disabled the queue in dev builds too.
@@ -118,22 +135,22 @@ export class RealOfflineQueueProcessor {
             continue;
           }
 
-          try {
-            if (item.type === 'personnelStatus') {
-              await savePersonnelStatus(item.payload);
-            }
-          } catch (error) {
-            item.retries++;
-            item.attempts = (item.attempts ?? item.retries - 1) + 1;
-            if (item.attempts >= MAX_RETRIES) {
-              logger.error({ message: 'Dropping offline queue item after max retries', context: { id: item.id, attempts: item.attempts, error } });
-              continue;
-            }
-            const backoff = Math.min(2 ** item.retries * 1000, 30000);
-            item.nextRetryAt = Date.now() + backoff;
-            remaining.push(item);
-            logger.warn({ message: 'Scheduled offline queue item retry', context: { id: item.id, attempts: item.attempts, nextRetryAt: item.nextRetryAt, error } });
+          const failure = await this.replayItem(item);
+          if (!failure) {
+            continue;
           }
+
+          const { error } = failure;
+          item.retries++;
+          item.attempts = (item.attempts ?? item.retries - 1) + 1;
+          if (item.attempts >= MAX_RETRIES) {
+            logger.error({ message: 'Dropping offline queue item after max retries', context: { id: item.id, attempts: item.attempts, error } });
+            continue;
+          }
+          const backoff = Math.min(2 ** item.retries * 1000, 30000);
+          item.nextRetryAt = Date.now() + backoff;
+          remaining.push(item);
+          logger.warn({ message: 'Scheduled offline queue item retry', context: { id: item.id, attempts: item.attempts, nextRetryAt: item.nextRetryAt, error } });
         }
         await storage.set(this.storageKey, JSON.stringify(remaining));
         this.scheduleNextRetry(remaining);
@@ -142,6 +159,55 @@ export class RealOfflineQueueProcessor {
       logger.error({ message: 'Processing offline queue failed', context: { error } });
     } finally {
       this.processing = false;
+    }
+  }
+
+  /**
+   * Sends one queued item. Resolves to the error to retry on, or null once the item is done:
+   * saved, or refused by the server in a way no retry can change. The payload goes out exactly
+   * as queued, so the server gets the time the user set the status, not the replay time.
+   */
+  private async replayItem(item: QueueItem): Promise<{ error: unknown } | null> {
+    if (item.type !== 'personnelStatus') {
+      return null;
+    }
+
+    try {
+      await savePersonnelStatus(item.payload);
+      return null;
+    } catch (error) {
+      if (!isClientRejection(error)) {
+        return { error };
+      }
+
+      const httpStatus = getResponseStatus(error);
+
+      if (httpStatus === 400 && hasStatusDestination(item.payload)) {
+        // Usually the destination -- e.g. the call closed while the device was offline. The
+        // status itself still matters to the call timeline, so save it without the destination.
+        const fallbackPayload = withoutStatusDestination(item.payload);
+
+        try {
+          await savePersonnelStatus(fallbackPayload);
+          logger.warn({ message: 'Offline personnel status rejected with its destination; saved without it', context: { id: item.id, httpStatus } });
+          return null;
+        } catch (fallbackError) {
+          if (!isClientRejection(fallbackError)) {
+            // Retry the destination-less payload so the network retry does not repeat the 400.
+            item.payload = fallbackPayload;
+            return { error: fallbackError };
+          }
+
+          logger.error({
+            message: 'Dropping offline personnel status rejected by the server',
+            context: { id: item.id, httpStatus: getResponseStatus(fallbackError), destinationRemoved: true },
+          });
+          return null;
+        }
+      }
+
+      logger.error({ message: 'Dropping offline personnel status rejected by the server', context: { id: item.id, httpStatus } });
+      return null;
     }
   }
 

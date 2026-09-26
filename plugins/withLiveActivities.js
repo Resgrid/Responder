@@ -78,6 +78,18 @@ function getBuildSettingValue(buildConfigurations, key) {
 }
 
 /**
+ * Whether the project already has the widget extension target.
+ *
+ * addTarget() records the name quoted in the comment section, but a project parsed from disk
+ * has it unquoted. Matching only the quoted form made every non-clean prebuild add a second,
+ * empty extension target — Xcode could then embed that one, which has no executable, and the
+ * simulator refuses to install the app.
+ */
+function hasWidgetTarget(xcodeProject) {
+  return Boolean(xcodeProject.pbxTargetByName(WIDGET_EXTENSION_NAME) || xcodeProject.pbxTargetByName(`"${WIDGET_EXTENSION_NAME}"`));
+}
+
+/**
  * Returns the Info.plist XML for the widget extension target.
  */
 function widgetInfoPlistXml() {
@@ -251,9 +263,7 @@ const withLiveActivitiesXcodeProject = (config) => {
     const targetedDeviceFamily = getBuildSettingValue(appBuildConfigurations, 'TARGETED_DEVICE_FAMILY') ?? '1,2';
 
     // ── Idempotency guard ────────────────────────────────────────────────────
-    // addTarget() stores target names with surrounding quotes in the comment
-    // section, so pbxTargetByName requires the quoted form for lookup.
-    if (xcodeProject.pbxTargetByName(`"${WIDGET_EXTENSION_NAME}"`)) {
+    if (hasWidgetTarget(xcodeProject)) {
       return cfg;
     }
 
@@ -365,3 +375,5 @@ module.exports = (config, { appGroupId } = {}) => {
   config = withLiveActivitiesXcodeProject(config);
   return config;
 };
+
+module.exports.hasWidgetTarget = hasWidgetTarget;

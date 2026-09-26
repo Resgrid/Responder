@@ -8,7 +8,14 @@ import { useSignalRStore } from '@/stores/signalr/signalr-store';
 // Debounce delay in milliseconds to prevent rapid consecutive API calls
 const DEBOUNCE_DELAY = 1000;
 
-export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData[]) => void) => {
+/**
+ * Refetch the map markers whenever the update hub reports a change, or when `refreshRequestedAt`
+ * (an epoch ms bumped by useMapLiveLocations) asks for one.
+ *
+ * `onMarkersUpdate` also receives the epoch ms the fetch started, so live positions pushed while
+ * the request was in flight can be re-applied over the snapshot instead of being rolled back.
+ */
+export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData[], fetchStartedAt: number) => void, refreshRequestedAt: number = 0) => {
   const lastProcessedTimestamp = useRef<number>(0);
   const lastProcessedTimestampRef = useRef<number | undefined>(undefined);
   const isUpdating = useRef<boolean>(false);
@@ -20,10 +27,12 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
   const abortController = useRef<AbortController | null>(null);
 
   const lastUpdateTimestamp = useSignalRStore((state) => state.lastUpdateTimestamp);
+  // Both are Date.now() stamps, so the newest request is always the larger one.
+  const triggerTimestamp = Math.max(lastUpdateTimestamp, refreshRequestedAt);
 
   const fetchAndUpdateMarkers = useCallback(
     async (requestedTimestamp?: number) => {
-      const timestampToProcess = requestedTimestamp || lastUpdateTimestamp;
+      const timestampToProcess = requestedTimestamp || triggerTimestamp;
 
       // Early return guard: avoid re-fetching the same timestamp
       if (timestampToProcess === undefined || timestampToProcess === lastProcessedTimestampRef.current) {
@@ -62,6 +71,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
           context: { timestamp: timestampToProcess },
         });
 
+        const fetchStartedAt = Date.now();
         const mapDataAndMarkers = await getMapDataAndMarkers(abortController.current.signal);
 
         // Check if request was aborted
@@ -82,7 +92,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
             },
           });
 
-          onMarkersUpdate(mapDataAndMarkers.Data.MapMakerInfos);
+          onMarkersUpdate(mapDataAndMarkers.Data.MapMakerInfos, fetchStartedAt);
         }
 
         // Update the last processed timestamp after successful API call
@@ -136,7 +146,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
         }
       }
     },
-    [lastUpdateTimestamp, onMarkersUpdate]
+    [triggerTimestamp, onMarkersUpdate]
   );
 
   useEffect(() => {
@@ -146,11 +156,12 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
     }
 
     // Only process if we have a valid timestamp and it's different from the last processed one
-    if (lastUpdateTimestamp > 0 && lastUpdateTimestamp !== lastProcessedTimestamp.current) {
+    if (triggerTimestamp > 0 && triggerTimestamp !== lastProcessedTimestamp.current) {
       logger.debug({
         message: 'Debouncing map markers update',
         context: {
-          lastUpdateTimestamp,
+          lastUpdateTimestamp: triggerTimestamp,
+          refreshRequestedAt,
           lastProcessed: lastProcessedTimestamp.current,
           delay: DEBOUNCE_DELAY,
         },
@@ -169,7 +180,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
         debounceTimer.current = null;
       }
     };
-  }, [lastUpdateTimestamp, fetchAndUpdateMarkers]);
+  }, [triggerTimestamp, refreshRequestedAt, fetchAndUpdateMarkers]);
 
   // Cleanup on unmount
   useEffect(() => {

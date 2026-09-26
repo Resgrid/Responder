@@ -197,6 +197,7 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
       Text: 'Available',
       BColor: '#00FF00',
       Detail: 0, // No destination required
+      Note: 1, // Optional note, so the destination step is followed by the note step
     },
     responseType: 'none' as const,
     selectedTab: 'calls' as const,
@@ -267,6 +268,7 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
           Text: 'Available',
           BColor: '#00FF00',
           Detail: 0, // No destination required
+          Note: 1, // Optional note, so the destination step is followed by the note step
         },
       });
 
@@ -288,6 +290,7 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
           Text: 'Responding',
           BColor: '#FF0000',
           Detail: 2, // Call required, but "No Destination" should still be valid
+          Note: 1, // Optional note, so the destination step is followed by the note step
         },
         responseType: 'none',
         selectedCall: null,
@@ -311,6 +314,7 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
           Text: 'Responding',
           BColor: '#FF0000',
           Detail: 2, // Call required
+          Note: 1, // Optional note, so the destination step is followed by the note step
         },
         responseType: 'call',
         selectedCall: mockCallsStore.calls[0],
@@ -334,6 +338,7 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
           Text: 'Responding',
           BColor: '#FF0000',
           Detail: 2, // Call required
+          Note: 1, // Optional note, so the destination step is followed by the note step
         },
         responseType: 'none',
         selectedCall: null,
@@ -357,6 +362,7 @@ describe('PersonnelStatusBottomSheet Integration Tests', () => {
           Text: 'Available',
           BColor: '#00FF00',
           Detail: 0, // No destination required
+          Note: 1, // Optional note, so the destination step is followed by the note step
         },
       });
 

@@ -53,3 +53,6 @@ export const UsersIcon = mockIcon;
 export const X = mockIcon;
 export const Menu = mockIcon;
 export const WifiOff = mockIcon;
+export const Wrench = mockIcon;
+export const ArrowLeft = mockIcon;
+export const Calendar = mockIcon;

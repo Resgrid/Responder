@@ -1,164 +1,130 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
-import React from 'react';
-import { AppStateStatus } from 'react-native';
+import { act, renderHook } from '@testing-library/react-native';
+import { type AppStateStatus } from 'react-native';
 
-import { useSignalRStore } from '@/stores/signalr/signalr-store';
+import { useSignalRLifecycle } from '@/hooks/use-signalr-lifecycle';
+import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 
-// Mock the SignalR store
-jest.mock('@/stores/signalr/signalr-store');
+// Drives the real hook: the app lifecycle, the SignalR store and the stored opt-in are mocked.
+const mockAppLifecycle: { isActive: boolean; appState: AppStateStatus } = { isActive: true, appState: 'active' };
 
-const mockUseSignalRStore = useSignalRStore as jest.MockedFunction<typeof useSignalRStore>;
+jest.mock('@/hooks/use-app-lifecycle', () => ({
+  useAppLifecycle: () => mockAppLifecycle,
+}));
 
-// Create a custom hook to test the SignalR lifecycle logic
-function useSignalRLifecycle(isActive: boolean, appState: AppStateStatus, isSignedIn: boolean, hasInitialized: boolean) {
-  const signalRStore = useSignalRStore();
+const mockSignalRStore = {
+  connectUpdateHub: jest.fn(),
+  disconnectUpdateHub: jest.fn(),
+  connectGeolocationHub: jest.fn(),
+  disconnectGeolocationHub: jest.fn(),
+  connectChatHub: jest.fn(),
+  disconnectChatHub: jest.fn(),
+};
 
-  React.useEffect(() => {
-    // Handle app going to background
-    if (!isActive && (appState === 'background' || appState === 'inactive') && hasInitialized && isSignedIn) {
-      signalRStore.disconnectUpdateHub();
-      signalRStore.disconnectGeolocationHub();
-    }
-  }, [isActive, appState, hasInitialized, isSignedIn, signalRStore]);
+jest.mock('@/stores/signalr/signalr-store', () => ({
+  useSignalRStore: (selector: (state: typeof mockSignalRStore) => unknown) => selector(mockSignalRStore),
+}));
 
-  React.useEffect(() => {
-    // Handle app resuming from background
-    if (isActive && appState === 'active' && hasInitialized && isSignedIn) {
-      signalRStore.connectUpdateHub();
-      signalRStore.connectGeolocationHub();
-    }
-  }, [isActive, appState, hasInitialized, isSignedIn, signalRStore]);
+jest.mock('@/lib/storage/realtime-geolocation', () => ({
+  loadRealtimeGeolocationState: jest.fn(),
+}));
 
-  return signalRStore;
+jest.mock('@/lib/logging', () => ({
+  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+}));
+
+const mockLoadRealtimeGeolocationState = loadRealtimeGeolocationState as jest.MockedFunction<typeof loadRealtimeGeolocationState>;
+
+interface LifecycleProps {
+  isSignedIn: boolean;
+  hasInitialized: boolean;
 }
 
-describe('SignalR Lifecycle Management', () => {
-  const mockConnectUpdateHub = jest.fn();
-  const mockDisconnectUpdateHub = jest.fn();
-  const mockConnectGeolocationHub = jest.fn();
-  const mockDisconnectGeolocationHub = jest.fn();
+const renderLifecycle = (props: LifecycleProps) => renderHook((current: LifecycleProps) => useSignalRLifecycle(current), { initialProps: props });
 
+const setAppState = (isActive: boolean, appState: AppStateStatus) => {
+  mockAppLifecycle.isActive = isActive;
+  mockAppLifecycle.appState = appState;
+};
+
+describe('useSignalRLifecycle', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
-
-    // Mock SignalR store
-    mockUseSignalRStore.mockReturnValue({
-      connectUpdateHub: mockConnectUpdateHub,
-      disconnectUpdateHub: mockDisconnectUpdateHub,
-      connectGeolocationHub: mockConnectGeolocationHub,
-      disconnectGeolocationHub: mockDisconnectGeolocationHub,
-      isUpdateHubConnected: false,
-      isGeolocationHubConnected: false,
-    } as any);
+    Object.values(mockSignalRStore).forEach((fn) => fn.mockResolvedValue(undefined));
+    mockLoadRealtimeGeolocationState.mockResolvedValue(true);
+    setAppState(true, 'active');
   });
 
-  it('should disconnect SignalR when app goes to background', async () => {
-    const { rerender } = renderHook(
-      ({ isActive, appState, isSignedIn, hasInitialized }) =>
-        useSignalRLifecycle(isActive, appState, isSignedIn, hasInitialized),
-      {
-        initialProps: {
-          isActive: true,
-          appState: 'active' as AppStateStatus,
-          isSignedIn: true,
-          hasInitialized: true,
-        },
-      }
-    );
-
-    // Simulate app going to background
-    rerender({
-      isActive: false,
-      appState: 'background' as AppStateStatus,
-      isSignedIn: true,
-      hasInitialized: true,
-    });
-
-    await waitFor(() => {
-      expect(mockDisconnectUpdateHub).toHaveBeenCalled();
-      expect(mockDisconnectGeolocationHub).toHaveBeenCalled();
-    });
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
-  it('should reconnect SignalR when app becomes active again', async () => {
-    const { rerender } = renderHook(
-      ({ isActive, appState, isSignedIn, hasInitialized }) =>
-        useSignalRLifecycle(isActive, appState, isSignedIn, hasInitialized),
-      {
-        initialProps: {
-          isActive: false,
-          appState: 'background' as AppStateStatus,
-          isSignedIn: true,
-          hasInitialized: true,
-        },
-      }
-    );
-
-    // Simulate app becoming active
-    rerender({
-      isActive: true,
-      appState: 'active' as AppStateStatus,
-      isSignedIn: true,
-      hasInitialized: true,
+  /** Background long enough to disconnect, then come back to the foreground. */
+  const backgroundThenResume = async (rerender: (props: LifecycleProps) => void, props: LifecycleProps) => {
+    setAppState(false, 'background');
+    rerender(props);
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2000);
     });
 
-    await waitFor(() => {
-      expect(mockConnectUpdateHub).toHaveBeenCalled();
-      expect(mockConnectGeolocationHub).toHaveBeenCalled();
+    setAppState(true, 'active');
+    rerender(props);
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(1000);
     });
+  };
+
+  it('reconnects every hub on resume when realtime geolocation is enabled', async () => {
+    const props = { isSignedIn: true, hasInitialized: true };
+    const { rerender } = renderLifecycle(props);
+
+    await backgroundThenResume(rerender, props);
+
+    expect(mockSignalRStore.connectUpdateHub).toHaveBeenCalledTimes(1);
+    expect(mockSignalRStore.connectGeolocationHub).toHaveBeenCalledTimes(1);
+    expect(mockSignalRStore.connectChatHub).toHaveBeenCalledTimes(1);
   });
 
-  it('should not manage SignalR connections when user is not signed in', async () => {
-    const { rerender } = renderHook(
-      ({ isActive, appState, isSignedIn, hasInitialized }) =>
-        useSignalRLifecycle(isActive, appState, isSignedIn, hasInitialized),
-      {
-        initialProps: {
-          isActive: true,
-          appState: 'active' as AppStateStatus,
-          isSignedIn: false,
-          hasInitialized: true,
-        },
-      }
-    );
+  it('leaves the geolocation hub disconnected on resume when the user opted out', async () => {
+    mockLoadRealtimeGeolocationState.mockResolvedValue(false);
+    const props = { isSignedIn: true, hasInitialized: true };
+    const { rerender } = renderLifecycle(props);
 
-    // Simulate app going to background
-    rerender({
-      isActive: false,
-      appState: 'background' as AppStateStatus,
-      isSignedIn: false,
-      hasInitialized: true,
-    });
+    await backgroundThenResume(rerender, props);
 
-    // Should not call SignalR methods when user is not signed in
-    expect(mockDisconnectUpdateHub).not.toHaveBeenCalled();
-    expect(mockDisconnectGeolocationHub).not.toHaveBeenCalled();
+    // Startup follows the stored opt-in; resume has to as well rather than reconnecting a hub the
+    // user switched off in Settings.
+    expect(mockSignalRStore.connectGeolocationHub).not.toHaveBeenCalled();
+    expect(mockSignalRStore.connectUpdateHub).toHaveBeenCalledTimes(1);
+    expect(mockSignalRStore.connectChatHub).toHaveBeenCalledTimes(1);
   });
 
-  it('should not manage SignalR connections when app is not initialized', async () => {
-    const { rerender } = renderHook(
-      ({ isActive, appState, isSignedIn, hasInitialized }) =>
-        useSignalRLifecycle(isActive, appState, isSignedIn, hasInitialized),
-      {
-        initialProps: {
-          isActive: true,
-          appState: 'active' as AppStateStatus,
-          isSignedIn: true,
-          hasInitialized: false,
-        },
-      }
-    );
+  it('still reconnects the other hubs when one of them fails', async () => {
+    mockSignalRStore.connectUpdateHub.mockRejectedValue(new Error('offline'));
+    const props = { isSignedIn: true, hasInitialized: true };
+    const { rerender } = renderLifecycle(props);
 
-    // Simulate app going to background
-    rerender({
-      isActive: false,
-      appState: 'background' as AppStateStatus,
-      isSignedIn: true,
-      hasInitialized: false,
-    });
+    await backgroundThenResume(rerender, props);
 
-    // Should not call SignalR methods when app is not initialized
-    expect(mockDisconnectUpdateHub).not.toHaveBeenCalled();
-    expect(mockDisconnectGeolocationHub).not.toHaveBeenCalled();
+    expect(mockSignalRStore.connectGeolocationHub).toHaveBeenCalledTimes(1);
+    expect(mockSignalRStore.connectChatHub).toHaveBeenCalledTimes(1);
   });
-}); 
+
+  it('does not manage SignalR connections when the user is not signed in', async () => {
+    const props = { isSignedIn: false, hasInitialized: true };
+    const { rerender } = renderLifecycle(props);
+
+    await backgroundThenResume(rerender, props);
+
+    Object.values(mockSignalRStore).forEach((fn) => expect(fn).not.toHaveBeenCalled());
+  });
+
+  it('does not manage SignalR connections before the app has initialized', async () => {
+    const props = { isSignedIn: true, hasInitialized: false };
+    const { rerender } = renderLifecycle(props);
+
+    await backgroundThenResume(rerender, props);
+
+    Object.values(mockSignalRStore).forEach((fn) => expect(fn).not.toHaveBeenCalled());
+  });
+});

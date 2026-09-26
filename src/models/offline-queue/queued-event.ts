@@ -1,4 +1,5 @@
 export enum QueuedEventType {
+  CHECKLIST_COMPLETION = 'checklist_completion',
   PERSONNEL_STATUS = 'personnel_status',
   CALL_IMAGE_UPLOAD = 'call_image_upload',
   CHECK_IN = 'check_in',

@@ -40,39 +40,40 @@ jest.mock('../pin-marker', () => {
 describe('MapPins PII Protection', () => {
   const mockOnPinPress = jest.fn();
 
+  // Pin ids and types as the Core map API sends them: call 0 (`c`), unit 1 (`u`), personnel 3 (`p`).
   const callPin: MapMakerInfoData = {
-    Id: '1',
+    Id: 'c1',
     Title: 'Medical Emergency',
     Latitude: 40.7128,
     Longitude: -74.0060,
     ImagePath: 'call',
     InfoWindowContent: 'Emergency at Main St',
     Color: '#ff0000',
-    Type: 1,
+    Type: 0,
     zIndex: '1',
   };
 
   const personnelPin: MapMakerInfoData = {
-    Id: '2',
+    Id: 'p2',
     Title: 'John Doe',
     Latitude: 40.7580,
     Longitude: -73.9855,
     ImagePath: 'person_available',
     InfoWindowContent: 'Personnel location',
     Color: '#00ff00',
-    Type: 2,
+    Type: 3,
     zIndex: '2',
   };
 
   const unitPin: MapMakerInfoData = {
-    Id: '3',
+    Id: 'u3',
     Title: 'Engine 1',
     Latitude: 40.7489,
     Longitude: -73.9857,
     ImagePath: 'engine_available',
     InfoWindowContent: 'Unit location',
     Color: '#0000ff',
-    Type: 3,
+    Type: 1,
     zIndex: '3',
   };
 

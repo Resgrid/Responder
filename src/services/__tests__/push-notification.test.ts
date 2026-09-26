@@ -456,6 +456,33 @@ describe('Push Notification Service Integration', () => {
       expect(mockShowNotificationModal).not.toHaveBeenCalled();
     });
 
+    it('should deep-link straight to the work order when a work-order notification is tapped', () => {
+      const response = createMockResponse({
+        title: 'Work order',
+        body: 'Work order WO-2026-000019: needs your attention',
+        data: { eventCode: 'NWO:0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11' },
+      });
+
+      notificationResponseHandler(response);
+
+      expect(routerPushWithRetry).toHaveBeenCalledWith({ pathname: '/work-orders/[id]', params: { id: '0b7c3e52-2f4a-4d0e-9a57-1f7a0c9d6e11' } }, expect.objectContaining({ maxAttempts: 40, retryDelayMs: 250 }));
+      expect(openWeatherAlertDetail).not.toHaveBeenCalled();
+      expect(mockShowNotificationModal).not.toHaveBeenCalled();
+    });
+
+    it('should not route a work-order id that could steer the router elsewhere', () => {
+      const response = createMockResponse({
+        title: 'Work order',
+        body: 'Work order WO-2026-000019: needs your attention',
+        data: { eventCode: 'NWO:../settings' },
+      });
+
+      notificationResponseHandler(response);
+
+      expect(routerPushWithRetry).not.toHaveBeenCalled();
+      expect(mockShowNotificationModal).toHaveBeenCalledWith(expect.objectContaining({ eventCode: 'NWO:../settings' }));
+    });
+
     it('should not show modal when the tapped notification has no eventCode', () => {
       const response = createMockResponse({
         title: 'Regular Notification',

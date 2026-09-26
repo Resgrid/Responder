@@ -11,4 +11,13 @@ export class DispatchedEventResultData {
 
   public StatusText: string = '';
   public StatusColor: string = '';
+
+  /**
+   * How the server linked this status to the call (`StatusDestinationSources`): 1 Explicit (the
+   * sender chose the call); 2 CarryForward, 3 Dispatch, 4 Unit (auto-linked: sent without a call and
+   * linked from the previous status, the one open dispatch, or the unit a person rode); 5 Inferred
+   * (set with no destination by a unit/person dispatched to this call while working it). Null or
+   * absent on older rows and non-status entries. See `getActivityLinkKind`.
+   */
+  public DestinationSource?: number | null = null;
 }

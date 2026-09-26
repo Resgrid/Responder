@@ -1,747 +1,308 @@
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import ShiftsScreen from '../shifts';
-import { useShiftsStore } from '@/stores/shifts/store';
-import { useAnalytics } from '@/hooks/use-analytics';
 
-// Mock react-i18next
+import * as shiftsApi from '@/api/shifts/shifts';
+import { ShiftDayResultData } from '@/models/v4/shifts/shiftDayResultData';
+import { ShiftDayMyStatus, ShiftTradeDirection, ShiftTradeUserState } from '@/models/v4/shifts/shiftEnums';
+import { ShiftResultData } from '@/models/v4/shifts/shiftResultData';
+import { ShiftTradeResultData } from '@/models/v4/shifts/shiftTradeResultData';
+import { useShiftsStore } from '@/stores/shifts/store';
+
+import ShiftsScreen from '../shifts';
+
+jest.mock('@/api/shifts/shifts', () => ({
+  getAllShifts: jest.fn(),
+  getShift: jest.fn(),
+  getTodaysShifts: jest.fn(),
+  getShiftDay: jest.fn(),
+  getShiftDaysForDateRange: jest.fn(),
+  getMyShifts: jest.fn(),
+  signupForShiftDay: jest.fn(),
+  withdrawFromShiftDay: jest.fn(),
+  getShiftTrades: jest.fn(),
+  getTradeCandidates: jest.fn(),
+  requestShiftTrade: jest.fn(),
+  respondToShiftTrade: jest.fn(),
+  finishShiftTrade: jest.fn(),
+  cancelShiftTrade: jest.fn(),
+  getPendingApprovals: jest.fn(),
+  reviewShiftSignup: jest.fn(),
+  reviewShiftTrade: jest.fn(),
+  getShiftDayPersonnelOptions: jest.fn(),
+  assignToShiftDay: jest.fn(),
+  removeFromShiftDay: jest.fn(),
+  getOnDutyPersonnel: jest.fn(),
+}));
+jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }));
+jest.mock('@/lib/storage/clear-all-data', () => ({ registerStoreReset: jest.fn() }));
+
+const mockTrackEvent = jest.fn();
+jest.mock('@/hooks/use-analytics', () => ({ useAnalytics: () => ({ trackEvent: mockTrackEvent }) }));
+
+const mockStackScreen = jest.fn();
+jest.mock('expo-router', () => {
+  const React = require('react');
+  return {
+    Stack: {
+      Screen: (props: { options: Record<string, unknown> }) => {
+        mockStackScreen(props);
+        return null;
+      },
+    },
+    useFocusEffect: (callback: () => void) => React.useEffect(callback, [callback]),
+  };
+});
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: Record<string, unknown>) => (options ? `${key}:${Object.values(options).map(String).join('|')}` : key),
+    i18n: { language: 'en' },
   }),
 }));
 
-// Mock the analytics hook
-jest.mock('@/hooks/use-analytics', () => ({
-  useAnalytics: jest.fn(),
-}));
-
-// Mock React Navigation
-jest.mock('expo-router', () => ({
-  ...jest.requireActual('expo-router'),
-  useIsFocused: () => true,
-  useFocusEffect: (callback: () => void) => {
-    callback();
-  },
-  useNavigation: () => ({
-    navigate: jest.fn(),
-  }),
-}));
-
-// Mock FocusAwareStatusBar
-jest.mock('@/components/ui/focus-aware-status-bar', () => ({
-  FocusAwareStatusBar: () => null,
-}));
-
-// Mock nativewind
-jest.mock('nativewind', () => ({
-  styled: jest.fn((Component: any) => Component),
-  useColorScheme: () => ({ colorScheme: 'light' }),
-  cssInterop: jest.fn(),
-}));
-
-// Mock @expo/html-elements
-jest.mock('@expo/html-elements', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return {
-    H1: ({ children, ...props }: any) => React.createElement(Text, props, children),
-    H2: ({ children, ...props }: any) => React.createElement(Text, props, children),
-    H3: ({ children, ...props }: any) => React.createElement(Text, props, children),
-    H4: ({ children, ...props }: any) => React.createElement(Text, props, children),
-    H5: ({ children, ...props }: any) => React.createElement(Text, props, children),
-    H6: ({ children, ...props }: any) => React.createElement(Text, props, children),
-  };
-});
-
-// Mock react-native-svg
-jest.mock('react-native-svg', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    __esModule: true,
-    default: ({ children, ...props }: any) => React.createElement(View, props, children),
-    Svg: ({ children, ...props }: any) => React.createElement(View, props, children),
-    Circle: ({ children, ...props }: any) => React.createElement(View, props, children),
-    Path: ({ children, ...props }: any) => React.createElement(View, props, children),
-    G: ({ children, ...props }: any) => React.createElement(View, props, children),
-  };
-});
-
-// Mock lucide-react-native
 jest.mock('lucide-react-native', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return {
-    Search: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'search-icon', ...props }),
-    FileQuestion: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'file-question-icon', ...props }),
-    AlertCircle: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'alert-circle-icon', ...props }),
-    Clock: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'clock-icon', ...props }),
-    Users: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'users-icon', ...props }),
-    User: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'user-icon', ...props }),
-    Calendar: ({ size, color, ...props }: any) => React.createElement(View, { testID: 'calendar-icon', ...props }),
-  };
+  const icon = React.forwardRef((props: Record<string, unknown>, ref: unknown) => React.createElement(View, { ...props, ref }));
+  return new Proxy({}, { get: () => icon });
 });
 
-// Mock specific React Native components that cause issues
-jest.mock('react-native/Libraries/Components/RefreshControl/RefreshControl', () => 'RefreshControl');
+jest.mock('@/components/ui/focus-aware-status-bar', () => ({ FocusAwareStatusBar: () => null }));
 
-// Mock the shifts store
-jest.mock('@/stores/shifts/store');
-
-// Mock the components that are imported
-jest.mock('@/components/shifts/shift-card', () => {
-  const React = require('react');
-  const { TouchableOpacity, Text } = require('react-native');
-  return {
-    ShiftCard: ({ shift, onPress }: any) =>
-      React.createElement(
-        TouchableOpacity,
-        { testID: `shift-card-${shift.ShiftId}`, onPress },
-        React.createElement(Text, null, shift.Name)
-      ),
-  };
-});
-
-jest.mock('@/components/shifts/shift-day-card', () => {
-  const React = require('react');
-  const { TouchableOpacity, Text } = require('react-native');
-  return {
-    ShiftDayCard: ({ shiftDay, onPress }: any) =>
-      React.createElement(
-        TouchableOpacity,
-        { testID: `shift-day-card-${shiftDay.ShiftDayId}`, onPress },
-        React.createElement(Text, null, shiftDay.ShiftName)
-      ),
-  };
-});
-
-jest.mock('@/components/shifts/shift-details-sheet', () => {
-  const React = require('react');
-  const { View, Text } = require('react-native');
-  return {
-    ShiftDetailsSheet: ({ isOpen, onClose }: any) =>
-      React.createElement(
-        View,
-        { testID: 'shift-details-sheet', style: { display: isOpen ? 'flex' : 'none' } },
-        React.createElement(Text, null, 'Shift Details')
-      ),
-  };
-});
-
-jest.mock('@/components/shifts/shift-day-details-sheet', () => {
-  const React = require('react');
-  const { View, Text } = require('react-native');
-  return {
-    ShiftDayDetailsSheet: ({ isOpen, onClose }: any) =>
-      React.createElement(
-        View,
-        { testID: 'shift-day-details-sheet', style: { display: isOpen ? 'flex' : 'none' } },
-        React.createElement(Text, null, 'Shift Day Details')
-      ),
-  };
-});
-
-jest.mock('@/components/common/zero-state-example', () => {
-  const React = require('react');
-  const { View, Text } = require('react-native');
-  return {
-    __esModule: true,
-    default: ({ title }: any) =>
-      React.createElement(
-        View,
-        { testID: 'zero-state' },
-        React.createElement(Text, null, title)
-      ),
-  };
-});
-
-// Mock UI components
-jest.mock('@/components/ui', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    View: ({ children, ...props }: any) => React.createElement(View, props, children),
-  };
-});
-
-jest.mock('@/components/ui/text', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return {
-    Text: ({ children, ...props }: any) => React.createElement(Text, props, children),
-  };
-});
-
-jest.mock('@/components/ui/button', () => {
-  const React = require('react');
-  const { TouchableOpacity, Text } = require('react-native');
-  return {
-    Button: ({ children, onPress, ...props }: any) =>
-      React.createElement(TouchableOpacity, { onPress, ...props }, children),
-    ButtonText: ({ children, ...props }: any) => React.createElement(Text, props, children),
-  };
-});
-
-jest.mock('@/components/ui/input', () => {
-  const React = require('react');
-  const { View, TouchableOpacity, Text } = require('react-native');
-  return {
-    Input: ({ children, ...props }: any) => React.createElement(View, props, children),
-    InputField: ({ placeholder, value, onChangeText, ...props }: any) =>
-      React.createElement(
-        TouchableOpacity,
-        {
-          testID: 'search-input',
-          onPress: () => onChangeText && onChangeText('test'),
-          ...props,
-        },
-        React.createElement(Text, null, placeholder)
-      ),
-    InputIcon: () => React.createElement(View, { testID: 'input-icon' }),
-    InputSlot: ({ children, onPress, ...props }: any) => React.createElement(TouchableOpacity, { ...props, onPress }, children),
-  };
-});
-
+// The shared FlatList mock only accepts component types for its slots; the screen passes elements.
 jest.mock('@/components/ui/flat-list', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return {
-    FlatList: ({ data, renderItem, keyExtractor, refreshControl, ...props }: any) =>
-      React.createElement(
-        View,
-        props,
-        data.map((item: any, index: number) =>
-          React.createElement(
-            View,
-            { key: keyExtractor ? keyExtractor(item) : index },
-            renderItem({ item, index })
-          )
-        )
-      ),
-  };
+  const slot = (value: unknown) => (value ? (React.isValidElement(value) ? value : React.createElement(value as React.ComponentType)) : null);
+  const FlatList = ({ data, renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, testID }: { data: unknown[]; renderItem: (info: { item: unknown; index: number }) => React.ReactNode; keyExtractor: (item: unknown, index: number) => string; ListHeaderComponent?: unknown; ListEmptyComponent?: unknown; testID?: string }) =>
+    React.createElement(
+      View,
+      { testID },
+      slot(ListHeaderComponent),
+      data.length === 0 ? slot(ListEmptyComponent) : data.map((item, index) => React.createElement(React.Fragment, { key: keyExtractor(item, index) }, renderItem({ item, index })))
+    );
+  return { FlatList };
 });
 
-jest.mock('@/components/ui/hstack', () => {
+// The sheets have their own suites; here they only report whether they are open and what they hold.
+jest.mock('@/components/shifts/shift-day-details-sheet', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return {
-    HStack: ({ children, ...props }: any) => React.createElement(View, props, children),
-  };
+  return { ShiftDayDetailsSheet: ({ isOpen }: { isOpen: boolean }) => (isOpen ? React.createElement(View, { testID: 'day-sheet-open' }) : null) };
 });
-
-jest.mock('@/components/ui/vstack', () => {
+jest.mock('@/components/shifts/shift-details-sheet', () => {
   const React = require('react');
-  const { View } = require('react-native');
+  const { View, Pressable } = require('react-native');
   return {
-    VStack: ({ children, ...props }: any) => React.createElement(View, props, children),
+    ShiftDetailsSheet: ({ isOpen, onViewCalendar }: { isOpen: boolean; onViewCalendar: (id: string) => void }) =>
+      isOpen ? React.createElement(View, { testID: 'shift-sheet-open' }, React.createElement(Pressable, { testID: 'shift-sheet-view-calendar', onPress: () => onViewCalendar('7') })) : null,
   };
 });
-
-jest.mock('@/components/ui/spinner', () => {
+jest.mock('@/components/shifts/shift-action-sheet', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  return {
-    Spinner: ({ ...props }: any) => React.createElement(Text, { testID: 'spinner' }, 'Loading...'),
-  };
+  return { ShiftActionSheet: ({ action }: { action: { kind: string } | null }) => (action ? React.createElement(Text, { testID: 'action-sheet' }, action.kind) : null) };
 });
 
-jest.mock('@/components/ui/box', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    Box: ({ children, ...props }: any) => React.createElement(View, props, children),
-  };
+const api = shiftsApi as unknown as Record<keyof typeof shiftsApi, jest.Mock>;
+
+const envelope = { PageSize: 0, Timestamp: '', Version: '', Node: '', RequestId: '', Environment: '', Status: 'success' };
+const list = <T,>(Data: T[]) => ({ ...envelope, Data });
+
+const makeDay = (overrides: Partial<ShiftDayResultData> = {}): ShiftDayResultData => ({
+  ...new ShiftDayResultData(),
+  ShiftId: '1',
+  ShiftName: 'PMRT Night',
+  ShiftDayId: '100',
+  ShiftDay: '2026-09-24T00:00:00',
+  Start: '2026-09-24T19:00:00',
+  End: '2026-09-25T07:00:00',
+  ...overrides,
 });
 
-jest.mock('@/components/ui/center', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    Center: ({ children, ...props }: any) => React.createElement(View, props, children),
-  };
-});
+const approvals = (isSupervisor: boolean, signups: unknown[] = [], trades: unknown[] = []) => ({ ...envelope, Data: { IsSupervisor: isSupervisor, Signups: signups, Trades: trades } });
 
-jest.mock('@/components/ui/heading', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return {
-    Heading: ({ children, ...props }: any) => React.createElement(Text, props, children),
-  };
-});
-
-jest.mock('@/components/ui/icon', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    Icon: ({ size, color, children, ...props }: any) => React.createElement(View, { testID: 'ui-icon', ...props }, children),
-  };
-});
-
-const mockUseShiftsStore = useShiftsStore as jest.MockedFunction<typeof useShiftsStore>;
-const mockUseAnalytics = useAnalytics as jest.MockedFunction<typeof useAnalytics>;
-
-const setShiftsStoreMock = (state: unknown) => {
-  mockUseShiftsStore.mockImplementation(((selector?: (s: unknown) => unknown) => (selector ? selector(state) : state)) as any);
-  // The screen reads a snapshot via getState() for its focus analytics.
-  (mockUseShiftsStore as unknown as { getState: () => unknown }).getState = () => state;
+// Focus fires several independent requests; let all of them settle inside act.
+const settle = async () => {
+  await act(async () => {
+    for (let i = 0; i < 10; i += 1) {
+      await Promise.resolve();
+    }
+  });
 };
 
-const mockShifts = [
-  {
-    ShiftId: '1',
-    Name: 'Day Shift',
-    Code: 'DAY',
-    Color: '#FF0000',
-    ScheduleType: 0,
-    AssignmentType: 0,
-    InShift: false,
-    PersonnelCount: 5,
-    GroupCount: 2,
-    NextDay: '2024-01-15T00:00:00Z',
-    NextDayId: 'day1',
-    Days: [],
-  },
-  {
-    ShiftId: '2',
-    Name: 'Night Shift',
-    Code: 'NIGHT',
-    Color: '#0000FF',
-    ScheduleType: 1,
-    AssignmentType: 1,
-    InShift: true,
-    PersonnelCount: 3,
-    GroupCount: 1,
-    NextDay: '2024-01-16T00:00:00Z',
-    NextDayId: 'night1',
-    Days: [],
-  },
-];
+const renderScreen = async () => {
+  const utils = render(<ShiftsScreen />);
+  await settle();
+  return utils;
+};
 
-const mockTodaysShifts = [
-  {
-    ShiftId: '1',
-    ShiftName: 'Day Shift',
-    ShiftDayId: 'day1',
-    ShiftDay: '2024-01-15T00:00:00Z',
-    Start: '2024-01-15T08:00:00Z',
-    End: '2024-01-15T16:00:00Z',
-    SignedUp: false,
-    ShiftType: 0,
-    Signups: [],
-    Needs: [],
-  },
-];
-
-const defaultMockStore = {
-  shifts: mockShifts,
-  todaysShiftDays: mockTodaysShifts,
-  currentView: 'today' as const,
-  searchQuery: '',
-  isShiftDetailsOpen: false,
-  isShiftDayDetailsOpen: false,
-  isLoading: false,
-  isTodaysLoading: false,
-  setCurrentView: jest.fn(),
-  setSearchQuery: jest.fn(),
-  fetchAllShifts: jest.fn(),
-  fetchTodaysShifts: jest.fn(),
-  closeShiftDetails: jest.fn(),
-  closeShiftDayDetails: jest.fn(),
-  selectShift: jest.fn(),
-  selectShiftDay: jest.fn(),
+const pressAndSettle = async (testID: string) => {
+  fireEvent.press(await screen.findByTestId(testID));
+  await settle();
 };
 
 describe('ShiftsScreen', () => {
-  const mockTrackEvent = jest.fn();
-
   beforeEach(() => {
     jest.clearAllMocks();
-    mockTrackEvent.mockReset();
-    mockTrackEvent.mockReset();
-    mockTrackEvent.mockReset();
-    mockTrackEvent.mockReset();
-    mockTrackEvent.mockReset();
+    useShiftsStore.getState().reset();
 
-    // Default mock for analytics
-    mockUseAnalytics.mockReturnValue({
-      trackEvent: mockTrackEvent,
-    });
-
-    setShiftsStoreMock(defaultMockStore);
+    api.getTodaysShifts.mockResolvedValue(list([makeDay()]));
+    api.getMyShifts.mockResolvedValue(list([]));
+    api.getShiftDaysForDateRange.mockResolvedValue(list([]));
+    api.getShiftTrades.mockResolvedValue(list([]));
+    api.getPendingApprovals.mockResolvedValue(approvals(false));
+    api.getOnDutyPersonnel.mockResolvedValue(list([]));
+    api.getAllShifts.mockResolvedValue(list([]));
+    api.getShiftDay.mockResolvedValue({ ...envelope, Data: makeDay() });
   });
 
-  it('renders correctly with default state', () => {
-    const { getByText, getByTestId } = render(<ShiftsScreen />);
-
-    expect(getByText('shifts.today')).toBeTruthy();
-    expect(getByText('shifts.all_shifts')).toBeTruthy();
-    expect(getByTestId('shift-day-card-day1')).toBeTruthy();
+  it('sets the header title', async () => {
+    await renderScreen();
+    expect(mockStackScreen).toHaveBeenCalledWith(expect.objectContaining({ options: expect.objectContaining({ title: 'shifts.title', headerShown: true }) }));
   });
 
-  it('switches between today and all shifts views', () => {
-    const setCurrentView = jest.fn();
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      setCurrentView,
-    });
-
-    const { getByText } = render(<ShiftsScreen />);
-
-    fireEvent.press(getByText('shifts.all_shifts'));
-    expect(setCurrentView).toHaveBeenCalledWith('all');
+  it('loads today and learns supervisor status on focus', async () => {
+    await renderScreen();
+    expect(api.getTodaysShifts).toHaveBeenCalled();
+    expect(api.getPendingApprovals).toHaveBeenCalled();
+    expect(await screen.findByTestId('shift-day-card-100')).toBeTruthy();
+    expect(mockTrackEvent).toHaveBeenCalledWith('shifts_viewed', expect.objectContaining({ activeTab: 'today' }));
   });
 
-  it('shows all shifts when view is set to all', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      currentView: 'all',
-    });
-
-    const { getByTestId } = render(<ShiftsScreen />);
-
-    expect(getByTestId('shift-card-1')).toBeTruthy();
-    expect(getByTestId('shift-card-2')).toBeTruthy();
+  it('shows the member segments, including On Duty, to a non-supervisor', async () => {
+    await renderScreen();
+    expect(screen.getByTestId('shifts-segment-today')).toBeTruthy();
+    expect(screen.getByTestId('shifts-segment-mine')).toBeTruthy();
+    expect(screen.getByTestId('shifts-segment-calendar')).toBeTruthy();
+    expect(screen.getByTestId('shifts-segment-trades')).toBeTruthy();
+    expect(screen.getByTestId('shifts-segment-onduty')).toBeTruthy();
+    expect(screen.queryByTestId('shifts-segment-approvals')).toBeNull();
   });
 
-  it('handles search input correctly', () => {
-    const setSearchQuery = jest.fn();
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      setSearchQuery,
-    });
+  it('adds Approvals (with a pending count) for a supervisor', async () => {
+    api.getPendingApprovals.mockResolvedValue(approvals(true, [{ ShiftSignupId: '44', UserName: 'Sam', Roles: [] }], []));
+    await renderScreen();
 
-    const { getByTestId } = render(<ShiftsScreen />);
-
-    const searchInput = getByTestId('search-input');
-    fireEvent.press(searchInput);
-
-    expect(setSearchQuery).toHaveBeenCalledWith('test');
+    await waitFor(() => expect(screen.getByTestId('shifts-segment-approvals')).toBeTruthy());
+    expect(screen.getByTestId('shifts-segment-onduty')).toBeTruthy();
+    expect(screen.getByTestId('shifts-segment-badge-approvals')).toBeTruthy();
   });
 
-  it('shows loading state for today shifts', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      isTodaysLoading: true,
-      todaysShiftDays: [],
-    });
-
-    const { getByText } = render(<ShiftsScreen />);
-
-    expect(getByText('shifts.loading')).toBeTruthy();
+  it('falls back to Today when a non-supervisor is left on a supervisor view', async () => {
+    useShiftsStore.setState({ currentView: 'approvals' });
+    await renderScreen();
+    await waitFor(() => expect(useShiftsStore.getState().currentView).toBe('today'));
+    expect(screen.getByTestId('shifts-segment-today').props.accessibilityState).toEqual({ selected: true });
   });
 
-  it('shows loading state for all shifts', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      currentView: 'all',
-      isLoading: true,
-      shifts: [],
-    });
+  it('filters today by search', async () => {
+    api.getTodaysShifts.mockResolvedValue(list([makeDay(), makeDay({ ShiftDayId: '101', ShiftName: 'MCOT Day' })]));
+    await renderScreen();
+    await screen.findByTestId('shift-day-card-101');
 
-    const { getByText } = render(<ShiftsScreen />);
-
-    expect(getByText('shifts.loading')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('shifts-search-input'), 'mcot');
+    await settle();
+    expect(screen.queryByTestId('shift-day-card-100')).toBeNull();
+    expect(screen.getByTestId('shift-day-card-101')).toBeTruthy();
   });
 
-  it('shows zero state when no shifts available', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      currentView: 'all',
-      shifts: [],
-    });
-
-    const { getByTestId } = render(<ShiftsScreen />);
-
-    expect(getByTestId('zero-state')).toBeTruthy();
+  it('opens the day sheet from a card', async () => {
+    await renderScreen();
+    await pressAndSettle('shift-day-card-100');
+    expect(screen.getByTestId('day-sheet-open')).toBeTruthy();
+    expect(api.getShiftDay).toHaveBeenCalledWith('100');
   });
 
-  it('shows zero state when no today shifts available', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      todaysShiftDays: [],
-    });
+  it('My Shifts loads my upcoming days and my standing shifts', async () => {
+    api.getMyShifts.mockResolvedValue(list([makeDay({ ShiftDayId: '300', MyStatus: ShiftDayMyStatus.PendingApproval })]));
+    api.getAllShifts.mockResolvedValue(list([{ ...new ShiftResultData(), ShiftId: '1', Name: 'PMRT Night', InShift: true }]));
+    await renderScreen();
 
-    const { getByTestId } = render(<ShiftsScreen />);
+    await pressAndSettle('shifts-segment-mine');
 
-    expect(getByTestId('zero-state')).toBeTruthy();
+    expect(api.getMyShifts).toHaveBeenCalled();
+    expect(await screen.findByTestId('shift-day-card-300')).toBeTruthy();
+    expect(screen.getByTestId('shift-card-1')).toBeTruthy();
+    expect(screen.getByText('shifts.status.pending_approval')).toBeTruthy();
   });
 
-  it('calls fetchTodaysShifts on mount when in today view', async () => {
-    const fetchTodaysShifts = jest.fn();
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      fetchTodaysShifts,
-    });
+  it('Calendar loads the visible month, shows a day, and filters by shift', async () => {
+    api.getAllShifts.mockResolvedValue(list([{ ...new ShiftResultData(), ShiftId: '7', Name: 'MCOT Day' }]));
+    api.getShiftDaysForDateRange.mockResolvedValue(list([makeDay({ ShiftDayId: '400', ShiftDay: '2026-09-10T00:00:00', Start: '2026-09-10T07:00:00', End: '2026-09-10T19:00:00' })]));
+    useShiftsStore.setState({ calendarRange: { start: '2026-09-01', end: '2026-09-30', shiftId: null } });
+    await renderScreen();
 
-    render(<ShiftsScreen />);
+    await pressAndSettle('shifts-segment-calendar');
+    expect(api.getShiftDaysForDateRange).toHaveBeenCalledWith('2026-09-01', '2026-09-30', undefined);
 
-    await waitFor(() => {
-      expect(fetchTodaysShifts).toHaveBeenCalled();
-    });
+    await pressAndSettle('shift-calendar-day-2026-09-10');
+    expect(screen.getByTestId('shift-day-card-400')).toBeTruthy();
+
+    await pressAndSettle('shifts-calendar-filter-7');
+    expect(api.getShiftDaysForDateRange).toHaveBeenLastCalledWith('2026-09-01', '2026-09-30', '7');
+    expect(screen.getByTestId('shifts-calendar-shift-info')).toBeTruthy();
   });
 
-  it('calls fetchAllShifts when switching to all view', async () => {
-    const fetchAllShifts = jest.fn();
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      currentView: 'all',
-      fetchAllShifts,
-    });
+  it('Calendar asks for a new range when the month changes', async () => {
+    useShiftsStore.setState({ calendarRange: { start: '2026-09-01', end: '2026-09-30', shiftId: null }, currentView: 'calendar' });
+    await renderScreen();
 
-    render(<ShiftsScreen />);
-
-    await waitFor(() => {
-      expect(fetchAllShifts).toHaveBeenCalled();
-    });
+    await pressAndSettle('shift-calendar-next');
+    expect(api.getShiftDaysForDateRange).toHaveBeenLastCalledWith('2026-10-01', '2026-10-31', undefined);
   });
 
-  it('opens shift details sheet when shift is selected', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      isShiftDetailsOpen: true,
-    });
+  it('opening a shift in the calendar switches view and filters', async () => {
+    useShiftsStore.setState({ isShiftDetailsOpen: true, selectedShift: { ...new ShiftResultData(), ShiftId: '7' } });
+    await renderScreen();
 
-    const { getByTestId } = render(<ShiftsScreen />);
+    await pressAndSettle('shift-sheet-view-calendar');
 
-    expect(getByTestId('shift-details-sheet')).toBeTruthy();
+    expect(useShiftsStore.getState().currentView).toBe('calendar');
+    expect(useShiftsStore.getState().calendarShiftId).toBe('7');
+    expect(useShiftsStore.getState().isShiftDetailsOpen).toBe(false);
   });
 
-  it('opens shift day details sheet when shift day is selected', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      isShiftDayDetailsOpen: true,
-    });
+  it('Trades lists trades and routes an accept through the confirmation sheet', async () => {
+    const trade: ShiftTradeResultData = { ...new ShiftTradeResultData(), ShiftSignupTradeId: '5', ShiftName: 'PMRT Night', Direction: ShiftTradeDirection.Incoming, MyState: ShiftTradeUserState.Open };
+    api.getShiftTrades.mockResolvedValue(list([trade]));
+    await renderScreen();
 
-    const { getByTestId } = render(<ShiftsScreen />);
+    await pressAndSettle('shifts-segment-trades');
 
-    expect(getByTestId('shift-day-details-sheet')).toBeTruthy();
+    expect(api.getShiftTrades).toHaveBeenCalled();
+    fireEvent.press(await screen.findByTestId('trade-accept-5'));
+    expect(screen.getByTestId('action-sheet').props.children).toBe('accept-trade');
   });
 
-  it('highlights active tab correctly', () => {
-    const { getByText } = render(<ShiftsScreen />);
+  it('Approvals lets a supervisor review a pending sign-up', async () => {
+    api.getPendingApprovals.mockResolvedValue(approvals(true, [{ ShiftSignupId: '44', UserName: 'Sam', GroupName: 'North', ShiftName: 'PMRT Night', Roles: [] }], []));
+    await renderScreen();
 
-    // Today tab should be active by default
-    const todayButton = getByText('shifts.today');
-    const allShiftsButton = getByText('shifts.all_shifts');
+    await pressAndSettle('shifts-segment-approvals');
 
-    // The active tab would have different styling, but we can't test that directly
-    // Instead, we verify the component renders without error
-    expect(todayButton).toBeTruthy();
-    expect(allShiftsButton).toBeTruthy();
+    fireEvent.press(await screen.findByTestId('pending-signup-deny-44'));
+    expect(screen.getByTestId('action-sheet').props.children).toBe('review-signup');
   });
 
-  it('handles pull to refresh for today view', async () => {
-    const fetchTodaysShifts = jest.fn();
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      fetchTodaysShifts,
-    });
+  it('On Duty shows who is on an active shift, to any member', async () => {
+    api.getPendingApprovals.mockResolvedValue(approvals(false));
+    api.getOnDutyPersonnel.mockResolvedValue(list([{ UserId: 'u1', Name: 'Alex Kim', ShiftId: '1', ShiftName: 'PMRT Night', ShiftDayId: '100', Start: '2026-09-24T19:00:00', End: '2026-09-25T07:00:00', GroupId: '', GroupName: '', Roles: [], Source: 0 }]));
+    await renderScreen();
 
-    const { getByTestId } = render(<ShiftsScreen />);
+    await pressAndSettle('shifts-segment-onduty');
 
-    // Simulate pull to refresh
-    // This would require more setup to properly test RefreshControl
-    expect(getByTestId('shift-day-card-day1')).toBeTruthy();
+    expect(api.getOnDutyPersonnel).toHaveBeenCalled();
+    expect(await screen.findByText('Alex Kim')).toBeTruthy();
   });
 
-  it('handles pull to refresh for all shifts view', async () => {
-    const fetchAllShifts = jest.fn();
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      currentView: 'all',
-      fetchAllShifts,
-    });
+  it('shows an error with retry when today fails to load', async () => {
+    api.getTodaysShifts.mockRejectedValueOnce(new Error('offline'));
+    await renderScreen();
 
-    const { getByTestId } = render(<ShiftsScreen />);
-
-    expect(getByTestId('shift-card-1')).toBeTruthy();
+    expect(await screen.findByText('shifts.load_error')).toBeTruthy();
+    api.getTodaysShifts.mockResolvedValue(list([makeDay()]));
+    await pressAndSettle('shifts-retry');
+    expect(await screen.findByTestId('shift-day-card-100')).toBeTruthy();
   });
-
-  it('filters results based on search query', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      currentView: 'all',
-      searchQuery: 'day',
-      shifts: [mockShifts[0]], // Only Day Shift matches the search
-    });
-
-    const { queryByTestId } = render(<ShiftsScreen />);
-
-    // Only Day Shift should be rendered due to filtering
-    expect(queryByTestId('shift-card-1')).toBeTruthy();
-  });
-
-  it('filters today shifts based on search query', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      searchQuery: 'day',
-      todaysShiftDays: mockTodaysShifts.filter(shift =>
-        shift.ShiftName.toLowerCase().includes('day')
-      ),
-    });
-
-    const { getByTestId } = render(<ShiftsScreen />);
-
-    expect(getByTestId('shift-day-card-day1')).toBeTruthy();
-  });
-
-  it('handles empty search results', () => {
-    setShiftsStoreMock({
-      ...defaultMockStore,
-      searchQuery: 'nonexistent',
-      todaysShiftDays: [],
-    });
-
-    const { getByTestId } = render(<ShiftsScreen />);
-
-    expect(getByTestId('zero-state')).toBeTruthy();
-  });
-
-  describe('Analytics Tracking', () => {
-    it('tracks shifts view on mount', () => {
-      render(<ShiftsScreen />);
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shifts_viewed', {
-        timestamp: expect.any(String),
-        activeTab: 'today',
-        shiftCount: 1, // mockTodaysShifts.length
-        hasSearchQuery: false,
-      });
-    });
-
-    it('tracks tab changes', () => {
-      const { getByText } = render(<ShiftsScreen />);
-
-      // Clear initial analytics call
-      mockTrackEvent.mockClear();
-
-      fireEvent.press(getByText('shifts.all_shifts'));
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shifts_tab_changed', {
-        timestamp: expect.any(String),
-        fromTab: 'today',
-        toTab: 'all',
-      });
-    });
-
-    it('tracks search events', () => {
-      const { getByTestId } = render(<ShiftsScreen />);
-
-      // Clear initial analytics call
-      mockTrackEvent.mockClear();
-
-      const searchInput = getByTestId('search-input');
-      fireEvent.press(searchInput);
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shifts_search', {
-        timestamp: expect.any(String),
-        searchQuery: 'test',
-        tab: 'today',
-      });
-    });
-
-    it('tracks refresh actions', async () => {
-      const fetchTodaysShifts = jest.fn();
-      setShiftsStoreMock({
-        ...defaultMockStore,
-        fetchTodaysShifts,
-      });
-
-      render(<ShiftsScreen />);
-
-      // Clear initial analytics call
-      mockTrackEvent.mockClear();
-
-      // Simulate refresh - this is harder to test directly with RefreshControl
-      // but we can test the handleRefresh function by triggering a tab change
-      const { getByText } = render(<ShiftsScreen />);
-      fireEvent.press(getByText('shifts.today'));
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shifts_tab_changed', {
-        timestamp: expect.any(String),
-        fromTab: 'today',
-        toTab: 'today',
-      });
-    });
-
-    it('tracks shift selection in today view', () => {
-      const selectShift = jest.fn();
-      setShiftsStoreMock({
-        ...defaultMockStore,
-        currentView: 'all',
-        selectShift,
-      });
-
-      const { getByTestId } = render(<ShiftsScreen />);
-
-      // Clear initial analytics call
-      mockTrackEvent.mockClear();
-
-      fireEvent.press(getByTestId('shift-card-1'));
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shift_selected', {
-        timestamp: expect.any(String),
-        shiftId: '1',
-        shiftName: 'Day Shift',
-        shiftCode: 'DAY',
-        tab: 'all',
-      });
-    });
-
-    it('tracks shift day selection in today view', () => {
-      const selectShiftDay = jest.fn();
-      setShiftsStoreMock({
-        ...defaultMockStore,
-        selectShiftDay,
-      });
-
-      const { getByTestId } = render(<ShiftsScreen />);
-
-      // Clear initial analytics call
-      mockTrackEvent.mockClear();
-
-      fireEvent.press(getByTestId('shift-day-card-day1'));
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shift_day_selected', {
-        timestamp: expect.any(String),
-        shiftDayId: 'day1',
-        shiftId: '1',
-        shiftName: 'Day Shift',
-        tab: 'today',
-      });
-    });
-
-    it('tracks analytics with search query state', () => {
-      setShiftsStoreMock({
-        ...defaultMockStore,
-        searchQuery: 'day shift',
-      });
-
-      render(<ShiftsScreen />);
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shifts_viewed', {
-        timestamp: expect.any(String),
-        activeTab: 'today',
-        shiftCount: 1,
-        hasSearchQuery: true,
-      });
-    });
-
-    it('tracks analytics for all shifts view', () => {
-      setShiftsStoreMock({
-        ...defaultMockStore,
-        currentView: 'all',
-      });
-
-      render(<ShiftsScreen />);
-
-      expect(mockTrackEvent).toHaveBeenCalledWith('shifts_viewed', {
-        timestamp: expect.any(String),
-        activeTab: 'all',
-        shiftCount: 2, // mockShifts.length
-        hasSearchQuery: false,
-      });
-    });
-  });
-}); 
+});

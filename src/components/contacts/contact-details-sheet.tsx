@@ -25,6 +25,7 @@ import {
   X,
 } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { withoutRedacted } from '@/lib/contacts/format';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
@@ -36,7 +37,10 @@ import { HStack } from '../ui/hstack';
 import { Pressable } from '../ui/pressable';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
+import { ContactDetailsExtra } from './contact-details-extra';
+import { ContactFilesPanel } from './contact-files-panel';
 import { ContactNotesList } from './contact-notes-list';
+import { ContactPreplanPanel } from './contact-preplan-panel';
 
 interface SectionProps {
   title: string;
@@ -228,16 +232,15 @@ export const ContactDetailsSheet: React.FC = () => {
   const isDetailsOpen = useContactsStore((state) => state.isDetailsOpen);
   const closeDetails = useContactsStore((state) => state.closeDetails);
   const selectedContactDetails = useContactsStore((state) => state.selectedContactDetails);
-  const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'notes' | 'preplan' | 'files'>('details');
 
   const selectedContact = React.useMemo(() => {
     if (!selectedContactId) return null;
-    // Prefer the full GetContactById record — the list payload is slim and leaves
-    // most detail fields empty. Fall back to the list row while details load.
-    if (selectedContactDetails?.ContactId === selectedContactId) {
-      return selectedContactDetails;
-    }
-    return contacts.find((contact) => contact.ContactId === selectedContactId);
+    // Prefer the full GetContactById record — the list payload is slim (no address, custom fields or
+    // category) — and fall back to the list row while it loads. Withheld values are removed so the
+    // sheet never shows the REDACTED sentinel as data or offers to dial it.
+    const record = selectedContactDetails?.ContactId === selectedContactId ? selectedContactDetails : contacts.find((contact) => contact.ContactId === selectedContactId);
+    return record ? withoutRedacted(record) : null;
   }, [contacts, selectedContactId, selectedContactDetails]);
 
   // Track analytics when sheet becomes visible
@@ -299,7 +302,7 @@ export const ContactDetailsSheet: React.FC = () => {
 
   // Handle tab changes with analytics
   const handleTabChange = useCallback(
-    (newTab: 'details' | 'notes') => {
+    (newTab: 'details' | 'notes' | 'preplan' | 'files') => {
       const fromTab = activeTab;
       setActiveTab(newTab);
 
@@ -403,7 +406,9 @@ export const ContactDetailsSheet: React.FC = () => {
               </HStack>
               <Text className="text-sm text-gray-500 dark:text-gray-400">{selectedContact.ContactType === ContactType.Person ? t('contacts.person') : t('contacts.company')}</Text>
               {selectedContact.OtherName ? <Text className="text-sm text-gray-600 dark:text-gray-300">({selectedContact.OtherName})</Text> : null}
-              {selectedContact.Category?.Name ? <Text className="text-sm text-primary-600 dark:text-primary-400">{selectedContact.Category.Name}</Text> : null}
+              {selectedContact.CategoryName || selectedContact.Category?.Name ? (
+                <Text className="text-sm text-primary-600 dark:text-primary-400">{selectedContact.CategoryName || selectedContact.Category?.Name}</Text>
+              ) : null}
             </VStack>
           </VStack>
 
@@ -419,12 +424,23 @@ export const ContactDetailsSheet: React.FC = () => {
                 {t('contacts.tabs.notes')}
               </Text>
             </Pressable>
+            <Pressable onPress={() => handleTabChange('preplan')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'preplan' ? 'bg-white shadow-xs dark:bg-gray-700' : ''}`}>
+              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'preplan' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                {t('contacts.tabs.preplan')}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => handleTabChange('files')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'files' ? 'bg-white shadow-xs dark:bg-gray-700' : ''}`}>
+              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'files' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                {t('contacts.tabs.files')}
+              </Text>
+            </Pressable>
           </HStack>
 
           {/* Tab Content */}
           {activeTab === 'details' ? (
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
               <VStack space="lg" className="flex-1">
+                <ContactDetailsExtra contact={selectedContact} />
                 {/* Contact Information Section */}
                 {hasContactInfo ? (
                   <Section title={t('contacts.contactInformation')} icon={<PhoneIcon size={16} color="#6366F1" />}>
@@ -530,8 +546,12 @@ export const ContactDetailsSheet: React.FC = () => {
                 ) : null}
               </VStack>
             </ScrollView>
-          ) : (
+          ) : activeTab === 'notes' ? (
             <ContactNotesList contactId={selectedContact.ContactId} />
+          ) : activeTab === 'preplan' ? (
+            <ContactPreplanPanel contactId={selectedContact.ContactId} />
+          ) : (
+            <ContactFilesPanel contactId={selectedContact.ContactId} />
           )}
         </Box>
       </ActionsheetContent>

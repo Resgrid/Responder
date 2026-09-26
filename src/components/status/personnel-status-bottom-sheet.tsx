@@ -6,10 +6,22 @@ import { Platform, ScrollView, TouchableOpacity } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
-import { arePoisAllowedForStatus, getCallDestinationDisplay, getPoiDestinationDisplay, getStationDestinationDisplay, type StatusDestinationTab } from '@/lib/status-destinations';
+import {
+  arePoisAllowedForStatus,
+  getCallDestinationDisplay,
+  getDefaultStatusCall,
+  getPersonnelStatusSteps,
+  getPoiDestinationDisplay,
+  getStationDestinationDisplay,
+  hasNoteStepForStatus,
+  isNoteRequiredForStatus,
+  type StatusDestinationTab,
+} from '@/lib/status-destinations';
 import { invertColor } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useCallsStore } from '@/stores/calls/store';
+import { useHomeStore } from '@/stores/home/home-store';
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
 
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
@@ -38,6 +50,7 @@ export const PersonnelStatusBottomSheet = () => {
     note,
     respondingTo,
     isLoading,
+    submitError = null,
     groups,
     isLoadingGroups,
     pois = [],
@@ -65,8 +78,11 @@ export const PersonnelStatusBottomSheet = () => {
   // write, so any unrelated core/calls update would re-render the whole sheet. (The
   // sheet's own store above stays destructured — it is dedicated to this sheet, so every
   // write to it is already meant for this component.)
-  const activeCall = useCoreStore((state) => state.activeCall);
   const activeStatuses = useCoreStore((state) => state.activeStatuses);
+  const coreCurrentStatus = useCoreStore((state) => state.currentStatus);
+  const currentUserStatus = useHomeStore((state) => state.currentUserStatus);
+  // The active call set from call detail or the Home Active Call tab (and the map pin).
+  const activeCall = useActiveCallStore((state) => state.activeCall);
   const calls = useCallsStore((state) => state.calls);
   const isLoadingCalls = useCallsStore((state) => state.isLoading);
   const fetchCalls = useCallsStore((state) => state.fetchCalls);
@@ -109,7 +125,7 @@ export const PersonnelStatusBottomSheet = () => {
   const stationsAllowed = areStationsAllowed();
   const poisAllowed = arePoisAllowed();
   const destinationRequired = isDestinationRequired();
-  const totalSteps = requiresStatusSelection ? 4 : 3;
+  const noteRequired = isNoteRequiredForStatus(selectedStatus);
 
   const allowedTabs = useMemo<StatusDestinationTab[]>(() => {
     const tabs: StatusDestinationTab[] = [];
@@ -129,6 +145,22 @@ export const PersonnelStatusBottomSheet = () => {
     return tabs;
   }, [callsAllowed, poisAllowed, stationsAllowed]);
 
+  const hasDestinationChoices = allowedTabs.length > 0;
+  const steps = getPersonnelStatusSteps({
+    requiresStatusSelection,
+    hasStatus: selectedStatus != null,
+    hasDestinationChoices,
+    hasNoteStep: hasNoteStepForStatus(selectedStatus),
+  });
+  const totalSteps = steps.length;
+  const isFirstStep = steps[0] === currentStep;
+  const isLastStep = steps[steps.length - 1] === currentStep;
+
+  // The active call, else the call the user's current status points at -- only while still open.
+  const defaultCall = useMemo(() => getDefaultStatusCall(calls, activeCall, currentUserStatus ?? coreCurrentStatus), [activeCall, calls, coreCurrentStatus, currentUserStatus]);
+  // A status with no destination to pick still sends the default call (see submitStatus).
+  const implicitCall = selectedStatus && !hasDestinationChoices ? defaultCall : null;
+
   const visibleStatuses = useMemo(() => {
     const nextStatuses = activeStatuses || [];
     return selectedPoi ? nextStatuses.filter((status) => arePoisAllowedForStatus(status.Detail)) : nextStatuses;
@@ -143,10 +175,10 @@ export const PersonnelStatusBottomSheet = () => {
   }, [fetchCalls, fetchDestinationPois, fetchGroups, isOpen]);
 
   useEffect(() => {
-    if (activeCall && currentStep === 'select-responding-to' && responseType === 'none' && callsAllowed && !selectedGroup && !selectedPoi) {
-      setSelectedCall(activeCall);
+    if (defaultCall && currentStep === 'select-responding-to' && responseType === 'none' && callsAllowed && !selectedGroup && !selectedPoi) {
+      setSelectedCall(defaultCall);
     }
-  }, [activeCall, callsAllowed, currentStep, responseType, selectedGroup, selectedPoi, setSelectedCall]);
+  }, [defaultCall, callsAllowed, currentStep, responseType, selectedGroup, selectedPoi, setSelectedCall]);
 
   const trackViewAnalytics = useCallback(() => {
     try {
@@ -386,40 +418,12 @@ export const PersonnelStatusBottomSheet = () => {
         return t('personnel.status.select_responding_to', { status: selectedStatus?.Text });
       case 'add-note':
         return t('personnel.status.add_note');
-      case 'confirm':
-        return t('personnel.status.confirm_status', { status: selectedStatus?.Text });
       default:
         return t('personnel.status.set_status');
     }
   };
 
-  const getStepNumber = () => {
-    if (requiresStatusSelection) {
-      switch (currentStep) {
-        case 'select-status':
-          return 1;
-        case 'select-responding-to':
-          return 2;
-        case 'add-note':
-          return 3;
-        case 'confirm':
-          return 4;
-        default:
-          return 1;
-      }
-    }
-
-    switch (currentStep) {
-      case 'select-responding-to':
-        return 1;
-      case 'add-note':
-        return 2;
-      case 'confirm':
-        return 3;
-      default:
-        return 1;
-    }
-  };
+  const getStepNumber = () => Math.max(steps.indexOf(currentStep), 0) + 1;
 
   const canProceedFromCurrentStep = () => {
     switch (currentStep) {
@@ -448,9 +452,7 @@ export const PersonnelStatusBottomSheet = () => {
 
         return false;
       case 'add-note':
-        return true;
-      case 'confirm':
-        return true;
+        return !noteRequired || note.trim().length > 0;
       default:
         return false;
     }
@@ -469,8 +471,59 @@ export const PersonnelStatusBottomSheet = () => {
       return getPoiDestinationDisplay(selectedPoi);
     }
 
+    if (implicitCall) {
+      return getCallDestinationDisplay(implicitCall);
+    }
+
     return t('personnel.status.no_destination');
   };
+
+  // The last step replaces the old confirmation screen, so it restates what Save will send.
+  const renderStatusSummary = () => (
+    <HStack space="sm" className="items-center rounded-lg bg-gray-100 px-3 py-2 dark:bg-gray-800" testID="personnel-status-summary">
+      <Text className="shrink font-semibold" numberOfLines={1}>
+        {selectedStatus?.Text}
+      </Text>
+      {/* A dot, not an arrow: the app forces RTL for Arabic, where an arrow would point backwards. */}
+      <VStack className="size-1 rounded-full bg-gray-400 dark:bg-gray-500" />
+      <Text className="flex-1 text-sm text-gray-600 dark:text-gray-400" numberOfLines={1} testID="personnel-status-summary-destination">
+        {getSelectedDestinationDisplay()}
+      </Text>
+    </HStack>
+  );
+
+  // Save failures are shown here rather than as a toast: the app's toasts render beneath this modal.
+  const renderStepActions = () => (
+    <>
+      {submitError ? (
+        <Text className="text-sm text-red-600 dark:text-red-400" accessibilityRole="alert" accessibilityLiveRegion="polite" testID="personnel-status-submit-error">
+          {submitError}
+        </Text>
+      ) : null}
+      <HStack space="sm" className="mt-4 justify-between">
+        {isFirstStep ? (
+          <Button variant="outline" onPress={handleClose} className="flex-1" isDisabled={isLoading}>
+            <ButtonText>{t('common.cancel')}</ButtonText>
+          </Button>
+        ) : (
+          <Button variant="outline" onPress={handlePrevious} className="flex-1" isDisabled={isLoading}>
+            <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
+            <ButtonText>{t('common.previous')}</ButtonText>
+          </Button>
+        )}
+        {isLastStep ? (
+          <Button onPress={handleSubmit} isDisabled={isLoading || !canProceedFromCurrentStep()} className="flex-1 bg-green-600" testID="personnel-status-save">
+            <ButtonText>{isLoading ? t('common.submitting') : t('common.save')}</ButtonText>
+          </Button>
+        ) : (
+          <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
+            <ButtonText>{t('common.next')}</ButtonText>
+            <ArrowRight size={16} color="#fff" />
+          </Button>
+        )}
+      </HStack>
+    </>
+  );
 
   const selectedDestinationTabBackgroundColor = colorScheme === 'dark' ? '#2563eb' : '#1d4ed8';
   const selectedDestinationTabBorderColor = colorScheme === 'dark' ? '#60a5fa' : '#1d4ed8';
@@ -566,7 +619,15 @@ export const PersonnelStatusBottomSheet = () => {
             </VStack>
           ) : null}
 
-          {currentStep === 'select-responding-to' ? (
+          {currentStep === 'select-responding-to' && !hasDestinationChoices ? (
+            /* No destination to pick and no note: this step is the one screen to save from. */
+            <VStack space="md" className="w-full">
+              {renderStatusSummary()}
+              {renderStepActions()}
+            </VStack>
+          ) : null}
+
+          {currentStep === 'select-responding-to' && hasDestinationChoices ? (
             <VStack space="md" className="w-full">
               <Text className="mb-2 font-medium">{t('personnel.status.select_destination')}</Text>
 
@@ -745,22 +806,8 @@ export const PersonnelStatusBottomSheet = () => {
                 ) : null}
               </ScrollView>
 
-              <HStack space="sm" className="mt-4 justify-between">
-                {requiresStatusSelection ? (
-                  <Button variant="outline" onPress={handlePrevious} className="flex-1">
-                    <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-                    <ButtonText>{t('common.previous')}</ButtonText>
-                  </Button>
-                ) : (
-                  <Button variant="outline" onPress={handleClose} className="flex-1">
-                    <ButtonText>{t('common.cancel')}</ButtonText>
-                  </Button>
-                )}
-                <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                  <ButtonText>{t('common.next')}</ButtonText>
-                  <ArrowRight size={16} color="#fff" />
-                </Button>
-              </HStack>
+              {isLastStep ? renderStatusSummary() : null}
+              {renderStepActions()}
             </VStack>
           ) : null}
 
@@ -771,74 +818,24 @@ export const PersonnelStatusBottomSheet = () => {
                time and pushed the note field out of the sheet's visible area. */
             <ScrollView keyboardShouldPersistTaps={Platform.OS === 'android' ? 'handled' : 'always'} showsVerticalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 1, width: '100%' }}>
               <VStack space="md" className="w-full">
-                <VStack space="sm">
-                  <Text className="font-medium">{t('personnel.status.selected_destination')}:</Text>
-                  <Text className="text-sm text-gray-600 dark:text-gray-400">{getSelectedDestinationDisplay()}</Text>
-                </VStack>
+                {renderStatusSummary()}
 
                 <VStack space="sm">
-                  <Text className="font-medium">
-                    {t('personnel.status.note')} ({t('common.optional')}):
-                  </Text>
+                  {noteRequired ? (
+                    <Text className="font-medium">{t('personnel.status.note')}:</Text>
+                  ) : (
+                    <Text className="font-medium">
+                      {t('personnel.status.note')} ({t('common.optional')}):
+                    </Text>
+                  )}
                   <Textarea size="md" className="min-h-[100px] w-full">
-                    <TextareaInput placeholder={t('personnel.status.note_placeholder')} value={note} onChangeText={setNote} />
+                    <TextareaInput placeholder={noteRequired ? t('personnel.status.note_required') : t('personnel.status.note_placeholder')} value={note} onChangeText={setNote} />
                   </Textarea>
                 </VStack>
 
-                <HStack space="sm" className="mt-4 justify-between">
-                  <Button variant="outline" onPress={handlePrevious} className="flex-1">
-                    <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-                    <ButtonText>{t('common.previous')}</ButtonText>
-                  </Button>
-                  <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                    <ButtonText>{t('common.next')}</ButtonText>
-                    <ArrowRight size={16} color="#fff" />
-                  </Button>
-                </HStack>
+                {renderStepActions()}
               </VStack>
             </ScrollView>
-          ) : null}
-
-          {currentStep === 'confirm' ? (
-            <VStack space="md" className="w-full">
-              <Text className="mb-4 text-center text-lg font-semibold">{t('personnel.status.review_and_confirm')}</Text>
-
-              <VStack space="sm" className="rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
-                <VStack space="xs">
-                  <Text className="font-medium">{t('personnel.status.status')}:</Text>
-                  <Text className="text-sm">{selectedStatus?.Text}</Text>
-                </VStack>
-
-                <VStack space="xs">
-                  <Text className="font-medium">{t('personnel.status.responding_to')}:</Text>
-                  <Text className="text-sm">{getSelectedDestinationDisplay()}</Text>
-                </VStack>
-
-                {responseType === 'none' && respondingTo ? (
-                  <VStack space="xs">
-                    <Text className="font-medium">{t('personnel.status.custom_responding_to')}:</Text>
-                    <Text className="text-sm">{respondingTo}</Text>
-                  </VStack>
-                ) : null}
-
-                {note ? (
-                  <VStack space="xs">
-                    <Text className="font-medium">{t('personnel.status.note')}:</Text>
-                    <Text className="text-sm">{note}</Text>
-                  </VStack>
-                ) : null}
-              </VStack>
-
-              <HStack space="sm" className="mt-4 justify-between">
-                <Button variant="outline" onPress={handlePrevious} className="flex-1" isDisabled={isLoading}>
-                  <ArrowLeft size={16} color={colorScheme === 'dark' ? '#737373' : '#737373'} />
-                  <ButtonText>{t('common.previous')}</ButtonText>
-                </Button>
-                <Button onPress={handleSubmit} isDisabled={isLoading} className="flex-1 bg-green-600">
-                  <ButtonText>{isLoading ? t('common.submitting') : t('common.submit')}</ButtonText>
-                </Button>
-              </HStack>
-            </VStack>
           ) : null}
         </VStack>
       </ActionsheetContent>

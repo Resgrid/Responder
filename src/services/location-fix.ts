@@ -20,55 +20,79 @@ export interface LocationFixResult {
 }
 
 /**
+ * Every native call below is bounded: a status submission waits on this whole function, and a
+ * call that never settles would leave the sheet on "Submitting..." until the app is killed.
+ *
  * `getCurrentPositionAsync` has no timeout of its own — indoors it can sit on the request until
- * the OS gives up, which on Android is effectively never. A submission must not hang behind it.
+ * the OS gives up, which on Android is effectively never.
  */
 const FIX_TIMEOUT_MS = 8000;
+
+/**
+ * Generous, because it covers the user reading the OS prompt. It exists for the request that never
+ * settles at all: on Android, a permission request made outside Expo (`PermissionsAndroid`,
+ * react-native-permissions) that overlaps an Expo one takes the activity's single result callback,
+ * and Expo then holds every later request behind the one that never heard back -- until the
+ * process restarts. Reporting that as denied points the user at the settings screen, and a
+ * permission granted there is read back without any prompt.
+ */
+const PERMISSION_TIMEOUT_MS = 30 * 1000;
+
+/** Both are quick reads of device state; anything slower is a stuck native call, not a slow one. */
+const SERVICES_CHECK_TIMEOUT_MS = 3000;
+const LAST_KNOWN_TIMEOUT_MS = 3000;
 
 /** A fix from the last minute is a fine answer for "where are you now" and costs no radio time. */
 const LAST_KNOWN_MAX_AGE_MS = 60 * 1000;
 
-interface TimedFix {
-  promise: Promise<Location.LocationObject | null>;
-  cancel: () => void;
-}
+const TIMED_OUT = Symbol('location-fix-timed-out');
 
 /**
- * Races the live fix against a timer. The timer is cleared either way: leaving it pending keeps a
- * Jest fake-timer test from settling and, in the app, holds a needless reference for its duration.
+ * Resolves with the promise's value, or `TIMED_OUT` if it has not settled within `ms`. The timer is
+ * cleared either way: leaving it pending keeps a Jest fake-timer test from settling and, in the
+ * app, holds a needless reference for its duration.
  */
-const withTimeout = (): TimedFix => {
-  let timer: ReturnType<typeof setTimeout> | null = null;
+const settleWithin = <T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve(TIMED_OUT), ms);
 
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), FIX_TIMEOUT_MS);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
   });
 
-  const cancel = () => {
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-  };
+const readLiveFix = async (): Promise<Location.LocationObject | null> => {
+  const location = await settleWithin(
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch((error) => {
+      logger.warn({
+        message: 'Failed to acquire current position',
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
+      return null;
+    }),
+    FIX_TIMEOUT_MS
+  );
 
-  return {
-    promise: Promise.race([
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch((error) => {
-        logger.warn({
-          message: 'Failed to acquire current position',
-          context: { error: error instanceof Error ? error.message : String(error) },
-        });
-        return null;
-      }),
-      timeout,
-    ]),
-    cancel,
-  };
+  return location === TIMED_OUT ? null : location;
 };
 
 const readLastKnown = async (): Promise<Location.LocationObject | null> => {
   try {
-    return await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS });
+    const location = await settleWithin(Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS }), LAST_KNOWN_TIMEOUT_MS);
+
+    if (location === TIMED_OUT) {
+      logger.warn({ message: 'Reading the last known position did not settle' });
+      return null;
+    }
+
+    return location;
   } catch (error) {
     logger.warn({
       message: 'Failed to read last known position',
@@ -85,22 +109,33 @@ const readLastKnown = async (): Promise<Location.LocationObject | null> => {
  * responder to fix: one is a trip to the OS settings, the other is a walk to a window. A caller
  * enforcing a GPS-required status needs to say which.
  */
+const resolveForegroundPermission = async (): Promise<Location.LocationPermissionResponse> => {
+  const permission = await Location.getForegroundPermissionsAsync();
+
+  // `canAskAgain` is false once the user has hard-denied; prompting again is a no-op that
+  // returns the same denial, so skip straight to reporting it.
+  if (permission.status !== 'granted' && permission.canAskAgain) {
+    return Location.requestForegroundPermissionsAsync();
+  }
+
+  return permission;
+};
+
 export const acquireLocationFix = async (): Promise<LocationFixResult> => {
-  let permission: Location.LocationPermissionResponse;
+  let permission: Location.LocationPermissionResponse | typeof TIMED_OUT;
 
   try {
-    permission = await Location.getForegroundPermissionsAsync();
-
-    // `canAskAgain` is false once the user has hard-denied; prompting again is a no-op that
-    // returns the same denial, so skip straight to reporting it.
-    if (permission.status !== 'granted' && permission.canAskAgain) {
-      permission = await Location.requestForegroundPermissionsAsync();
-    }
+    permission = await settleWithin(resolveForegroundPermission(), PERMISSION_TIMEOUT_MS);
   } catch (error) {
     logger.warn({
       message: 'Failed to resolve location permissions for fix',
       context: { error: error instanceof Error ? error.message : String(error) },
     });
+    return { outcome: 'permission-denied', location: null };
+  }
+
+  if (permission === TIMED_OUT) {
+    logger.warn({ message: 'Location permission request did not settle; reporting it as denied' });
     return { outcome: 'permission-denied', location: null };
   }
 
@@ -115,8 +150,11 @@ export const acquireLocationFix = async (): Promise<LocationFixResult> => {
   // Permission can be granted while the device's location services are switched off entirely; the
   // position call then fails in a way that looks identical to "no signal" unless we check.
   try {
-    const servicesEnabled = await Location.hasServicesEnabledAsync();
-    if (!servicesEnabled) {
+    const servicesEnabled = await settleWithin(Location.hasServicesEnabledAsync(), SERVICES_CHECK_TIMEOUT_MS);
+    if (servicesEnabled === TIMED_OUT) {
+      // Same as a check that throws: let the position attempt decide.
+      logger.warn({ message: 'Checking whether location services are enabled did not settle' });
+    } else if (!servicesEnabled) {
       logger.info({ message: 'Location services are disabled on the device' });
       return { outcome: 'services-disabled', location: null };
     }
@@ -128,13 +166,7 @@ export const acquireLocationFix = async (): Promise<LocationFixResult> => {
     });
   }
 
-  const timedFix = withTimeout();
-  let location: Location.LocationObject | null;
-  try {
-    location = await timedFix.promise;
-  } finally {
-    timedFix.cancel();
-  }
+  let location = await readLiveFix();
 
   // A timed-out live fix is common indoors. A recent cached one is still a truthful answer and is
   // far better than refusing a GPS-required status outright.

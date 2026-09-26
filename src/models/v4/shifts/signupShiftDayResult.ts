@@ -1,5 +1,3 @@
-import { BaseV4Request } from '../baseV4Request';
+import { ShiftActionResult } from './shiftActionResult';
 
-export class SignupShiftDayResult extends BaseV4Request {
-  public Id: string = '';
-}
+export class SignupShiftDayResult extends ShiftActionResult {}

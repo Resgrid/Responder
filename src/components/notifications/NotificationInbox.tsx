@@ -1,5 +1,6 @@
 import { useNotifications } from '@novu/react-native';
 import { FlashList } from '@shopify/flash-list';
+import { type Href, router } from 'expo-router';
 import { CheckCircle, ChevronRight, Circle, ExternalLink, MoreVertical, Trash2, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
@@ -14,6 +15,8 @@ import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import { useCoreStore } from '@/stores/app/core-store';
+import { useMessagesStore } from '@/stores/messages/store';
+import { isSafeRouteId, parseNotificationData } from '@/stores/push-notification/store';
 import { useToastStore } from '@/stores/toast/store';
 import { type NotificationPayload } from '@/types/notification';
 
@@ -88,17 +91,36 @@ interface NotificationInboxProps {
 // Derived from the hook's own return type so we don't depend on @novu/js directly.
 type NovuNotification = NonNullable<ReturnType<typeof useNotifications>['notifications']>[number];
 
-const REFERENCE_TYPES = ['call', 'message', 'status', 'note', 'other'] as const;
+const REFERENCE_TYPES = ['call', 'message', 'status', 'note', 'work-order', 'chat', 'other'] as const;
 
 const asString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
 const asReferenceType = (value: unknown): NotificationPayload['referenceType'] => REFERENCE_TYPES.find((candidate) => candidate === value);
+
+// The Novu bridge copies the push event code into the in-app step's data, so an inbox row resolves
+// through the same parser as the push it mirrors: call dispatches ("C{callId}"), department messages
+// ("M{messageId}"), work orders ("NWO:{id}") and chat conversations ("t:{channelId}" direct,
+// "g:{channelId}" group) open from the inbox so far.
+const referenceFromEventCode = (eventCode: unknown): Pick<NotificationPayload, 'referenceType' | 'referenceId'> | undefined => {
+  if (typeof eventCode !== 'string') return undefined;
+  // Dispatch and message codes carry no separator, so the push parser (which splits on ':') cannot read them.
+  const call = /^C:?(\d+)$/i.exec(eventCode);
+  if (call) return { referenceType: 'call', referenceId: call[1] };
+  const message = /^M:?(\d+)$/i.exec(eventCode);
+  if (message) return { referenceType: 'message', referenceId: message[1] };
+  const parsed = parseNotificationData({ eventCode });
+  if (!isSafeRouteId(parsed.id)) return undefined;
+  if (parsed.type === 'work-order') return { referenceType: 'work-order', referenceId: parsed.id };
+  if (parsed.type === 'chat' || parsed.type === 'group-chat') return { referenceType: 'chat', referenceId: parsed.id };
+  return undefined;
+};
 
 // Novu v3 renamed these fields (title -> subject, read -> isRead, payload -> data). Reading the
 // v2 names silently yielded undefined, which is why unread styling and the reference button never
 // appeared. `data` is an untyped bag from the server, so every field is narrowed before use.
 export const mapNovuNotification = (item: NovuNotification): NotificationPayload => {
   const data = item.data;
+  const reference = referenceFromEventCode(data?.eventCode);
 
   return {
     id: item.id,
@@ -107,9 +129,10 @@ export const mapNovuNotification = (item: NovuNotification): NotificationPayload
     createdAt: item.createdAt,
     read: item.isRead,
     type: asString(data?.type),
-    referenceId: asString(data?.referenceId),
-    referenceType: asReferenceType(data?.referenceType),
-    metadata: data,
+    referenceId: reference?.referenceId ?? asString(data?.referenceId),
+    referenceType: reference?.referenceType ?? asReferenceType(data?.referenceType),
+    // The event code is routing, not something to show under "Additional information".
+    metadata: data ? Object.fromEntries(Object.entries(data).filter(([key]) => key !== 'eventCode')) : undefined,
   };
 };
 
@@ -152,7 +175,7 @@ const NotificationRow = React.memo(function NotificationRow({ item, isSelectionM
       {!isSelectionMode ? (
         notification.referenceType && notification.referenceId ? (
           <View style={styles.actionButtons}>
-            <Button onPress={() => onNavigateToReference(notification.referenceType!, notification.referenceId!)} variant="outline" className="size-8 p-0">
+            <Button onPress={() => onNavigateToReference(notification.referenceType!, notification.referenceId!)} variant="outline" className="size-8 p-0" testID={`notification-reference-${notification.id}`}>
               <ExternalLink size={24} color={iconColors.accent} strokeWidth={2} />
             </Button>
             <ChevronRight size={24} color={iconColors.muted} strokeWidth={2} style={styles.chevron} />
@@ -327,7 +350,27 @@ export const NotificationInbox = ({ isOpen, onClose }: NotificationInboxProps) =
 
   const handleNavigateToReference = React.useCallback(
     (referenceType: string, referenceId: string) => {
-      // TODO: Implement navigation based on reference type
+      // The id came from the notification's server data, so it is re-checked before it reaches a route path.
+      const href: Href | null = !isSafeRouteId(referenceId)
+        ? null
+        : referenceType === 'call'
+          ? { pathname: '/call/[id]', params: { id: referenceId } }
+          : referenceType === 'work-order'
+            ? ({ pathname: '/work-orders/[id]', params: { id: referenceId } } as Href)
+            : referenceType === 'chat'
+              ? { pathname: '/chat/[channelId]', params: { channelId: referenceId } }
+              : referenceType === 'message'
+                ? '/(app)/messages'
+                : null;
+      if (href) {
+        setSelectedNotification(null);
+        onClose();
+        router.push(href);
+        // The messages screen has no per-message route; loading the message opens its details sheet there.
+        if (referenceType === 'message') void useMessagesStore.getState().fetchMessageDetails(referenceId);
+        return;
+      }
+      // TODO: Implement navigation for the remaining reference types
       logger.debug({
         message: 'Notification reference navigation requested',
         context: { referenceType, referenceId },

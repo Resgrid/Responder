@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, act } from '@testing-library/react-
 import React from 'react';
 
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 
 import HomeMap from '../map';
 
@@ -240,8 +241,8 @@ jest.mock('@/api/mapping/mapping', () => ({
     Promise.resolve({
       Data: {
         MapMakerInfos: [
-          { Id: '1', Title: 'Test Pin 1', Latitude: 40.7128, Longitude: -74.006, Type: 1, ImagePath: 'call', InfoWindowContent: '', Color: '#ff0000', zIndex: '1' },
-          { Id: '2', Title: 'Test Pin 2', Latitude: 40.7589, Longitude: -73.9851, Type: 2, ImagePath: 'person', InfoWindowContent: '', Color: '#00ff00', zIndex: '2' },
+          { Id: 'c1', Title: 'Test Pin 1', Latitude: 40.7128, Longitude: -74.006, Type: 0, ImagePath: 'call', InfoWindowContent: '', Color: '#ff0000', zIndex: '1' },
+          { Id: 'p2', Title: 'Test Pin 2', Latitude: 40.7589, Longitude: -73.9851, Type: 3, ImagePath: 'person', InfoWindowContent: '', Color: '#00ff00', zIndex: '2' },
         ],
       },
     })
@@ -255,6 +256,31 @@ jest.mock('@/hooks/use-app-lifecycle', () => ({
 jest.mock('@/hooks/use-map-signalr-updates', () => ({
   useMapSignalRUpdates: jest.fn(),
 }));
+
+// Live positions are covered by the hook's own tests; here only the wiring matters. applySnapshot has
+// to be stable per mount like the real one, or the initial-fetch effect would run on every render.
+const mockApplySnapshot = jest.fn();
+
+jest.mock('@/hooks/use-map-live-locations', () => {
+  type MockLiveLocationsResult = { applySnapshot: (pins: unknown[], fetchStartedAt: number) => void; refreshRequestedAt: number };
+  const results = new WeakMap<object, MockLiveLocationsResult>();
+  return {
+    useMapLiveLocations: (setPins: (pins: unknown[]) => void) => {
+      let result = results.get(setPins);
+      if (!result) {
+        result = {
+          applySnapshot: (pins: unknown[], fetchStartedAt: number) => {
+            mockApplySnapshot(pins, fetchStartedAt);
+            setPins(pins);
+          },
+          refreshRequestedAt: 0,
+        };
+        results.set(setPins, result);
+      }
+      return result;
+    },
+  };
+});
 
 jest.mock('@/lib/env', () => ({
   Env: {
@@ -280,10 +306,15 @@ jest.mock('@/services/location', () => ({
   },
 }));
 
-jest.mock('@/stores/app/core-store', () => ({
-  useCoreStore: jest.fn(() => ({
-    setActiveCall: jest.fn(),
-  })),
+// The map pin's "Set as current call" writes the shared active call store.
+const mockSetActiveCallById = jest.fn();
+
+jest.mock('@/stores/calls/active-call-store', () => ({
+  useActiveCallStore: {
+    getState: () => ({
+      setActiveCallById: mockSetActiveCallById,
+    }),
+  },
 }));
 
 jest.mock('@/stores/app/location-store', () => {
@@ -442,20 +473,34 @@ describe('HomeMap', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('map-pins')).toBeTruthy();
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
-      expect(screen.getByTestId('map-pin-2')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-p2')).toBeTruthy();
     });
+  });
+
+  it('routes every REST snapshot through the live-location hook', async () => {
+    render(<HomeMap />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
+    });
+
+    // The initial fetch hands over its start time so positions pushed meanwhile are re-applied...
+    expect(mockApplySnapshot).toHaveBeenCalledTimes(1);
+    expect(mockApplySnapshot).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ Id: 'c1' })]), expect.any(Number));
+    // ...and SignalR-driven refetches use the same path, plus the live-location refresh trigger.
+    expect(useMapSignalRUpdates).toHaveBeenCalledWith(expect.any(Function), 0);
   });
 
   it('opens pin detail modal when pin is pressed', async () => {
     render(<HomeMap />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
     });
 
     // Press a pin
-    fireEvent.press(screen.getByTestId('map-pin-1'));
+    fireEvent.press(screen.getByTestId('map-pin-c1'));
 
     // Check that pin detail modal is opened
     await waitFor(() => {
@@ -464,15 +509,43 @@ describe('HomeMap', () => {
     });
   });
 
+  it('opens the POI screen with the bare POI id for a POI pin', async () => {
+    const mapping = jest.requireMock('@/api/mapping/mapping') as { getMapDataAndMarkers: jest.Mock };
+    const originalImplementation = mapping.getMapDataAndMarkers.getMockImplementation();
+    mapping.getMapDataAndMarkers.mockImplementation(() =>
+      Promise.resolve({
+        Data: {
+          MapMakerInfos: [{ Id: 'poi9', Title: 'Hospital', Latitude: 40.7128, Longitude: -74.006, Type: 4, ImagePath: 'map-icon-hospital', InfoWindowContent: '', Color: '', zIndex: '1' }],
+        },
+      })
+    );
+
+    try {
+      render(<HomeMap />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pin-poi9')).toBeTruthy();
+      });
+
+      fireEvent.press(screen.getByTestId('map-pin-poi9'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/poi/9');
+    } finally {
+      if (originalImplementation) {
+        mapping.getMapDataAndMarkers.mockImplementation(originalImplementation);
+      }
+    }
+  });
+
   it('closes pin detail modal when close button is pressed', async () => {
     render(<HomeMap />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
     });
 
     // Open modal
-    fireEvent.press(screen.getByTestId('map-pin-1'));
+    fireEvent.press(screen.getByTestId('map-pin-c1'));
 
     await waitFor(() => {
       expect(screen.getByTestId('pin-detail-modal')).toBeTruthy();
@@ -487,27 +560,15 @@ describe('HomeMap', () => {
   });
 
   it('handles setting pin as current call', async () => {
-    const mockSetActiveCall = jest.fn();
-
-    // Mock the core store for this test
-    const mockCoreStore = require('@/stores/app/core-store');
-    mockCoreStore.useCoreStore.mockReturnValue({
-      setActiveCall: mockSetActiveCall,
-    });
-
-    // Also mock getState to return the same setActiveCall function
-    mockCoreStore.useCoreStore.getState = jest.fn(() => ({
-      setActiveCall: mockSetActiveCall,
-    }));
 
     render(<HomeMap />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
     });
 
     // Open modal
-    fireEvent.press(screen.getByTestId('map-pin-1'));
+    fireEvent.press(screen.getByTestId('map-pin-c1'));
 
     await waitFor(() => {
       expect(screen.getByTestId('pin-detail-modal')).toBeTruthy();
@@ -517,7 +578,7 @@ describe('HomeMap', () => {
     fireEvent.press(screen.getByTestId('set-current-call'));
 
     await waitFor(() => {
-      expect(mockSetActiveCall).toHaveBeenCalledWith('1');
+      expect(mockSetActiveCallById).toHaveBeenCalledWith('1');
     });
   });
 
@@ -583,21 +644,21 @@ describe('HomeMap', () => {
       render(<HomeMap />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+        expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
       });
 
       // Clear initial analytics call
       mockTrackEvent.mockClear();
 
       // Press a pin
-      fireEvent.press(screen.getByTestId('map-pin-1'));
+      fireEvent.press(screen.getByTestId('map-pin-c1'));
 
       // Check analytics tracking for pin press
       expect(mockTrackEvent).toHaveBeenCalledWith('map_pin_pressed', {
         timestamp: expect.any(String),
-        pinId: '1',
+        pinId: 'c1',
         pinTitle: 'Test Pin 1',
-        pinType: 1,
+        pinType: 0,
       });
     });
 
@@ -641,27 +702,15 @@ describe('HomeMap', () => {
     });
 
     it('tracks set as current call action', async () => {
-      const mockSetActiveCall = jest.fn();
-
-      // Mock the core store for this test
-      const mockCoreStore = require('@/stores/app/core-store');
-      mockCoreStore.useCoreStore.mockReturnValue({
-        setActiveCall: mockSetActiveCall,
-      });
-
-      // Also mock getState to return the same setActiveCall function
-      mockCoreStore.useCoreStore.getState = jest.fn(() => ({
-        setActiveCall: mockSetActiveCall,
-      }));
 
       render(<HomeMap />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+        expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
       });
 
       // Open modal
-      fireEvent.press(screen.getByTestId('map-pin-1'));
+      fireEvent.press(screen.getByTestId('map-pin-c1'));
 
       await waitFor(() => {
         expect(screen.getByTestId('pin-detail-modal')).toBeTruthy();
@@ -674,15 +723,15 @@ describe('HomeMap', () => {
       fireEvent.press(screen.getByTestId('set-current-call'));
 
       await waitFor(() => {
-        expect(mockSetActiveCall).toHaveBeenCalledWith('1');
+        expect(mockSetActiveCallById).toHaveBeenCalledWith('1');
       });
 
       // Check analytics tracking for set as current call
       expect(mockTrackEvent).toHaveBeenCalledWith('map_pin_set_as_current_call', {
         timestamp: expect.any(String),
-        pinId: '1',
+        pinId: 'c1',
         pinTitle: 'Test Pin 1',
-        pinType: 1,
+        pinType: 0,
       });
     });
 

@@ -43,7 +43,6 @@ import { FeatureFlagKeys, featureFlagsStore } from '@/stores/feature-flags/store
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { useRolesStore } from '@/stores/roles/store';
 import { securityStore } from '@/stores/security/store';
-import { useShiftsStore } from '@/stores/shifts/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
@@ -127,13 +126,12 @@ export default function TabLayout() {
       // time before the app became usable on a cellular link.
       await Promise.all([useCoreStore.getState().init(), useCallsStore.getState().init(), securityStore.getState().getRights()]);
       //await useCalendarStore.getState().init();
-      //await useShiftsStore.getState().init();
       //await usePersonnelStore.getState().init();
       if (!isCurrentRun()) return;
 
       // Feature flags must follow rights: the identity key that decides whether persisted
       // flags belong to this account reads securityStore.rights.DepartmentId.
-      await featureFlagsStore.getState().fetchFlags(), dataProtectionStore.getState().fetchCapabilities();
+      await Promise.all([featureFlagsStore.getState().fetchFlags(), dataProtectionStore.getState().fetchCapabilities()]);
       if (!isCurrentRun()) return;
 
       // Realtime feeds. Every one of them has to follow the Promise.all above: opening a hub reads

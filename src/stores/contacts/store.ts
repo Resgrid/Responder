@@ -22,7 +22,7 @@ interface ContactsState {
   // Actions
   fetchContacts: () => Promise<void>;
   fetchContactDetails: (contactId: string) => Promise<void>;
-  fetchContactNotes: (contactId: string) => Promise<void>;
+  fetchContactNotes: (contactId: string, force?: boolean) => Promise<void>;
   setSearchQuery: (query: string) => void;
   selectContact: (id: string) => void;
   closeDetails: () => void;
@@ -50,11 +50,12 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
     }
   },
 
-  fetchContactNotes: async (contactId: string) => {
+  fetchContactNotes: async (contactId: string, force = false) => {
     const { contactNotes } = get();
 
-    // Don't fetch if we already have notes for this contact
-    if (contactNotes[contactId]) {
+    // Don't fetch if we already have notes for this contact, unless the sheet asks for a fresh read
+    // (opening a contact, or after protected data was unlocked, when the cached notes may be redacted).
+    if (contactNotes[contactId] && !force) {
       return;
     }
 
@@ -97,7 +98,7 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
 
   selectContact: (id) => {
     set({ selectedContactId: id, isDetailsOpen: true });
-    get().fetchContactDetails(id);
+    void get().fetchContactDetails(id);
   },
 
   closeDetails: () => set({ isDetailsOpen: false, selectedContactDetails: null }),

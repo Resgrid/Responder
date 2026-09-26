@@ -1,4 +1,5 @@
 import { addDays, endOfDay, format, startOfDay, subDays } from 'date-fns';
+import { AppState } from 'react-native';
 import { create } from 'zustand';
 
 import { getCalendarItem, getCalendarItems, getCalendarItemsForDateRange, getCalendarItemTypes, setCalendarAttending } from '@/api/calendar/calendar';
@@ -6,6 +7,9 @@ import { logger } from '@/lib/logging';
 import { getTodayLocalString, isDateInRange } from '@/lib/utils';
 import { type CalendarItemResultData, mapCalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { type GetAllCalendarItemTypesResult } from '@/models/v4/calendar/calendarItemTypeResultData';
+import useAuthStore from '@/stores/auth/store';
+import { dataProtectionStore } from '@/stores/data-protection/store';
+import { securityStore } from '@/stores/security/store';
 import type { ApiResponse } from '@/types/api';
 
 interface CalendarState {
@@ -59,6 +63,14 @@ interface CalendarState {
   get items(): CalendarItemResultData[];
 }
 
+let checklistCalendarEpoch = 0;
+const calendarReadScope = () => ({ epoch: checklistCalendarEpoch, grant: dataProtectionStore.getState().grantToken });
+const protectCalendarResponse = (items: CalendarItemResultData[], request: ReturnType<typeof calendarReadScope>) => {
+  const protection = dataProtectionStore.getState();
+  const stale = request.epoch !== checklistCalendarEpoch || AppState.currentState !== 'active' || (!!(request.grant || protection.capabilities?.isProtectionEnabled) && !protection.isStepUpActive());
+  return stale ? items.filter((item) => !item.IsVirtual) : items;
+};
+
 export const useCalendarStore = create<CalendarState>((set, get) => ({
   // Initial state - matching Angular implementation
   todayCalendarItems: [],
@@ -106,15 +118,18 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         context: { todayISO: today.toISOString() },
       });
 
+      const checklistRead = calendarReadScope();
       const response = (await getCalendarItemsForDateRange(today.toISOString(), today.toISOString())) as ApiResponse<CalendarItemResultData[]>;
 
       // Filter items to ensure they're really for today.
       // Always use range-based filtering so timed multi-day events (where IsMultiDay may
       // not be set by the API) still appear on every day they cover, including day one.
       const todayStr = getTodayLocalString();
-      const todayItems = response.Data.map(mapCalendarItemResultData).filter((item: CalendarItemResultData) => {
-        return isDateInRange(todayStr, item.Start, item.End, item.IsAllDay);
-      });
+      const todayItems = protectCalendarResponse(response.Data, checklistRead)
+        .map(mapCalendarItemResultData)
+        .filter((item: CalendarItemResultData) => {
+          return isDateInRange(todayStr, item.Start, item.End, item.IsAllDay);
+        });
 
       set({
         todayCalendarItems: todayItems,
@@ -152,9 +167,10 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       const startDate = format(startOfDay(today), 'yyyy-MM-dd HH:mm:ss');
       const endDate = format(endOfDay(addDays(today, 7)), 'yyyy-MM-dd HH:mm:ss');
 
+      const checklistRead = calendarReadScope();
       const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
-        upcomingCalendarItems: response.Data.map(mapCalendarItemResultData),
+        upcomingCalendarItems: protectCalendarResponse(response.Data, checklistRead).map(mapCalendarItemResultData),
         isUpcomingLoading: false,
         updateCalendarItems: false,
       });
@@ -178,9 +194,10 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       const startDate = subDays(new Date(), 90).toISOString().split('T')[0]!;
       const endDate = addDays(new Date(), 120).toISOString().split('T')[0]!;
 
+      const checklistRead = calendarReadScope();
       const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
-        calendarItems: response.Data.map(mapCalendarItemResultData),
+        calendarItems: protectCalendarResponse(response.Data, checklistRead).map(mapCalendarItemResultData),
         isLoading: false,
         updateCalendarItems: false,
       });
@@ -200,9 +217,10 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   loadCalendarItemsForDateRange: async (startDate: string, endDate: string) => {
     set({ isLoading: true, error: null });
     try {
+      const checklistRead = calendarReadScope();
       const response = (await getCalendarItemsForDateRange(startDate, endDate)) as ApiResponse<CalendarItemResultData[]>;
       set({
-        selectedMonthItems: response.Data.map(mapCalendarItemResultData),
+        selectedMonthItems: protectCalendarResponse(response.Data, checklistRead).map(mapCalendarItemResultData),
         isLoading: false,
         updateCalendarItems: false,
       });
@@ -338,3 +356,31 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     await get().setCalendarItemAttendingStatus(calendarItemId, note || '', status);
   },
 }));
+
+// Newly composed checklist titles follow the grant/background lifecycle and never survive an identity change.
+const concealVirtualChecklistCalendar = () => {
+  checklistCalendarEpoch++;
+  const redact = (items: CalendarItemResultData[]) => items.map((item) => (item.IsVirtual ? { ...item, Title: 'REDACTED', Description: '', Location: '', IsRedacted: true } : item));
+  useCalendarStore.setState((state) => ({
+    todayCalendarItems: redact(state.todayCalendarItems),
+    upcomingCalendarItems: redact(state.upcomingCalendarItems),
+    selectedMonthItems: redact(state.selectedMonthItems),
+    calendarItems: redact(state.calendarItems),
+    viewCalendarItem: state.viewCalendarItem?.IsVirtual ? null : state.viewCalendarItem,
+  }));
+};
+let checklistCalendarExpiry: ReturnType<typeof setTimeout> | null = null;
+dataProtectionStore.subscribe((state) => {
+  if (checklistCalendarExpiry) clearTimeout(checklistCalendarExpiry);
+  if (!state.isStepUpActive()) concealVirtualChecklistCalendar();
+  else if (state.stepUpExpiresAt) checklistCalendarExpiry = setTimeout(concealVirtualChecklistCalendar, Math.max(0, state.stepUpExpiresAt - Date.now()));
+});
+AppState.addEventListener('change', (state) => {
+  if (state !== 'active') concealVirtualChecklistCalendar();
+});
+useAuthStore.subscribe((state, before) => {
+  if (state.userId !== before.userId) concealVirtualChecklistCalendar();
+});
+securityStore.subscribe((state, before) => {
+  if (state.rights?.DepartmentId !== before.rights?.DepartmentId) concealVirtualChecklistCalendar();
+});

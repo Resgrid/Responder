@@ -61,6 +61,8 @@ jest.mock('@/lib/utils', () => ({
 
 // Mock lucide-react-native icons
 jest.mock('lucide-react-native', () => ({
+  Award: 'Award',
+  Briefcase: 'Briefcase',
   Calendar: 'Calendar',
   CalendarCheck: 'CalendarCheck',
   CloudAlert: 'CloudAlert',
@@ -78,6 +80,10 @@ jest.mock('lucide-react-native', () => ({
   Truck: 'Truck',
   User: 'User',
   Users: 'Users',
+  FileText: 'FileText',
+  MessagesSquare: 'MessagesSquare',
+  Sparkles: 'Sparkles',
+  Wrench: 'Wrench',
 }));
 
 // Mock UI components

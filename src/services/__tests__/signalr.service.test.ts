@@ -529,6 +529,32 @@ describe('SignalRService', () => {
       expect(eventCallback).toHaveBeenCalledWith(testData);
     });
 
+    it('does not log location pushes or any message payload', async () => {
+      const unitListener = jest.fn();
+      signalRService.on('onUnitLocationUpdated', unitListener);
+
+      await signalRService.connectToHubWithEventingUrl({ ...mockConfig, methods: ['onUnitLocationUpdated', 'onPersonnelLocationUpdated', 'testMethod'] });
+
+      const handlerFor = (method: string) => mockConnection.on.mock.calls.find((call) => call[0] === method)?.[1];
+      const unitPush = { departmentId: 7, unitId: '12', latitude: 47.6062123, longitude: -122.3321456, recordId: 'r1', timestamp: '2026-09-25T14:03:11Z' };
+      const personPush = { departmentId: 7, userId: 'user-1', latitude: 47.6062123, longitude: -122.3321456, recordId: 'r2', timestamp: '2026-09-25T14:03:12Z' };
+
+      handlerFor('onUnitLocationUpdated')!(unitPush);
+      handlerFor('onPersonnelLocationUpdated')!(personPush);
+      handlerFor('testMethod')!({ body: 'private chat text' });
+
+      const logged = JSON.stringify([mockLogger.debug, mockLogger.info, mockLogger.warn, mockLogger.error].flatMap((log) => log.mock.calls));
+      expect(logged).not.toContain('47.6062123');
+      expect(logged).not.toContain('-122.3321456');
+      expect(logged).not.toContain('private chat text');
+      expect(logged).not.toMatch(/Received on(Unit|Personnel)LocationUpdated/);
+      expect(mockLogger.debug).toHaveBeenCalledWith({ message: 'Received testMethod message from hub: testHub', context: { method: 'testMethod' } });
+
+      // Logging less must not deliver less.
+      expect(unitListener).toHaveBeenCalledWith(unitPush);
+      signalRService.off('onUnitLocationUpdated', unitListener);
+    });
+
     it('should remove event listeners', () => {
       const eventCallback = jest.fn();
       
@@ -766,9 +792,48 @@ describe('SignalRService', () => {
       
       // Should NOT have called connectToHubWithEventingUrl due to token refresh failure
       expect(connectSpy).not.toHaveBeenCalled();
-      
+
       jest.useRealTimers();
       connectSpy.mockRestore();
+    });
+
+    it('rebuilds a closed geolocation hub with the refreshed token and announces the new connection', async () => {
+      const geoConfig: SignalRHubConnectConfig = {
+        name: 'geolocationHub',
+        eventingUrl: 'https://api.example.com/',
+        hubName: 'geolocationHub',
+        methods: ['onUnitLocationUpdated'],
+      };
+
+      await signalRService.connectToHubWithEventingUrl(geoConfig);
+
+      // The token is baked into this hub's URL, so SignalR's own retries would replay a stale one;
+      // reconnection is left to the service's rebuild path instead.
+      expect(mockBuilderInstance.withAutomaticReconnect).not.toHaveBeenCalled();
+
+      const onHubConnected = jest.fn();
+      signalRService.on('hubConnected', onHubConnected);
+      const onCloseCallback = mockConnection.onclose.mock.calls[0]?.[0];
+
+      // Refreshing swaps in a new token, as the auth store does.
+      mockRefreshAccessToken.mockImplementation(async () => {
+        mockGetState.mockReturnValue({ accessToken: 'fresh-token', refreshAccessToken: mockRefreshAccessToken });
+      });
+
+      jest.useFakeTimers();
+      try {
+        // e.g. the server closing the socket because the access token expired.
+        onCloseCallback?.(new Error('Server returned an error on close: token expired'));
+        await jest.advanceTimersByTimeAsync(6000);
+
+        expect(mockRefreshAccessToken).toHaveBeenCalledTimes(1);
+        expect(mockBuilderInstance.withUrl).toHaveBeenLastCalledWith('https://api.example.com/geolocationHub?access_token=fresh-token', {});
+        // The store re-invokes GeolocationConnect on this event; group membership died with the old connection.
+        expect(onHubConnected).toHaveBeenCalledWith({ hubName: 'geolocationHub' });
+      } finally {
+        signalRService.off('hubConnected', onHubConnected);
+        jest.useRealTimers();
+      }
     });
   });
 });

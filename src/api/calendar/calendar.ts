@@ -23,7 +23,7 @@ export const getCalendarItems = async () => {
  * Fetch calendar items for a specific date range
  */
 export const getCalendarItemsForDateRange = async (start: string, end: string) => {
-  const response = await getCalendarItemsForDateRangeApi.get<CalendarItemsResult>({ start, end });
+  const response = await getCalendarItemsForDateRangeApi.get<CalendarItemsResult>({ start, end, includeChecklists: true });
   return response.data;
 };
 

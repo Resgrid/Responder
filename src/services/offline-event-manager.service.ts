@@ -4,7 +4,11 @@ import { saveCallImage } from '@/api/calls/callFiles';
 import { performCheckIn } from '@/api/calls/check-in-timers';
 import { logger } from '@/lib/logging';
 import { type QueuedCallImageUploadEvent, type QueuedCheckInEvent, type QueuedEvent, QueuedEventStatus, QueuedEventType } from '@/models/offline-queue/queued-event';
+import type * as ChecklistsStore from '@/stores/checklists/store';
 import { useOfflineQueueStore } from '@/stores/offline-queue/store';
+
+/** The coded error flushChecklistDraft throws while the app is backgrounded or protected data is locked. */
+const CHECKLIST_LOCKED = 'checklist_locked';
 
 class OfflineEventManager {
   private static instance: OfflineEventManager;
@@ -185,6 +189,13 @@ class OfflineEventManager {
 
     try {
       switch (event.type) {
+        case QueuedEventType.CHECKLIST_COMPLETION: {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { flushChecklistDraft } = require('@/stores/checklists/store') as typeof ChecklistsStore;
+          if (typeof event.data.scope !== 'string' || typeof event.data.id !== 'string') throw new Error('checklist_invalid_reference');
+          await flushChecklistDraft(event.data.scope, event.data.id);
+          break;
+        }
         case QueuedEventType.CALL_IMAGE_UPLOAD:
           await this.processCallImageUploadEvent(event as QueuedCallImageUploadEvent);
           break;
@@ -209,6 +220,15 @@ class OfflineEventManager {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // A checklist refuses to sync while the app is in the background or protected data is locked. That is
+      // a wait, not a failure: consuming a retry would exhaust the event within a minute, and nothing brings
+      // an exhausted event back when the app returns or the person unlocks again.
+      if (errorMessage === CHECKLIST_LOCKED) {
+        store.updateEventStatus(event.id, QueuedEventStatus.PENDING);
+        logger.debug({ message: 'Checklist sync is waiting for the app to be unlocked', context: { eventId: event.id } });
+        return;
+      }
 
       store.updateEventStatus(event.id, QueuedEventStatus.FAILED, errorMessage);
 

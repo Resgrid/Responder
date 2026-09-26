@@ -1,9 +1,12 @@
 import { useRouter } from 'expo-router';
 import {
+  Award,
+  Briefcase,
   Calendar,
   CalendarCheck,
   CloudAlert,
   Contact,
+  FileText,
   Headphones,
   Home,
   ListTree,
@@ -20,6 +23,7 @@ import {
   Truck,
   User,
   Users,
+  Wrench,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo } from 'react';
@@ -37,7 +41,7 @@ import { useAuthStore } from '@/lib/auth';
 import { getAvatarUrl } from '@/lib/utils';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
-import { useIsChatEnabled } from '@/stores/feature-flags/store';
+import { useIsChatEnabled, useIsChecklistsEnabled, useIsDeploymentsEnabled, useIsRecordsFieldEnabled, useIsWorkOrdersEnabled } from '@/stores/feature-flags/store';
 import { securityStore } from '@/stores/security/store';
 
 import { AudioStreamBottomSheet } from '../audio-stream/audio-stream-bottom-sheet';
@@ -67,6 +71,10 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const setAudioStreamBottomSheetVisible = useAudioStreamStore((state) => state.setIsBottomSheetVisible);
   const rights = securityStore((state) => state.rights);
   const isChatEnabled = useIsChatEnabled();
+  const isChecklistsEnabled = useIsChecklistsEnabled();
+  const isDeploymentsEnabled = useIsDeploymentsEnabled();
+  const isRecordsEnabled = useIsRecordsFieldEnabled();
+  const isWorkOrdersEnabled = useIsWorkOrdersEnabled();
 
   const menuItems: MenuItem[] = useMemo(
     () =>
@@ -135,6 +143,41 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
           testID: 'side-menu-weather-alerts',
         },
         {
+          id: 'checklists',
+          title: t('checklists.labels.Checklists'),
+          icon: FileText,
+          route: '/(app)/checklists',
+          testID: 'side-menu-checklists',
+        },
+        {
+          id: 'records',
+          title: t('tabs.records'),
+          icon: FileText,
+          route: '/(app)/records',
+          testID: 'side-menu-records',
+        },
+        {
+          id: 'operations',
+          title: t('operations.title'),
+          icon: Briefcase,
+          route: '/(app)/operations',
+          testID: 'side-menu-operations',
+        },
+        {
+          id: 'workOrders',
+          title: t('workOrders.title'),
+          icon: Wrench,
+          route: '/(app)/work-orders',
+          testID: 'side-menu-work-orders',
+        },
+        {
+          id: 'certifications',
+          title: t('certifications.title'),
+          icon: Award,
+          route: '/(app)/certifications',
+          testID: 'side-menu-certifications',
+        },
+        {
           id: 'chat',
           title: t('tabs.chat'),
           icon: MessagesSquare,
@@ -155,9 +198,21 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
           route: '/(app)/settings',
           testID: 'side-menu-settings',
         },
-        // Chat and the assistant are gated by the Chat.System feature flag.
-      ].filter((item) => (item.id === 'chat' || item.id === 'assistant' ? isChatEnabled : true)),
-    [t, isChatEnabled]
+        // Chat and the assistant are gated by Chat.System; Field Records by Records.System plus this
+        // app's own child flag. Both resolve fail-closed, so an entry stays hidden until confirmed.
+      ].filter((item) => {
+        if (item.id === 'chat' || item.id === 'assistant') {
+          return isChatEnabled;
+        }
+        if (item.id === 'checklists') return isChecklistsEnabled;
+        if (item.id === 'operations') return isDeploymentsEnabled;
+        if (item.id === 'workOrders') return isWorkOrdersEnabled;
+        if (item.id === 'records') {
+          return isRecordsEnabled;
+        }
+        return true;
+      }),
+    [t, isChatEnabled, isRecordsEnabled, isChecklistsEnabled, isDeploymentsEnabled, isWorkOrdersEnabled]
   );
 
   const handleNavigation = useCallback(

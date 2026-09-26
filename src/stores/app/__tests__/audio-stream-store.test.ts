@@ -7,6 +7,7 @@ jest.mock('@/lib/logging', () => ({
   logger: {
     debug: jest.fn(),
     info: jest.fn(),
+    warn: jest.fn(),
     error: jest.fn(),
   },
 }));
@@ -47,6 +48,8 @@ describe('AudioStreamStore', () => {
     remove: jest.fn(),
     seekTo: jest.fn(() => Promise.resolve()),
     addListener: jest.fn(() => ({ remove: jest.fn() })),
+    setActiveForLockScreen: jest.fn(),
+    clearLockScreenControls: jest.fn(),
   } as any;
 
   beforeEach(() => {
@@ -70,6 +73,8 @@ describe('AudioStreamStore', () => {
     mockSoundObject.remove.mockImplementation(() => undefined);
     mockSoundObject.seekTo.mockImplementation(() => Promise.resolve());
     mockSoundObject.addListener.mockImplementation(() => ({ remove: jest.fn() }));
+    mockSoundObject.setActiveForLockScreen.mockImplementation(() => undefined);
+    mockSoundObject.clearLockScreenControls.mockImplementation(() => undefined);
 
     // Mock expo-audio methods
     mockSetAudioModeAsync.mockResolvedValue(undefined);
@@ -267,6 +272,38 @@ describe('AudioStreamStore', () => {
       });
     });
 
+    it('should register the player with the OS media session so it can be paused outside the app', async () => {
+      await useAudioStreamStore.getState().playStream(mockStream);
+
+      expect(mockSoundObject.setActiveForLockScreen).toHaveBeenCalledWith(
+        true,
+        { title: mockStream.Name },
+        {
+          isLiveStream: true,
+          showSeekForward: false,
+          showSeekBackward: false,
+        }
+      );
+    });
+
+    it('should keep playing when media session registration fails', async () => {
+      const lockScreenError = new Error('Service binding failed');
+      mockSoundObject.setActiveForLockScreen.mockImplementationOnce(() => {
+        throw lockScreenError;
+      });
+
+      await useAudioStreamStore.getState().playStream(mockStream);
+
+      const state = useAudioStreamStore.getState();
+      expect(state.soundObject).toEqual(mockSoundObject);
+      expect(state.isPlaying).toBe(true);
+      expect(mockSoundObject.play).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith({
+        message: 'Failed to activate audio stream media controls',
+        context: { error: lockScreenError, streamName: mockStream.Name },
+      });
+    });
+
     it('should stop current stream before playing new one', async () => {
       // Set up existing stream
       useAudioStreamStore.setState({
@@ -397,6 +434,7 @@ describe('AudioStreamStore', () => {
       expect(state.isBuffering).toBe(false);
 
       expect(mockSoundObject.pause).toHaveBeenCalled();
+      expect(mockSoundObject.clearLockScreenControls).toHaveBeenCalled();
       expect(mockSoundObject.remove).toHaveBeenCalled();
 
       expect(mockLogger.info).toHaveBeenCalledWith({

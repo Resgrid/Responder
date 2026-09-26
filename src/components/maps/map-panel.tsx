@@ -8,14 +8,16 @@ import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { Loading } from '@/components/common/loading';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useMapLiveLocations } from '@/hooks/use-map-live-locations';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { logger } from '@/lib/logging';
+import { getPinEntityId } from '@/lib/map-pin-ids';
 import { isPoiMarker } from '@/lib/poi';
 import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useToastStore } from '@/stores/toast/store';
 
 import MapPins from './map-pins';
@@ -63,7 +65,10 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const isInteractionLocked = isMapLocked && focusedPoi == null;
   const showRecenterButton = !isFollowingUser && hasUserMovedMap && latitude != null && longitude != null;
 
-  useMapSignalRUpdates(setMapPins);
+  // Realtime positions move unit/personnel pins in place; every REST snapshot goes through
+  // applySnapshot so a refetch cannot roll back a position pushed while it was in flight.
+  const { applySnapshot, refreshRequestedAt } = useMapLiveLocations(setMapPins);
+  useMapSignalRUpdates(applySnapshot, refreshRequestedAt);
 
   // Keep isScreenFocused in sync with navigation focus. Stable callback so it only
   // fires on real focus/blur transitions, not on every dependency change.
@@ -178,10 +183,11 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
 
     const fetchMapDataAndMarkers = async () => {
       try {
+        const fetchStartedAt = Date.now();
         const mapDataAndMarkers = await getMapDataAndMarkers();
 
         if (isMounted && mapDataAndMarkers?.Data) {
-          setMapPins(mapDataAndMarkers.Data.MapMakerInfos);
+          applySnapshot(mapDataAndMarkers.Data.MapMakerInfos, fetchStartedAt);
         }
       } catch (error) {
         logger.error({
@@ -200,7 +206,8 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+    // applySnapshot is stable, so this still runs once per mount.
+  }, [applySnapshot]);
 
   useEffect(() => {
     Animated.loop(
@@ -268,7 +275,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
       });
 
       if (isPoiMarker(pin)) {
-        router.push(`/poi/${pin.Id}`);
+        router.push(`/poi/${getPinEntityId(pin)}`);
         return;
       }
 
@@ -281,7 +288,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const handleSetAsCurrentCall = useCallback(
     async (pin: MapMakerInfoData) => {
       try {
-        await useCoreStore.getState().setActiveCall(pin.Id);
+        await useActiveCallStore.getState().setActiveCallById(getPinEntityId(pin));
         useToastStore.getState().showToast('success', t('map.call_set_as_current'));
 
         trackEvent('map_pin_set_as_current_call', {
@@ -295,7 +302,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
           message: 'Failed to set call as current call',
           context: {
             error,
-            callId: pin.Id,
+            callId: getPinEntityId(pin),
             callTitle: pin.Title,
           },
         });
