@@ -21,8 +21,8 @@ const mockedUseSignalRStore = useSignalRStore as jest.MockedFunction<typeof useS
 const createMockMapData = (): GetMapDataAndMarkersResult => {
   const mapMakers: MapMakerInfoData[] = [
     {
-      Id: '1',
-      Type: 1,
+      Id: 'p1',
+      Type: 3,
       Title: 'John Doe',
       Latitude: 40.7128,
       Longitude: -74.006,
@@ -32,8 +32,8 @@ const createMockMapData = (): GetMapDataAndMarkersResult => {
       Color: '#FF0000',
     } as MapMakerInfoData,
     {
-      Id: '2',
-      Type: 2,
+      Id: 'u2',
+      Type: 1,
       Title: 'Unit 1',
       Latitude: 40.7589,
       Longitude: -73.9851,

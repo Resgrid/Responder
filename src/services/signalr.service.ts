@@ -39,6 +39,12 @@ export const HUB_DISCONNECTED_EVENT = 'hubDisconnected';
  */
 export const HUB_RECONNECT_EXHAUSTED_EVENT = 'hubReconnectExhausted';
 
+// Location pushes arrive every few seconds for every unit and person, so they are not logged at all:
+// a per-message line would flood the console and push useful breadcrumbs out of error reports.
+const UNLOGGED_HUB_METHODS = new Set(['onunitlocationupdated', 'onpersonnellocationupdated']);
+
+export const isUnloggedHubMethod = (method: string): boolean => UNLOGGED_HUB_METHODS.has(method.toLowerCase());
+
 export interface HubLifecycleEvent {
   hubName: string;
 }
@@ -349,10 +355,6 @@ class SignalRService {
         });
 
         connection.on(method, (...args: unknown[]) => {
-          logger.info({
-            message: `Received ${method} message from hub: ${config.name}`,
-            context: { method, args },
-          });
           this.handleMessage(config.name, method, args);
         });
       });
@@ -498,10 +500,6 @@ class SignalRService {
         });
 
         connection.on(method, (...args: unknown[]) => {
-          logger.info({
-            message: `Received ${method} message from hub: ${config.name}`,
-            context: { method, args },
-          });
           this.handleMessage(config.name, method, args);
         });
       });
@@ -711,10 +709,13 @@ class SignalRService {
   }
 
   private handleMessage(hubName: string, method: string, args: unknown[]): void {
-    logger.debug({
-      message: `Received message from hub: ${hubName}`,
-      context: { method, args },
-    });
+    // Never log payloads: they carry personal data (chat, call details, precise coordinates).
+    if (!isUnloggedHubMethod(method)) {
+      logger.debug({
+        message: `Received ${method} message from hub: ${hubName}`,
+        context: { method },
+      });
+    }
     // Emit event for subscribers using the method name as the event name. Hub
     // methods can send more than one argument (chatPresenceChanged sends
     // `userId, isOnline`), so forward every argument to the listeners.

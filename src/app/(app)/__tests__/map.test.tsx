@@ -241,8 +241,8 @@ jest.mock('@/api/mapping/mapping', () => ({
     Promise.resolve({
       Data: {
         MapMakerInfos: [
-          { Id: '1', Title: 'Test Pin 1', Latitude: 40.7128, Longitude: -74.006, Type: 1, ImagePath: 'call', InfoWindowContent: '', Color: '#ff0000', zIndex: '1' },
-          { Id: '2', Title: 'Test Pin 2', Latitude: 40.7589, Longitude: -73.9851, Type: 2, ImagePath: 'person', InfoWindowContent: '', Color: '#00ff00', zIndex: '2' },
+          { Id: 'c1', Title: 'Test Pin 1', Latitude: 40.7128, Longitude: -74.006, Type: 0, ImagePath: 'call', InfoWindowContent: '', Color: '#ff0000', zIndex: '1' },
+          { Id: 'p2', Title: 'Test Pin 2', Latitude: 40.7589, Longitude: -73.9851, Type: 3, ImagePath: 'person', InfoWindowContent: '', Color: '#00ff00', zIndex: '2' },
         ],
       },
     })
@@ -473,8 +473,8 @@ describe('HomeMap', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('map-pins')).toBeTruthy();
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
-      expect(screen.getByTestId('map-pin-2')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-p2')).toBeTruthy();
     });
   });
 
@@ -482,12 +482,12 @@ describe('HomeMap', () => {
     render(<HomeMap />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
     });
 
     // The initial fetch hands over its start time so positions pushed meanwhile are re-applied...
     expect(mockApplySnapshot).toHaveBeenCalledTimes(1);
-    expect(mockApplySnapshot).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ Id: '1' })]), expect.any(Number));
+    expect(mockApplySnapshot).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ Id: 'c1' })]), expect.any(Number));
     // ...and SignalR-driven refetches use the same path, plus the live-location refresh trigger.
     expect(useMapSignalRUpdates).toHaveBeenCalledWith(expect.any(Function), 0);
   });
@@ -496,11 +496,11 @@ describe('HomeMap', () => {
     render(<HomeMap />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
     });
 
     // Press a pin
-    fireEvent.press(screen.getByTestId('map-pin-1'));
+    fireEvent.press(screen.getByTestId('map-pin-c1'));
 
     // Check that pin detail modal is opened
     await waitFor(() => {
@@ -509,15 +509,43 @@ describe('HomeMap', () => {
     });
   });
 
+  it('opens the POI screen with the bare POI id for a POI pin', async () => {
+    const mapping = jest.requireMock('@/api/mapping/mapping') as { getMapDataAndMarkers: jest.Mock };
+    const originalImplementation = mapping.getMapDataAndMarkers.getMockImplementation();
+    mapping.getMapDataAndMarkers.mockImplementation(() =>
+      Promise.resolve({
+        Data: {
+          MapMakerInfos: [{ Id: 'poi9', Title: 'Hospital', Latitude: 40.7128, Longitude: -74.006, Type: 4, ImagePath: 'map-icon-hospital', InfoWindowContent: '', Color: '', zIndex: '1' }],
+        },
+      })
+    );
+
+    try {
+      render(<HomeMap />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pin-poi9')).toBeTruthy();
+      });
+
+      fireEvent.press(screen.getByTestId('map-pin-poi9'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/poi/9');
+    } finally {
+      if (originalImplementation) {
+        mapping.getMapDataAndMarkers.mockImplementation(originalImplementation);
+      }
+    }
+  });
+
   it('closes pin detail modal when close button is pressed', async () => {
     render(<HomeMap />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
     });
 
     // Open modal
-    fireEvent.press(screen.getByTestId('map-pin-1'));
+    fireEvent.press(screen.getByTestId('map-pin-c1'));
 
     await waitFor(() => {
       expect(screen.getByTestId('pin-detail-modal')).toBeTruthy();
@@ -536,11 +564,11 @@ describe('HomeMap', () => {
     render(<HomeMap />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+      expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
     });
 
     // Open modal
-    fireEvent.press(screen.getByTestId('map-pin-1'));
+    fireEvent.press(screen.getByTestId('map-pin-c1'));
 
     await waitFor(() => {
       expect(screen.getByTestId('pin-detail-modal')).toBeTruthy();
@@ -616,21 +644,21 @@ describe('HomeMap', () => {
       render(<HomeMap />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+        expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
       });
 
       // Clear initial analytics call
       mockTrackEvent.mockClear();
 
       // Press a pin
-      fireEvent.press(screen.getByTestId('map-pin-1'));
+      fireEvent.press(screen.getByTestId('map-pin-c1'));
 
       // Check analytics tracking for pin press
       expect(mockTrackEvent).toHaveBeenCalledWith('map_pin_pressed', {
         timestamp: expect.any(String),
-        pinId: '1',
+        pinId: 'c1',
         pinTitle: 'Test Pin 1',
-        pinType: 1,
+        pinType: 0,
       });
     });
 
@@ -678,11 +706,11 @@ describe('HomeMap', () => {
       render(<HomeMap />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('map-pin-1')).toBeTruthy();
+        expect(screen.getByTestId('map-pin-c1')).toBeTruthy();
       });
 
       // Open modal
-      fireEvent.press(screen.getByTestId('map-pin-1'));
+      fireEvent.press(screen.getByTestId('map-pin-c1'));
 
       await waitFor(() => {
         expect(screen.getByTestId('pin-detail-modal')).toBeTruthy();
@@ -701,9 +729,9 @@ describe('HomeMap', () => {
       // Check analytics tracking for set as current call
       expect(mockTrackEvent).toHaveBeenCalledWith('map_pin_set_as_current_call', {
         timestamp: expect.any(String),
-        pinId: '1',
+        pinId: 'c1',
         pinTitle: 'Test Pin 1',
-        pinType: 1,
+        pinType: 0,
       });
     });
 

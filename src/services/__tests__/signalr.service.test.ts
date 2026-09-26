@@ -529,6 +529,32 @@ describe('SignalRService', () => {
       expect(eventCallback).toHaveBeenCalledWith(testData);
     });
 
+    it('does not log location pushes or any message payload', async () => {
+      const unitListener = jest.fn();
+      signalRService.on('onUnitLocationUpdated', unitListener);
+
+      await signalRService.connectToHubWithEventingUrl({ ...mockConfig, methods: ['onUnitLocationUpdated', 'onPersonnelLocationUpdated', 'testMethod'] });
+
+      const handlerFor = (method: string) => mockConnection.on.mock.calls.find((call) => call[0] === method)?.[1];
+      const unitPush = { departmentId: 7, unitId: '12', latitude: 47.6062123, longitude: -122.3321456, recordId: 'r1', timestamp: '2026-09-25T14:03:11Z' };
+      const personPush = { departmentId: 7, userId: 'user-1', latitude: 47.6062123, longitude: -122.3321456, recordId: 'r2', timestamp: '2026-09-25T14:03:12Z' };
+
+      handlerFor('onUnitLocationUpdated')!(unitPush);
+      handlerFor('onPersonnelLocationUpdated')!(personPush);
+      handlerFor('testMethod')!({ body: 'private chat text' });
+
+      const logged = JSON.stringify([mockLogger.debug, mockLogger.info, mockLogger.warn, mockLogger.error].flatMap((log) => log.mock.calls));
+      expect(logged).not.toContain('47.6062123');
+      expect(logged).not.toContain('-122.3321456');
+      expect(logged).not.toContain('private chat text');
+      expect(logged).not.toMatch(/Received on(Unit|Personnel)LocationUpdated/);
+      expect(mockLogger.debug).toHaveBeenCalledWith({ message: 'Received testMethod message from hub: testHub', context: { method: 'testMethod' } });
+
+      // Logging less must not deliver less.
+      expect(unitListener).toHaveBeenCalledWith(unitPush);
+      signalRService.off('onUnitLocationUpdated', unitListener);
+    });
+
     it('should remove event listeners', () => {
       const eventCallback = jest.fn();
       

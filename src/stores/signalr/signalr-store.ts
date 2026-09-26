@@ -324,7 +324,8 @@ export const useSignalRStore = create<SignalRState>((set, get) => {
   /** Record a pushed position. Nothing is throttled here; live maps decide what to render. */
   const storeLiveLocation = (event: string, message: unknown, location: LiveLocation | null): void => {
     if (!location) {
-      logger.debug({ message: `Ignoring unusable ${event} payload`, context: { message } });
+      // No payload in the log: location pushes carry precise coordinates.
+      logger.debug({ message: `Ignoring unusable ${event} payload` });
       set({ lastGeolocationMessage: message, lastGeolocationTimestamp: Date.now() });
       return;
     }

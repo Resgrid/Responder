@@ -11,6 +11,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { useMapLiveLocations } from '@/hooks/use-map-live-locations';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { logger } from '@/lib/logging';
+import { getPinEntityId } from '@/lib/map-pin-ids';
 import { isPoiMarker } from '@/lib/poi';
 import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
@@ -274,7 +275,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
       });
 
       if (isPoiMarker(pin)) {
-        router.push(`/poi/${pin.Id}`);
+        router.push(`/poi/${getPinEntityId(pin)}`);
         return;
       }
 
@@ -287,7 +288,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const handleSetAsCurrentCall = useCallback(
     async (pin: MapMakerInfoData) => {
       try {
-        await useActiveCallStore.getState().setActiveCallById(pin.Id);
+        await useActiveCallStore.getState().setActiveCallById(getPinEntityId(pin));
         useToastStore.getState().showToast('success', t('map.call_set_as_current'));
 
         trackEvent('map_pin_set_as_current_call', {
@@ -301,7 +302,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
           message: 'Failed to set call as current call',
           context: {
             error,
-            callId: pin.Id,
+            callId: getPinEntityId(pin),
             callTitle: pin.Title,
           },
         });
