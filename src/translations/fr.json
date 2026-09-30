@@ -408,7 +408,7 @@
     "category": "Catégorie (cours, exercice, congrès)",
     "certificateAttached": "certificat joint",
     "creditAdded": "Heures ajoutées.",
-    "creditDate": "Date (aaaa-mm-jj, vide pour aujourd'hui)",
+    "creditDate": "Date (aujourd’hui par défaut)",
     "creditNote": "De quoi il s'agit",
     "credits": "{{hours}} sur {{required}} heures de formation continue",
     "creditsTitle": "{{hours}} heures de formation continue",
@@ -427,13 +427,13 @@
     "form": {
       "area": "Domaine ou niveau",
       "choosePhoto": "Choisir une photo",
-      "expiresOn": "Expire (aaaa-mm-jj)",
+      "expiresOn": "Expire",
       "issuedBy": "Délivrée par",
       "name": "Nom",
       "number": "Numéro",
       "otherType": "Autre (saisir un nom)",
       "photoAttached": "Photo jointe.",
-      "receivedOn": "Obtenue (aaaa-mm-jj)",
+      "receivedOn": "Obtenue",
       "save": "Enregistrer",
       "takePhoto": "Photo de la carte",
       "type": "Certification"
@@ -443,7 +443,7 @@
     "hoursInvalid": "Saisissez un nombre d'heures supérieur à 0.",
     "issuedByIs": "Délivrée par {{name}}",
     "nameRequired": "Choisissez un type ou saisissez un nom.",
-    "newExpiry": "Nouvelle date d'expiration (aaaa-mm-jj)",
+    "newExpiry": "Nouvelle date d'expiration",
     "newNumber": "Nouveau numéro (facultatif)",
     "noExpiry": "N'expire pas",
     "none": "Vous n'avez encore ajouté aucune certification.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "Trop de tentatives. Patientez quelques minutes et réessayez.",
     "step_up_unavailable": "Les données protégées ne sont pas encore disponibles sur ce serveur. Contactez votre administrateur.",
     "step_up_verify": "Vérifier"
+  },
+  "dateTimePicker": {
+    "clear": "Effacer",
+    "date": "Date",
+    "hour": "Heure",
+    "minute": "Minute"
   },
   "form": {
     "invalid_url": "Veuillez saisir une URL valide commençant par http:// ou https://",

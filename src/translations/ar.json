@@ -408,7 +408,7 @@
     "category": "الفئة (دورة، تمرين، مؤتمر)",
     "certificateAttached": "الشهادة مرفقة",
     "creditAdded": "تمت إضافة الساعات.",
-    "creditDate": "التاريخ (yyyy-mm-dd، فارغ لليوم)",
+    "creditDate": "التاريخ (اليوم افتراضيًا)",
     "creditNote": "ما هو",
     "credits": "{{hours}} من {{required}} ساعة تعليم مستمر",
     "creditsTitle": "{{hours}} ساعة تعليم مستمر",
@@ -427,13 +427,13 @@
     "form": {
       "area": "المجال أو المستوى",
       "choosePhoto": "اختيار صورة",
-      "expiresOn": "تاريخ الانتهاء (yyyy-mm-dd)",
+      "expiresOn": "تاريخ الانتهاء",
       "issuedBy": "الجهة المصدرة",
       "name": "الاسم",
       "number": "الرقم",
       "otherType": "أخرى (أدخل اسمًا)",
       "photoAttached": "تم إرفاق الصورة.",
-      "receivedOn": "تاريخ الحصول (yyyy-mm-dd)",
+      "receivedOn": "تاريخ الحصول",
       "save": "حفظ",
       "takePhoto": "صورة البطاقة",
       "type": "الشهادة"
@@ -443,7 +443,7 @@
     "hoursInvalid": "أدخل عدد ساعات أكبر من 0.",
     "issuedByIs": "صادرة عن {{name}}",
     "nameRequired": "اختر نوعًا أو أدخل اسمًا.",
-    "newExpiry": "تاريخ الانتهاء الجديد (yyyy-mm-dd)",
+    "newExpiry": "تاريخ الانتهاء الجديد",
     "newNumber": "رقم جديد (اختياري)",
     "noExpiry": "لا تنتهي",
     "none": "لم تضف أي شهادات بعد.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "محاولات كثيرة جدًا. انتظر بضع دقائق ثم أعد المحاولة.",
     "step_up_unavailable": "البيانات المحمية غير متاحة بعد على هذا الخادم. تواصل مع المسؤول.",
     "step_up_verify": "تأكيد"
+  },
+  "dateTimePicker": {
+    "clear": "مسح",
+    "date": "التاريخ",
+    "hour": "الساعة",
+    "minute": "الدقيقة"
   },
   "form": {
     "invalid_url": "يرجى إدخال عنوان URL صالح يبدأ بـ http:// أو https://",

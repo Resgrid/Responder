@@ -408,7 +408,7 @@
     "category": "Category (course, drill, conference)",
     "certificateAttached": "certificate attached",
     "creditAdded": "Hours added.",
-    "creditDate": "Date (yyyy-mm-dd, blank for today)",
+    "creditDate": "Date (defaults to today)",
     "creditNote": "What it was",
     "credits": "{{hours}} of {{required}} continuing-education hours",
     "creditsTitle": "{{hours}} continuing-education hours",
@@ -427,13 +427,13 @@
     "form": {
       "area": "Area or level",
       "choosePhoto": "Choose photo",
-      "expiresOn": "Expires (yyyy-mm-dd)",
+      "expiresOn": "Expires on",
       "issuedBy": "Issued by",
       "name": "Name",
       "number": "Number",
       "otherType": "Other (enter a name)",
       "photoAttached": "Photo attached.",
-      "receivedOn": "Received (yyyy-mm-dd)",
+      "receivedOn": "Issued on",
       "save": "Save",
       "takePhoto": "Photo of card",
       "type": "Certification"
@@ -443,7 +443,7 @@
     "hoursInvalid": "Enter a number of hours greater than 0.",
     "issuedByIs": "Issued by {{name}}",
     "nameRequired": "Pick a type or enter a name.",
-    "newExpiry": "New expiry date (yyyy-mm-dd)",
+    "newExpiry": "New expiry date",
     "newNumber": "New number (optional)",
     "noExpiry": "Does not expire",
     "none": "You have not added any certifications yet.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "Too many attempts. Wait a few minutes and try again.",
     "step_up_unavailable": "Protected data is not available on this server yet. Contact your administrator.",
     "step_up_verify": "Verify"
+  },
+  "dateTimePicker": {
+    "clear": "Clear",
+    "date": "Date",
+    "hour": "Hour",
+    "minute": "Minute"
   },
   "form": {
     "invalid_url": "Please enter a valid URL starting with http:// or https://",

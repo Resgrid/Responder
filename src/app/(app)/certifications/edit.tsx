@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native';
 
 import { getCertification } from '@/api/certifications/certifications';
+import { DateTimeField } from '@/components/common/date-time-field';
 import { OptionSelect } from '@/components/operations/option-select';
 import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
@@ -181,12 +182,8 @@ const CertificationForm: React.FC<CertificationFormProps> = ({ existing }) => {
         <Input>
           <InputField value={area} onChangeText={setArea} placeholder={t('certifications.form.area')} maxLength={200} testID="certification-area" />
         </Input>
-        <Input>
-          <InputField value={receivedOn} onChangeText={setReceivedOn} placeholder={t('certifications.form.receivedOn')} maxLength={10} testID="certification-received" />
-        </Input>
-        <Input>
-          <InputField value={expiresOn} onChangeText={setExpiresOn} placeholder={t('certifications.form.expiresOn')} maxLength={10} testID="certification-expires" />
-        </Input>
+        <DateTimeField value={receivedOn} onChange={setReceivedOn} label={t('certifications.form.receivedOn')} testID="certification-received" />
+        <DateTimeField value={expiresOn} onChange={setExpiresOn} label={t('certifications.form.expiresOn')} testID="certification-expires" />
         <HStack space="sm">
           <Button variant="outline" size="sm" onPress={() => void pick('camera')} testID="certification-camera">
             <ButtonText>{t('certifications.form.takePhoto')}</ButtonText>

@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView } from 'react-native';
 
+import { DateTimeField } from '@/components/common/date-time-field';
 import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
@@ -145,9 +146,7 @@ export default function CertificationScreen() {
 
             <VStack space="sm" className="rounded-lg border border-outline-200 p-3" testID="certification-renew">
               <Text className="font-semibold">{t('certifications.renew')}</Text>
-              <Input>
-                <InputField value={renewTo} onChangeText={setRenewTo} placeholder={t('certifications.newExpiry')} maxLength={10} testID="certification-renew-date" />
-              </Input>
+              <DateTimeField value={renewTo} onChange={setRenewTo} label={t('certifications.newExpiry')} testID="certification-renew-date" />
               <Input>
                 <InputField value={renewNumber} onChangeText={setRenewNumber} placeholder={t('certifications.newNumber')} maxLength={100} testID="certification-renew-number" />
               </Input>
@@ -171,9 +170,9 @@ export default function CertificationScreen() {
                 <Input className="w-24">
                   <InputField value={creditHours} onChangeText={setCreditHours} keyboardType="decimal-pad" placeholder={t('certifications.hours')} testID="certification-credit-hours" />
                 </Input>
-                <Input className="flex-1">
-                  <InputField value={creditDate} onChangeText={setCreditDate} placeholder={t('certifications.creditDate')} maxLength={10} testID="certification-credit-date" />
-                </Input>
+                <VStack className="flex-1">
+                  <DateTimeField value={creditDate} onChange={setCreditDate} label={t('certifications.creditDate')} testID="certification-credit-date" />
+                </VStack>
               </HStack>
               <Input>
                 <InputField value={creditCategory} onChangeText={setCreditCategory} placeholder={t('certifications.category')} maxLength={100} testID="certification-credit-category" />

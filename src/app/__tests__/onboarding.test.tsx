@@ -333,30 +333,12 @@ describe('Onboarding Component', () => {
       expect(mockRouter.replace).toHaveBeenCalledWith('/login');
     });
 
-    it('should navigate to login when Get Started is pressed on last slide', async () => {
-      // Since the animation/state logic is complex to test, we'll test the button functionality
-      // by manually triggering the onPress logic that would be called in the last slide
-      render(<Onboarding />);
-
-      // Clear previous analytics calls
+    it('should navigate to login when Get Started is pressed on last slide', () => {
+      const screen = render(<Onboarding />);
+      fireEvent.press(screen.getByTestId('next-button'));
+      fireEvent.press(screen.getByTestId('next-button'));
       mockTrackEvent.mockClear();
-
-      // Simulate the button press behavior (what happens in the actual last slide onPress)
-      // This tests the same logic that would be called when the Get Started button is pressed
-      const onGetStartedPress = () => {
-        mockTrackEvent('onboarding_completed', {
-          timestamp: new Date().toISOString(),
-          totalSlides: 3,
-          completionMethod: 'finished',
-        });
-        mockSetIsFirstTime(false);
-        mockRouter.replace('/login');
-      };
-
-      // Execute the logic
-      onGetStartedPress();
-
-      // Verify analytics and navigation
+      fireEvent.press(screen.getByTestId('get-started-button'));
       expect(mockTrackEvent).toHaveBeenCalledWith('onboarding_completed', {
         timestamp: expect.any(String),
         totalSlides: 3,
@@ -364,6 +346,7 @@ describe('Onboarding Component', () => {
       });
       expect(mockSetIsFirstTime).toHaveBeenCalledWith(false);
       expect(mockRouter.replace).toHaveBeenCalledWith('/login');
+      screen.unmount();
     });
 
     it('should render component without calling setIsOnboarding (functionality is commented out)', () => {

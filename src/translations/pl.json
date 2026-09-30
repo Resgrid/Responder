@@ -408,7 +408,7 @@
     "category": "Kategoria (kurs, ćwiczenia, konferencja)",
     "certificateAttached": "dołączono certyfikat",
     "creditAdded": "Dodano godziny.",
-    "creditDate": "Data (rrrr-mm-dd, puste = dziś)",
+    "creditDate": "Data (domyślnie dzisiaj)",
     "creditNote": "Czego dotyczyło",
     "credits": "{{hours}} z {{required}} godzin doskonalenia",
     "creditsTitle": "{{hours}} godzin doskonalenia",
@@ -427,13 +427,13 @@
     "form": {
       "area": "Zakres lub poziom",
       "choosePhoto": "Wybierz zdjęcie",
-      "expiresOn": "Wygasa (rrrr-mm-dd)",
+      "expiresOn": "Wygasa",
       "issuedBy": "Wydane przez",
       "name": "Nazwa",
       "number": "Numer",
       "otherType": "Inne (wpisz nazwę)",
       "photoAttached": "Dołączono zdjęcie.",
-      "receivedOn": "Uzyskane (rrrr-mm-dd)",
+      "receivedOn": "Uzyskane",
       "save": "Zapisz",
       "takePhoto": "Zdjęcie legitymacji",
       "type": "Uprawnienie"
@@ -443,7 +443,7 @@
     "hoursInvalid": "Wpisz liczbę godzin większą od 0.",
     "issuedByIs": "Wydane przez {{name}}",
     "nameRequired": "Wybierz rodzaj lub wpisz nazwę.",
-    "newExpiry": "Nowa data ważności (rrrr-mm-dd)",
+    "newExpiry": "Nowa data ważności",
     "newNumber": "Nowy numer (opcjonalnie)",
     "noExpiry": "Nie wygasa",
     "none": "Nie dodano jeszcze żadnych uprawnień.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "Zbyt wiele prób. Odczekaj kilka minut i spróbuj ponownie.",
     "step_up_unavailable": "Chronione dane nie są jeszcze dostępne na tym serwerze. Skontaktuj się z administratorem.",
     "step_up_verify": "Potwierdź"
+  },
+  "dateTimePicker": {
+    "clear": "Wyczyść",
+    "date": "Data",
+    "hour": "Godzina",
+    "minute": "Minuta"
   },
   "form": {
     "invalid_url": "Proszę wprowadzić prawidłowy URL zaczynający się od http:// lub https://",

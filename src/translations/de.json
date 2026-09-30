@@ -408,7 +408,7 @@
     "category": "Kategorie (Lehrgang, Übung, Tagung)",
     "certificateAttached": "Zertifikat angehängt",
     "creditAdded": "Stunden hinzugefügt.",
-    "creditDate": "Datum (jjjj-mm-tt, leer für heute)",
+    "creditDate": "Datum (standardmäßig heute)",
     "creditNote": "Was es war",
     "credits": "{{hours}} von {{required}} Fortbildungsstunden",
     "creditsTitle": "{{hours}} Fortbildungsstunden",
@@ -427,13 +427,13 @@
     "form": {
       "area": "Bereich oder Stufe",
       "choosePhoto": "Foto auswählen",
-      "expiresOn": "Läuft ab (jjjj-mm-tt)",
+      "expiresOn": "Läuft ab",
       "issuedBy": "Ausgestellt von",
       "name": "Name",
       "number": "Nummer",
       "otherType": "Andere (Namen eingeben)",
       "photoAttached": "Foto angehängt.",
-      "receivedOn": "Erworben (jjjj-mm-tt)",
+      "receivedOn": "Erworben",
       "save": "Speichern",
       "takePhoto": "Foto des Ausweises",
       "type": "Qualifikation"
@@ -443,7 +443,7 @@
     "hoursInvalid": "Geben Sie mehr als 0 Stunden ein.",
     "issuedByIs": "Ausgestellt von {{name}}",
     "nameRequired": "Wählen Sie einen Typ oder geben Sie einen Namen ein.",
-    "newExpiry": "Neues Ablaufdatum (jjjj-mm-tt)",
+    "newExpiry": "Neues Ablaufdatum",
     "newNumber": "Neue Nummer (optional)",
     "noExpiry": "Läuft nicht ab",
     "none": "Sie haben noch keine Qualifikationen hinzugefügt.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut.",
     "step_up_unavailable": "Geschützte Daten sind auf diesem Server noch nicht verfügbar. Wenden Sie sich an Ihre Administration.",
     "step_up_verify": "Bestätigen"
+  },
+  "dateTimePicker": {
+    "clear": "Löschen",
+    "date": "Datum",
+    "hour": "Stunde",
+    "minute": "Minute"
   },
   "form": {
     "invalid_url": "Bitte geben Sie eine gültige URL ein, die mit http:// oder https:// beginnt",

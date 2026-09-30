@@ -72,7 +72,9 @@ const problemMessage = (error: unknown): string => {
  */
 export const hashFile = async (fileUri: string): Promise<string> => {
   const base64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
-  const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, Buffer.from(base64, 'base64'));
+  const bytes = Buffer.from(base64, 'base64');
+  // Expo's native bridge requires a plain typed array, not the Buffer subclass.
+  const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength));
   return Buffer.from(digest).toString('hex');
 };
 

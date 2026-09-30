@@ -408,7 +408,7 @@
     "category": "Categoria (corso, esercitazione, convegno)",
     "certificateAttached": "certificato allegato",
     "creditAdded": "Ore aggiunte.",
-    "creditDate": "Data (aaaa-mm-gg, vuoto per oggi)",
+    "creditDate": "Data (oggi per impostazione predefinita)",
     "creditNote": "Di cosa si trattava",
     "credits": "{{hours}} su {{required}} ore di formazione continua",
     "creditsTitle": "{{hours}} ore di formazione continua",
@@ -427,13 +427,13 @@
     "form": {
       "area": "Ambito o livello",
       "choosePhoto": "Scegli foto",
-      "expiresOn": "Scade (aaaa-mm-gg)",
+      "expiresOn": "Scade",
       "issuedBy": "Rilasciata da",
       "name": "Nome",
       "number": "Numero",
       "otherType": "Altro (inserisci un nome)",
       "photoAttached": "Foto allegata.",
-      "receivedOn": "Conseguita (aaaa-mm-gg)",
+      "receivedOn": "Conseguita",
       "save": "Salva",
       "takePhoto": "Foto della tessera",
       "type": "Certificazione"
@@ -443,7 +443,7 @@
     "hoursInvalid": "Inserisci più di 0 ore.",
     "issuedByIs": "Rilasciata da {{name}}",
     "nameRequired": "Scegli un tipo o inserisci un nome.",
-    "newExpiry": "Nuova data di scadenza (aaaa-mm-gg)",
+    "newExpiry": "Nuova data di scadenza",
     "newNumber": "Nuovo numero (facoltativo)",
     "noExpiry": "Non scade",
     "none": "Non hai ancora aggiunto certificazioni.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "Troppi tentativi. Attendi qualche minuto e riprova.",
     "step_up_unavailable": "I dati protetti non sono ancora disponibili su questo server. Contatta l'amministratore.",
     "step_up_verify": "Verifica"
+  },
+  "dateTimePicker": {
+    "clear": "Cancella",
+    "date": "Data",
+    "hour": "Ora",
+    "minute": "Minuto"
   },
   "form": {
     "invalid_url": "Inserire un URL valido che inizi con http:// o https://",

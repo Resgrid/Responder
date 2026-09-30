@@ -408,7 +408,7 @@
     "category": "Kategori (kurs, övning, konferens)",
     "certificateAttached": "intyg bifogat",
     "creditAdded": "Timmar tillagda.",
-    "creditDate": "Datum (åååå-mm-dd, tomt för i dag)",
+    "creditDate": "Datum (idag som standard)",
     "creditNote": "Vad det var",
     "credits": "{{hours}} av {{required}} timmar vidareutbildning",
     "creditsTitle": "{{hours}} timmar vidareutbildning",
@@ -427,13 +427,13 @@
     "form": {
       "area": "Område eller nivå",
       "choosePhoto": "Välj foto",
-      "expiresOn": "Går ut (åååå-mm-dd)",
+      "expiresOn": "Går ut",
       "issuedBy": "Utfärdad av",
       "name": "Namn",
       "number": "Nummer",
       "otherType": "Annan (ange namn)",
       "photoAttached": "Foto bifogat.",
-      "receivedOn": "Erhållen (åååå-mm-dd)",
+      "receivedOn": "Erhållen",
       "save": "Spara",
       "takePhoto": "Foto av kortet",
       "type": "Behörighet"
@@ -443,7 +443,7 @@
     "hoursInvalid": "Ange fler än 0 timmar.",
     "issuedByIs": "Utfärdad av {{name}}",
     "nameRequired": "Välj en typ eller ange ett namn.",
-    "newExpiry": "Nytt utgångsdatum (åååå-mm-dd)",
+    "newExpiry": "Nytt utgångsdatum",
     "newNumber": "Nytt nummer (valfritt)",
     "noExpiry": "Går inte ut",
     "none": "Du har inte lagt till några behörigheter än.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "För många försök. Vänta några minuter och försök igen.",
     "step_up_unavailable": "Skyddade uppgifter är ännu inte tillgängliga på den här servern. Kontakta din administratör.",
     "step_up_verify": "Bekräfta"
+  },
+  "dateTimePicker": {
+    "clear": "Rensa",
+    "date": "Datum",
+    "hour": "Timme",
+    "minute": "Minut"
   },
   "form": {
     "invalid_url": "Ange en giltig URL som börjar med http:// eller https://",

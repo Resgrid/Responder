@@ -408,7 +408,7 @@
     "category": "Categoría (curso, simulacro, congreso)",
     "certificateAttached": "certificado adjunto",
     "creditAdded": "Horas añadidas.",
-    "creditDate": "Fecha (aaaa-mm-dd, vacío para hoy)",
+    "creditDate": "Fecha (hoy por defecto)",
     "creditNote": "Qué fue",
     "credits": "{{hours}} de {{required}} horas de formación continua",
     "creditsTitle": "{{hours}} horas de formación continua",
@@ -427,13 +427,13 @@
     "form": {
       "area": "Área o nivel",
       "choosePhoto": "Elegir foto",
-      "expiresOn": "Caduca (aaaa-mm-dd)",
+      "expiresOn": "Caduca",
       "issuedBy": "Emitida por",
       "name": "Nombre",
       "number": "Número",
       "otherType": "Otra (escriba un nombre)",
       "photoAttached": "Foto adjunta.",
-      "receivedOn": "Obtenida (aaaa-mm-dd)",
+      "receivedOn": "Obtenida",
       "save": "Guardar",
       "takePhoto": "Foto de la tarjeta",
       "type": "Certificación"
@@ -443,7 +443,7 @@
     "hoursInvalid": "Introduzca más de 0 horas.",
     "issuedByIs": "Emitida por {{name}}",
     "nameRequired": "Elija un tipo o escriba un nombre.",
-    "newExpiry": "Nueva fecha de caducidad (aaaa-mm-dd)",
+    "newExpiry": "Nueva fecha de caducidad",
     "newNumber": "Nuevo número (opcional)",
     "noExpiry": "No caduca",
     "none": "Aún no ha añadido certificaciones.",
@@ -989,6 +989,12 @@
     "step_up_too_many_attempts": "Demasiados intentos. Espere unos minutos e inténtelo de nuevo.",
     "step_up_unavailable": "Los datos protegidos aún no están disponibles en este servidor. Póngase en contacto con su administrador.",
     "step_up_verify": "Verificar"
+  },
+  "dateTimePicker": {
+    "clear": "Borrar",
+    "date": "Fecha",
+    "hour": "Hora",
+    "minute": "Minuto"
   },
   "form": {
     "invalid_url": "Por favor, introduce una URL válida que comience con http:// o https://",
