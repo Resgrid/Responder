@@ -1,3 +1,5 @@
+import type { MfaChallenge } from '@/lib/mfa/types';
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -8,7 +10,11 @@ export type SsoProvider = 'oidc' | 'saml2';
 export interface ExternalTokenCredentials {
   provider: SsoProvider;
   externalToken: string;
-  departmentCode: string;
+  /**
+   * The department, as the system-encrypted token SSO discovery returns (or the SAML relay's callback carries). The
+   * server reads this or a department code, never a username.
+   */
+  departmentToken: string;
   /** Current authenticator (TOTP) code; required when the account has 2FA enabled. */
   otpCode?: string;
 }
@@ -38,6 +44,13 @@ export interface LoginResponse {
   mfaRequired?: boolean;
   /** A code was supplied but rejected (error invalid_totp). */
   invalidOtp?: boolean;
+  /**
+   * The sign-in continues on a login transaction (passkey plan section 7.5): the password was right and a second factor,
+   * or setting one up, finishes it. The secret is the only authority for that; it is held in memory and never logged.
+   */
+  mfaTransaction?: { secret: string; challenge: MfaChallenge };
+  /** The department requires MFA the account does not have, and this server cannot set it up in the app. */
+  enrollmentRequired?: boolean;
 }
 export interface ProfileModel {
   sub: string;

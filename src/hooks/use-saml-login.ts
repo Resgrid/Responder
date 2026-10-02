@@ -6,11 +6,12 @@ import { useCallback } from 'react';
 
 import { isValidSsoUrl } from '@/hooks/use-oidc-login';
 import { logger } from '@/lib/logging';
+import { RESGRID_CLIENT } from '@/lib/mfa/client-app';
 import { getItem, removeItem, setItem } from '@/lib/storage';
 import useAuthStore, { PENDING_SAML_STATE_KEY } from '@/stores/auth/store';
 
-/** MMKV key used to persist the active SAML department code across cold starts */
-export const PENDING_SAML_DEPT_CODE_KEY = 'pending_saml_dept_code';
+/** MMKV key holding discovery's department token across a cold start, for a relay callback that carries none */
+export const PENDING_SAML_DEPT_TOKEN_KEY = 'pending_saml_dept_token';
 
 const PENDING_SAML_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -83,8 +84,10 @@ const consumePendingSamlState = async (callbackState?: string): Promise<boolean>
 };
 
 export interface UseSamlLoginOptions {
-  idpSsoUrl: string;
-  departmentCode: string;
+  /** The server's SAML start page (discovery's SamlLoginUrl), which sends the browser on to the department's IdP. */
+  signInUrl: string;
+  /** Discovery's department token; the relay's callback normally carries its own. */
+  departmentToken: string;
 }
 
 export interface UseSamlLoginResult {
@@ -98,39 +101,40 @@ export interface UseSamlLoginResult {
  * Flow:
  *  1. Call startSamlLogin() to open the IdP SSO URL in a browser.
  *  2. The IdP POSTs a SAMLResponse to the SP ACS URL.
- *  3. The SP ACS URL redirects to resgrid://auth/callback?saml_response=<base64>.
+ *  3. The SP ACS URL redirects to resgrid://auth/callback?saml_response=<relay token>&relay_state=<our RelayState>.
  *  4. The deep-link is intercepted by the app and handleDeepLink() is called.
  *  5. handleDeepLink() exchanges the SAMLResponse for a Resgrid token.
  *
- * NOTE: The backend SP ACS endpoint must redirect to
- * resgrid://auth/callback?saml_response=<base64url-encoded SAMLResponse>
- * See the implementation plan Step 8 for backend configuration.
+ * NOTE: The backend relay (connect/saml-mobile-callback) returns to the app named in the RelayState (responder.<nonce>)
+ * and echoes it as relay_state; a callback whose relay_state is not our pending one is refused (login CSRF).
  */
-export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions): UseSamlLoginResult {
+export function useSamlLogin({ signInUrl, departmentToken }: UseSamlLoginOptions): UseSamlLoginResult {
   const { loginWithSso } = useAuthStore();
 
   const startSamlLogin = useCallback(async (): Promise<void> => {
-    if (!idpSsoUrl) {
-      logger.warn({ message: 'SAML: idpSsoUrl is empty, cannot start login' });
+    if (!signInUrl) {
+      logger.warn({ message: 'SAML: no sign-in page, cannot start login' });
       return;
     }
 
-    if (!isValidSsoUrl(idpSsoUrl)) {
-      logger.error({ message: 'SAML: refusing to open non-HTTPS or malformed IdP SSO URL', context: { idpSsoUrl } });
+    if (!isValidSsoUrl(signInUrl)) {
+      logger.error({ message: 'SAML: refusing to open a non-HTTPS or malformed sign-in page' });
       return;
     }
 
-    const state = Crypto.randomUUID();
+    // One-time RelayState, tagged with this app's name: every app shares one ACS URL, so the server's relay returns to the
+    // app named here and echoes the whole value back as relay_state. IdPs round-trip RelayState, not arbitrary params.
+    const state = `${RESGRID_CLIENT}.${Crypto.randomUUID()}`;
     await savePendingSamlState(state);
 
-    // Persist department code so the cold-start deep-link handler can retrieve it
-    await setItem<string>(PENDING_SAML_DEPT_CODE_KEY, departmentCode);
+    // Keep discovery's department token for a cold-start callback that carries none
+    await setItem<string>(PENDING_SAML_DEPT_TOKEN_KEY, departmentToken);
 
-    const initiateUrl = `${idpSsoUrl}${idpSsoUrl.includes('?') ? '&' : '?'}state=${encodeURIComponent(state)}`;
+    const initiateUrl = `${signInUrl}${signInUrl.includes('?') ? '&' : '?'}RelayState=${encodeURIComponent(state)}`;
 
-    logger.info({ message: 'SAML: opening IdP SSO URL', context: { idpSsoUrl } });
+    logger.info({ message: 'SAML: opening the sign-in page' });
     await WebBrowser.openBrowserAsync(initiateUrl);
-  }, [idpSsoUrl, departmentCode]);
+  }, [signInUrl, departmentToken]);
 
   const handleDeepLink = useCallback(
     async (url: string): Promise<boolean> => {
@@ -142,9 +146,9 @@ export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions)
         return false;
       }
 
-      const stateValid = await consumePendingSamlState(parsed.queryParams?.state as string | undefined);
+      const stateValid = await consumePendingSamlState(parsed.queryParams?.relay_state as string | undefined);
       if (!stateValid) {
-        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
+        await removeItem(PENDING_SAML_DEPT_TOKEN_KEY);
         return false;
       }
 
@@ -154,7 +158,7 @@ export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions)
         await loginWithSso({
           provider: 'saml2',
           externalToken: samlResponse,
-          departmentCode,
+          departmentToken: callbackDepartmentToken(parsed.queryParams?.department_token) ?? departmentToken,
         });
         return true;
       } catch (error) {
@@ -165,19 +169,22 @@ export function useSamlLogin({ idpSsoUrl, departmentCode }: UseSamlLoginOptions)
         return false;
       } finally {
         await clearPendingSamlState();
-        await removeItem(PENDING_SAML_DEPT_CODE_KEY);
+        await removeItem(PENDING_SAML_DEPT_TOKEN_KEY);
       }
     },
-    [departmentCode, loginWithSso]
+    [departmentToken, loginWithSso]
   );
 
   return { startSamlLogin, handleDeepLink };
 }
 
+/** The department token the relay put on its callback (connect/saml-mobile-callback always sends one). */
+const callbackDepartmentToken = (value: unknown): string | null => (typeof value === 'string' && value.length > 0 ? value : null);
+
 /**
  * Standalone SAML deep-link handler for use outside of React components
  * (e.g., in the app _layout.tsx for cold-start callbacks).
- * Reads the stored department code from MMKV and calls loginWithSso directly.
+ * Uses the relay callback's department token, or the one stored at launch, and calls loginWithSso directly.
  */
 export async function handleSamlCallbackUrl(url: string): Promise<boolean> {
   const parsed = Linking.parse(url);
@@ -185,15 +192,15 @@ export async function handleSamlCallbackUrl(url: string): Promise<boolean> {
 
   if (!samlResponse) return false;
 
-  const stateValid = await consumePendingSamlState(parsed.queryParams?.state as string | undefined);
+  const stateValid = await consumePendingSamlState(parsed.queryParams?.relay_state as string | undefined);
   if (!stateValid) {
-    await removeItem(PENDING_SAML_DEPT_CODE_KEY);
+    await removeItem(PENDING_SAML_DEPT_TOKEN_KEY);
     return false;
   }
 
-  const departmentCode = getItem<string>(PENDING_SAML_DEPT_CODE_KEY);
-  if (!departmentCode) {
-    logger.warn({ message: 'SAML cold-start: no pending department code found in storage' });
+  const departmentToken = callbackDepartmentToken(parsed.queryParams?.department_token) ?? getItem<string>(PENDING_SAML_DEPT_TOKEN_KEY);
+  if (!departmentToken) {
+    logger.warn({ message: 'SAML cold-start: no department token on the callback or in storage' });
     await clearPendingSamlState();
     return false;
   }
@@ -204,9 +211,9 @@ export async function handleSamlCallbackUrl(url: string): Promise<boolean> {
     await useAuthStore.getState().loginWithSso({
       provider: 'saml2',
       externalToken: samlResponse,
-      departmentCode,
+      departmentToken,
     });
-    await removeItem(PENDING_SAML_DEPT_CODE_KEY);
+    await removeItem(PENDING_SAML_DEPT_TOKEN_KEY);
     return true;
   } catch (error) {
     logger.error({

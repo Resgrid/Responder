@@ -2,6 +2,7 @@ import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestCo
 
 import { readProtectedGrantHeaders } from '@/lib/data-protection/grant-provider';
 import { logger } from '@/lib/logging';
+import { CLIENT_HEADER, RESGRID_CLIENT } from '@/lib/mfa/client-app';
 import { getBaseApiUrl } from '@/lib/storage/app';
 import useAuthStore from '@/stores/auth/store';
 
@@ -15,6 +16,8 @@ const axiosInstance: AxiosInstance = axios.create({
   timeout: DEFAULT_REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
+    // Which app is calling (passkey plan section 10.4): passkeys, brokered SSO and approvals are bound to it.
+    [CLIENT_HEADER]: RESGRID_CLIENT,
   },
 });
 
@@ -128,6 +131,13 @@ axiosInstance.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config;
     if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
+    // A 401 carrying a problem `type` is the application refusing this request (a wrong code, a session that ended),
+    // not an expired token: the authentication layer answers those with an empty body. Refreshing and replaying would
+    // count a wrong code twice toward the lockout.
+    if (error.response?.status === 401 && typeof (error.response.data as { type?: unknown } | undefined)?.type === 'string') {
       return Promise.reject(error);
     }
 

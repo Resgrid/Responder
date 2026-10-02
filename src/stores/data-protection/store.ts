@@ -1,8 +1,27 @@
 import { create } from 'zustand';
 
-import { getDataProtectionCapabilities, requestProtectedGrant, verifyStepUp } from '@/api/data-protection/data-protection';
+import {
+  beginStepUpSso,
+  cancelStepUpApproval,
+  completeStepUpApproval,
+  completeStepUpFederated,
+  getDataProtectionCapabilities,
+  getStepUpApprovalStatus,
+  getStepUpMethods,
+  getStepUpPasskeyOptions,
+  requestProtectedGrant,
+  requestStepUpApproval,
+  type StepUpResult,
+  verifyStepUp,
+  verifyStepUpPasskey,
+} from '@/api/data-protection/data-protection';
 import { setProtectedGrantProvider } from '@/lib/data-protection/grant-provider';
 import { logger } from '@/lib/logging';
+import { type ApprovalWaitResult, waitForApproval } from '@/lib/mfa/approval-wait';
+import { toMfaProblem } from '@/lib/mfa/errors';
+import { getPasskeyAssertion, passkeysSupported } from '@/lib/mfa/passkey';
+import { isPasskeyCeremonyError } from '@/lib/mfa/passkey-errors';
+import { runSsoRoundTrip } from '@/lib/mfa/sso-browser';
 import { registerStoreReset } from '@/lib/storage/clear-all-data';
 
 // ---------------------------------------------------------------------------
@@ -13,7 +32,11 @@ import { registerStoreReset } from '@/lib/storage/clear-all-data';
 // starts locked. The window is ABSOLUTE — activity never extends it.
 // ---------------------------------------------------------------------------
 
-export type StepUpErrorCode = 'invalid_totp' | 'mfa_not_enrolled' | 'too_many_attempts' | 'grants_not_configured' | 'unknown';
+/**
+ * Why the last step-up did not produce a grant. The first five are the TOTP path's own; the other methods report the
+ * server's code (or `passkey_*` / `sso_*` for a prompt or browser round trip that did not finish), shown via mfaErrorKey.
+ */
+export type StepUpErrorCode = 'invalid_totp' | 'mfa_not_enrolled' | 'too_many_attempts' | 'grants_not_configured' | 'unknown' | (string & {});
 
 /** What ensureGrant() concluded. The caller shows the OTP prompt only for 'step_up_required'. */
 export type GrantOutcome = 'granted' | 'step_up_required' | 'unavailable';
@@ -43,6 +66,19 @@ export interface DataProtectionState {
   openPrompt: () => void;
   closePrompt: () => void;
   lastError: StepUpErrorCode | null;
+  /** The step-up methods this member has and the department accepts for protected data; null until loaded. */
+  stepUpMethods: string[] | null;
+  preferredStepUpMethod: string | null;
+  loadStepUpMethods: () => Promise<void>;
+  /** A passkey for this app (plan section 8.1). */
+  verifyPasskey: () => Promise<boolean>;
+  /** Approve with Responder: returns the number to show on this screen only. */
+  requestApproval: () => Promise<{ id: string; number: string } | null>;
+  waitForApproval: (approvalRequestId: string, signal?: AbortSignal) => Promise<ApprovalWaitResult>;
+  completeApproval: (approvalRequestId: string) => Promise<boolean>;
+  cancelApproval: (approvalRequestId: string) => Promise<void>;
+  /** The department's identity provider, where it accepts its provider's MFA for protected data (plan section 7.8). */
+  verifyFederated: () => Promise<boolean>;
   fetchCapabilities: () => Promise<void>;
   /**
    * Tries to obtain a grant without prompting. Returns 'granted' when the department has exempted
@@ -78,6 +114,32 @@ const parseErrorCode = (error: unknown): StepUpErrorCode => {
 
 const problemType = (error: unknown): string | undefined => (error as { response?: { data?: { type?: string } } })?.response?.data?.type;
 
+/** The grant a step-up returned, when it is a usable one; a token-less or already-expired answer is a failure. */
+const grantFrom = (result: StepUpResult | undefined): { grantToken: string; stepUpExpiresAt: number } | null => {
+  const expiresAt = result?.StepUpExpiresOnUtc ? Date.parse(result.StepUpExpiresOnUtc) : NaN;
+  return result?.GrantToken && Number.isFinite(expiresAt) && expiresAt > Date.now() ? { grantToken: result.GrantToken, stepUpExpiresAt: expiresAt } : null;
+};
+
+/** Runs one step-up method; the grant it returns (memory only) becomes the window, and any refusal its code. */
+const stepUp = async (method: string, run: () => Promise<StepUpResult | null>): Promise<boolean> => {
+  dataProtectionStore.setState({ isVerifying: true, lastError: null });
+  try {
+    const result = await run();
+    if (!result) {
+      dataProtectionStore.setState({ isVerifying: false });
+      return false;
+    }
+    const grant = grantFrom(result);
+    dataProtectionStore.setState(grant ? { ...grant, isVerifying: false, lastError: null } : { isVerifying: false, lastError: 'unknown' });
+    return !!grant;
+  } catch (error) {
+    const code = isPasskeyCeremonyError(error) ? `passkey_${error.reason}` : toMfaProblem(error).code;
+    logger.warn({ message: 'ADP step-up failed', context: { method, errorType: code } });
+    dataProtectionStore.setState({ isVerifying: false, lastError: code });
+    return false;
+  }
+};
+
 export const dataProtectionStore = create<DataProtectionState>()((set, get) => ({
   capabilities: null,
   isCapabilitiesLoaded: false,
@@ -87,6 +149,48 @@ export const dataProtectionStore = create<DataProtectionState>()((set, get) => (
   isRequestingGrant: false,
   isPromptOpen: false,
   lastError: null,
+  stepUpMethods: null,
+  preferredStepUpMethod: null,
+  loadStepUpMethods: async () => {
+    try {
+      const methods = await getStepUpMethods();
+      const usable = (methods?.Methods ?? []).filter((m) => m !== 'passkey' || passkeysSupported());
+      set({ stepUpMethods: usable, preferredStepUpMethod: methods?.Preferred ?? null });
+    } catch {
+      // An older server has no methods list: the authenticator code is the step-up it has always offered.
+      set({ stepUpMethods: ['totp'], preferredStepUpMethod: 'totp' });
+    }
+  },
+  verifyPasskey: () =>
+    stepUp('passkey', async () => {
+      const ceremony = await getStepUpPasskeyOptions();
+      const credential = await getPasskeyAssertion(ceremony.Options);
+      return verifyStepUpPasskey(ceremony.RequestId, credential);
+    }),
+  requestApproval: async () => {
+    set({ lastError: null });
+    try {
+      const started = await requestStepUpApproval();
+      return { id: started.ApprovalRequestId, number: started.MatchNumber };
+    } catch (error) {
+      set({ lastError: toMfaProblem(error).code });
+      return null;
+    }
+  },
+  waitForApproval: (approvalRequestId: string, signal?: AbortSignal) => waitForApproval(() => getStepUpApprovalStatus(approvalRequestId), signal),
+  completeApproval: (approvalRequestId: string) => stepUp('passkey_approval', () => completeStepUpApproval(approvalRequestId)),
+  cancelApproval: async (approvalRequestId: string) => {
+    await cancelStepUpApproval(approvalRequestId).catch(() => undefined);
+  },
+  verifyFederated: () =>
+    stepUp('federated', async () => {
+      const trip = await runSsoRoundTrip((secrets) => beginStepUpSso(secrets));
+      if (!trip.ok) {
+        set({ lastError: trip.code ?? `sso_${trip.reason}` });
+        return null;
+      }
+      return completeStepUpFederated(trip.trip.ssoTransactionId, trip.trip.ssoCode, trip.trip.codeVerifier);
+    }),
   openPrompt: () => set({ isPromptOpen: true, lastError: null }),
   closePrompt: () => set({ isPromptOpen: false }),
   fetchCapabilities: async () => {
@@ -207,6 +311,8 @@ registerStoreReset('dataProtection', () => {
     isRequestingGrant: false,
     isPromptOpen: false,
     lastError: null,
+    stepUpMethods: null,
+    preferredStepUpMethod: null,
   });
 });
 

@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { LoginFormProps } from '@/app/login/login-form';
+import { LoginMfaSheet } from '@/components/auth/login-mfa-sheet';
 import { LoginOtpModal } from '@/components/auth/login-otp-modal';
 import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { FocusAwareStatusBar } from '@/components/ui';
@@ -15,6 +16,8 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth } from '@/lib/auth';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { isMfaErrorCode, mfaErrorKey } from '@/lib/mfa/messages';
+import useAuthStore from '@/stores/auth/store';
 
 import { LoginForm } from './login-form';
 
@@ -28,7 +31,10 @@ export default function Login() {
   const { t } = useTranslation();
   const router = useRouter();
   const { login, status, error, isAuthenticated } = useAuth();
+  const mfaChallenge = useAuthStore((s) => s.mfaChallenge);
   const { trackEvent } = useAnalytics();
+  // A sign-in that ended (expired, too many attempts, policy changed) says why in the member's language.
+  const displayError = isMfaErrorCode(error) ? t(mfaErrorKey(error)) : error;
 
   // Track analytics when view becomes visible
   useFocusEffect(
@@ -117,13 +123,22 @@ export default function Login() {
     <>
       <FocusAwareStatusBar />
 
-      <LoginForm onSubmit={onLocalLoginSubmit} isLoading={status === 'loading'} onSsoPress={() => router.push('/login/sso')} onServerUrlPress={() => setIsServerUrlSheetVisible(true)} {...(error ? { error } : {})} />
+      <LoginForm
+        onSubmit={onLocalLoginSubmit}
+        isLoading={status === 'loading'}
+        onSsoPress={() => router.push('/login/sso')}
+        onServerUrlPress={() => setIsServerUrlSheetVisible(true)}
+        {...(displayError ? { error: displayError } : {})}
+      />
 
       {isServerUrlSheetVisible ? <ServerUrlBottomSheet isOpen={isServerUrlSheetVisible} onClose={() => setIsServerUrlSheetVisible(false)} /> : null}
 
-      {/* Two-factor challenge: token endpoint answered mfa_required / invalid_totp */}
+      {/* Second factor on the login transaction: the methods this sign-in accepts, or the setup the department requires. An SSO sign-in's second factor is the SSO screen's, on top of this one */}
+      <LoginMfaSheet isOpen={status === 'mfaRequired' && mfaChallenge != null && mfaChallenge.kind !== 'legacy' && mfaChallenge.source !== 'sso'} onLostFactor={() => router.push('/login/recovery')} />
+
+      {/* Two-factor challenge on an older server: token endpoint answered mfa_required / invalid_totp with no transaction */}
       <LoginOtpModal
-        isOpen={status === 'mfaRequired' && !otpDismissed && pendingCredentials != null}
+        isOpen={status === 'mfaRequired' && mfaChallenge?.kind === 'legacy' && !otpDismissed && pendingCredentials != null}
         isSubmitting={status === 'loading'}
         invalidCode={error === 'invalid_totp'}
         onSubmit={onOtpSubmit}
@@ -140,7 +155,7 @@ export default function Login() {
             </ModalHeader>
             <ModalBody>
               <Text>{t('login.errorModal.message')}</Text>
-              {error ? <Text className="mt-2 text-sm text-gray-500">{error}</Text> : null}
+              {displayError ? <Text className="mt-2 text-sm text-gray-500">{displayError}</Text> : null}
             </ModalBody>
             <ModalFooter>
               <Button

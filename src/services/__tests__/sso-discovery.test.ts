@@ -40,9 +40,53 @@ describe('ssoDiscovery', () => {
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://api.resgrid.dev/api/v4/connect/sso-config',
-        { params: { departmentCode: 'DEPT001' } },
+        { params: { departmentCode: 'DEPT001' }, headers: { 'X-Resgrid-Client': 'responder' } },
       );
-      expect(result).toEqual(mockConfig);
+      expect(result).toEqual({ ...mockConfig, departmentId: null, departmentToken: null, brokeredSsoAvailable: false, samlLoginUrl: null });
+    });
+
+    it('reads the PascalCase v4 payload, including the brokered SSO fields', async () => {
+      mockedAxios.get = jest.fn().mockResolvedValue({
+        data: {
+          Data: {
+            SsoEnabled: true,
+            ProviderType: 'saml2',
+            Authority: null,
+            ClientId: null,
+            MetadataUrl: 'https://idp.example.com/metadata',
+            EntityId: 'urn:resgrid',
+            AllowLocalLogin: false,
+            RequireSso: true,
+            RequireMfa: true,
+            OidcRedirectUri: null,
+            OidcScopes: null,
+            DepartmentId: 42,
+            DepartmentToken: 'enc-token',
+            BrokeredSsoAvailable: true,
+            SamlLoginUrl: 'https://api.example.com/api/v4/connect/saml-mobile-login?departmentToken=enc-token',
+          },
+        },
+      });
+
+      const result = await fetchDepartmentSsoConfig('DEPT001');
+
+      expect(result).toEqual({
+        ssoEnabled: true,
+        providerType: 'saml2',
+        authority: null,
+        clientId: null,
+        metadataUrl: 'https://idp.example.com/metadata',
+        entityId: 'urn:resgrid',
+        samlLoginUrl: 'https://api.example.com/api/v4/connect/saml-mobile-login?departmentToken=enc-token',
+        allowLocalLogin: false,
+        requireSso: true,
+        requireMfa: true,
+        oidcRedirectUri: '',
+        oidcScopes: '',
+        departmentId: 42,
+        departmentToken: 'enc-token',
+        brokeredSsoAvailable: true,
+      });
     });
 
     it('returns null when the API response has no Data field', async () => {
@@ -105,9 +149,9 @@ describe('ssoDiscovery', () => {
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://api.resgrid.dev/api/v4/connect/sso-config-for-user',
-        { params: { username: 'jdoe@example.com' } },
+        { params: { username: 'jdoe@example.com' }, headers: { 'X-Resgrid-Client': 'responder' } },
       );
-      expect(result).toEqual(mockOidcConfig);
+      expect(result).toEqual({ ...mockOidcConfig, departmentId: null, departmentToken: null, brokeredSsoAvailable: false, samlLoginUrl: null });
     });
 
     it('includes departmentId param when provided', async () => {
@@ -117,7 +161,7 @@ describe('ssoDiscovery', () => {
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://api.resgrid.dev/api/v4/connect/sso-config-for-user',
-        { params: { username: 'jdoe@example.com', departmentId: 42 } },
+        { params: { username: 'jdoe@example.com', departmentId: 42 }, headers: { 'X-Resgrid-Client': 'responder' } },
       );
     });
 
@@ -128,7 +172,7 @@ describe('ssoDiscovery', () => {
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://api.resgrid.dev/api/v4/connect/sso-config-for-user',
-        { params: { username: 'jdoe@example.com' } },
+        { params: { username: 'jdoe@example.com' }, headers: { 'X-Resgrid-Client': 'responder' } },
       );
     });
 
