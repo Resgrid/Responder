@@ -82,6 +82,31 @@ describe('finishing a sign-in on the login transaction', () => {
     expect(hasLoginTransaction()).toBe(false);
   });
 
+  it('ends the sign-in when the completion grant fails, since the factor is already spent', async () => {
+    const h = host();
+    holdLoginTransaction('secret');
+    mocked.completeTotp.mockResolvedValue(completion());
+    grant.mockRejectedValueOnce(new Error('offline'));
+
+    expect(await verifyLoginMfa(h, { method: 'totp', code: '123456' })).toEqual({ ok: false, code: 'network_error', restart: true });
+    expect(h.restart).toHaveBeenCalledWith('network_error');
+    expect(h.signIn).not.toHaveBeenCalled();
+    expect(hasLoginTransaction()).toBe(false);
+  });
+
+  it('ends the sign-in when the tokens it returned cannot be used', async () => {
+    const h = host();
+    h.signIn.mockImplementation(() => {
+      throw new Error('Invalid ID token format');
+    });
+    holdLoginTransaction('secret');
+    mocked.completeTotp.mockResolvedValue(completion());
+
+    expect(await verifyLoginMfa(h, { method: 'totp', code: '123456' })).toEqual({ ok: false, code: 'unknown_error', restart: true });
+    expect(h.restart).toHaveBeenCalledWith('unknown_error');
+    expect(hasLoginTransaction()).toBe(false);
+  });
+
   it('finishes setting up the required authenticator and hands the new recovery codes over once', async () => {
     const h = host();
     holdLoginTransaction('setup-secret');

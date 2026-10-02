@@ -6,13 +6,18 @@ export type ApprovalWaitResult = ApprovalState | 'aborted' | 'unavailable';
 
 const TERMINAL: readonly ApprovalState[] = ['approved', 'denied', 'expired', 'canceled', 'consumed'];
 
+// Each pause removes its own abort listener, so a long wait does not pile one up per poll on the caller's signal.
 const wait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener('abort', () => {
+    const onAbort = () => {
       clearTimeout(timer);
       resolve();
-    });
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 
 /**

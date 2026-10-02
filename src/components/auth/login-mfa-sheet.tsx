@@ -98,10 +98,15 @@ export const LoginMfaSheet: React.FC<LoginMfaSheetProps> = ({ isOpen, onLostFact
   const run = useCallback(async (action: () => Promise<{ ok: boolean; code?: string }>) => {
     setBusy(true);
     setErrorCode(null);
-    const result = await action();
-    setBusy(false);
-    if (!result.ok) {
-      setErrorCode(result.code ?? 'unknown_error');
+    try {
+      const result = await action();
+      if (!result.ok) {
+        setErrorCode(result.code ?? 'unknown_error');
+      }
+    } catch {
+      setErrorCode('unknown_error');
+    } finally {
+      setBusy(false);
     }
   }, []);
 

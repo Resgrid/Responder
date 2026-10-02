@@ -78,3 +78,15 @@ it('ignores vertical scrolling and clamps swipes at the last step without comple
   expect(props.onFinish).toHaveBeenCalledTimes(1);
   screen.unmount();
 });
+
+it('starts each step at the top of the page', () => {
+  const scrollTo = jest.fn();
+  const screen = render(<OnboardingScreen {...props} />, { createNodeMock: (element) => (element.type === 'RNScrollView' ? { scrollTo } : null) });
+  scrollTo.mockClear();
+  screen.rerender(<OnboardingScreen {...props} currentIndex={1} />);
+  expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+  scrollTo.mockClear();
+  screen.rerender(<OnboardingScreen {...props} currentIndex={1} />);
+  expect(scrollTo).not.toHaveBeenCalled();
+  screen.unmount();
+});

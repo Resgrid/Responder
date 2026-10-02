@@ -84,6 +84,25 @@ describe('AccountSecurity', () => {
     expect(mocked.completePasskeyRegistration).not.toHaveBeenCalled();
   });
 
+  it('reports the refusal instead of asking for proof a third time when no retry is left', async () => {
+    mocked.getPasskeyRegistrationOptions.mockRejectedValue(refusal(401, 'reauthentication_required'));
+    mocked.reauthenticateWithPassword.mockResolvedValue({ VerifiedAt: 'now' });
+    const { getByTestId, queryByTestId } = render(<AccountSecurity />);
+    await waitFor(() => expect(getByTestId('account-add-passkey')).toBeTruthy());
+
+    await act(async () => fireEvent.press(getByTestId('account-add-passkey')));
+    for (let proof = 0; proof < 2; proof++) {
+      await waitFor(() => expect(getByTestId('account-verify-secret')).toBeTruthy());
+      fireEvent.changeText(getByTestId('account-verify-secret'), 'pw');
+      await act(async () => fireEvent.press(getByTestId('account-verify-submit')));
+    }
+
+    await waitFor(() => expect(getByTestId('account-error').props.children).toBe('mfa.errors.reauthentication_required'));
+    expect(queryByTestId('account-verify-modal')).toBeNull();
+    expect(mocked.reauthenticateWithPassword).toHaveBeenCalledTimes(2);
+    expect(mocked.getPasskeyRegistrationOptions).toHaveBeenCalledTimes(3);
+  });
+
   it('reports a verification that was not the member', async () => {
     mocked.reportActivity.mockResolvedValue({ SessionEnded: true, NextSteps: [] });
     const { getByTestId } = render(<AccountSecurity />);

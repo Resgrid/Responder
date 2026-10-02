@@ -70,6 +70,49 @@ describe('StepUpModal with every method', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('starts one approval request however often it is pressed', async () => {
+    let start: (value: { id: string; number: string }) => void = () => undefined;
+    store.requestApproval.mockReturnValue(new Promise((resolve) => (start = resolve)));
+    store.waitForApproval.mockReturnValue(new Promise(() => undefined));
+    const { getByTestId } = render(<StepUpModal isOpen onClose={jest.fn()} />);
+
+    fireEvent.press(getByTestId('step-up-approval'));
+    fireEvent.press(getByTestId('step-up-approval'));
+    expect(store.requestApproval).toHaveBeenCalledTimes(1);
+
+    await act(async () => start({ id: 'ap-1', number: '42' }));
+    expect(store.waitForApproval).toHaveBeenCalledTimes(1);
+  });
+
+  it('withdraws a request that arrives after the prompt closed, without waiting on it', async () => {
+    let start: (value: { id: string; number: string }) => void = () => undefined;
+    store.requestApproval.mockReturnValue(new Promise((resolve) => (start = resolve)));
+    const onClose = jest.fn();
+    const { getByTestId, rerender } = render(<StepUpModal isOpen onClose={onClose} />);
+
+    fireEvent.press(getByTestId('step-up-approval'));
+    rerender(<StepUpModal isOpen={false} onClose={onClose} />);
+    await act(async () => start({ id: 'ap-1', number: '42' }));
+
+    expect(store.cancelApproval).toHaveBeenCalledWith('ap-1');
+    expect(store.waitForApproval).not.toHaveBeenCalled();
+    expect(store.completeApproval).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('withdraws the waiting request on the server when the prompt closes', async () => {
+    store.requestApproval.mockResolvedValue({ id: 'ap-1', number: '42' });
+    store.waitForApproval.mockImplementation((_id: string, signal: AbortSignal) => new Promise((resolve) => signal.addEventListener('abort', () => resolve('aborted'))));
+    const onClose = jest.fn();
+    const { getByTestId, rerender } = render(<StepUpModal isOpen onClose={onClose} />);
+    await act(async () => fireEvent.press(getByTestId('step-up-approval')));
+    expect(getByTestId('mfa-approval-number').props.children).toBe('42');
+
+    await act(async () => rerender(<StepUpModal isOpen={false} onClose={onClose} />));
+    expect(store.cancelApproval).toHaveBeenCalledWith('ap-1');
+    expect(store.completeApproval).not.toHaveBeenCalled();
+  });
+
   it('shows a method\'s refusal in the member\'s language', () => {
     dataProtectionStore.setState({ lastError: 'passkey_cancelled' });
     const { getByTestId } = render(<StepUpModal isOpen onClose={jest.fn()} />);

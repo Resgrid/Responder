@@ -66,19 +66,33 @@ export const forgetLoginSecrets = (): void => {
   factorRecovery = null;
 };
 
-const failed = (host: LoginMfaHost, problem: MfaProblem): LoginMfaResult => {
-  if (endsTransaction(problem)) {
-    forgetLoginSecrets();
-    host.restart(problem.code);
-    return { ok: false, code: problem.code, restart: true };
-  }
-  return { ok: false, code: problem.code, restart: false };
+/** The sign-in cannot finish any more: its secrets go, and the member starts again with the reason shown. */
+const ended = (host: LoginMfaHost, code: string): LoginMfaResult => {
+  forgetLoginSecrets();
+  host.restart(code);
+  return { ok: false, code, restart: true };
 };
 
+const failed = (host: LoginMfaHost, problem: MfaProblem): LoginMfaResult => (endsTransaction(problem) ? ended(host, problem.code) : { ok: false, code: problem.code, restart: false });
+
+/**
+ * Redeems the completion code. The factor is already spent and a completion is never issued twice, so a lost grant
+ * response or tokens this app cannot use end the sign-in rather than leaving the member to retry on a spent transaction.
+ */
 const finish = async (host: LoginMfaHost, secret: string, completion: CompletionData): Promise<LoginMfaResult> => {
-  const tokens = await completionGrantRequest(secret, completion.CompletionCode);
+  let tokens: AuthResponse;
+  try {
+    tokens = await completionGrantRequest(secret, completion.CompletionCode);
+  } catch (error) {
+    return ended(host, toMfaProblem(error).code);
+  }
   loginTransaction = null;
-  host.signIn(tokens, completion.RecoveryCodes ?? null);
+  try {
+    host.signIn(tokens, completion.RecoveryCodes ?? null);
+  } catch {
+    logger.error({ message: 'Second-factor sign-in returned tokens that could not be used' });
+    return ended(host, 'unknown_error');
+  }
   logger.info({ message: 'Signed in with a second factor', context: { recovery: completion.Recovery } });
   return { ok: true, recovery: !!completion.Recovery };
 };

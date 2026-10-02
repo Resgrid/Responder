@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { AppState } from 'react-native';
 
 import { getPendingApproval } from '@/api/mfa/account-security';
@@ -37,6 +37,17 @@ describe('usePendingApprovalCheck', () => {
     (getPendingApproval as jest.Mock).mockResolvedValue({ ApprovalRequestId: 'ap-1' });
     renderHook(() => usePendingApprovalCheck(true));
     await waitFor(() => expect(getPendingApproval).toHaveBeenCalledTimes(2));
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing when the member signs out while the lookup is on its way', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    (getPendingApproval as jest.Mock).mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const { rerender } = renderHook(({ enabled }) => usePendingApprovalCheck(enabled), { initialProps: { enabled: true } });
+    expect(getPendingApproval).toHaveBeenCalledTimes(1);
+
+    rerender({ enabled: false });
+    await act(async () => answer({ ApprovalRequestId: 'ap-1' }));
     expect(mockPush).not.toHaveBeenCalled();
   });
 });

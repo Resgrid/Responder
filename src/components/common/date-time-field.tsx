@@ -16,6 +16,9 @@ interface DateTimeFieldProps {
   testID?: string;
 }
 
+// A page of 24 years, kept within years 1-9999.
+const yearPageStart = (start: number) => Math.max(1, Math.min(9976, start));
+
 // One picker for native and web. No keyboard entry; cancel never commits the draft.
 // Date-only and clock-only values keep their calendar day/clock across time zones.
 export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled = false, clearable = true, testID = 'date-time-field' }: DateTimeFieldProps) => {
@@ -26,7 +29,7 @@ export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled 
   const [month, setMonth] = useState(draft.getMonth());
   const [year, setYear] = useState(draft.getFullYear());
   const [view, setView] = useState<'days' | 'months' | 'years'>('days');
-  const [yearPage, setYearPage] = useState(year - 11);
+  const [yearPage, setYearPage] = useState(() => yearPageStart(year - 11));
   const selected = parsePickerValue(value, mode);
   const display = !value ? label : mode === 'time' ? pickerTime(selected) : mode === 'date' ? selected.toLocaleDateString(locale) : selected.toLocaleString(locale);
   const show = () => {
@@ -35,7 +38,7 @@ export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled 
     setDraft(next);
     setMonth(next.getMonth());
     setYear(next.getFullYear());
-    setYearPage(Math.max(1, Math.min(9976, next.getFullYear() - 11)));
+    setYearPage(yearPageStart(next.getFullYear() - 11));
     setView('days');
     setOpen(true);
   };
@@ -53,7 +56,7 @@ export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled 
   monthEnd.setMonth(month + 1, 0);
   const move = (direction: number) => {
     if (view === 'years') {
-      setYearPage((page) => Math.max(1, Math.min(9976, page + direction * 24)));
+      setYearPage((page) => yearPageStart(page + direction * 24));
       return;
     }
     const next = calendarDate(1);

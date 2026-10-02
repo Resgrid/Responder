@@ -34,6 +34,9 @@ import useAuthStore from '@/stores/auth/store';
 
 const APP_NAMES: Record<string, string> = { web: 'Resgrid Web', responder: 'Resgrid Responder', unit: 'Resgrid Unit', dispatch: 'Resgrid Dispatch', ic: 'Resgrid Command' };
 
+/** A change, and at most two retries after the proof the server asks for. */
+const MAX_ROUNDS = 3;
+
 const when = (value: string | null | undefined): string | null => {
   const parsed = parseUtc(value);
   return parsed ? new Date(parsed).toLocaleString() : null;
@@ -94,7 +97,7 @@ export default function AccountSecurity() {
       setErrorCode(null);
       setNotice(null);
       try {
-        for (let round = 0; round < 3; round++) {
+        for (let round = 0; round < MAX_ROUNDS; round++) {
           try {
             const result = await action();
             if ((result as { CurrentSessionEnded?: boolean } | undefined)?.CurrentSessionEnded) {
@@ -113,8 +116,12 @@ export default function AccountSecurity() {
             }
             const code = toMfaProblem(error).code;
             const needed: AccountProof | null = code === 'reauthentication_required' ? 'reauthenticate' : code === 'step_up_required' ? 'step_up' : null;
-            if (!needed || !(await prove(needed))) {
-              setErrorCode(needed ? null : code);
+            // No retry is left after the last round, so asking for proof again would verify the member for nothing.
+            if (!needed || round === MAX_ROUNDS - 1) {
+              setErrorCode(code);
+              return;
+            }
+            if (!(await prove(needed))) {
               return;
             }
           }

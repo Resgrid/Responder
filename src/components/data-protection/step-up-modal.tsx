@@ -32,7 +32,21 @@ export const StepUpModal: React.FC<StepUpModalProps> = ({ isOpen, onClose, onVer
   const lastError = dataProtectionStore((state) => state.lastError);
   const methods = dataProtectionStore((state) => state.stepUpMethods);
   const [approval, setApproval] = useState<{ id: string; number: string } | null>(null);
+  const [approvalBusy, setApprovalBusy] = useState(false);
   const approvalAbort = useRef<AbortController | null>(null);
+  // The request still waiting in the member's Responder; withdrawn on the server when this prompt closes first.
+  const approvalId = useRef<string | null>(null);
+
+  /** Stops waiting for Responder and withdraws a request that is still waiting there. */
+  const stopApproval = useCallback(() => {
+    approvalAbort.current?.abort();
+    approvalAbort.current = null;
+    const waiting = approvalId.current;
+    approvalId.current = null;
+    if (waiting) {
+      void dataProtectionStore.getState().cancelApproval(waiting);
+    }
+  }, []);
 
   // The methods this member has and the department accepts for protected data (passkey plan section 8.1).
   useEffect(() => {
@@ -40,11 +54,12 @@ export const StepUpModal: React.FC<StepUpModalProps> = ({ isOpen, onClose, onVer
       void dataProtectionStore.getState().loadStepUpMethods();
     } else {
       setCode('');
-      approvalAbort.current?.abort();
-      approvalAbort.current = null;
+      stopApproval();
       setApproval(null);
     }
-  }, [isOpen]);
+  }, [isOpen, stopApproval]);
+
+  useEffect(() => stopApproval, [stopApproval]);
 
   const finished = useCallback(
     (ok: boolean) => {
@@ -61,35 +76,53 @@ export const StepUpModal: React.FC<StepUpModalProps> = ({ isOpen, onClose, onVer
   const handleProvider = useCallback(async () => finished(await dataProtectionStore.getState().verifyFederated()), [finished]);
 
   const handleApproval = useCallback(async () => {
-    const store = dataProtectionStore.getState();
-    const started = await store.requestApproval();
-    if (!started) {
+    // One request at a time: a second press while the first is on its way would start another one on the server.
+    if (approvalAbort.current) {
       return;
     }
-    setApproval(started);
     const controller = new AbortController();
     approvalAbort.current = controller;
-    const decided = await store.waitForApproval(started.id, controller.signal);
-    if (decided === 'aborted') {
-      return;
+    setApprovalBusy(true);
+    try {
+      const store = dataProtectionStore.getState();
+      const started = await store.requestApproval();
+      if (!started) {
+        return;
+      }
+      if (controller.signal.aborted) {
+        // The prompt closed while the request was on its way: nothing waits for it now, so withdraw it.
+        void store.cancelApproval(started.id);
+        return;
+      }
+      approvalId.current = started.id;
+      setApproval(started);
+      const decided = await store.waitForApproval(started.id, controller.signal);
+      if (decided === 'aborted' || controller.signal.aborted) {
+        return;
+      }
+      approvalId.current = null;
+      setApproval(null);
+      if (decided !== 'approved') {
+        dataProtectionStore.setState({ lastError: decided === 'denied' ? 'approval_denied' : 'approval_expired' });
+        return;
+      }
+      const ok = await store.completeApproval(started.id);
+      // A prompt closed meanwhile reveals nothing.
+      if (!controller.signal.aborted) {
+        finished(ok);
+      }
+    } finally {
+      if (approvalAbort.current === controller) {
+        approvalAbort.current = null;
+      }
+      setApprovalBusy(false);
     }
-    setApproval(null);
-    if (decided !== 'approved') {
-      dataProtectionStore.setState({ lastError: decided === 'denied' ? 'approval_denied' : 'approval_expired' });
-      return;
-    }
-    finished(await store.completeApproval(started.id));
   }, [finished]);
 
   const cancelApproval = useCallback(() => {
-    const current = approval;
-    approvalAbort.current?.abort();
-    approvalAbort.current = null;
+    stopApproval();
     setApproval(null);
-    if (current) {
-      void dataProtectionStore.getState().cancelApproval(current.id);
-    }
-  }, [approval]);
+  }, [stopApproval]);
 
   const offersCode = methods == null || methods.includes('totp');
 
@@ -160,17 +193,17 @@ export const StepUpModal: React.FC<StepUpModalProps> = ({ isOpen, onClose, onVer
               </Input>
             ) : null}
             {!approval && methods?.includes('passkey') ? (
-              <Button variant="outline" action="secondary" onPress={() => void handlePasskey()} isDisabled={isVerifying} testID="step-up-passkey">
+              <Button variant="outline" action="secondary" onPress={() => void handlePasskey()} isDisabled={isVerifying || approvalBusy} testID="step-up-passkey">
                 <ButtonText>{t('mfa.login.use_passkey')}</ButtonText>
               </Button>
             ) : null}
             {!approval && methods?.includes('passkey_approval') ? (
-              <Button variant="outline" action="secondary" onPress={() => void handleApproval()} isDisabled={isVerifying} testID="step-up-approval">
+              <Button variant="outline" action="secondary" onPress={() => void handleApproval()} isDisabled={isVerifying || approvalBusy} testID="step-up-approval">
                 <ButtonText>{t('mfa.login.use_approval')}</ButtonText>
               </Button>
             ) : null}
             {!approval && methods?.includes('federated') ? (
-              <Button variant="outline" action="secondary" onPress={() => void handleProvider()} isDisabled={isVerifying} testID="step-up-provider">
+              <Button variant="outline" action="secondary" onPress={() => void handleProvider()} isDisabled={isVerifying || approvalBusy} testID="step-up-provider">
                 <ButtonText>{t('mfa.login.use_provider')}</ButtonText>
               </Button>
             ) : null}

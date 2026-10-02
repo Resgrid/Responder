@@ -16,12 +16,17 @@ export const usePendingApprovalCheck = (enabled: boolean): void => {
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
+
+  // Only a committed screen counts: a render React discards must not stop (or start) navigation.
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     if (!enabled) {
       return;
     }
+    let active = true;
     let lastCheck = 0;
     const check = async () => {
       const now = Date.now();
@@ -31,7 +36,8 @@ export const usePendingApprovalCheck = (enabled: boolean): void => {
       lastCheck = now;
       try {
         const pending = await getPendingApproval();
-        if (pending && pathnameRef.current !== APPROVE_PATH) {
+        // A lookup that finishes after sign-out (or any other disable) opens nothing.
+        if (active && pending && pathnameRef.current !== APPROVE_PATH) {
           router.push(APPROVE_PATH as Href);
         }
       } catch (error) {
@@ -45,6 +51,9 @@ export const usePendingApprovalCheck = (enabled: boolean): void => {
         void check();
       }
     });
-    return () => subscription?.remove?.();
+    return () => {
+      active = false;
+      subscription?.remove?.();
+    };
   }, [enabled, router]);
 };

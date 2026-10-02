@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import { Image, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
@@ -29,11 +29,17 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ title, descr
   const [containerWidth, setContainerWidth] = useState(width);
   const { colorScheme } = useColorScheme();
   const start = useRef<{ x: number; y: number } | null>(null);
+  const scroll = useRef<ScrollView>(null);
   const availableWidth = Math.min(width, containerWidth);
   const horizontal = availableWidth >= 680 && fontScale < 1.5;
   const compact = height < 500;
   const last = currentIndex === total - 1;
   const actionColor = colorScheme === 'dark' ? 'black' : 'white';
+
+  // The page stays mounted between steps (so focus stays on Next); each step starts at its top, not where the last one was scrolled to.
+  useEffect(() => {
+    scroll.current?.scrollTo({ y: 0, animated: false });
+  }, [currentIndex]);
 
   const handleTouchStart = (event: GestureResponderEvent) => {
     start.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY ?? 0 };
@@ -52,7 +58,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ title, descr
   return (
     <SafeAreaView className="flex-1 bg-background-50" onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}>
       <FocusAwareStatusBar hidden={true} />
-      <ScrollView bounces={false} contentContainerStyle={styles.scroll}>
+      <ScrollView ref={scroll} bounces={false} contentContainerStyle={styles.scroll}>
         <View style={[styles.page, { paddingHorizontal: availableWidth < 360 ? 16 : 24, paddingVertical: compact ? 12 : 24 }]}>
           <View style={styles.header}>
             <Image accessible={false} style={styles.logo} resizeMode="contain" source={colorScheme === 'dark' ? require('@assets/images/Resgrid_JustText_White.png') : require('@assets/images/Resgrid_JustText.png')} />

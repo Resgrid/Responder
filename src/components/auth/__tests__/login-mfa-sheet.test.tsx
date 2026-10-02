@@ -100,6 +100,18 @@ describe('LoginMfaSheet', () => {
     expect(getByTestId('login-mfa-error').props.children).toBe('mfa.errors.invalid_totp');
   });
 
+  it('lets the member try again when a step fails unexpectedly', async () => {
+    verifyLoginMfa.mockRejectedValueOnce(new Error('boom'));
+    const { getByTestId } = render(<LoginMfaSheet isOpen onLostFactor={jest.fn()} />);
+    fireEvent.changeText(getByTestId('login-mfa-code'), '000000');
+    await act(async () => fireEvent.press(getByTestId('login-mfa-submit')));
+    expect(getByTestId('login-mfa-error').props.children).toBe('mfa.errors.unknown_error');
+
+    fireEvent.changeText(getByTestId('login-mfa-code'), '123456');
+    await act(async () => fireEvent.press(getByTestId('login-mfa-submit')));
+    expect(verifyLoginMfa).toHaveBeenLastCalledWith({ method: 'totp', code: '123456' });
+  });
+
   it('shows the approval number on this screen and finishes once Responder approves', async () => {
     requestLoginApproval.mockResolvedValue({ ApprovalRequestId: 'ap-1', MatchNumber: '42', ExpiresIn: 120 });
     let decide: (value: string) => void = () => undefined;

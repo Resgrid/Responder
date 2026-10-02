@@ -29,4 +29,20 @@ describe('waitForApproval', () => {
     await expect(waitForApproval(status, controller.signal, 1)).resolves.toBe('aborted');
     expect(status).toHaveBeenCalledTimes(1);
   });
+
+  it('leaves no abort listener behind on the signal after each poll', async () => {
+    const controller = new AbortController();
+    const add = jest.spyOn(controller.signal, 'addEventListener');
+    const remove = jest.spyOn(controller.signal, 'removeEventListener');
+    const status = jest
+      .fn()
+      .mockResolvedValueOnce({ State: 'pending', ExpiresAt: null })
+      .mockResolvedValueOnce({ State: 'pending', ExpiresAt: null })
+      .mockResolvedValueOnce({ State: 'approved', ExpiresAt: null });
+
+    await expect(waitForApproval(status, controller.signal, 1)).resolves.toBe('approved');
+    expect(add).toHaveBeenCalledTimes(2);
+    expect(remove).toHaveBeenCalledTimes(2);
+    expect(remove.mock.calls.map(([, listener]) => listener)).toEqual(add.mock.calls.map(([, listener]) => listener));
+  });
 });

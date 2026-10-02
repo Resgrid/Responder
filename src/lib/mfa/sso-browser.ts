@@ -65,41 +65,50 @@ export const runSsoRoundTrip = async (begin: (secrets: SsoRoundTripSecrets) => P
   const codeVerifier = randomBase64Url(32);
   const state = randomBase64Url(24);
   const desktop = desktopSso();
-  const listener = desktop ? await desktop.ssoListen() : null;
-  const returnTarget = listener ? listener.returnTarget : ssoReturnTarget();
-
-  let begun: SsoBeginData;
+  let listener: { id: string; returnTarget: string } | null = null;
   try {
-    begun = await begin({ returnTarget, state, codeChallenge: await s256Challenge(codeVerifier), platform: ssoPlatform() });
-  } catch (error) {
-    if (desktop && listener) {
-      await desktop.ssoCancel(listener.id);
+    listener = desktop ? await desktop.ssoListen() : null;
+    const returnTarget = listener ? listener.returnTarget : ssoReturnTarget();
+
+    let begun: SsoBeginData;
+    try {
+      begun = await begin({ returnTarget, state, codeChallenge: await s256Challenge(codeVerifier), platform: ssoPlatform() });
+    } catch (error) {
+      return { ok: false, reason: 'refused', code: toMfaProblem(error).code };
     }
-    return { ok: false, reason: 'refused', code: toMfaProblem(error).code };
-  }
 
-  let returnedUrl: string | null;
-  if (desktop && listener) {
-    // The provider opens in the member's own browser; the loopback listener hands back its one return.
-    returnedUrl = await desktop.ssoOpen(listener.id, begun.AuthorizeUrl);
-  } else {
-    const result = await WebBrowser.openAuthSessionAsync(begun.AuthorizeUrl, returnTarget, { preferEphemeralSession: ephemeral });
-    returnedUrl = result.type === 'success' && result.url ? result.url : null;
-  }
-  if (!returnedUrl) {
-    return { ok: false, reason: 'cancelled' };
-  }
+    let returnedUrl: string | null;
+    if (desktop && listener) {
+      // The provider opens in the member's own browser; the loopback listener hands back its one return.
+      returnedUrl = await desktop.ssoOpen(listener.id, begun.AuthorizeUrl);
+    } else {
+      const result = await WebBrowser.openAuthSessionAsync(begun.AuthorizeUrl, returnTarget, { preferEphemeralSession: ephemeral });
+      returnedUrl = result.type === 'success' && result.url ? result.url : null;
+    }
+    if (!returnedUrl) {
+      return { ok: false, reason: 'cancelled' };
+    }
 
-  const returned = parseSsoReturn(returnedUrl);
-  if (returned.state !== state) {
-    return { ok: false, reason: 'state_mismatch' };
-  }
-  if (returned.error) {
-    return { ok: false, reason: returned.error === 'access_denied' ? 'denied' : 'failed', code: returned.error };
-  }
-  if (!returned.ssoCode) {
+    const returned = parseSsoReturn(returnedUrl);
+    if (returned.state !== state) {
+      return { ok: false, reason: 'state_mismatch' };
+    }
+    if (returned.error) {
+      return { ok: false, reason: returned.error === 'access_denied' ? 'denied' : 'failed', code: returned.error };
+    }
+    if (!returned.ssoCode) {
+      return { ok: false, reason: 'failed' };
+    }
+
+    return { ok: true, trip: { ssoTransactionId: begun.SsoTransactionId, ssoCode: returned.ssoCode, codeVerifier } };
+  } catch {
+    // The listener or the browser could not run (no browser on the device, another auth session already open, the
+    // desktop bridge failing): a failed round trip, reported like any other rather than thrown at every caller.
     return { ok: false, reason: 'failed' };
+  } finally {
+    // The listener closes itself after its one return, so this is a no-op then; on every other way out it closes here.
+    if (desktop && listener) {
+      await desktop.ssoCancel(listener.id).catch(() => undefined);
+    }
   }
-
-  return { ok: true, trip: { ssoTransactionId: begun.SsoTransactionId, ssoCode: returned.ssoCode, codeVerifier } };
 };

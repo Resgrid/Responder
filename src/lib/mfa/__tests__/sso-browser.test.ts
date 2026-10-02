@@ -71,6 +71,11 @@ describe('runSsoRoundTrip', () => {
     await runSsoRoundTrip(async () => begun, true);
     expect(openAuthSession).toHaveBeenCalledWith(begun.AuthorizeUrl, 'resgrid://sso-return', { preferEphemeralSession: true });
   });
+
+  it('reports a browser that cannot open as a failed round trip instead of throwing', async () => {
+    openAuthSession.mockRejectedValueOnce(new Error('No matching browser activity found'));
+    await expect(runSsoRoundTrip(async () => begun)).resolves.toEqual({ ok: false, reason: 'failed' });
+  });
 });
 
 describe('runSsoRoundTrip in the desktop app', () => {
@@ -117,6 +122,18 @@ describe('runSsoRoundTrip in the desktop app', () => {
     expect(result).toEqual({ ok: false, reason: 'refused', code: 'sso_unavailable' });
     expect(bridge.ssoCancel).toHaveBeenCalledWith('trip-1');
     expect(bridge.ssoOpen).not.toHaveBeenCalled();
+  });
+
+  it('reports a listener that cannot start, or a browser that cannot open, as failed and closes the listener', async () => {
+    const begin = jest.fn(async () => begun);
+    bridge.ssoListen.mockRejectedValueOnce(new Error('EADDRINUSE'));
+    await expect(runSsoRoundTrip(begin)).resolves.toEqual({ ok: false, reason: 'failed' });
+    expect(begin).not.toHaveBeenCalled();
+    expect(bridge.ssoCancel).not.toHaveBeenCalled();
+
+    bridge.ssoOpen.mockRejectedValueOnce(new Error('openExternal failed'));
+    await expect(runSsoRoundTrip(begin)).resolves.toEqual({ ok: false, reason: 'failed' });
+    expect(bridge.ssoCancel).toHaveBeenCalledWith('trip-1');
   });
 
   it('reads a closed or timed-out listener as cancelled, and still checks the state', async () => {
