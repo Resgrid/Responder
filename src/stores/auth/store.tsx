@@ -7,6 +7,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { cacheManager } from '@/lib/cache/cache-manager';
 import { clearCacheScope, setCacheScope } from '@/lib/cache/cache-scope';
 import { logger } from '@/lib/logging';
+import type { ApprovalWaitResult } from '@/lib/mfa/approval-wait';
+import type { ApprovalRequestData, MfaChallenge, TotpSetupData } from '@/lib/mfa/types';
 import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/clear-all-data';
 
 import { externalTokenRequest, loginRequest, refreshTokenRequest } from '../../lib/auth/api';
@@ -14,6 +16,23 @@ import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentia
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
 import { getItem, removeItem, setItem, zustandStorage } from '../../lib/storage';
+import {
+  type BrokeredSsoResult,
+  cancelLoginApprovalRequest,
+  forgetLoginSecrets,
+  holdLoginTransaction,
+  type LoginMfaHost,
+  type LoginMfaResult,
+  type LoginMfaStep,
+  loginSetupOptions,
+  type RecoveryStart,
+  signInWithBrokeredSso,
+  type SsoDepartment,
+  startFactorRecovery,
+  startLoginApproval,
+  verifyLoginMfa,
+  waitForLoginApproval,
+} from './login-mfa';
 
 export const PENDING_SAML_STATE_KEY = 'pending_saml_state';
 
@@ -67,12 +86,34 @@ interface AuthState {
    * open its OTP prompt for a challenge it has no pending exchange to retry.
    */
   isSsoMfaPending: boolean;
+  /**
+   * A sign-in waiting for its second factor (or for the authenticator its department requires), when the server runs the
+   * login transaction. Not persisted: the transaction secret lives in `login-mfa` memory and dies with the process.
+   */
+  mfaChallenge: MfaChallenge | null;
+  /** Recovery codes from setting up an authenticator at sign-in, shown once after sign-in and then dropped. Never persisted. */
+  pendingRecoveryCodes: string[] | null;
 
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
   loginWithSso: (credentials: ExternalTokenCredentials) => Promise<void>;
   /** Retries the pending SSO exchange with the user's authenticator code (2FA challenge). */
   retrySsoWithOtp: (otpCode: string) => Promise<void>;
+  /** Finishes the pending sign-in with a second factor (passkey plan section 7.5). */
+  verifyLoginMfa: (step: LoginMfaStep) => Promise<LoginMfaResult>;
+  /** Asks the member's Responder to approve the pending sign-in; the number is shown on this screen only. */
+  requestLoginApproval: () => Promise<ApprovalRequestData | { code: string; restart: boolean }>;
+  waitForLoginApproval: (approvalRequestId: string, signal?: AbortSignal) => Promise<ApprovalWaitResult>;
+  cancelLoginApproval: (approvalRequestId: string) => Promise<void>;
+  /** A new authenticator key for the setup the department requires. */
+  loginSetupOptions: () => Promise<TotpSetupData | { code: string; restart: boolean }>;
+  /** Abandons the pending sign-in; nothing of it is kept. */
+  cancelLoginMfa: () => void;
+  /** Signs in through the department's identity provider by way of the Resgrid broker (plan section 7.7.2). */
+  loginWithBrokeredSso: (department: SsoDepartment) => Promise<BrokeredSsoResult>;
+  dismissRecoveryCodes: () => void;
+  /** "I lost my authenticator": spends a recovery code on the pending sign-in to open the restricted recovery. */
+  beginFactorRecovery: (recoveryCode: string) => Promise<RecoveryStart | { code: string; restart: boolean }>;
   logout: (reason?: string) => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   hydrate: () => void;
@@ -85,6 +126,41 @@ interface AuthState {
   isRefreshTokenExpired: () => boolean;
   shouldRefreshToken: () => boolean;
 }
+
+/**
+ * The signed-in state for a token response: the profile from the id token, and the persisted auth response. Throws on a
+ * missing or malformed id token, which no sign-in may continue without.
+ */
+const signedInState = (authResponse: AuthResponse): Partial<AuthState> => {
+  const tokenParts = authResponse.id_token?.split('.') ?? [];
+  if (tokenParts.length < 3 || !tokenParts[1]) {
+    throw new Error('Invalid ID token format');
+  }
+  const profileData = JSON.parse(sanitizeJson(decodeJwtPayload(tokenParts[1]))) as ProfileModel;
+  const now = Date.now();
+  setItem<AuthResponse>('authResponse', { ...authResponse, obtained_at: now });
+  return {
+    accessToken: authResponse.access_token ?? null,
+    refreshToken: authResponse.refresh_token ?? null,
+    accessTokenObtainedAt: now,
+    refreshTokenObtainedAt: now,
+    status: 'signedIn',
+    error: null,
+    profile: profileData,
+    userId: profileData.sub,
+    isFirstTime: false,
+  };
+};
+
+/**
+ * How the login transaction module moves this store: finishing a sign-in with tokens, showing a pending sign-in, or
+ * sending the member back to the start. Called only after the store exists.
+ */
+const mfaHost: LoginMfaHost = {
+  signIn: (authResponse, recoveryCodes) => useAuthStore.setState({ ...signedInState(authResponse), mfaChallenge: null, pendingRecoveryCodes: recoveryCodes }),
+  setChallenge: (challenge, error = null) => useAuthStore.setState({ status: challenge ? 'mfaRequired' : 'signedOut', mfaChallenge: challenge, error }),
+  restart: (code) => useAuthStore.setState({ status: 'signedOut', mfaChallenge: null, error: code }),
+};
 
 const useAuthStore = create<AuthState>()(
   persist(
@@ -99,6 +175,8 @@ const useAuthStore = create<AuthState>()(
       userId: null,
       isFirstTime: true,
       isSsoMfaPending: false,
+      mfaChallenge: null,
+      pendingRecoveryCodes: null,
       login: async (credentials: LoginCredentials) => {
         try {
           set({ status: 'loading' });
@@ -154,6 +232,13 @@ const useAuthStore = create<AuthState>()(
                 refreshTokenObtainedAt: now,
               },
             });
+          } else if (response.mfaTransaction) {
+            // The password was right; a second factor (or the setup the department requires) finishes the sign-in on the
+            // login transaction. The secret goes to login-mfa memory; the store only holds what the screen shows.
+            holdLoginTransaction(response.mfaTransaction.secret);
+            set({ status: 'mfaRequired', error: null, mfaChallenge: response.mfaTransaction.challenge });
+          } else if (response.enrollmentRequired) {
+            set({ status: 'error', error: 'mfa_enrollment_required', mfaChallenge: null });
           } else if (response.mfaRequired) {
             // 2FA challenge: the login screen prompts for the authenticator code and calls
             // login() again with otpCode. Credentials are never retained here.
@@ -164,6 +249,7 @@ const useAuthStore = create<AuthState>()(
             set({
               status: 'mfaRequired',
               error: response.invalidOtp ? 'invalid_totp' : null,
+              mfaChallenge: { kind: 'legacy', methods: ['totp'], enrolled: ['totp'], preferred: 'totp', expiresAt: null, source: 'password' },
             });
           } else {
             logger.error({
@@ -299,6 +385,28 @@ const useAuthStore = create<AuthState>()(
         await get().loginWithSso({ ...pendingSsoMfaCredentials, otpCode });
       },
 
+      verifyLoginMfa: (step: LoginMfaStep) => verifyLoginMfa(mfaHost, step),
+      requestLoginApproval: () => startLoginApproval(mfaHost),
+      waitForLoginApproval: (approvalRequestId: string, signal?: AbortSignal) => waitForLoginApproval(mfaHost, approvalRequestId, signal),
+      cancelLoginApproval: (approvalRequestId: string) => cancelLoginApprovalRequest(approvalRequestId),
+      loginSetupOptions: () => loginSetupOptions(mfaHost),
+      cancelLoginMfa: () => {
+        forgetLoginSecrets();
+        set({ status: 'signedOut', mfaChallenge: null, error: null });
+      },
+      loginWithBrokeredSso: async (department: SsoDepartment) => {
+        set({ status: 'loading', error: null, mfaChallenge: null });
+        const result = await signInWithBrokeredSso(mfaHost, department);
+        if (result.outcome === 'cancelled') {
+          set({ status: 'signedOut' });
+        } else if (result.outcome === 'failed') {
+          set({ status: 'error', error: result.code });
+        }
+        return result;
+      },
+      dismissRecoveryCodes: () => set({ pendingRecoveryCodes: null }),
+      beginFactorRecovery: (recoveryCode: string) => startFactorRecovery(mfaHost, recoveryCode),
+
       logout: async (reason?: string) => {
         const currentState = get();
         const wasAuthenticated = currentState.isAuthenticated();
@@ -359,9 +467,12 @@ const useAuthStore = create<AuthState>()(
           });
         }
 
-        // The retained IdP exchange is a credential; it must not outlive the session.
+        // The retained IdP exchange and any sign-in secrets are credentials; they must not outlive the session.
         pendingSsoMfaCredentials = null;
+        forgetLoginSecrets();
         set({
+          mfaChallenge: null,
+          pendingRecoveryCodes: null,
           accessToken: null,
           refreshToken: null,
           accessTokenObtainedAt: null,
@@ -664,9 +775,11 @@ const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => zustandStorage),
-      // The pending SSO exchange lives in module memory and dies with the process, so a rehydrated
-      // `true` here would open the OTP prompt with nothing to retry. Force it back to false.
-      merge: (persisted, current) => ({ ...current, ...(persisted as Partial<AuthState>), isSsoMfaPending: false }),
+      // A pending sign-in and recovery codes shown once are never written to storage.
+      partialize: ({ mfaChallenge: _mfaChallenge, pendingRecoveryCodes: _pendingRecoveryCodes, ...persisted }) => persisted,
+      // The pending SSO exchange and the login transaction live in module memory and die with the process, so a
+      // rehydrated pending state would open a prompt with nothing to finish. Force them back.
+      merge: (persisted, current) => ({ ...current, ...(persisted as Partial<AuthState>), isSsoMfaPending: false, mfaChallenge: null, pendingRecoveryCodes: null }),
     }
   )
 );

@@ -9,7 +9,7 @@ export interface PushNotificationData {
   data?: Record<string, unknown>;
 }
 
-export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'weather' | 'communication-test' | 'work-order' | 'unknown';
+export type NotificationType = 'call' | 'message' | 'chat' | 'group-chat' | 'weather' | 'communication-test' | 'work-order' | 'mfa-approval' | 'unknown';
 
 export interface ParsedNotification {
   type: NotificationType;
@@ -35,6 +35,8 @@ interface PushNotificationModalState {
 const EVENT_CODE_TYPES: Record<string, NotificationType> = {
   ct: 'communication-test',
   nwo: 'work-order',
+  // "NA:{approvalRequestId}": another app asks this member to approve a sign-in or action (passkey plan section 7.9).
+  na: 'mfa-approval',
 };
 
 // First character of the event code prefix sent by the Resgrid backend, e.g.

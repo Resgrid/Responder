@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RealtimeStatusBanner } from '@/components/common/realtime-status-banner';
 import { StepUpPromptHost } from '@/components/data-protection/step-up-prompt-host';
+import { RecoveryCodesModal } from '@/components/mfa/recovery-codes-modal';
 import { NotificationButton } from '@/components/notifications/NotificationButton';
 import { NotificationInbox } from '@/components/notifications/NotificationInbox';
 import SideMenu from '@/components/sidebar/side-menu-content';
@@ -22,6 +23,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { useAppInitRetry } from '@/hooks/use-app-init-retry';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
+import { usePendingApprovalCheck } from '@/hooks/use-pending-approval-check';
 import { useSignalRLifecycle } from '@/hooks/use-signalr-lifecycle';
 import { useAuthStore } from '@/lib/auth';
 import { Env } from '@/lib/env';
@@ -53,6 +55,8 @@ export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const status = useAuthStore((state) => state.status);
+  // Approve with Responder: open a waiting request when the app comes to the foreground (the push may be late).
+  usePendingApprovalCheck(status === 'signedIn');
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
@@ -404,6 +408,7 @@ export default function TabLayout() {
         two prompts over each other.
       */}
       <StepUpPromptHost />
+      <RecoveryCodesModal />
 
       {/* Top Navigation Bar */}
       <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>

@@ -25,14 +25,22 @@ jest.mock('@/hooks/use-analytics', () => ({
   }),
 }));
 
+const mockAuthStatus = { current: 'idle' };
 jest.mock('@/lib/auth', () => ({
   useAuth: () => ({
     login: mockLogin,
-    status: 'idle',
+    status: mockAuthStatus.current,
     error: undefined,
     isAuthenticated: false,
   }),
 }));
+
+// The second-factor sheet renders as a marker that says whether it is open.
+jest.mock('@/components/auth/login-mfa-sheet', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { LoginMfaSheet: ({ isOpen }: { isOpen: boolean }) => (isOpen ? React.createElement(View, { testID: 'login-mfa-sheet-open' }) : null) };
+});
 
 jest.mock('@/lib/env', () => ({
   Env: {
@@ -115,5 +123,31 @@ describe('Login screen', () => {
     fireEvent.press(screen.getByTestId('open-server-url-sheet'));
 
     expect(screen.getByTestId('server-url-bottom-sheet')).toBeTruthy();
+  });
+});
+
+describe('the second-factor sheet on the login screen', () => {
+  const { default: useAuthStore } = jest.requireActual('@/stores/auth/store') as typeof import('@/stores/auth/store');
+  const verify = (source: 'password' | 'sso') => ({ kind: 'verify' as const, methods: ['totp' as const], enrolled: ['totp' as const], preferred: 'totp' as const, expiresAt: null, source });
+
+  beforeEach(() => {
+    mockAuthStatus.current = 'mfaRequired';
+  });
+  afterEach(() => {
+    mockAuthStatus.current = 'idle';
+    useAuthStore.setState({ mfaChallenge: null });
+  });
+
+  it('opens for a password sign-in that continues on a login transaction', () => {
+    useAuthStore.setState({ mfaChallenge: verify('password') });
+    render(<Login />);
+    expect(screen.getByTestId('login-mfa-sheet-open')).toBeTruthy();
+  });
+
+  it("leaves a single sign-on's second factor to the SSO screen on top of it", () => {
+    // Both screens are mounted while the SSO screen is shown; two sheets would each stage their own setup key.
+    useAuthStore.setState({ mfaChallenge: verify('sso') });
+    render(<Login />);
+    expect(screen.queryByTestId('login-mfa-sheet-open')).toBeNull();
   });
 });

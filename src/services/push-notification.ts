@@ -325,6 +325,11 @@ class PushNotificationService {
         if (await PushNotificationService.deepLink('/(app)/messages', 'Failed to deep-link to messages from push notification', eventCode)) {
           return;
         }
+      } else if (parsed.type === 'mfa-approval' && isSafeRouteId(parsed.id)) {
+        // The approval screen reads the request from the server; the push carries only its id.
+        if (await PushNotificationService.deepLink({ pathname: '/approve-sign-in', params: { id: parsed.id } } as unknown as Href, 'Failed to open the approval request from push notification', eventCode)) {
+          return;
+        }
       } else if (parsed.type === 'work-order' && isSafeRouteId(parsed.id)) {
         // "NWO:{workOrderId}": the detail screen loads the order through the authorized v4 read.
         if (await PushNotificationService.deepLink({ pathname: '/work-orders/[id]', params: { id: parsed.id } } as Href, 'Failed to deep-link to work order from push notification', eventCode)) {

@@ -123,3 +123,19 @@ describe('EditCertificationScreen', () => {
     expect(getCertification).not.toHaveBeenCalled();
   });
 });
+
+it('saves issued and expiry dates selected from pickers', async () => {
+  mockParams.id = '42';
+  useCertificationsStore.setState({ items: [record()] });
+  jest.mocked(saveCertification).mockResolvedValue(record());
+  const screen = render(<EditCertificationScreen />);
+  fireEvent.press(screen.getByTestId('certification-received'));
+  fireEvent.press(screen.getByTestId('certification-received-day-15'));
+  fireEvent.press(screen.getByTestId('certification-received-done'));
+  fireEvent.press(screen.getByTestId('certification-expires'));
+  fireEvent.press(screen.getByTestId('certification-expires-day-20'));
+  fireEvent.press(screen.getByTestId('certification-expires-done'));
+  fireEvent.press(screen.getByTestId('certification-save'));
+  await waitFor(() => expect(saveCertification).toHaveBeenCalledWith(expect.objectContaining({ ReceivedOn: '2025-01-15', ExpiresOn: '2027-01-20' })));
+  screen.unmount();
+});

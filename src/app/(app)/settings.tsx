@@ -1,6 +1,6 @@
 /* eslint-disable react/react-in-jsx-scope */
 import { Env } from '@env';
-import { useFocusEffect } from 'expo-router';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +31,7 @@ import { useUnitsStore } from '@/stores/units/store';
 
 export default function Settings() {
   const { t } = useTranslation();
+  const router = useRouter();
   const signOut = useAuthStore.getState().logout;
   const { colorScheme } = useColorScheme();
   const { trackEvent } = useAnalytics();
@@ -205,6 +206,7 @@ export default function Settings() {
             <VStack space="sm">
               <Item text={t('settings.server')} value={getBaseApiUrl()} onPress={handleServerUrlPress} textStyle="text-info-600" />
               <Item text={t('settings.login_info')} onPress={handleLoginInfoPress} textStyle="text-info-600" />
+              <Item text={t('mfa.account.title')} onPress={() => router.push('/account-security' as unknown as Href)} textStyle="text-info-600" />
               <Item text={t('settings.logout')} onPress={handleLogoutPress} textStyle="text-error-600" />
             </VStack>
           </Card>
