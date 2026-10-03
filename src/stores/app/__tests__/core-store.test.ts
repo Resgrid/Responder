@@ -134,7 +134,8 @@ describe('Core Store', () => {
         MapCenterZoomLevel: 9,
         MapDayStyleUrl: '',
         MapNightStyleUrl: '',
-        AppMapboxAccessToken: ''
+        AppMapboxAccessToken: '',
+        IsDepartmentMapOverride: false
       },
 			PageSize: 0,
 			Timestamp: '',
@@ -333,6 +334,7 @@ describe('Core Store', () => {
 				MapDayStyleUrl: '',
 				MapNightStyleUrl: '',
 				AppMapboxAccessToken: '',
+				IsDepartmentMapOverride: false,
 			});
 			expect(result.current.activeStatuses).toEqual([
 				{
@@ -414,6 +416,7 @@ describe('Core Store', () => {
 				MapDayStyleUrl: '',
 				MapNightStyleUrl: '',
 				AppMapboxAccessToken: '',
+				IsDepartmentMapOverride: false,
 			});
 			expect(result.current.currentStatus).toBe(null);
 			expect(result.current.currentStaffing).toBe(null);
@@ -565,6 +568,7 @@ describe('Core Store', () => {
 				MapDayStyleUrl: '',
 				MapNightStyleUrl: '',
 				AppMapboxAccessToken: '',
+				IsDepartmentMapOverride: false,
 			});
 		});
 

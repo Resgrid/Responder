@@ -30,7 +30,8 @@ const mockConfig: GetConfigResultData = {
   MapCenterZoomLevel: 9,
   MapDayStyleUrl: '',
   MapNightStyleUrl: '',
-  AppMapboxAccessToken: ''
+  AppMapboxAccessToken: '',
+  IsDepartmentMapOverride: false
 };
 
 // Mock the core store

@@ -35,6 +35,7 @@ const BASE_CONFIG: GetConfigResultData = {
   MapDayStyleUrl: '',
   MapNightStyleUrl: '',
   AppMapboxAccessToken: '',
+  IsDepartmentMapOverride: false,
 };
 
 const setConfig = (center: Partial<GetConfigResultData>) => {

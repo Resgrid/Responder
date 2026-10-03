@@ -124,6 +124,7 @@ const CONFIGURED_CENTER: GetConfigResultData = {
   MapDayStyleUrl: '',
   MapNightStyleUrl: '',
   AppMapboxAccessToken: '',
+  IsDepartmentMapOverride: false,
 };
 
 const lastCamera = () => mockCameraProps[mockCameraProps.length - 1];
