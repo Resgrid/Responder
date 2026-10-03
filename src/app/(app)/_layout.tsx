@@ -26,8 +26,8 @@ import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { usePendingApprovalCheck } from '@/hooks/use-pending-approval-check';
 import { useSignalRLifecycle } from '@/hooks/use-signalr-lifecycle';
 import { useAuthStore } from '@/lib/auth';
-import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { onMapboxAccessTokenChange } from '@/lib/mapbox-token';
 import { useIsFirstTime } from '@/lib/storage';
 import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
@@ -48,7 +48,12 @@ import { securityStore } from '@/stores/security/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
-Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
+// Sets the SDK token now (stored server token, else the built-in one) and again whenever it changes.
+// Store listeners run synchronously, before React re-renders, so the SDK has the new token before a
+// map re-renders with a style that needs it. On web, Mapbox.setAccessToken sets mapboxgl.accessToken.
+onMapboxAccessTokenChange((token) => {
+  Mapbox.setAccessToken(token);
+});
 
 export default function TabLayout() {
   const { t } = useTranslation();

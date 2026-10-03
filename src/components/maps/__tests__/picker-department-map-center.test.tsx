@@ -121,6 +121,9 @@ const CONFIGURED_CENTER: GetConfigResultData = {
   UnitLocationMinMeters: 0,
   AnalyticsApiKey: '',
   AnalyticsHost: '',
+  MapDayStyleUrl: '',
+  MapNightStyleUrl: '',
+  AppMapboxAccessToken: '',
 };
 
 const lastCamera = () => mockCameraProps[mockCameraProps.length - 1];

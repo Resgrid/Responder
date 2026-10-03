@@ -11,6 +11,7 @@
  */
 
 import { logger } from '@/lib/logging';
+import { clearMapboxToken } from '@/lib/mapbox-token';
 import { IS_FIRST_TIME, storage } from '@/lib/storage';
 import { BASE_API_URL_STORAGE_KEY } from '@/lib/storage/app';
 
@@ -21,7 +22,10 @@ import { clearUnitsFilterOptions } from './units-filter';
 // Store reset functions registry
 type StoreResetFunction = () => void;
 
-const storeResetFunctions: Map<string, StoreResetFunction> = new Map();
+// The Mapbox token store is shared code that does not register itself. Forgetting the server token on
+// sign-out (and on a server switch, which signs out) puts maps back on the built-in token until config
+// loads again.
+const storeResetFunctions: Map<string, StoreResetFunction> = new Map([['mapbox-token', clearMapboxToken]]);
 
 /**
  * Register a store reset function
