@@ -27,7 +27,9 @@ interface LocationHistoryState {
 export const locationHistoryKey = (source: LocationHistorySource) => `${source.kind}:${source.id}`;
 
 // Only the newest request for a key may write. Panels re-fetch the same source when the protected-data grant changes, so
-// an answer from before a grant change (revealed or REDACTED) must never land after the newer one.
+// an answer from before a grant change (revealed or REDACTED) must never land after the newer one. For the same reason a
+// re-fetch drops the history it replaces: what was revealed under a grant since withdrawn must not stay on screen while
+// (or if never) the newer answer arrives.
 const latestRequests: Record<string, number> = {};
 let sequence = 0;
 
@@ -42,7 +44,7 @@ export const useLocationHistoryStore = create<LocationHistoryState>((set) => ({
     const key = locationHistoryKey(source);
     const request = ++sequence;
     latestRequests[key] = request;
-    set((state) => ({ entries: { ...state.entries, [key]: { history: state.entries[key]?.history ?? null, isLoading: true, error: null } } }));
+    set((state) => ({ entries: { ...state.entries, [key]: { history: null, isLoading: true, error: null } } }));
 
     try {
       const result = source.kind === 'call' ? await getCallLocationHistory(source.id) : await getContactCallHistory(source.id);

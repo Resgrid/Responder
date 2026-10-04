@@ -22,9 +22,18 @@ interface ContactPreplanState {
 
 // Only the newest request per contact may write. A forced re-fetch after a grant change races the one
 // before it, and the older answer (revealed before a grant loss, redacted before an unlock) must lose.
+// For the same reason a re-fetch drops the cached entry it replaces: what was revealed under a grant
+// since withdrawn must not stay on screen while (or if never) the newer answer arrives.
 let requestCounter = 0;
 const latestPreplanRequest = new Map<string, number>();
 const latestFilesRequest = new Map<string, number>();
+
+/** The record without this contact's entry; removed rather than nulled, since a null pre-plan means "has none". */
+const without = <T>(record: Record<string, T>, contactId: string): Record<string, T> => {
+  const rest = { ...record };
+  delete rest[contactId];
+  return rest;
+};
 
 /**
  * Pre-plan and site-file cache for the contact details sheet (Contacts plan Phase A). Cached per contact
@@ -43,7 +52,7 @@ export const useContactPreplanStore = create<ContactPreplanState>((set, get) => 
 
     const request = ++requestCounter;
     latestPreplanRequest.set(contactId, request);
-    set((state) => ({ loadingPreplan: { ...state.loadingPreplan, [contactId]: true }, error: null }));
+    set((state) => ({ preplans: without(state.preplans, contactId), loadingPreplan: { ...state.loadingPreplan, [contactId]: true }, error: null }));
     try {
       const result = await getContactPreplan(contactId);
       if (latestPreplanRequest.get(contactId) !== request) return;
@@ -67,7 +76,7 @@ export const useContactPreplanStore = create<ContactPreplanState>((set, get) => 
 
     const request = ++requestCounter;
     latestFilesRequest.set(contactId, request);
-    set((state) => ({ loadingFiles: { ...state.loadingFiles, [contactId]: true }, error: null }));
+    set((state) => ({ files: without(state.files, contactId), loadingFiles: { ...state.loadingFiles, [contactId]: true }, error: null }));
     try {
       const result = await getContactFiles(contactId, false);
       if (latestFilesRequest.get(contactId) !== request) return;

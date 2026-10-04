@@ -97,6 +97,35 @@ describe('useContactPreplanStore', () => {
     expect(state.loadingFiles.c1).toBeFalsy();
   });
 
+  it('drops the cached pre-plan and files as soon as a forced re-fetch starts, so a withdrawn grant reveals nothing meanwhile', async () => {
+    mockGetContactPreplan.mockResolvedValueOnce({ Data: preplan('North door') } as never);
+    mockGetContactFiles.mockResolvedValueOnce({ Data: files('floor-plan') } as never);
+    await useContactPreplanStore.getState().fetchPreplan('c1');
+    await useContactPreplanStore.getState().fetchFiles('c1');
+
+    const preplanRequest = deferred<{ Data: ContactPreplanData }>();
+    const filesRequest = deferred<{ Data: ContactFileResultData[] }>();
+    mockGetContactPreplan.mockImplementationOnce(() => preplanRequest.promise as never);
+    mockGetContactFiles.mockImplementationOnce(() => filesRequest.promise as never);
+    const preplanFetch = useContactPreplanStore.getState().fetchPreplan('c1', true);
+    const filesFetch = useContactPreplanStore.getState().fetchFiles('c1', true);
+
+    let state = useContactPreplanStore.getState();
+    expect(Object.prototype.hasOwnProperty.call(state.preplans, 'c1')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(state.files, 'c1')).toBe(false);
+    expect(state.loadingPreplan.c1).toBe(true);
+    expect(state.loadingFiles.c1).toBe(true);
+
+    preplanRequest.resolve({ Data: preplan('REDACTED') });
+    filesRequest.reject(new Error('offline'));
+    await Promise.all([preplanFetch, filesFetch]);
+
+    state = useContactPreplanStore.getState();
+    expect(state.preplans.c1).toEqual(preplan('REDACTED'));
+    // A failed re-fetch leaves nothing behind rather than the files revealed before it.
+    expect(Object.prototype.hasOwnProperty.call(state.files, 'c1')).toBe(false);
+  });
+
   it('serves the cached pre-plan without refetching unless forced', async () => {
     mockGetContactPreplan.mockResolvedValue({ Data: preplan('North door') } as never);
 

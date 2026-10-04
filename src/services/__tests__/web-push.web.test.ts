@@ -4,12 +4,13 @@
  * sign-out unregisters and kills the token, and another person or department in the browser rotates it.
  */
 
-const mockRegisterDevice = jest.fn(async () => ({}));
+const mockRegisterDevice = jest.fn(async () => ({ Status: 'queued' }));
 const mockUnRegisterWebPush = jest.fn(async () => ({}));
 const mockOpenNotification = jest.fn(async () => undefined);
 const mockShowNotificationModal = jest.fn(async () => undefined);
 const mockFirebaseGetToken = jest.fn(async () => 'browser-token');
 const mockFirebaseDeleteToken = jest.fn(async () => true);
+const mockLoggerWarn = jest.fn();
 
 jest.mock('firebase/app', () => ({ getApps: () => [], initializeApp: (_config: unknown, name: string) => ({ name }) }));
 jest.mock('firebase/messaging', () => ({
@@ -24,7 +25,7 @@ jest.mock('@/api/devices/push', () => ({
 }));
 jest.mock('@/services/push-notification', () => ({ pushNotificationService: { openNotification: (...args: unknown[]) => mockOpenNotification(...(args as [])) } }));
 jest.mock('@/lib/storage/app', () => ({ getBaseApiUrl: () => 'https://api.test/api/v4', getDeviceUuid: () => 'device-uuid' }));
-jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }));
+jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), warn: (...args: unknown[]) => mockLoggerWarn(...(args as [])), error: jest.fn(), debug: jest.fn() } }));
 jest.mock('@/lib/mfa/client-app', () => ({ CLIENT_HEADER: 'X-Resgrid-Client', RESGRID_CLIENT: 'responder' }));
 jest.mock('@/stores/push-notification/store', () => ({ usePushNotificationModalStore: { getState: () => ({ showNotificationModal: mockShowNotificationModal }) } }));
 
@@ -217,6 +218,20 @@ describe('browser', () => {
     now.mockRestore();
   });
 
+  it('retries a registration the server refused instead of remembering it for a day', async () => {
+    permission = 'granted';
+    const { push } = load();
+    mockRegisterDevice.mockResolvedValueOnce({ Status: 'failure' });
+
+    await push.syncWebPush();
+    expect(storage.has('rg.webPush.registration')).toBe(false);
+    expect(mockLoggerWarn).toHaveBeenCalledWith(expect.objectContaining({ context: { status: 'failure' } }));
+
+    await push.syncWebPush();
+    expect(mockRegisterDevice).toHaveBeenCalledTimes(2);
+    expect(storage.has('rg.webPush.registration')).toBe(true);
+  });
+
   it('takes the device off the previous department and rotates the token before registering in the new one', async () => {
     permission = 'granted';
     const { push } = load();
@@ -272,6 +287,18 @@ describe('browser', () => {
 
     await hooks.runSignOutHooks('access-token');
 
+    expect(mockFirebaseDeleteToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a sign-out unregister the server refused and still kills the token', async () => {
+    permission = 'granted';
+    const { push, hooks } = load();
+    await push.syncWebPush();
+    (globals.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 401 });
+
+    await hooks.runSignOutHooks('access-token');
+
+    expect(mockLoggerWarn).toHaveBeenCalledWith(expect.objectContaining({ context: { status: 401 } }));
     expect(mockFirebaseDeleteToken).toHaveBeenCalledTimes(1);
   });
 

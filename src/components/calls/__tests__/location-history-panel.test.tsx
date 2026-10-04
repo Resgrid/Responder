@@ -113,6 +113,17 @@ describe('LocationHistoryPanel', () => {
     expect(mockTrackEvent).toHaveBeenCalledWith('location_history_viewed', expect.objectContaining({ kind: 'call', id: '42', callCount: 2 }));
   });
 
+  it('counts the closing note in the collapsed notes label', async () => {
+    const closingOnly = { ...baseHistory.Calls[0], CallId: '7000', Notes: [] };
+    mockCallHistory.mockResolvedValueOnce({ Data: { ...baseHistory, Calls: [closingOnly, baseHistory.Calls[0]] } } as never);
+
+    render(<LocationHistoryPanel source={{ kind: 'call', id: '42' }} />);
+
+    await waitFor(() => expect(screen.getByTestId('location-history-notes-toggle-7000')).toBeTruthy());
+    expect(screen.getByText('location_history.show_notes:{"count":1}')).toBeTruthy();
+    expect(screen.getByText('location_history.show_notes:{"count":2}')).toBeTruthy();
+  });
+
   it('shows a lock instead of the REDACTED sentinel for protected call text', async () => {
     mockCallHistory.mockResolvedValueOnce({ Data: baseHistory } as never);
 

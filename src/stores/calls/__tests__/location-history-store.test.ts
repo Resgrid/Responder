@@ -68,6 +68,28 @@ describe('useLocationHistoryStore', () => {
     expect(useLocationHistoryStore.getState().entries['call:42'].history?.Calls[0].CallId).toBe('new');
   });
 
+  it('drops the history it replaces as soon as a re-fetch starts, so a withdrawn grant reveals nothing meanwhile', async () => {
+    const pending = deferred<never>();
+    mockCallHistory.mockResolvedValueOnce({ Data: history(['revealed']) } as never).mockReturnValueOnce(pending.promise);
+
+    await act(async () => {
+      await useLocationHistoryStore.getState().fetchHistory({ kind: 'call', id: '42' });
+    });
+    expect(useLocationHistoryStore.getState().entries['call:42'].history?.Calls).toHaveLength(1);
+
+    let refetch!: Promise<void>;
+    act(() => {
+      refetch = useLocationHistoryStore.getState().fetchHistory({ kind: 'call', id: '42' });
+    });
+    expect(useLocationHistoryStore.getState().entries['call:42']).toEqual({ history: null, isLoading: true, error: null });
+
+    await act(async () => {
+      pending.resolve({ Data: history(['redacted']) } as never);
+      await refetch;
+    });
+    expect(useLocationHistoryStore.getState().entries['call:42'].history?.Calls[0].CallId).toBe('redacted');
+  });
+
   it('records an error and clears the history when the request fails', async () => {
     mockCallHistory.mockRejectedValueOnce(new Error('boom'));
 

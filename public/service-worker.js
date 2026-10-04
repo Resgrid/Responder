@@ -21,7 +21,7 @@ function readPush(event) {
   if (event.data) {
     try {
       payload = event.data.json() || {};
-    } catch (e) {
+    } catch {
       payload = { notification: { body: event.data.text() } };
     }
   }

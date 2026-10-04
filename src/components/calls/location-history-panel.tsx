@@ -47,15 +47,18 @@ interface HistoryCallCardProps {
   onOpenCall: (callId: string) => void;
 }
 
-const HistoryCallCard: React.FC<HistoryCallCardProps> = ({ call, onOpenCall }) => {
+const HistoryCallCard: React.FC<HistoryCallCardProps> = React.memo(({ call, onOpenCall }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const hasNotes = call.Notes.length > 0 || !!call.CompletedNotes;
+  // The closing note counts as one, so a call with only a closing note never reads "Notes (0)".
+  const noteCount = call.Notes.length + (call.CompletedNotes ? 1 : 0);
   const loggedOn = call.LoggedOn || formatTimestamp(call.LoggedOnUtc);
+  const handleOpen = useCallback(() => onOpenCall(call.CallId), [onOpenCall, call.CallId]);
+  const toggleNotes = useCallback(() => setExpanded((value) => !value), []);
 
   return (
     <Box className="mb-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" testID={`location-history-call-${call.CallId}`}>
-      <Pressable onPress={() => onOpenCall(call.CallId)} className="p-3" testID={`location-history-open-${call.CallId}`}>
+      <Pressable onPress={handleOpen} className="p-3" testID={`location-history-open-${call.CallId}`}>
         <HStack space="sm" className="items-start">
           <VStack className="flex-1">
             <HStack space="xs" className="flex-wrap items-center">
@@ -95,12 +98,12 @@ const HistoryCallCard: React.FC<HistoryCallCardProps> = ({ call, onOpenCall }) =
         ) : null}
       </Pressable>
 
-      {hasNotes ? (
+      {noteCount > 0 ? (
         <Box className="border-t border-gray-100 dark:border-gray-800">
-          <Pressable onPress={() => setExpanded((value) => !value)} className="px-3 py-2" testID={`location-history-notes-toggle-${call.CallId}`}>
+          <Pressable onPress={toggleNotes} className="px-3 py-2" testID={`location-history-notes-toggle-${call.CallId}`}>
             <HStack space="xs" className="items-center">
               {expanded ? <ChevronUpIcon size={16} color="#6366F1" /> : <ChevronDownIcon size={16} color="#6366F1" />}
-              <Text className="text-sm text-primary-600 dark:text-primary-400">{expanded ? t('location_history.hide_notes') : t('location_history.show_notes', { count: call.Notes.length })}</Text>
+              <Text className="text-sm text-primary-600 dark:text-primary-400">{expanded ? t('location_history.hide_notes') : t('location_history.show_notes', { count: noteCount })}</Text>
             </HStack>
           </Pressable>
           {expanded ? (
@@ -125,7 +128,7 @@ const HistoryCallCard: React.FC<HistoryCallCardProps> = ({ call, onOpenCall }) =
       ) : null}
     </Box>
   );
-};
+});
 
 /**
  * Previous calls at a location: on the call detail screen, other calls at the same address (however it was typed), nearby

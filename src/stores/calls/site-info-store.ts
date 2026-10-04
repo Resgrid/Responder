@@ -16,6 +16,8 @@ interface SiteInfoState {
 
 // Only the newest request may write. The tab re-fetches the same call when the grant changes, so a
 // response for an older request (revealed before a grant loss, redacted before an unlock) is dropped.
+// For the same reason a fetch drops the site info it replaces: what was revealed under a grant since
+// withdrawn must not stay on screen while (or if never) the newer answer arrives.
 let latestRequest = 0;
 
 /**
@@ -31,7 +33,7 @@ export const useSiteInfoStore = create<SiteInfoState>((set) => ({
 
   fetchSiteInfo: async (callId: string) => {
     const request = ++latestRequest;
-    set({ isLoading: true, error: null, callId });
+    set({ siteInfo: null, isLoading: true, error: null, callId });
     try {
       const result = await getCallSiteInfo(callId);
       if (request !== latestRequest) {

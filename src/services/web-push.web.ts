@@ -68,6 +68,8 @@ const ASKED_KEY = 'rg.webPush.asked';
 const ASK_AGAIN_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 /** FCM rotates web tokens; re-registering daily keeps the server's copy current. */
 const REREGISTER_AFTER_MS = 24 * 60 * 60 * 1000;
+/** RegisterDevice answers 200 either way; only these statuses mean the registration was taken (it is queued). */
+const REGISTERED_STATUSES = ['queued', 'success'];
 
 const listeners = new Set<() => void>();
 
@@ -260,8 +262,13 @@ async function runSync(): Promise<void> {
     await unregisterQuietly(current);
   }
 
-  await registerDevice({ UserId: identity.userId, Token: token, Platform: WEB_PLATFORM, DeviceUuid: getDeviceUuid() || '', Prefix: identity.prefix });
-  writeRegistration({ key: keyOf(identity), userId: identity.userId, prefix: identity.prefix, token, registeredAt: Date.now() });
+  const result = await registerDevice({ UserId: identity.userId, Token: token, Platform: WEB_PLATFORM, DeviceUuid: getDeviceUuid() || '', Prefix: identity.prefix });
+  // Remembered only once the server took it: a refused registration left cached would skip the retry for a day.
+  if (REGISTERED_STATUSES.includes(result?.Status?.toLowerCase() ?? '')) {
+    writeRegistration({ key: keyOf(identity), userId: identity.userId, prefix: identity.prefix, token, registeredAt: Date.now() });
+  } else {
+    logger.warn({ message: 'Web push: the server did not take the registration', context: { status: result?.Status } });
+  }
   notify();
 }
 
@@ -316,12 +323,16 @@ registerSignOutHook(async (accessToken) => {
   if (stored && accessToken) {
     // Straight to the server, not through the api client: its 401 handling would re-enter logout. Awaited (sign-out
     // waits on it), so no keepalive: some browsers refuse keepalive on a cross-origin call that needs a preflight.
+    // fetch resolves on a 4xx/5xx; the token deleted below still stops delivery, but the refusal is worth seeing.
     try {
-      await fetch(`${getBaseApiUrl()}/Devices/UnRegisterWebPush`, {
+      const response = await fetch(`${getBaseApiUrl()}/Devices/UnRegisterWebPush`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, [CLIENT_HEADER]: RESGRID_CLIENT },
         body: JSON.stringify({ Token: stored.token, Prefix: stored.prefix }),
       });
+      if (!response.ok) {
+        logger.warn({ message: 'Web push: the server refused to unregister the token at sign-out', context: { status: response.status } });
+      }
     } catch (error) {
       logger.warn({ message: 'Web push: the token could not be unregistered at sign-out', context: { error } });
     }
@@ -363,7 +374,7 @@ export function attachWebPushListeners(): void {
   const onMessage = (event: MessageEvent) => {
     const message = event.data as { type?: string; data?: WebPushPayload } | undefined;
     if (message?.type === 'NOTIFICATION_CLICK' && message.data) {
-      void openWebPush(message.data);
+      openWebPush(message.data).catch((error) => logger.warn({ message: 'Web push: the clicked notification could not be opened', context: { error } }));
     } else if (message?.type === 'PUSH_RECEIVED' && message.data) {
       onPushReceived(message.data);
     }
