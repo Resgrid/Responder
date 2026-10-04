@@ -9,9 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { useDepartmentMapCenter } from '@/lib/map-center';
+import { useDepartmentMapStyle } from '@/lib/map-style';
+import { useMapboxAccessToken } from '@/lib/mapbox-token';
 import { locationService } from '@/services/location';
 import { useLocationStore } from '@/stores/app/location-store';
 
@@ -21,7 +22,7 @@ import { useLocationStore } from '@/stores/app/location-store';
  * A full-screen location picker that allows users to select a location on a map.
  *
  * Debugging steps if component gets stuck in "Loading" state:
- * 1. Check if Mapbox is configured (RESPOND_MAPBOX_PUBKEY in environment)
+ * 1. Check if Mapbox is configured (server-supplied token in config, or RESPOND_MAPBOX_PUBKEY in environment)
  * 2. Check device location permissions
  * 3. Check console logs for detailed debugging information
  * 4. Ensure device location services are enabled
@@ -48,6 +49,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
   // Read reactively: config often lands after this mounts, and a one-shot read would leave the map
   // parked on the bootstrap fallback for the rest of the session.
   const departmentMapCenter = useDepartmentMapCenter();
+  const mapStyle = useDepartmentMapStyle();
   const latitude = useLocationStore((state) => state.latitude);
   const longitude = useLocationStore((state) => state.longitude);
   const setLocation = useLocationStore((state) => state.setLocation);
@@ -63,8 +65,8 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
   const [isMapReady, setIsMapReady] = useState(false);
   const isMountedRef = useRef(true);
 
-  // Check if Mapbox is properly configured
-  const isMapboxConfigured = Boolean(Env.RESPOND_MAPBOX_PUBKEY && Env.RESPOND_MAPBOX_PUBKEY.trim() !== '');
+  // Check if Mapbox is properly configured (server-supplied token, else the built-in one)
+  const isMapboxConfigured = Boolean(useMapboxAccessToken());
 
   // Helper function to get current location from device
   const getCurrentLocationFromDevice = React.useCallback(async () => {
@@ -377,6 +379,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       {currentLocation ? (
         <Mapbox.MapView
           ref={mapRef}
+          styleURL={mapStyle}
           style={styles.map}
           logoEnabled={false}
           attributionEnabled={true}
@@ -402,6 +405,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
         // Default map view centered on the department when no location is available
         <Mapbox.MapView
           ref={mapRef}
+          styleURL={mapStyle}
           style={styles.map}
           logoEnabled={false}
           attributionEnabled={true}

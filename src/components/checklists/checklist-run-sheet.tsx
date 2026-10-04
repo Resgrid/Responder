@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { attestChecklistRun, getChecklistImage } from '@/api/checklists/checklists';
 import { ChecklistSignaturePad } from '@/components/checklists/signature-pad';
+import { DateTimeField } from '@/components/common/date-time-field';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { checklistFailed, isChecklistRequired, visibleChecklistItems } from '@/lib/checklists/form';
@@ -132,7 +133,10 @@ export const ChecklistRunSheet: React.FC = () => {
                   <ButtonText>{item.Type === 6 ? label : t(`checklists.labels.${label}`)}</ButtonText>
                 </Button>
               ))}
-              {[3, 4, 5, 7].includes(item.Type) ? (
+              {item.Type === 7 ? (
+                <DateTimeField value={answer?.Value ?? ''} onChange={(Value) => change({ Status: Value ? 1 : 0, Value })} label={item.Name} disabled={!editable || busy} testID="checklist-answer-date" />
+              ) : null}
+              {[3, 4, 5].includes(item.Type) ? (
                 <TextInput
                   accessibilityLabel={t('checklists.labels.Answer')}
                   className="rounded border border-outline-300 p-3 text-typography-900"
@@ -140,7 +144,7 @@ export const ChecklistRunSheet: React.FC = () => {
                   multiline={item.Type === 5}
                   keyboardType={[3, 4].includes(item.Type) ? 'decimal-pad' : 'default'}
                   value={answer?.Value ?? ''}
-                  placeholder={item.Type === 7 ? 'YYYY-MM-DD' : (item.Units ?? '')}
+                  placeholder={item.Units ?? ''}
                   onChangeText={(Value) => change({ Status: Value ? 1 : 0, Value })}
                 />
               ) : null}

@@ -5,6 +5,7 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
+import { useDepartmentMapStyle } from '@/lib/map-style';
 
 interface StaticMapProps {
   latitude: number;
@@ -18,6 +19,7 @@ interface StaticMapProps {
 
 const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoom = 15, height = 200, showUserLocation = false, onPress }) => {
   const { t } = useTranslation();
+  const mapStyle = useDepartmentMapStyle();
   if (!latitude || !longitude) {
     return (
       <Box style={[styles.container, { height }]} className="items-center justify-center bg-gray-200">
@@ -30,7 +32,7 @@ const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoo
     <Box style={[styles.container, { height }]}>
       {/* Locked preview: all gestures disabled — the map must not fight the parent
           ScrollView. Interaction happens in the full-screen modal opened via onPress. */}
-      <Mapbox.MapView style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={false} zoomEnabled={false} scrollEnabled={false} rotateEnabled={false} pitchEnabled={false}>
+      <Mapbox.MapView styleURL={mapStyle} style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={false} zoomEnabled={false} scrollEnabled={false} rotateEnabled={false} pitchEnabled={false}>
         <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />
         {/* Marker for the location — an empty child renders an invisible annotation */}
         <Mapbox.PointAnnotation id="destinationPoint" coordinate={[longitude, latitude]} title={address || 'Location'}>

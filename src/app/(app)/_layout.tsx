@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RealtimeStatusBanner } from '@/components/common/realtime-status-banner';
 import { StepUpPromptHost } from '@/components/data-protection/step-up-prompt-host';
+import { RecoveryCodesModal } from '@/components/mfa/recovery-codes-modal';
 import { NotificationButton } from '@/components/notifications/NotificationButton';
 import { NotificationInbox } from '@/components/notifications/NotificationInbox';
 import SideMenu from '@/components/sidebar/side-menu-content';
@@ -22,10 +23,11 @@ import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { useAppInitRetry } from '@/hooks/use-app-init-retry';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
+import { usePendingApprovalCheck } from '@/hooks/use-pending-approval-check';
 import { useSignalRLifecycle } from '@/hooks/use-signalr-lifecycle';
 import { useAuthStore } from '@/lib/auth';
-import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { onMapboxAccessTokenChange } from '@/lib/mapbox-token';
 import { useIsFirstTime } from '@/lib/storage';
 import { loadRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
@@ -46,13 +48,20 @@ import { securityStore } from '@/stores/security/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
-Mapbox.setAccessToken(Env.RESPOND_MAPBOX_PUBKEY);
+// Sets the SDK token now (stored server token, else the built-in one) and again whenever it changes.
+// Store listeners run synchronously, before React re-renders, so the SDK has the new token before a
+// map re-renders with a style that needs it. On web, Mapbox.setAccessToken sets mapboxgl.accessToken.
+onMapboxAccessTokenChange((token) => {
+  Mapbox.setAccessToken(token);
+});
 
 export default function TabLayout() {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const status = useAuthStore((state) => state.status);
+  // Approve with Responder: open a waiting request when the app comes to the foreground (the push may be late).
+  usePendingApprovalCheck(status === 'signedIn');
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
@@ -404,6 +413,7 @@ export default function TabLayout() {
         two prompts over each other.
       */}
       <StepUpPromptHost />
+      <RecoveryCodesModal />
 
       {/* Top Navigation Bar */}
       <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>

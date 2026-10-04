@@ -4,6 +4,9 @@ import React from 'react';
 
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
+import { FALLBACK_DAY_MAP_STYLE } from '@/lib/map-style';
+import { GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
+import { useCoreStore } from '@/stores/app/core-store';
 
 import HomeMap from '../map';
 
@@ -116,13 +119,13 @@ jest.mock('@rnmapbox/maps', () => ({
   __esModule: true,
   default: {
     setAccessToken: jest.fn(),
-    StyleURL: {
-      Street: 'mapbox://styles/mapbox/streets-v11',
-      Satellite: 'mapbox://styles/mapbox/satellite-v9',
-    },
-    MapView: ({ children, testID }: any) => {
+    MapView: ({ children, testID, styleURL }: any) => {
       const { View } = require('react-native');
-      return <View testID={testID}>{children}</View>;
+      return (
+        <View testID={testID} styleURL={styleURL}>
+          {children}
+        </View>
+      );
     },
     Camera: ({ children }: any) => {
       const { View } = require('react-native');
@@ -316,6 +319,13 @@ jest.mock('@/stores/calls/active-call-store', () => ({
     }),
   },
 }));
+
+// A real store, so the base map style follows department config when it lands after mount.
+jest.mock('@/stores/app/core-store', () => {
+  const { create } = require('zustand');
+
+  return { useCoreStore: create(() => ({ config: null })) };
+});
 
 jest.mock('@/stores/app/location-store', () => {
   let mockState = {
@@ -613,6 +623,36 @@ describe('HomeMap', () => {
     // In landscape mode, the map container should still render correctly
     // (side menu is handled by the parent _layout.tsx)
     expect(screen.getByTestId('home-map-container')).toBeTruthy();
+  });
+
+  describe('department map style', () => {
+    afterEach(() => {
+      useCoreStore.setState({ config: null });
+    });
+
+    it('renders the department day style once config lands', async () => {
+      render(<HomeMap />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pins')).toBeTruthy();
+      });
+
+      // Before config arrives the map uses the bootstrap fallback, not a hardcoded SDK style.
+      expect(screen.getByTestId('home-map-view').props.styleURL).toBe(FALLBACK_DAY_MAP_STYLE);
+
+      act(() => {
+        useCoreStore.setState({
+          config: Object.assign(new GetConfigResultData(), {
+            MapDayStyleUrl: 'mapbox://styles/mapbox/satellite-v9',
+            MapNightStyleUrl: 'mapbox://styles/mapbox/navigation-night-v1',
+          }),
+        });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('home-map-view').props.styleURL).toBe('mapbox://styles/mapbox/satellite-v9');
+      });
+    });
   });
 
   describe('Analytics Tracking', () => {

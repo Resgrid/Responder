@@ -8,8 +8,9 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Env } from '@/lib/env';
 import { useDepartmentMapCenter } from '@/lib/map-center';
+import { useDepartmentMapStyle } from '@/lib/map-style';
+import { useMapboxAccessToken } from '@/lib/mapbox-token';
 
 interface LocationPickerProps {
   initialLocation?:
@@ -30,6 +31,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
   // Read reactively: config often lands after this mounts, and a one-shot read would leave the map
   // parked on the bootstrap fallback for the rest of the session.
   const departmentMapCenter = useDepartmentMapCenter();
+  const mapStyle = useDepartmentMapStyle();
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -38,8 +40,8 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
   const [mapError, setMapError] = useState<string | null>(null);
   const [hasAttemptedLocationFetch, setHasAttemptedLocationFetch] = useState(false);
 
-  // Check if Mapbox is properly configured
-  const isMapboxConfigured = Boolean(Env.RESPOND_MAPBOX_PUBKEY && Env.RESPOND_MAPBOX_PUBKEY.trim() !== '');
+  // Check if Mapbox is properly configured (server-supplied token, else the built-in one)
+  const isMapboxConfigured = Boolean(useMapboxAccessToken());
 
   useEffect(() => {
     if (!isMapboxConfigured) {
@@ -142,6 +144,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
       {currentLocation ? (
         <Mapbox.MapView
           ref={mapRef}
+          styleURL={mapStyle}
           style={styles.map}
           logoEnabled={false}
           attributionEnabled={false}
@@ -164,6 +167,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
         // Default map view centered on the department until the user has a location
         <Mapbox.MapView
           ref={mapRef}
+          styleURL={mapStyle}
           style={styles.map}
           logoEnabled={false}
           attributionEnabled={false}

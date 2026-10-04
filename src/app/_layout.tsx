@@ -230,6 +230,8 @@ function RootLayout() {
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="login/index" options={{ headerShown: false }} />
         <Stack.Screen name="login/sso" options={{ headerShown: true }} />
+        <Stack.Screen name="login/recovery" options={{ headerShown: true }} />
+        <Stack.Screen name="sso-return" options={{ headerShown: false }} />
       </Stack>
     </Providers>
   );

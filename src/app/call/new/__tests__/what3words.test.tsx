@@ -27,7 +27,11 @@ const mockConfig: GetConfigResultData = {
   AnalyticsHost: '',
   MapCenterLatitude: 0,
   MapCenterLongitude: 0,
-  MapCenterZoomLevel: 9
+  MapCenterZoomLevel: 9,
+  MapDayStyleUrl: '',
+  MapNightStyleUrl: '',
+  AppMapboxAccessToken: '',
+  IsDepartmentMapOverride: false
 };
 
 // Mock the core store

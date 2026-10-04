@@ -409,6 +409,27 @@ describe('API Client - Token Refresh', () => {
     });
   });
 
+  describe('Response Interceptor - application refusals', () => {
+    it('passes a 401 problem refusal straight through: no refresh, no replay of the code', async () => {
+      useAuthStore.setState({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        accessTokenObtainedAt: Date.now() - 1000,
+        refreshTokenObtainedAt: Date.now() - 1000,
+        status: 'signedIn',
+        profile: { sub: 'test-user' } as any,
+        userId: 'test-user',
+      });
+      mockAxios.onPost('/Mfa/VerifyStepUp').reply(401, { type: 'invalid_totp', title: 'The code is invalid', status: 401 });
+
+      await expect(api.post('/Mfa/VerifyStepUp', { Code: '000000' })).rejects.toMatchObject({ response: { status: 401, data: { type: 'invalid_totp' } } });
+
+      expect(mockedRefreshTokenRequest).not.toHaveBeenCalled();
+      expect(mockAxios.history.post).toHaveLength(1);
+      expect(useAuthStore.getState().status).toBe('signedIn');
+    });
+  });
+
   describe('Token Expiry Helper Methods', () => {
     it('should correctly identify expiring soon tokens', () => {
       const now = Date.now();

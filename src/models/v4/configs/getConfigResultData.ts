@@ -22,4 +22,12 @@ export class GetConfigResultData {
   public MapCenterLongitude: number = 0;
   /** Zoom level for department-wide maps. */
   public MapCenterZoomLevel: number = 9;
+  /** Department Mapbox base map style (mapbox:// url) for the light theme. */
+  public MapDayStyleUrl: string = '';
+  /** Department Mapbox base map style (mapbox:// url) for the dark theme. */
+  public MapNightStyleUrl: string = '';
+  /** Public Mapbox token for this app (department's own when its override is on); '' keeps the built-in token. */
+  public AppMapboxAccessToken: string = '';
+  /** True when the department's own Mapbox account (token and custom style) is in effect; its style then waits for that token. */
+  public IsDepartmentMapOverride: boolean = false;
 }

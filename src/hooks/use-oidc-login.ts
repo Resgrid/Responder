@@ -11,7 +11,8 @@ WebBrowser.maybeCompleteAuthSession();
 export interface UseOidcLoginOptions {
   authority: string;
   clientId: string;
-  departmentCode: string;
+  /** Discovery's department token, sent with the id_token to connect/external-token. */
+  departmentToken: string;
 }
 
 export const isValidSsoUrl = (url: string): boolean => {
@@ -41,11 +42,11 @@ export interface UseOidcLoginResult {
  * Hook that drives the OIDC Authorization-Code + PKCE login flow.
  *
  * Usage:
- *   const { request, promptAsync, exchangeCodeForResgridToken } = useOidcLogin({ authority, clientId, departmentCode });
+ *   const { request, promptAsync, exchangeCodeForResgridToken } = useOidcLogin({ authority, clientId, departmentToken });
  *   // Call promptAsync() to open the system browser.
  *   // Watch `response` and call exchangeCodeForResgridToken() when response.type === 'success'.
  */
-export function useOidcLogin({ authority, clientId, departmentCode }: UseOidcLoginOptions): UseOidcLoginResult {
+export function useOidcLogin({ authority, clientId, departmentToken }: UseOidcLoginOptions): UseOidcLoginResult {
   const redirectUri = AuthSession.makeRedirectUri({ scheme: 'resgrid', path: 'auth/callback' });
 
   const safeAuthority = isValidSsoUrl(authority) ? authority : '';
@@ -99,7 +100,7 @@ export function useOidcLogin({ authority, clientId, departmentCode }: UseOidcLog
       await loginWithSso({
         provider: 'oidc',
         externalToken: idToken,
-        departmentCode,
+        departmentToken,
       });
 
       return true;
@@ -110,7 +111,7 @@ export function useOidcLogin({ authority, clientId, departmentCode }: UseOidcLog
       });
       return false;
     }
-  }, [response, request, discovery, clientId, redirectUri, departmentCode, loginWithSso]);
+  }, [response, request, discovery, clientId, redirectUri, departmentToken, loginWithSso]);
 
   return {
     request,

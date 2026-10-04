@@ -69,6 +69,12 @@ jest.mock('@/lib/storage', () => ({
 	},
 }));
 
+// The token check itself talks to Mapbox; here only the hand-off from a config load matters.
+const mockApplyServerMapboxToken = jest.fn((_token: string | null | undefined): Promise<void> => Promise.resolve());
+jest.mock('@/lib/mapbox-token', () => ({
+	applyServerMapboxToken: (token: string | null | undefined) => mockApplyServerMapboxToken(token),
+}));
+
 // Import after mocks
 import { useCoreStore } from '../core-store';
 import { getConfig } from '@/api/config';
@@ -125,7 +131,11 @@ describe('Core Store', () => {
         AnalyticsHost: '',
         MapCenterLatitude: 0,
         MapCenterLongitude: 0,
-        MapCenterZoomLevel: 9
+        MapCenterZoomLevel: 9,
+        MapDayStyleUrl: '',
+        MapNightStyleUrl: '',
+        AppMapboxAccessToken: '',
+        IsDepartmentMapOverride: false
       },
 			PageSize: 0,
 			Timestamp: '',
@@ -321,6 +331,10 @@ describe('Core Store', () => {
 				MapCenterLatitude: 0,
 				MapCenterLongitude: 0,
 				MapCenterZoomLevel: 9,
+				MapDayStyleUrl: '',
+				MapNightStyleUrl: '',
+				AppMapboxAccessToken: '',
+				IsDepartmentMapOverride: false,
 			});
 			expect(result.current.activeStatuses).toEqual([
 				{
@@ -399,6 +413,10 @@ describe('Core Store', () => {
 				MapCenterLatitude: 0,
 				MapCenterLongitude: 0,
 				MapCenterZoomLevel: 9,
+				MapDayStyleUrl: '',
+				MapNightStyleUrl: '',
+				AppMapboxAccessToken: '',
+				IsDepartmentMapOverride: false,
 			});
 			expect(result.current.currentStatus).toBe(null);
 			expect(result.current.currentStaffing).toBe(null);
@@ -418,6 +436,73 @@ describe('Core Store', () => {
 			expect(result.current.isInitializing).toBe(false);
 			expect(result.current.error).toBe('Failed to init core app data');
 			expect(result.current.isLoading).toBe(false);
+		});
+	});
+
+	describe('Mapbox token', () => {
+		const SERVER_MAPBOX_TOKEN = 'pk.eyJ1IjoiY291bnR5LWZpcmUifQ.server-signature';
+
+		const serveMapboxToken = async (token: string) => {
+			const response = await mockGetConfig('test-app-key');
+			mockGetConfig.mockResolvedValue({ ...response, Data: { ...response.Data, AppMapboxAccessToken: token } });
+		};
+
+		it('should hand the server token to the token store after a successful init', async () => {
+			await serveMapboxToken(SERVER_MAPBOX_TOKEN);
+			const { result } = renderHook(() => useCoreStore());
+
+			await act(async () => {
+				await result.current.init();
+			});
+
+			expect(mockApplyServerMapboxToken).toHaveBeenCalledTimes(1);
+			expect(mockApplyServerMapboxToken).toHaveBeenCalledWith(SERVER_MAPBOX_TOKEN);
+		});
+
+		it('should not wait for the token check to finish init', async () => {
+			mockApplyServerMapboxToken.mockReturnValueOnce(new Promise<void>(() => undefined));
+			const { result } = renderHook(() => useCoreStore());
+
+			await act(async () => {
+				await result.current.init();
+			});
+
+			expect(result.current.isInitialized).toBe(true);
+			expect(result.current.isInitializing).toBe(false);
+		});
+
+		it('should not touch the token when init fails', async () => {
+			mockGetConfig.mockRejectedValue(new Error('API Error'));
+			const { result } = renderHook(() => useCoreStore());
+
+			await act(async () => {
+				await result.current.init();
+			});
+
+			expect(mockApplyServerMapboxToken).not.toHaveBeenCalled();
+		});
+
+		it('should hand the server token to the token store after a successful config fetch', async () => {
+			await serveMapboxToken(SERVER_MAPBOX_TOKEN);
+			const { result } = renderHook(() => useCoreStore());
+
+			await act(async () => {
+				await result.current.fetchConfig();
+			});
+
+			expect(mockApplyServerMapboxToken).toHaveBeenCalledTimes(1);
+			expect(mockApplyServerMapboxToken).toHaveBeenCalledWith(SERVER_MAPBOX_TOKEN);
+		});
+
+		it('should not touch the token when the config fetch fails', async () => {
+			mockGetConfig.mockRejectedValue(new Error('Config Error'));
+			const { result } = renderHook(() => useCoreStore());
+
+			await act(async () => {
+				await result.current.fetchConfig();
+			});
+
+			expect(mockApplyServerMapboxToken).not.toHaveBeenCalled();
 		});
 	});
 
@@ -480,6 +565,10 @@ describe('Core Store', () => {
 				MapCenterLatitude: 0,
 				MapCenterLongitude: 0,
 				MapCenterZoomLevel: 9,
+				MapDayStyleUrl: '',
+				MapNightStyleUrl: '',
+				AppMapboxAccessToken: '',
+				IsDepartmentMapOverride: false,
 			});
 		});
 

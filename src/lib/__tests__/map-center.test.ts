@@ -32,6 +32,10 @@ const BASE_CONFIG: GetConfigResultData = {
   UnitLocationMinMeters: 0,
   AnalyticsApiKey: '',
   AnalyticsHost: '',
+  MapDayStyleUrl: '',
+  MapNightStyleUrl: '',
+  AppMapboxAccessToken: '',
+  IsDepartmentMapOverride: false,
 };
 
 const setConfig = (center: Partial<GetConfigResultData>) => {

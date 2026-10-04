@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
-import { Env } from '@/lib/env';
+import { useDepartmentMapStyle } from '@/lib/map-style';
+import { useMapboxAccessToken } from '@/lib/mapbox-token';
 
 interface FullScreenMapModalProps {
   isOpen: boolean;
@@ -30,8 +31,10 @@ interface FullScreenMapModalProps {
 const FullScreenMapModal: React.FC<FullScreenMapModalProps> = ({ isOpen, onClose, latitude, longitude, address, zoom = 15, showUserLocation = false, polygon, accentColor = '#ef4444' }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const mapStyle = useDepartmentMapStyle();
 
-  const isMapboxConfigured = Boolean(Env.RESPOND_MAPBOX_PUBKEY && Env.RESPOND_MAPBOX_PUBKEY.trim() !== '');
+  // Server-supplied token, else the built-in one
+  const isMapboxConfigured = Boolean(useMapboxAccessToken());
 
   const polygonShape = React.useMemo(() => {
     if (!polygon || polygon.length < 3) {
@@ -80,7 +83,7 @@ const FullScreenMapModal: React.FC<FullScreenMapModalProps> = ({ isOpen, onClose
     <Modal visible={isOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <View style={styles.container} testID="full-screen-map-modal">
         {isMapboxConfigured ? (
-          <Mapbox.MapView style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={true} zoomEnabled={true} scrollEnabled={true} rotateEnabled={true} pitchEnabled={true}>
+          <Mapbox.MapView styleURL={mapStyle} style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={true} zoomEnabled={true} scrollEnabled={true} rotateEnabled={true} pitchEnabled={true}>
             {polygonBounds ? <Mapbox.Camera bounds={polygonBounds} animationDuration={0} /> : <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />}
             {polygonShape ? (
               <Mapbox.ShapeSource id="fullScreenAreaPolygon" shape={polygonShape as GeoJSON.Feature}>

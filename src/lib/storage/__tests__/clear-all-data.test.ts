@@ -40,6 +40,12 @@ jest.mock('../secure-storage', () => ({
   clearSecureKeys: () => mockClearSecureKeys(),
 }));
 
+// Mock the Mapbox token store
+const mockClearMapboxToken = jest.fn();
+jest.mock('@/lib/mapbox-token', () => ({
+  clearMapboxToken: () => mockClearMapboxToken(),
+}));
+
 import { clearAllAppData, getRegisteredStoreCount, getRegisteredStoreNames, registerStoreReset, unregisterStoreReset } from '../clear-all-data';
 
 describe('clearAllAppData', () => {
@@ -131,6 +137,12 @@ describe('clearAllAppData', () => {
         message: 'MMKV storage cleared with preserved keys',
         context: { preservedKeys: ['baseUrl', 'IS_FIRST_TIME'] },
       });
+    });
+
+    it('should forget the server Mapbox token so maps fall back to the built-in token', async () => {
+      await clearAllAppData();
+
+      expect(mockClearMapboxToken).toHaveBeenCalledTimes(1);
     });
 
     it('should skip store reset when resetStores is false', async () => {

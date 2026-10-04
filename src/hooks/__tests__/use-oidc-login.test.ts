@@ -80,7 +80,7 @@ describe('useOidcLogin', () => {
 
   it('returns request=null and response=null when authority is empty', () => {
     const { result } = renderHook(() =>
-      useOidcLogin({ authority: '', clientId: 'test', departmentCode: 'DEPT' }),
+      useOidcLogin({ authority: '', clientId: 'test', departmentToken: 'dept-token' }),
     );
 
     expect(result.current.request).toBeNull();
@@ -89,7 +89,7 @@ describe('useOidcLogin', () => {
 
   it('passes an empty authority to discovery when the authority URL is invalid', () => {
     renderHook(() =>
-      useOidcLogin({ authority: 'not a url', clientId: 'test', departmentCode: 'DEPT' }),
+      useOidcLogin({ authority: 'not a url', clientId: 'test', departmentToken: 'dept-token' }),
     );
 
     expect(mockedUseAutoDiscovery).toHaveBeenCalledWith('');
@@ -97,7 +97,7 @@ describe('useOidcLogin', () => {
 
   it('passes the authority to discovery when the authority URL is valid https', () => {
     renderHook(() =>
-      useOidcLogin({ authority: 'https://idp.example.com', clientId: 'test', departmentCode: 'DEPT' }),
+      useOidcLogin({ authority: 'https://idp.example.com', clientId: 'test', departmentToken: 'dept-token' }),
     );
 
     expect(mockedUseAutoDiscovery).toHaveBeenCalledWith('https://idp.example.com');
@@ -115,7 +115,7 @@ describe('useOidcLogin', () => {
       useOidcLogin({
         authority: 'https://idp.example.com',
         clientId: 'client123',
-        departmentCode: 'DEPT',
+        departmentToken: 'dept-token',
       }),
     );
 
@@ -138,7 +138,7 @@ describe('useOidcLogin', () => {
       useOidcLogin({
         authority: 'https://idp.example.com',
         clientId: 'client123',
-        departmentCode: 'DEPT',
+        departmentToken: 'dept-token',
       }),
     );
 
@@ -163,7 +163,7 @@ describe('useOidcLogin', () => {
       useOidcLogin({
         authority: 'https://idp.example.com',
         clientId: 'client123',
-        departmentCode: 'DEPT001',
+        departmentToken: 'dept-token',
       }),
     );
 
@@ -175,7 +175,7 @@ describe('useOidcLogin', () => {
     expect(mockLoginWithSso).toHaveBeenCalledWith({
       provider: 'oidc',
       externalToken: 'id.token.here',
-      departmentCode: 'DEPT001',
+      departmentToken: 'dept-token',
     });
     expect(ok!).toBe(true);
   });

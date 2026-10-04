@@ -5,6 +5,7 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
+import { useDepartmentMapStyle } from '@/lib/map-style';
 
 interface StaticMapProps {
   latitude: number;
@@ -18,6 +19,7 @@ interface StaticMapProps {
 
 const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoom = 15, height = 200, showUserLocation = false, onPress }) => {
   const { t } = useTranslation();
+  const mapStyle = useDepartmentMapStyle();
   const [userCoordinate, setUserCoordinate] = useState<[number, number] | null>(null);
 
   useEffect(() => {
@@ -52,7 +54,9 @@ const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoo
 
   return (
     <div style={{ width: '100%', height, position: 'relative', overflow: 'hidden' }}>
-      <Mapbox.MapView style={{ flex: 1, width: '100%', height }} zoomEnabled={false} scrollEnabled={false} rotateEnabled={false} pitchEnabled={false}>
+      {/* The web MapView reads styleURL only when it mounts, so key on it to rebuild when config
+          lands or the theme flips. */}
+      <Mapbox.MapView key={mapStyle} styleURL={mapStyle} style={{ flex: 1, width: '100%', height }} zoomEnabled={false} scrollEnabled={false} rotateEnabled={false} pitchEnabled={false}>
         <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />
         <Mapbox.MarkerView coordinate={[longitude, latitude]}>
           <div

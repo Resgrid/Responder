@@ -17,6 +17,7 @@ import { VStack } from '@/components/ui/vstack';
 import { formatWeatherAlertTranslation, getWeatherAlertCategoryName, normalizeWeatherAlertSeverity } from '@/components/weather-alerts/weather-alert-formatters';
 import { getWeatherAlertRequestId } from '@/components/weather-alerts/weather-alert-list-utils';
 import { WeatherAlertSeverityBadge } from '@/components/weather-alerts/weather-alert-severity-badge';
+import { useDepartmentMapStyle } from '@/lib/map-style';
 import { SEVERITY_COLORS } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
@@ -72,6 +73,7 @@ export default function WeatherAlertDetail() {
   const fetchActiveAlerts = useWeatherAlertsStore((state) => state.fetchActiveAlerts);
   const selectAlertByIdentity = useWeatherAlertsStore((state) => state.selectAlertByIdentity);
   const alertIdentity = typeof id === 'string' ? decodeURIComponent(id).trim() : '';
+  const mapStyle = useDepartmentMapStyle();
 
   const handleBack = useCallback(() => {
     router.back();
@@ -264,7 +266,7 @@ export default function WeatherAlertDetail() {
         {/* Map */}
         {mapCenter ? (
           <Box className="mx-4 mt-3 overflow-hidden rounded-xl" style={styles.mapContainer}>
-            <Mapbox.MapView style={styles.map} styleURL={Mapbox.StyleURL.Street} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} compassEnabled={false}>
+            <Mapbox.MapView style={styles.map} styleURL={mapStyle} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} compassEnabled={false}>
               {mapBounds ? <Mapbox.Camera bounds={mapBounds} animationMode="none" /> : <Mapbox.Camera centerCoordinate={mapCenter} zoomLevel={7} animationMode="none" />}
               {geoJsonShape ? (
                 <Mapbox.ShapeSource id="alertPolygon" shape={geoJsonShape as GeoJSON.Feature}>

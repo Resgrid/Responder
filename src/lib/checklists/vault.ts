@@ -36,13 +36,15 @@ export const vaultRead = async <T>(scope: string, name: string): Promise<T | nul
   const id = await slot(scope, name);
   const ciphertext = native ? storage?.getString(id) : memory.get(id);
   if (!ciphertext) return null;
-  const bytes = await aesDecryptAsync(AESSealedData.fromCombined(ciphertext), await keyFor(scope), { additionalData: Buffer.from(`${scope}:${name}`, 'utf8') });
+  const bytes = await aesDecryptAsync(AESSealedData.fromCombined(ciphertext), await keyFor(scope), { additionalData: Buffer.from(`${scope}:${name}`, 'utf8').toString('base64') });
   return JSON.parse(Buffer.from(bytes).toString('utf8')) as T;
 };
 export const vaultWrite = async (scope: string, name: string, value: unknown): Promise<void> => {
   const plaintext = Buffer.from(JSON.stringify(value), 'utf8');
   if (plaintext.byteLength > 32 * 1024 * 1024) throw new Error('storage_full');
-  const ciphertext = await aesEncryptAsync(plaintext, await keyFor(scope), { additionalData: Buffer.from(`${scope}:${name}`, 'utf8') });
+  // Expo's iOS typed-array bridge cannot identify the Buffer subclass and can trap
+  // before returning a JS error. Its base64 input path preserves the same bytes.
+  const ciphertext = await aesEncryptAsync(plaintext.toString('base64'), await keyFor(scope), { additionalData: Buffer.from(`${scope}:${name}`, 'utf8').toString('base64') });
   const id = await slot(scope, name);
   const text = await ciphertext.combined('base64');
   if (native) storage!.set(id, text);

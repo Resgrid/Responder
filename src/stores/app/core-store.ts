@@ -7,6 +7,7 @@ import { getAllPersonnelStatuses, getCurrentPersonStatus } from '@/api/satuses';
 import { getAllPersonnelStaffings, getCurrentPersonStaffing } from '@/api/staffing';
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
+import { applyServerMapboxToken } from '@/lib/mapbox-token';
 import { zustandStorage } from '@/lib/storage';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
@@ -118,6 +119,11 @@ export const useCoreStore = create<CoreState>()(
             config: config.Data,
           });
 
+          // Fire and forget: checking the token with Mapbox must never hold up or fail init.
+          if (config.Data) {
+            void applyServerMapboxToken(config.Data.AppMapboxAccessToken);
+          }
+
           logger.info({
             message: 'Core store initialization completed successfully',
           });
@@ -165,6 +171,11 @@ export const useCoreStore = create<CoreState>()(
         try {
           const config = await getConfig(Env.APP_KEY);
           set({ config: config.Data });
+
+          // Fire and forget: checking the token with Mapbox must never hold up or fail the config load.
+          if (config.Data) {
+            void applyServerMapboxToken(config.Data.AppMapboxAccessToken);
+          }
         } catch (error) {
           set({ error: 'Failed to fetch config', isLoading: false });
           logger.error({

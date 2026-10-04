@@ -1,7 +1,7 @@
 import Mapbox from '@rnmapbox/maps';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { NavigationIcon } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -12,8 +12,8 @@ import { useMapLiveLocations } from '@/hooks/use-map-live-locations';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { logger } from '@/lib/logging';
 import { getPinEntityId } from '@/lib/map-pin-ids';
+import { useDepartmentMapStyle } from '@/lib/map-style';
 import { isPoiMarker } from '@/lib/poi';
-import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { useLocationStore } from '@/stores/app/location-store';
@@ -50,16 +50,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const heading = useLocationStore((state) => state.heading);
   const isMapLocked = useLocationStore((state) => state.isMapLocked);
 
-  const mapOptions = useMemo(() => {
-    return Object.keys(Mapbox.StyleURL)
-      .map((key) => ({
-        label: key,
-        data: (Mapbox.StyleURL as Record<string, string>)[key],
-      }))
-      .sort(onSortOptions);
-  }, []);
-
-  const styleURL = mapOptions[0]?.data;
+  const styleURL = useDepartmentMapStyle();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const isFollowingUser = isScreenFocused && isMapLocked && focusedPoi == null;
   const isInteractionLocked = isMapLocked && focusedPoi == null;
