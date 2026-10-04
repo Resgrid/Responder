@@ -48,6 +48,7 @@ jest.mock('@/components/calls/call-files-modal', () => () => null);
 jest.mock('@/components/calls/call-images-modal', () => () => null);
 jest.mock('@/components/calls/call-notes-modal', () => () => null);
 jest.mock('@/components/calls/call-site-info-tab-panel', () => ({ CallSiteInfoTabPanel: () => null }));
+jest.mock('@/components/calls/location-history-panel', () => ({ LocationHistoryPanel: () => null }));
 jest.mock('@/components/calls/close-call-bottom-sheet', () => ({ CloseCallBottomSheet: () => null }));
 jest.mock('@/components/check-in/check-in-tab-panel', () => ({ CheckInTabPanel: () => null }));
 jest.mock('@/components/common/header-back-button', () => ({ HeaderBackButton: () => null }));

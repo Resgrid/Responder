@@ -268,6 +268,7 @@
       "command": "Comando",
       "contact": "Contatto",
       "dispatched": "Inviato",
+      "history": "Storico",
       "info": "Info",
       "protocols": "Protocolli",
       "site": "Info sito",
@@ -961,6 +962,7 @@
     "stateId": "ID regione",
     "systemInformation": "Informazioni di sistema",
     "tabs": {
+      "calls": "Chiamate",
       "details": "Dettagli",
       "files": "File",
       "notes": "Note",
@@ -1172,6 +1174,40 @@
     "fix_unavailable": "Impossibile ottenere la posizione. Spostati in un'area con una visuale del cielo più libera e riprova.",
     "tracking_notification_body": "Condivisione della tua posizione con il tuo dipartimento.",
     "tracking_notification_title": "Tracciamento della posizione"
+  },
+  "location_history": {
+    "address_matching_off": "La protezione avanzata dei dati è attiva per questo dipartimento: gli indirizzi delle chiamate sono cifrati e vengono mostrate solo le chiamate collegate tramite contatto.",
+    "closing_notes": "Note di chiusura",
+    "empty": "Nessuna chiamata correlata",
+    "empty_description": "Non sono state trovate chiamate precedenti in questo luogo o con questi contatti.",
+    "has_more": "Sono mostrate solo le chiamate più recenti.",
+    "header_call": "Chiamate precedenti in questo luogo",
+    "header_contact": "Chiamate correlate",
+    "help_call": "Chiamate allo stesso indirizzo, comunque sia stato scritto, chiamate vicine senza indirizzo stradale e chiamate collegate allo stesso contatto.",
+    "help_contact": "Chiamate collegate a questo contatto, più le chiamate presso qualsiasi occupazione a cui è collegato questo contatto.",
+    "hide_notes": "Nascondi note",
+    "index_incomplete": "Le chiamate meno recenti sono ancora in fase di indicizzazione, quindi alcune potrebbero non comparire ancora.",
+    "load_failed": "Impossibile caricare lo storico delle chiamate.",
+    "loading": "Caricamento chiamate...",
+    "match": {
+      "nearby": "Nelle vicinanze",
+      "same_address": "Stesso indirizzo",
+      "same_contact": "Stesso contatto",
+      "similar_address": "Indirizzo simile"
+    },
+    "matched_as": "Interpretato come {{address}}",
+    "meters_away": "a {{distance}} m",
+    "show_notes": "Note ({{count}})",
+    "state": {
+      "0": "Attiva",
+      "1": "Chiusa",
+      "2": "Annullata",
+      "3": "Infondata",
+      "4": "Fondata",
+      "5": "Minore"
+    },
+    "unknown_priority": "Sconosciuta",
+    "unknown_user": "Utente sconosciuto"
   },
   "login": {
     "change_server_url": "Modifica URL server",

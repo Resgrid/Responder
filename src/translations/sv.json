@@ -268,6 +268,7 @@
       "command": "Ledning",
       "contact": "Kontakt",
       "dispatched": "Dirigerade",
+      "history": "Historik",
       "info": "Info",
       "protocols": "Protokoll",
       "site": "Objektinfo",
@@ -961,6 +962,7 @@
     "stateId": "Region-ID",
     "systemInformation": "Systeminformation",
     "tabs": {
+      "calls": "Larm",
       "details": "Detaljer",
       "files": "Filer",
       "notes": "Anteckningar",
@@ -1172,6 +1174,40 @@
     "fix_unavailable": "Kunde inte fastställa din position. Flytta till en plats med fri sikt mot himlen och försök igen.",
     "tracking_notification_body": "Delar din position med din avdelning.",
     "tracking_notification_title": "Platsspårning"
+  },
+  "location_history": {
+    "address_matching_off": "Avancerat dataskydd är aktiverat för den här avdelningen, så larmadresser är krypterade och endast larm kopplade via kontakt visas.",
+    "closing_notes": "Avslutsanteckningar",
+    "empty": "Inga relaterade larm",
+    "empty_description": "Inga tidigare larm hittades på den här platsen eller med dessa kontakter.",
+    "has_more": "Endast de senaste larmen visas.",
+    "header_call": "Tidigare larm på den här platsen",
+    "header_contact": "Relaterade larm",
+    "help_call": "Larm på samma adress oavsett hur den skrevs, närliggande larm utan gatuadress och larm kopplade till samma kontakt.",
+    "help_contact": "Larm kopplade till den här kontakten, samt larm vid alla objekt som kontakten är kopplad till.",
+    "hide_notes": "Dölj anteckningar",
+    "index_incomplete": "Äldre larm indexeras fortfarande, så vissa kanske inte visas ännu.",
+    "load_failed": "Larmhistoriken kunde inte läsas in.",
+    "loading": "Läser in larm...",
+    "match": {
+      "nearby": "I närheten",
+      "same_address": "Samma adress",
+      "same_contact": "Samma kontakt",
+      "similar_address": "Liknande adress"
+    },
+    "matched_as": "Tolkad som {{address}}",
+    "meters_away": "{{distance}} m bort",
+    "show_notes": "Anteckningar ({{count}})",
+    "state": {
+      "0": "Aktivt",
+      "1": "Avslutat",
+      "2": "Avbrutet",
+      "3": "Ogrundat",
+      "4": "Grundat",
+      "5": "Mindre"
+    },
+    "unknown_priority": "Okänd",
+    "unknown_user": "Okänd användare"
   },
   "login": {
     "change_server_url": "Ändra server-URL",
