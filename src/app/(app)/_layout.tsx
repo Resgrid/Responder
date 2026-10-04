@@ -37,6 +37,7 @@ import { locationService } from '@/services/location';
 import { offlineEventManager } from '@/services/offline-event-manager.service';
 import { offlineQueueService } from '@/services/offline-queue.service';
 import { usePushNotifications } from '@/services/push-notification';
+import { useWebPushRegistration } from '@/services/web-push';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCalendarStore } from '@/stores/calendar/store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -100,6 +101,8 @@ export default function TabLayout() {
 
   // Initialize push notifications
   usePushNotifications();
+  // Browser push on the web edition (a no-op on the phone).
+  useWebPushRegistration();
 
   const initializeApp = useCallback(async () => {
     if (isInitializing.current) {

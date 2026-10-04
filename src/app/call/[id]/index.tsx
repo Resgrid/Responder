@@ -15,6 +15,7 @@ import CallImagesModal from '@/components/calls/call-images-modal';
 import CallNotesModal from '@/components/calls/call-notes-modal';
 import { CallSiteInfoTabPanel } from '@/components/calls/call-site-info-tab-panel';
 import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
+import { LocationHistoryPanel } from '@/components/calls/location-history-panel';
 import { CheckInTabPanel } from '@/components/check-in/check-in-tab-panel';
 import { HeaderBackButton } from '@/components/common/header-back-button';
 import { Loading } from '@/components/common/loading';
@@ -487,6 +488,13 @@ export default function CallDetail() {
       key: 'site',
       title: t('call_detail.tabs.site'),
       content: <CallSiteInfoTabPanel callId={call.CallId} />,
+    });
+
+    // History tab: previous calls at this location (address however it was typed) or with the same contacts.
+    builtTabs.push({
+      key: 'history',
+      title: t('call_detail.tabs.history'),
+      content: <LocationHistoryPanel source={{ kind: 'call', id: call.CallId }} />,
     });
 
     builtTabs.push({

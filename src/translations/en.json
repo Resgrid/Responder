@@ -268,6 +268,7 @@
       "command": "Command",
       "contact": "Contact",
       "dispatched": "Dispatched",
+      "history": "History",
       "info": "Info",
       "protocols": "Protocols",
       "site": "Site Info",
@@ -961,6 +962,7 @@
     "stateId": "State ID",
     "systemInformation": "System Information",
     "tabs": {
+      "calls": "Calls",
       "details": "Details",
       "files": "Files",
       "notes": "Notes",
@@ -1172,6 +1174,40 @@
     "fix_unavailable": "Could not get a location fix. Move to an area with a clearer view of the sky and try again.",
     "tracking_notification_body": "Sharing your location with your department.",
     "tracking_notification_title": "Location Tracking"
+  },
+  "location_history": {
+    "address_matching_off": "Advanced Data Protection is on for this department, so call addresses are encrypted and only calls linked by contact are shown.",
+    "closing_notes": "Closing notes",
+    "empty": "No related calls",
+    "empty_description": "No earlier calls were found at this location or with these contacts.",
+    "has_more": "Only the most recent calls are shown.",
+    "header_call": "Previous calls at this location",
+    "header_contact": "Related calls",
+    "help_call": "Calls at the same address however it was typed, nearby calls without a street address, and calls linked to the same contact.",
+    "help_contact": "Calls linked to this contact, plus calls at any occupancy this contact is linked to.",
+    "hide_notes": "Hide notes",
+    "index_incomplete": "Older calls are still being indexed, so some may not appear yet.",
+    "load_failed": "The call history could not be loaded.",
+    "loading": "Loading calls...",
+    "match": {
+      "nearby": "Nearby",
+      "same_address": "Same address",
+      "same_contact": "Same contact",
+      "similar_address": "Similar address"
+    },
+    "matched_as": "Matched as {{address}}",
+    "meters_away": "{{distance}} m away",
+    "show_notes": "Notes ({{count}})",
+    "state": {
+      "0": "Active",
+      "1": "Closed",
+      "2": "Cancelled",
+      "3": "Unfounded",
+      "4": "Founded",
+      "5": "Minor"
+    },
+    "unknown_priority": "Unknown",
+    "unknown_user": "Unknown user"
   },
   "login": {
     "change_server_url": "Change Server URL",

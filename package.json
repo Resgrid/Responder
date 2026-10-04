@@ -104,6 +104,7 @@
     "expo-task-manager": "~57.0.20",
     "expo-video": "~57.0.5",
     "expo-web-browser": "~57.0.3",
+    "firebase": "^12.19.0",
     "geojson": "~0.5.0",
     "i18next": "~23.14.0",
     "livekit-client": "^2.20.1",

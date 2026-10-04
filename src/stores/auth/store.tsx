@@ -12,6 +12,7 @@ import type { ApprovalRequestData, MfaChallenge, TotpSetupData } from '@/lib/mfa
 import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/clear-all-data';
 
 import { externalTokenRequest, loginRequest, refreshTokenRequest } from '../../lib/auth/api';
+import { runSignOutHooks } from '../../lib/auth/sign-out-hooks';
 import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
@@ -430,6 +431,17 @@ const useAuthStore = create<AuthState>()(
               userId: currentState.userId,
               timestamp: Date.now(),
             },
+          });
+        }
+
+        // Whatever must still reach the server as this session (this browser's push token) goes first: the
+        // token is cleared below. Bounded, so a dead server never holds sign-out up.
+        try {
+          await runSignOutHooks(currentState.accessToken);
+        } catch (error) {
+          logger.warn({
+            message: 'A sign-out hook failed',
+            context: { error, reason },
           });
         }
 

@@ -268,6 +268,7 @@
       "command": "Comando",
       "contact": "Contacto",
       "dispatched": "Despachadas",
+      "history": "Historial",
       "info": "Información",
       "protocols": "Protocolos",
       "site": "Info. del sitio",
@@ -961,6 +962,7 @@
     "stateId": "ID del estado",
     "systemInformation": "Información del sistema",
     "tabs": {
+      "calls": "Llamadas",
       "details": "Detalles",
       "files": "Archivos",
       "notes": "Notas",
@@ -1172,6 +1174,40 @@
     "fix_unavailable": "No se pudo obtener la ubicación. Diríjase a una zona con mejor visibilidad del cielo e inténtelo de nuevo.",
     "tracking_notification_body": "Compartiendo su ubicación con su departamento.",
     "tracking_notification_title": "Seguimiento de ubicación"
+  },
+  "location_history": {
+    "address_matching_off": "La Protección Avanzada de Datos está activada para este departamento, por lo que las direcciones de las llamadas están cifradas y solo se muestran las llamadas vinculadas por contacto.",
+    "closing_notes": "Notas de cierre",
+    "empty": "No hay llamadas relacionadas",
+    "empty_description": "No se encontraron llamadas anteriores en esta ubicación ni con estos contactos.",
+    "has_more": "Solo se muestran las llamadas más recientes.",
+    "header_call": "Llamadas anteriores en esta ubicación",
+    "header_contact": "Llamadas relacionadas",
+    "help_call": "Llamadas en la misma dirección, sin importar cómo se escribió, llamadas cercanas sin dirección postal y llamadas vinculadas al mismo contacto.",
+    "help_contact": "Llamadas vinculadas a este contacto, más las llamadas en cualquier ocupación a la que esté vinculado este contacto.",
+    "hide_notes": "Ocultar notas",
+    "index_incomplete": "Las llamadas más antiguas aún se están indexando, por lo que es posible que algunas no aparezcan todavía.",
+    "load_failed": "No se pudo cargar el historial de llamadas.",
+    "loading": "Cargando llamadas...",
+    "match": {
+      "nearby": "Cercana",
+      "same_address": "Misma dirección",
+      "same_contact": "Mismo contacto",
+      "similar_address": "Dirección similar"
+    },
+    "matched_as": "Interpretada como {{address}}",
+    "meters_away": "a {{distance}} m",
+    "show_notes": "Notas ({{count}})",
+    "state": {
+      "0": "Activa",
+      "1": "Cerrada",
+      "2": "Cancelada",
+      "3": "Infundada",
+      "4": "Fundada",
+      "5": "Menor"
+    },
+    "unknown_priority": "Desconocida",
+    "unknown_user": "Usuario desconocido"
   },
   "login": {
     "change_server_url": "Cambiar URL del servidor",

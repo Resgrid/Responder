@@ -252,25 +252,27 @@ class PushNotificationService {
   // tap-response handlers so a tapped notification stays visible after the app opens.
   private presentNotificationModal = (request: Notifications.NotificationRequest): void => {
     const { eventCode, data } = extractPushNotificationData(request);
-    const content = request.content;
-
     if (eventCode) {
-      const notificationData: PushNotificationData & { eventCode: string } = {
-        eventCode,
-        data,
-      };
-
-      if (content.title) {
-        notificationData.title = content.title;
-      }
-
-      if (content.body) {
-        notificationData.body = content.body;
-      }
-
-      // Show the notification modal using the store
-      usePushNotificationModalStore.getState().showNotificationModal(notificationData);
+      this.showNotificationModal({ eventCode, data, title: request.content.title ?? undefined, body: request.content.body ?? undefined });
     }
+  };
+
+  private showNotificationModal = (notification: PushNotificationData & { eventCode: string }): void => {
+    const notificationData: PushNotificationData & { eventCode: string } = {
+      eventCode: notification.eventCode,
+      data: notification.data,
+    };
+
+    if (notification.title) {
+      notificationData.title = notification.title;
+    }
+
+    if (notification.body) {
+      notificationData.body = notification.body;
+    }
+
+    // Show the notification modal using the store
+    usePushNotificationModalStore.getState().showNotificationModal(notificationData);
   };
 
   private handleNotificationReceived = (notification: Notifications.Notification): void => {
@@ -299,6 +301,17 @@ class PushNotificationService {
       message: 'Notification response received',
       context: { eventCode },
     });
+
+    const content = response.notification.request.content;
+    await this.openNotification({ eventCode: eventCode ?? '', data, title: content.title ?? undefined, body: content.body ?? undefined });
+  };
+
+  /**
+   * Opens what a notification points at. Shared by a tapped phone notification and a clicked browser one
+   * (services/web-push.web.ts), so both land in the same place.
+   */
+  public openNotification = async (notification: PushNotificationData & { eventCode: string }): Promise<void> => {
+    const { eventCode, data } = notification;
 
     // Tapping a push deep-links straight to the relevant screen: weather alerts, chat
     // channels, calls, messages and work orders all navigate directly. Anything else — and any deep-link
@@ -338,7 +351,9 @@ class PushNotificationService {
       }
     }
 
-    this.presentNotificationModal(response.notification.request);
+    if (eventCode) {
+      this.showNotificationModal(notification);
+    }
   };
 
   // Resolves true when the push landed on its route, false once the retry budget is spent so
@@ -369,6 +384,12 @@ class PushNotificationService {
   };
 
   public async registerForPushNotifications(userId: string, departmentCode: string): Promise<string | null> {
+    // A browser registers through services/web-push.web.ts, and only once the person asks: asking for permission
+    // here, with no click behind it, is refused by most browsers and failed for want of a web push config anyway.
+    if (Platform.OS === 'web') {
+      return null;
+    }
+
     if (!Device.isDevice) {
       logger.warn({
         message: 'Push notifications are not available on simulator/emulator',

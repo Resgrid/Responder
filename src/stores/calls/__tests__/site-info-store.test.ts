@@ -133,6 +133,24 @@ describe('useSiteInfoStore', () => {
     expect(useSiteInfoStore.getState().siteInfo).toBe(concealed);
   });
 
+  it('drops the site info it replaces as soon as a re-fetch starts, so a withdrawn grant reveals nothing meanwhile', async () => {
+    const pending = deferred<any>();
+    mockGetCallSiteInfo.mockResolvedValueOnce({ Data: makeSiteInfo('42') } as any);
+    mockGetCallSiteInfo.mockImplementationOnce(() => pending.promise);
+
+    await useSiteInfoStore.getState().fetchSiteInfo('42');
+    expect(useSiteInfoStore.getState().siteInfo?.CallId).toBe('42');
+
+    const refetch = useSiteInfoStore.getState().fetchSiteInfo('42');
+    expect(useSiteInfoStore.getState().siteInfo).toBeNull();
+    expect(useSiteInfoStore.getState().isLoading).toBe(true);
+
+    const concealed = { ...makeSiteInfo('42'), IsProtected: true };
+    pending.resolve({ Data: concealed });
+    await refetch;
+    expect(useSiteInfoStore.getState().siteInfo).toBe(concealed);
+  });
+
   it('drops a response that arrives after reset', async () => {
     const pending = deferred<any>();
     mockGetCallSiteInfo.mockImplementationOnce(() => pending.promise);
