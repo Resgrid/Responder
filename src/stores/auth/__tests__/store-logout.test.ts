@@ -54,6 +54,7 @@ jest.mock('@/lib/storage/clear-all-data', () => ({
 
 import * as SecureStore from 'expo-secure-store';
 
+import { _clearSignOutHooks, registerSignOutHook } from '@/lib/auth/sign-out-hooks';
 import { clearAllAppData } from '@/lib/storage/clear-all-data';
 import useAuthStore from '../store';
 
@@ -106,6 +107,31 @@ describe('Auth Store - Logout Functionality', () => {
       expect(state.profile).toBeNull();
       expect(state.isFirstTime).toBe(false);
       expect(state.userId).toBeNull();
+    });
+
+    it('runs the sign-out hooks first, with the session still signed in and its token, before any data is cleared', async () => {
+      const seen: { token: string | null; status: string; cleared: boolean }[] = [];
+      registerSignOutHook(async (token) => {
+        seen.push({ token, status: useAuthStore.getState().status, cleared: mockedClearAllAppData.mock.calls.length > 0 });
+      });
+
+      await useAuthStore.getState().logout();
+
+      expect(seen).toEqual([{ token: 'test-token', status: 'signedIn', cleared: false }]);
+      expect(useAuthStore.getState().accessToken).toBeNull();
+      _clearSignOutHooks();
+    });
+
+    it('still signs out when a sign-out hook fails', async () => {
+      registerSignOutHook(async () => {
+        throw new Error('server unreachable');
+      });
+
+      await useAuthStore.getState().logout();
+
+      expect(useAuthStore.getState().status).toBe('signedOut');
+      expect(mockedClearAllAppData).toHaveBeenCalled();
+      _clearSignOutHooks();
     });
 
     it('should log warning if removeItem fails but still reset auth state', async () => {

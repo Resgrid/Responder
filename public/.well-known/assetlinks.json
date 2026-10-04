@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "wtdt.resgrid.andriod",
+      "sha256_cert_fingerprints": [
+        "FF:56:FC:B4:6B:4F:07:41:20:92:00:08:AA:D0:46:E3:C8:7A:B8:95:F1:CF:A6:68:46:F0:D2:55:42:1C:77:2D"
+      ]
+    }
+  }
+]
