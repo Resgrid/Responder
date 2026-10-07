@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 
 import { StatusButtons } from '../status-buttons';
@@ -132,5 +132,83 @@ describe('StatusButtons', () => {
     render(<StatusButtons />);
 
     expect(screen.getByText('No status options available')).toBeTruthy();
+  });
+
+  describe('status flow', () => {
+    // After "Departed" only "On Scene" is offered (Custom Statuses → Next statuses).
+    const available = createStatus({ Id: 10, Text: 'Available', Detail: 0, NextIds: [] });
+    const departed = createStatus({ Id: 12, Text: 'Departed', Detail: 0, NextIds: [13] });
+    const onScene = createStatus({ Id: 13, Text: 'On Scene', Detail: 0, NextIds: [10] });
+
+    const setStores = (statusType: number | null, config: Record<string, unknown> | null = null) => {
+      mockUseCoreStore.mockReturnValue({
+        activeStatuses: [available, departed, onScene],
+        currentStatus: statusType == null ? null : { StatusType: statusType },
+        config,
+      } as unknown as ReturnType<typeof useCoreStore>);
+    };
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('offers only the next statuses, with a way to show them all', () => {
+      setStores(12);
+
+      render(<StatusButtons />);
+
+      expect(screen.getByText('On Scene')).toBeTruthy();
+      expect(screen.queryByText('Available')).toBeNull();
+
+      fireEvent.press(screen.getByTestId('status-buttons-show-all'));
+
+      expect(screen.getByText('Available')).toBeTruthy();
+      expect(screen.getByTestId('status-button-12').props.accessibilityLabel).toBe('Departed, personnel.status.current');
+      expect(screen.getByTestId('status-buttons-show-next')).toBeTruthy();
+    });
+
+    it('marks the current status when it has no next statuses', () => {
+      setStores(10);
+
+      render(<StatusButtons />);
+
+      expect(screen.getByText('Departed')).toBeTruthy();
+      expect(screen.getByText('personnel.status.current')).toBeTruthy();
+      expect(screen.queryByTestId('status-buttons-show-all')).toBeNull();
+    });
+
+    it('in hold mode opens the sheet and confirms the status once the hold completes', () => {
+      jest.useFakeTimers();
+      const mockConfirmHeldStatus = jest.fn();
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        setIsOpen: mockSetIsOpen,
+        confirmHeldStatus: mockConfirmHeldStatus,
+      } as unknown as ReturnType<typeof usePersonnelStatusBottomSheetStore>);
+      setStores(10, { StatusHoldToConfirm: true });
+
+      render(<StatusButtons />);
+
+      expect(screen.queryByTestId('status-button-12')).toBeNull();
+
+      fireEvent(screen.getByTestId('status-hold-button-12'), 'pressIn');
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      expect(mockSetIsOpen).toHaveBeenCalledWith(true, departed);
+      expect(mockConfirmHeldStatus).toHaveBeenCalledWith(departed);
+    });
+
+    it('in hold mode a tap only explains the gesture', () => {
+      jest.useFakeTimers();
+      setStores(10, { StatusHoldToConfirm: true });
+
+      render(<StatusButtons />);
+
+      fireEvent(screen.getByTestId('status-hold-button-12'), 'pressIn');
+      fireEvent(screen.getByTestId('status-hold-button-12'), 'pressOut');
+
+      expect(mockSetIsOpen).not.toHaveBeenCalled();
+    });
   });
 });

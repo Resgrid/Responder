@@ -37,4 +37,6 @@ export class GetConfigResultData {
   public AppMapboxAccessToken: string = '';
   /** True when the department's own Mapbox account (token and custom style) is in effect; its style then waits for that token. */
   public IsDepartmentMapOverride: boolean = false;
+  /** Department sets statuses with a two-second press and hold instead of tap + Next/Submit. */
+  public StatusHoldToConfirm?: boolean = false;
 }

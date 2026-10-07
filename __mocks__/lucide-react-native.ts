@@ -56,3 +56,5 @@ export const WifiOff = mockIcon;
 export const Wrench = mockIcon;
 export const ArrowLeft = mockIcon;
 export const Calendar = mockIcon;
+export const Check = mockIcon;
+export const Fingerprint = mockIcon;

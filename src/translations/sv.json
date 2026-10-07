@@ -205,6 +205,8 @@
     "close_call_error": "Det gick inte att avsluta larmet",
     "close_call_note": "Avslutningsanteckning",
     "close_call_note_placeholder": "Ange en anteckning om avslutningen av larmet",
+    "close_call_notify": "Meddela alla som är kopplade till larmet",
+    "close_call_notify_hint": "Meddelar larmad personal, grupper, roller, enheter och ledningsgruppen att larmet är avslutat.",
     "close_call_success": "Larmet avslutades",
     "close_call_type": "Avslutningstyp",
     "close_call_type_placeholder": "Välj avslutningstyp",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "Lägg till anteckning",
       "calls_tab": "Larm",
+      "current": "Aktuell",
+      "current_status": "Aktuell status",
       "destination_required": "En destination krävs för denna status",
       "general_status": "Allmän statusuppdatering",
       "gps_required": "GPS-position krävs för denna status",
+      "hold_to_set_hint": "Håll in i 2 sekunder för att sätta statusen",
+      "hold_to_set_instructions": "Håll in en status i 2 sekunder för att sätta den",
+      "hold_to_submit": "Håll in för att skicka",
       "loading_pois": "Laddar POI:er...",
       "loading_stations": "Läser in stationer...",
       "missing_required_info": "Nödvändig information saknas",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "Ange status: {{status}}",
       "selected_call": "Valt larm",
       "set_status": "Ange personalstatus",
+      "show_all_statuses": "Visa alla statusar ({{count}} till)",
+      "show_next_statuses": "Visa bara nästa statusar",
       "stations_tab": "Stationer",
       "status": "Status"
     }
