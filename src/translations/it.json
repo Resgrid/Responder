@@ -205,6 +205,8 @@
     "close_call_error": "Impossibile chiudere la chiamata",
     "close_call_note": "Nota di chiusura",
     "close_call_note_placeholder": "Inserire una nota sulla chiusura della chiamata",
+    "close_call_notify": "Avvisa tutti i partecipanti alla chiamata",
+    "close_call_notify_hint": "Avvisa personale, gruppi, ruoli e unità allertati e il team di comando che la chiamata è chiusa.",
     "close_call_success": "Chiamata chiusa con successo",
     "close_call_type": "Tipo di chiusura",
     "close_call_type_placeholder": "Selezionare il tipo di chiusura",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "Aggiungi nota",
       "calls_tab": "Chiamate",
+      "current": "Attuale",
+      "current_status": "Stato attuale",
       "destination_required": "Per questo stato è richiesta una destinazione",
       "general_status": "Aggiornamento stato generale",
       "gps_required": "Per questo stato è richiesta la posizione GPS",
+      "hold_to_set_hint": "Tieni premuto per 2 secondi per impostare lo stato",
+      "hold_to_set_instructions": "Tieni premuto uno stato per 2 secondi per impostarlo",
+      "hold_to_submit": "Tieni premuto per inviare",
       "loading_pois": "Caricamento POI...",
       "loading_stations": "Caricamento stazioni...",
       "missing_required_info": "Informazioni richieste mancanti",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "Imposta stato: {{status}}",
       "selected_call": "Chiamata selezionata",
       "set_status": "Imposta stato personale",
+      "show_all_statuses": "Mostra tutti gli stati (altri {{count}})",
+      "show_next_statuses": "Mostra solo gli stati successivi",
       "stations_tab": "Stazioni",
       "status": "Stato"
     }

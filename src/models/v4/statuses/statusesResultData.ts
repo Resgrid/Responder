@@ -8,4 +8,6 @@ export class StatusesResultData {
   public Gps: boolean = false; // Require GPS
   public Note: number = 0; // Note Type
   public Detail: number = 0; // Detail Type
+  /** Ids of the statuses offered next while this one is current; empty = offer every status. */
+  public NextIds?: number[] = [];
 }

@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -17,7 +17,9 @@ import {
   isNoteRequiredForStatus,
   type StatusDestinationTab,
 } from '@/lib/status-destinations';
+import { getOfferedStatuses, resolveCurrentStatusId } from '@/lib/status-flow';
 import { invertColor } from '@/lib/utils';
+import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -32,6 +34,95 @@ import { Spinner } from '../ui/spinner';
 import { Text } from '../ui/text';
 import { Textarea, TextareaInput } from '../ui/textarea';
 import { VStack } from '../ui/vstack';
+import { HoldToConfirmButton } from './hold-to-confirm-button';
+
+/** The red outline that marks the member's current status (crews asked for it to be unmistakable). */
+const CURRENT_STATUS_BORDER = '#dc2626';
+
+const CurrentStatusPill: React.FC = React.memo(() => {
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.currentPill}>
+      <Text style={styles.currentPillText}>{t('personnel.status.current')}</Text>
+    </View>
+  );
+});
+
+CurrentStatusPill.displayName = 'CurrentStatusPill';
+
+interface PersonnelStatusOptionProps {
+  status: StatusesResultData;
+  isSelected: boolean;
+  isCurrent: boolean;
+  isHoldMode: boolean;
+  isDisabled: boolean;
+  onSelect: (statusId: number) => void;
+  onHold: (status: StatusesResultData) => void;
+  onHoldTap: () => void;
+}
+
+const PersonnelStatusOption: React.FC<PersonnelStatusOptionProps> = React.memo(({ status, isSelected, isCurrent, isHoldMode, isDisabled, onSelect, onHold, onHoldTap }) => {
+  const { t } = useTranslation();
+  const textColor = invertColor(status.BColor, true);
+
+  const handleSelect = useCallback(() => onSelect(status.Id), [onSelect, status.Id]);
+  const handleHold = useCallback(() => onHold(status), [onHold, status]);
+
+  if (isHoldMode) {
+    return (
+      <View className="mb-3">
+        <HoldToConfirmButton
+          testID={`personnel-status-hold-${status.Id}`}
+          onConfirm={handleHold}
+          onTap={onHoldTap}
+          disabled={isDisabled}
+          backgroundColor={status.BColor}
+          foregroundColor={textColor}
+          style={isCurrent ? styles.currentOutline : null}
+          contentStyle={styles.holdOptionContent}
+          accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : status.Text}
+          accessibilityHint={t('personnel.status.hold_to_set_hint')}
+        >
+          <HStack space="sm" className="items-center">
+            <Text className="flex-1 font-bold" style={{ color: textColor }}>
+              {status.Text}
+            </Text>
+            {isCurrent ? <CurrentStatusPill /> : null}
+          </HStack>
+        </HoldToConfirmButton>
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      testID={`personnel-status-option-${status.Id}`}
+      onPress={handleSelect}
+      className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 dark:border-primary-400' : 'border-transparent'}`}
+      style={[{ backgroundColor: status.BColor }, isCurrent && !isSelected ? styles.currentOutline : null]}
+      accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : undefined}
+    >
+      <HStack space="sm" className="items-center">
+        <VStack
+          className="flex size-5 items-center justify-center rounded border-2"
+          style={{
+            borderColor: textColor,
+            backgroundColor: isSelected ? textColor : 'transparent',
+          }}
+        >
+          {isSelected ? <Check size={12} color={status.BColor} /> : null}
+        </VStack>
+        <Text className="flex-1 font-bold" style={{ color: textColor }}>
+          {status.Text}
+        </Text>
+        {isCurrent ? <CurrentStatusPill /> : null}
+      </HStack>
+    </TouchableOpacity>
+  );
+});
+
+PersonnelStatusOption.displayName = 'PersonnelStatusOption';
 
 export const PersonnelStatusBottomSheet = () => {
   const { t } = useTranslation();
@@ -67,6 +158,7 @@ export const PersonnelStatusBottomSheet = () => {
     nextStep,
     previousStep,
     submitStatus,
+    confirmHeldStatus = async () => undefined,
     reset,
     isDestinationRequired = () => false,
     areCallsAllowed = () => true,
@@ -86,6 +178,9 @@ export const PersonnelStatusBottomSheet = () => {
   const calls = useCallsStore((state) => state.calls);
   const isLoadingCalls = useCallsStore((state) => state.isLoading);
   const fetchCalls = useCallsStore((state) => state.fetchCalls);
+  // Department "Hold to set status": a two-second press and hold replaces tap + Next/Save.
+  const isHoldMode = useCoreStore((state) => state.config?.StatusHoldToConfirm === true);
+  const [showAllStatuses, setShowAllStatuses] = React.useState(false);
   const { colorScheme } = useColorScheme();
 
   // Refs for volatile values read inside trackViewAnalytics so the callback
@@ -161,10 +256,23 @@ export const PersonnelStatusBottomSheet = () => {
   // A status with no destination to pick still sends the default call (see submitStatus).
   const implicitCall = selectedStatus && !hasDestinationChoices ? defaultCall : null;
 
-  const visibleStatuses = useMemo(() => {
+  const selectableStatuses = useMemo(() => {
     const nextStatuses = activeStatuses || [];
     return selectedPoi ? nextStatuses.filter((status) => arePoisAllowedForStatus(status.Detail)) : nextStatuses;
   }, [activeStatuses, selectedPoi]);
+
+  // The member's current status, and the statuses configured to follow it (Custom Statuses → Next statuses).
+  const currentStatusId = useMemo(() => resolveCurrentStatusId(activeStatuses, { StateId: (currentUserStatus ?? coreCurrentStatus)?.StatusType }), [activeStatuses, coreCurrentStatus, currentUserStatus]);
+  const currentStatus = useMemo(() => activeStatuses?.find((status) => String(status.Id) === currentStatusId) ?? null, [activeStatuses, currentStatusId]);
+  const offeredStatuses = useMemo(() => getOfferedStatuses(selectableStatuses, currentStatusId, showAllStatuses), [currentStatusId, selectableStatuses, showAllStatuses]);
+  const hasNextStatusRestriction = useMemo(() => showAllStatuses && getOfferedStatuses(selectableStatuses, currentStatusId, false).isRestricted, [currentStatusId, selectableStatuses, showAllStatuses]);
+  const visibleStatuses = offeredStatuses.offered;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setShowAllStatuses(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -239,26 +347,61 @@ export const PersonnelStatusBottomSheet = () => {
     reset();
   };
 
-  const handleStatusSelect = (statusId: number) => {
-    const status = visibleStatuses.find((currentStatus) => currentStatus.Id === statusId);
+  const handleStatusSelect = useCallback(
+    (statusId: number) => {
+      const status = visibleStatuses.find((currentStatus) => currentStatus.Id === statusId);
 
-    if (!status) {
-      return;
+      if (!status) {
+        return;
+      }
+
+      setSelectedStatus(status);
+
+      try {
+        trackEvent('personnel_status_option_selected', {
+          timestamp: new Date().toISOString(),
+          statusId: status.Id,
+          statusText: status.Text,
+          statusDetail: status.Detail,
+        });
+      } catch (error) {
+        console.warn('Failed to track status option analytics:', error);
+      }
+    },
+    [setSelectedStatus, trackEvent, visibleStatuses]
+  );
+
+  // Toasts render beneath this modal, so a tap in hold mode is explained inline instead.
+  const [isHoldHintVisible, setIsHoldHintVisible] = React.useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsHoldHintVisible(false);
     }
+  }, [isOpen]);
 
-    setSelectedStatus(status);
+  const showHoldHint = useCallback(() => setIsHoldHintVisible(true), []);
+  const handleShowAllStatuses = useCallback(() => setShowAllStatuses(true), []);
+  const handleShowNextStatuses = useCallback(() => setShowAllStatuses(false), []);
 
-    try {
-      trackEvent('personnel_status_option_selected', {
-        timestamp: new Date().toISOString(),
-        statusId: status.Id,
-        statusText: status.Text,
-        statusDetail: status.Detail,
-      });
-    } catch (error) {
-      console.warn('Failed to track status option analytics:', error);
-    }
-  };
+  const handleStatusHold = useCallback(
+    (status: StatusesResultData) => {
+      try {
+        trackEvent('personnel_status_option_held', {
+          timestamp: new Date().toISOString(),
+          statusId: status.Id,
+          statusText: status.Text,
+          statusDetail: status.Detail,
+        });
+      } catch (error) {
+        console.warn('Failed to track status hold analytics:', error);
+      }
+
+      setIsHoldHintVisible(false);
+      void confirmHeldStatus(status);
+    },
+    [confirmHeldStatus, trackEvent]
+  );
 
   const handleCallSelect = (callId: string) => {
     const call = calls.find((currentCall) => currentCall.CallId === callId);
@@ -393,6 +536,10 @@ export const PersonnelStatusBottomSheet = () => {
     await submitStatus();
   };
 
+  const handleHoldSubmit = () => {
+    void handleSubmit();
+  };
+
   const handleTabSelect = (tab: StatusDestinationTab) => {
     const fromTab = selectedTab;
     setSelectedTab(tab);
@@ -492,9 +639,33 @@ export const PersonnelStatusBottomSheet = () => {
     </HStack>
   );
 
+  const renderHoldHint = () =>
+    isHoldHintVisible ? (
+      <Text className="text-sm font-semibold text-red-600 dark:text-red-400" accessibilityRole="alert" accessibilityLiveRegion="polite" testID="personnel-status-hold-hint">
+        {t('personnel.status.hold_to_set_hint')}
+      </Text>
+    ) : null;
+
+  const renderCurrentStatusBanner = (status: StatusesResultData) => {
+    const textColor = invertColor(status.BColor, true);
+
+    return (
+      <View testID="personnel-status-current-banner" style={[styles.currentBanner, { backgroundColor: status.BColor }]}>
+        <Text style={[styles.currentBannerCaption, { color: textColor }]}>{t('personnel.status.current_status')}</Text>
+        <HStack space="sm" className="items-center">
+          <Text className="flex-1 font-bold" style={{ color: textColor }}>
+            {status.Text}
+          </Text>
+          <CurrentStatusPill />
+        </HStack>
+      </View>
+    );
+  };
+
   // Save failures are shown here rather than as a toast: the app's toasts render beneath this modal.
   const renderStepActions = () => (
     <>
+      {renderHoldHint()}
       {submitError ? (
         <Text className="text-sm text-red-600 dark:text-red-400" accessibilityRole="alert" accessibilityLiveRegion="polite" testID="personnel-status-submit-error">
           {submitError}
@@ -511,7 +682,28 @@ export const PersonnelStatusBottomSheet = () => {
             <ButtonText>{t('common.previous')}</ButtonText>
           </Button>
         )}
-        {isLastStep ? (
+        {isLastStep && isHoldMode ? (
+          <View style={styles.holdSave}>
+            <HoldToConfirmButton
+              testID="personnel-status-hold-save"
+              onConfirm={handleHoldSubmit}
+              onTap={showHoldHint}
+              disabled={isLoading || !canProceedFromCurrentStep()}
+              backgroundColor="#16a34a"
+              foregroundColor="#ffffff"
+              contentStyle={styles.holdSaveContent}
+              accessibilityLabel={t('personnel.status.hold_to_submit')}
+              accessibilityHint={t('personnel.status.hold_to_set_hint')}
+            >
+              <HStack space="xs" className="items-center justify-center">
+                {isLoading ? <Spinner size="small" color="white" /> : null}
+                <Text className="text-center font-semibold" style={{ color: '#ffffff' }}>
+                  {isLoading ? t('common.submitting') : t('personnel.status.hold_to_submit')}
+                </Text>
+              </HStack>
+            </HoldToConfirmButton>
+          </View>
+        ) : isLastStep ? (
           <Button onPress={handleSubmit} isDisabled={isLoading || !canProceedFromCurrentStep()} className="flex-1 bg-green-600" testID="personnel-status-save">
             <ButtonText>{isLoading ? t('common.submitting') : t('common.save')}</ButtonText>
           </Button>
@@ -563,7 +755,10 @@ export const PersonnelStatusBottomSheet = () => {
 
           {currentStep === 'select-status' ? (
             <VStack space="md" className="w-full">
-              <Text className="mb-2 font-medium">{t('personnel.status.status')}</Text>
+              <Text className="mb-2 font-medium">{isHoldMode ? t('personnel.status.hold_to_set_instructions') : t('personnel.status.status')}</Text>
+
+              {/* The current status stays visible even when the list only offers what follows it. */}
+              {currentStatus && !visibleStatuses.some((status) => String(status.Id) === currentStatusId) ? renderCurrentStatusBanner(currentStatus) : null}
 
               <ScrollView className="max-h-[320px]">
                 {activeStatuses === null ? (
@@ -572,49 +767,57 @@ export const PersonnelStatusBottomSheet = () => {
                     <Text className="text-center text-gray-600 dark:text-gray-400">{t('common.loading')}</Text>
                   </VStack>
                 ) : visibleStatuses.length > 0 ? (
-                  visibleStatuses.map((status) => {
-                    const isSelected = selectedStatus?.Id === status.Id;
-                    const textColor = invertColor(status.BColor, true);
-
-                    return (
-                      <TouchableOpacity
-                        key={status.Id}
-                        onPress={() => handleStatusSelect(status.Id)}
-                        className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 dark:border-primary-400' : 'border-transparent'}`}
-                        style={{ backgroundColor: status.BColor }}
-                      >
-                        <HStack space="sm" className="items-center">
-                          <VStack
-                            className="flex size-5 items-center justify-center rounded border-2"
-                            style={{
-                              borderColor: textColor,
-                              backgroundColor: isSelected ? textColor : 'transparent',
-                            }}
-                          >
-                            {isSelected ? <Check size={12} color={status.BColor} /> : null}
-                          </VStack>
-                          <VStack className="flex-1">
-                            <Text className="font-bold" style={{ color: textColor }}>
-                              {status.Text}
-                            </Text>
-                          </VStack>
-                        </HStack>
-                      </TouchableOpacity>
-                    );
-                  })
+                  visibleStatuses.map((status) => (
+                    <PersonnelStatusOption
+                      key={status.Id}
+                      status={status}
+                      isSelected={selectedStatus?.Id === status.Id}
+                      isCurrent={String(status.Id) === currentStatusId}
+                      isHoldMode={isHoldMode}
+                      isDisabled={isLoading}
+                      onSelect={handleStatusSelect}
+                      onHold={handleStatusHold}
+                      onHoldTap={showHoldHint}
+                    />
+                  ))
                 ) : (
                   <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('home.status.no_options_available')}</Text>
                 )}
+
+                {offeredStatuses.isRestricted ? (
+                  <TouchableOpacity testID="personnel-status-show-all" onPress={handleShowAllStatuses} className="items-center py-2">
+                    <Text className="font-semibold text-primary-600 dark:text-primary-400">{t('personnel.status.show_all_statuses', { count: offeredStatuses.hiddenCount })}</Text>
+                  </TouchableOpacity>
+                ) : hasNextStatusRestriction ? (
+                  <TouchableOpacity testID="personnel-status-show-next" onPress={handleShowNextStatuses} className="items-center py-2">
+                    <Text className="font-semibold text-primary-600 dark:text-primary-400">{t('personnel.status.show_next_statuses')}</Text>
+                  </TouchableOpacity>
+                ) : null}
               </ScrollView>
 
-              <HStack space="sm" className="mt-4 justify-between">
-                <Button variant="outline" onPress={handleClose} className="flex-1">
+              {renderHoldHint()}
+              {isHoldMode && isLoading && selectedStatus ? renderStatusSummary() : null}
+              {submitError && isHoldMode ? (
+                <Text className="text-sm text-red-600 dark:text-red-400" accessibilityRole="alert" accessibilityLiveRegion="polite" testID="personnel-status-submit-error">
+                  {submitError}
+                </Text>
+              ) : null}
+
+              <HStack space="sm" className="mt-4 items-center justify-between">
+                <Button variant="outline" onPress={handleClose} className="flex-1" isDisabled={isLoading}>
                   <ButtonText>{t('common.cancel')}</ButtonText>
                 </Button>
-                <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                  <ButtonText>{t('common.next')}</ButtonText>
-                  <ArrowRight size={16} color="#fff" />
-                </Button>
+                {!isHoldMode ? (
+                  <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
+                    <ButtonText>{t('common.next')}</ButtonText>
+                    <ArrowRight size={16} color="#fff" />
+                  </Button>
+                ) : isLoading ? (
+                  <HStack space="xs" className="flex-1 items-center justify-center">
+                    <Spinner size="small" />
+                    <Text className="text-sm text-gray-600 dark:text-gray-400">{t('common.submitting')}</Text>
+                  </HStack>
+                ) : null}
               </HStack>
             </VStack>
           ) : null}
@@ -842,3 +1045,45 @@ export const PersonnelStatusBottomSheet = () => {
     </Actionsheet>
   );
 };
+
+const styles = StyleSheet.create({
+  holdSave: {
+    flex: 1,
+  },
+  holdSaveContent: {
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  holdOptionContent: {
+    padding: 12,
+  },
+  currentOutline: {
+    borderWidth: 3,
+    borderColor: CURRENT_STATUS_BORDER,
+  },
+  currentPill: {
+    backgroundColor: CURRENT_STATUS_BORDER,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  currentPillText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  currentBanner: {
+    borderWidth: 3,
+    borderColor: CURRENT_STATUS_BORDER,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  currentBannerCaption: {
+    fontSize: 11,
+    fontWeight: '600',
+    opacity: 0.8,
+    textTransform: 'uppercase',
+  },
+});

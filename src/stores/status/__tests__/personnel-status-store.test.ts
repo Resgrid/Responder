@@ -1813,4 +1813,72 @@ describe('usePersonnelStatusBottomSheetStore', () => {
 			expect(store().isLoading).toBe(false);
 		});
 	});
+
+	describe('confirmHeldStatus (hold to set status)', () => {
+		const openCall = { CallId: '321', Number: 'C-321', Name: 'Structure Fire', Address: '9 Elm St' };
+		const heldStatus = (overrides: Record<string, unknown>) => ({ Id: 7, Type: 1, StateId: 7, Text: 'Departed', BColor: '#f0ad4e', Color: '#000000', Gps: false, Note: 0, Detail: 0, ...overrides }) as any;
+
+		const hold = async (status: any) => {
+			act(() => {
+				usePersonnelStatusBottomSheetStore.getState().setIsOpen(true, status);
+			});
+
+			await act(async () => {
+				await usePersonnelStatusBottomSheetStore.getState().confirmHeldStatus(status);
+			});
+		};
+
+		beforeEach(() => {
+			(mockOfflineQueueProcessor.addPersonnelStatusToQueue as jest.MockedFunction<any>) = jest.fn().mockReturnValue('queued-1');
+			mockSavePersonnelStatus.mockResolvedValue({} as any);
+			useCallsStore.setState({ calls: [openCall as any] });
+			useActiveCallStore.setState({ activeCall: null, activeCallId: null });
+			useCoreStore.setState({ currentStatus: null });
+		});
+
+		afterEach(() => {
+			useCallsStore.setState({ calls: [] });
+			useActiveCallStore.setState({ activeCall: null, activeCallId: null });
+			useCoreStore.setState({ currentStatus: null });
+		});
+
+		it('saves a status with nothing more to ask straight away', async () => {
+			await hold(heldStatus({ Detail: 0 }));
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ Type: '7' }));
+		});
+
+		it('fills a call destination from the active call and saves', async () => {
+			useActiveCallStore.setState({ activeCall: openCall as any, activeCallId: '321' });
+
+			await hold(heldStatus({ Detail: 2 }));
+
+			expect(mockSavePersonnelStatus).toHaveBeenCalledWith(expect.objectContaining({ Type: '7', RespondingTo: '321', RespondingToType: 2 }));
+		});
+
+		it('stays on the destination step when there is no call to default to', async () => {
+			await hold(heldStatus({ Detail: 2 }));
+
+			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+			expect(usePersonnelStatusBottomSheetStore.getState().currentStep).toBe('select-responding-to');
+			expect(usePersonnelStatusBottomSheetStore.getState().selectedStatus?.Id).toBe(7);
+		});
+
+		it('asks for a required note instead of saving', async () => {
+			await hold(heldStatus({ Detail: 0, Note: 2 }));
+
+			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+			expect(usePersonnelStatusBottomSheetStore.getState().currentStep).toBe('add-note');
+		});
+
+		it('ignores a hold while a save is already running', async () => {
+			usePersonnelStatusBottomSheetStore.setState({ isLoading: true });
+
+			await act(async () => {
+				await usePersonnelStatusBottomSheetStore.getState().confirmHeldStatus(heldStatus({ Detail: 0 }));
+			});
+
+			expect(mockSavePersonnelStatus).not.toHaveBeenCalled();
+		});
+	});
 });

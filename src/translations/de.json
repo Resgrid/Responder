@@ -205,6 +205,8 @@
     "close_call_error": "Einsatz konnte nicht abgeschlossen werden",
     "close_call_note": "Abschlussnotiz",
     "close_call_note_placeholder": "Geben Sie eine Notiz zum Abschluss des Einsatzes ein",
+    "close_call_notify": "Alle Beteiligten des Einsatzes benachrichtigen",
+    "close_call_notify_hint": "Informiert alarmierte Einsatzkräfte, Gruppen, Rollen, Einheiten und die Einsatzleitung, dass der Einsatz abgeschlossen ist.",
     "close_call_success": "Einsatz erfolgreich abgeschlossen",
     "close_call_type": "Abschlussart",
     "close_call_type_placeholder": "Abschlussart auswählen",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "Notiz hinzufügen",
       "calls_tab": "Einsätze",
+      "current": "Aktuell",
+      "current_status": "Aktueller Status",
       "destination_required": "Für diesen Status ist ein Ziel erforderlich",
       "general_status": "Allgemeine Statusaktualisierung",
       "gps_required": "Für diesen Status ist ein GPS-Standort erforderlich",
+      "hold_to_set_hint": "Zwei Sekunden gedrückt halten, um den Status zu setzen",
+      "hold_to_set_instructions": "Einen Status zwei Sekunden gedrückt halten, um ihn zu setzen",
+      "hold_to_submit": "Zum Senden gedrückt halten",
       "loading_pois": "Lade POIs...",
       "loading_stations": "Stationen werden geladen...",
       "missing_required_info": "Erforderliche Informationen fehlen",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "Status festlegen: {{status}}",
       "selected_call": "Ausgewählter Einsatz",
       "set_status": "Personalstatus festlegen",
+      "show_all_statuses": "Alle Status anzeigen ({{count}} weitere)",
+      "show_next_statuses": "Nur nächste Status anzeigen",
       "stations_tab": "Stationen",
       "status": "Status"
     }

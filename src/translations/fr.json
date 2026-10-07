@@ -205,6 +205,8 @@
     "close_call_error": "Échec de la clôture de l'appel",
     "close_call_note": "Note de clôture",
     "close_call_note_placeholder": "Saisissez une note concernant la clôture de l'appel",
+    "close_call_notify": "Prévenir tous les intervenants de l'appel",
+    "close_call_notify_hint": "Informe le personnel, les groupes, les rôles et les unités engagés ainsi que l'équipe de commandement que l'appel est clos.",
     "close_call_success": "Appel clos avec succès",
     "close_call_type": "Type de clôture",
     "close_call_type_placeholder": "Sélectionner le type de clôture",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "Ajouter une note",
       "calls_tab": "Appels",
+      "current": "Actuel",
+      "current_status": "Statut actuel",
       "destination_required": "Une destination est requise pour ce statut",
       "general_status": "Mise à jour générale du statut",
       "gps_required": "La position GPS est requise pour ce statut",
+      "hold_to_set_hint": "Maintenez appuyé 2 secondes pour définir le statut",
+      "hold_to_set_instructions": "Maintenez un statut appuyé 2 secondes pour le définir",
+      "hold_to_submit": "Maintenir pour envoyer",
       "loading_pois": "Chargement des POI...",
       "loading_stations": "Chargement des postes...",
       "missing_required_info": "Informations requises manquantes",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "Définir le statut : {{status}}",
       "selected_call": "Appel sélectionné",
       "set_status": "Définir le statut du personnel",
+      "show_all_statuses": "Afficher tous les statuts ({{count}} de plus)",
+      "show_next_statuses": "Afficher uniquement les statuts suivants",
       "stations_tab": "Postes",
       "status": "Statut"
     }

@@ -26,6 +26,7 @@ import {
   type StatusDestinationTab,
   type StatusDestinationType,
 } from '@/lib/status-destinations';
+import { canSubmitStatusWithoutInput } from '@/lib/status-flow';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
@@ -96,6 +97,12 @@ interface PersonnelStatusBottomSheetStore {
   goToNextStep: () => void;
   previousStep: () => void;
   submitStatus: () => Promise<void>;
+  /**
+   * The crew completed a press-and-hold on `status` (department "Hold to set status"): select it, then save
+   * straight away when nothing else is needed (destination filled from the default call), or move to the
+   * step that still needs the crew.
+   */
+  confirmHeldStatus: (status: StatusesResultData) => Promise<void>;
   reset: () => void;
   isDestinationRequired: () => boolean;
   areCallsAllowed: () => boolean;
@@ -545,6 +552,30 @@ export const usePersonnelStatusBottomSheetStore = create<PersonnelStatusBottomSh
         set({ isLoading: false });
       }
     }
+  },
+  confirmHeldStatus: async (status) => {
+    if (get().isLoading) {
+      return;
+    }
+
+    get().setSelectedStatus(status);
+
+    const { requiresStatusSelection, responseType, selectedCall, selectedGroup, selectedPoi } = get();
+    const callsAllowed = areCallsAllowedForDetail(status.Detail);
+    const hasChosenDestination = (responseType === 'call' && selectedCall != null) || (responseType === 'station' && selectedGroup != null) || (responseType === 'poi' && selectedPoi != null);
+    const defaultCall = !hasChosenDestination && callsAllowed && hasDestinationChoicesForDetail(status.Detail) ? getDefaultCallFromStores() : null;
+
+    if (canSubmitStatusWithoutInput(status, { allowsCalls: callsAllowed || hasChosenDestination, hasDefaultCall: hasChosenDestination || defaultCall != null })) {
+      if (defaultCall) {
+        get().setSelectedCall(defaultCall);
+      }
+
+      await get().submitStatus();
+      return;
+    }
+
+    const steps = getStepsForStatus(status, requiresStatusSelection);
+    set({ currentStep: steps.find((step) => step !== 'select-status') ?? steps[0], submitError: null });
   },
   reset: () => {
     sheetSession++;

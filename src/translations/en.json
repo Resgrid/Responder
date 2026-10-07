@@ -205,6 +205,8 @@
     "close_call_error": "Failed to close call",
     "close_call_note": "Close Note",
     "close_call_note_placeholder": "Enter a note about closing the call",
+    "close_call_notify": "Notify everyone on the call",
+    "close_call_notify_hint": "Alerts the dispatched personnel, groups, roles, units and command team that the call is closed.",
     "close_call_success": "Call closed successfully",
     "close_call_type": "Close Type",
     "close_call_type_placeholder": "Select close type",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "Add Note",
       "calls_tab": "Calls",
+      "current": "Current",
+      "current_status": "Current status",
       "destination_required": "A destination is required for this status",
       "general_status": "General status update",
       "gps_required": "GPS location is required for this status",
+      "hold_to_set_hint": "Press and hold for 2 seconds to set the status",
+      "hold_to_set_instructions": "Press and hold a status for 2 seconds to set it",
+      "hold_to_submit": "Hold to submit",
       "loading_pois": "Loading POIs...",
       "loading_stations": "Loading stations...",
       "missing_required_info": "Missing required information",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "Set Status: {{status}}",
       "selected_call": "Selected Call",
       "set_status": "Set Personnel Status",
+      "show_all_statuses": "Show all statuses ({{count}} more)",
+      "show_next_statuses": "Show next statuses only",
       "stations_tab": "Stations",
       "status": "Status"
     }

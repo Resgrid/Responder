@@ -290,7 +290,7 @@ describe('usePushNotificationModalStore', () => {
       expect(parsed.eventCode).toBe('c:1234');
     });
 
-    it('should handle event code without colon', () => {
+    it('should parse the colon-less call code Core sends for a dispatch', () => {
       const store = usePushNotificationModalStore.getState();
       const parsed = store.parseNotification({
         eventCode: 'C1234',
@@ -298,9 +298,25 @@ describe('usePushNotificationModalStore', () => {
         body: 'Structure fire',
       });
 
+      expect(parsed.type).toBe('call');
+      expect(parsed.id).toBe('1234');
+      expect(parsed.eventCode).toBe('C1234');
+    });
+
+    it('should parse the colon-less message code', () => {
+      const store = usePushNotificationModalStore.getState();
+      const parsed = store.parseNotification({ eventCode: 'M5678', title: 'Message' });
+
+      expect(parsed.type).toBe('message');
+      expect(parsed.id).toBe('5678');
+    });
+
+    it('should not read a colon-less multi-letter code as a call', () => {
+      const store = usePushNotificationModalStore.getState();
+      const parsed = store.parseNotification({ eventCode: 'CT123', title: 'Communication test' });
+
       expect(parsed.type).toBe('unknown');
       expect(parsed.id).toBe('');
-      expect(parsed.eventCode).toBe('C1234');
     });
 
     it('should handle invalid event code format', () => {

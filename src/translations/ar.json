@@ -205,6 +205,8 @@
     "close_call_error": "فشل في إغلاق المكالمة",
     "close_call_note": "ملاحظة الإغلاق",
     "close_call_note_placeholder": "أدخل ملاحظة حول إغلاق المكالمة",
+    "close_call_notify": "إشعار جميع المعنيين بالمكالمة",
+    "close_call_notify_hint": "ينبّه الأفراد والمجموعات والأدوار والوحدات المُرسلة وفريق القيادة بأن المكالمة قد أُغلقت.",
     "close_call_success": "تم إغلاق المكالمة بنجاح",
     "close_call_type": "نوع الإغلاق",
     "close_call_type_placeholder": "اختر نوع الإغلاق",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "إضافة ملاحظة",
       "calls_tab": "المكالمات",
+      "current": "الحالية",
+      "current_status": "الحالة الحالية",
       "destination_required": "هذه الحالة تتطلب وجهة",
       "general_status": "تحديث الحالة العامة",
       "gps_required": "موقع GPS مطلوب لهذه الحالة",
+      "hold_to_set_hint": "اضغط مطولاً لمدة ثانيتين لتعيين الحالة",
+      "hold_to_set_instructions": "اضغط مطولاً على حالة لمدة ثانيتين لتعيينها",
+      "hold_to_submit": "اضغط مطولاً للإرسال",
       "loading_pois": "جارٍ تحميل نقاط الاهتمام...",
       "loading_stations": "تحميل المحطات...",
       "missing_required_info": "المعلومات المطلوبة مفقودة",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "تعيين الحالة: {{status}}",
       "selected_call": "المكالمة المختارة",
       "set_status": "تعيين حالة الموظفين",
+      "show_all_statuses": "إظهار كل الحالات ({{count}} أخرى)",
+      "show_next_statuses": "إظهار الحالات التالية فقط",
       "stations_tab": "المحطات",
       "status": "الحالة"
     }

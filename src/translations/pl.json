@@ -205,6 +205,8 @@
     "close_call_error": "Nie udało się zamknąć zgłoszenia",
     "close_call_note": "Notatka zamknięcia",
     "close_call_note_placeholder": "Wprowadź notatkę dotyczącą zamknięcia zgłoszenia",
+    "close_call_notify": "Powiadom wszystkich przypisanych do zgłoszenia",
+    "close_call_notify_hint": "Informuje zadysponowany personel, grupy, role, jednostki i zespół dowodzenia o zamknięciu zgłoszenia.",
     "close_call_success": "Zgłoszenie zamknięte pomyślnie",
     "close_call_type": "Typ zamknięcia",
     "close_call_type_placeholder": "Wybierz typ zamknięcia",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "Dodaj notatkę",
       "calls_tab": "Zgłoszenia",
+      "current": "Bieżący",
+      "current_status": "Bieżący status",
       "destination_required": "Ten status wymaga celu",
       "general_status": "Ogólna aktualizacja statusu",
       "gps_required": "Ten status wymaga lokalizacji GPS",
+      "hold_to_set_hint": "Przytrzymaj przez 2 sekundy, aby ustawić status",
+      "hold_to_set_instructions": "Przytrzymaj status przez 2 sekundy, aby go ustawić",
+      "hold_to_submit": "Przytrzymaj, aby wysłać",
       "loading_pois": "Ładowanie POI...",
       "loading_stations": "Ładowanie stacji...",
       "missing_required_info": "Brakuje wymaganych informacji",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "Ustaw status: {{status}}",
       "selected_call": "Wybrane zgłoszenie",
       "set_status": "Ustaw status personelu",
+      "show_all_statuses": "Pokaż wszystkie statusy (jeszcze {{count}})",
+      "show_next_statuses": "Pokaż tylko następne statusy",
       "stations_tab": "Stacje",
       "status": "Status"
     }

@@ -205,6 +205,8 @@
     "close_call_error": "Не вдалося закрити виклик",
     "close_call_note": "Примітка закриття",
     "close_call_note_placeholder": "Введіть примітку щодо закриття виклику",
+    "close_call_notify": "Сповістити всіх учасників виклику",
+    "close_call_notify_hint": "Сповіщає направлений персонал, групи, ролі, підрозділи та команду управління, що виклик закрито.",
     "close_call_success": "Виклик успішно закрито",
     "close_call_type": "Тип закриття",
     "close_call_type_placeholder": "Вибрати тип закриття",
@@ -1774,9 +1776,14 @@
     "status": {
       "add_note": "Додати примітку",
       "calls_tab": "Виклики",
+      "current": "Поточний",
+      "current_status": "Поточний статус",
       "destination_required": "Для цього статусу потрібен пункт призначення",
       "general_status": "Загальне оновлення статусу",
       "gps_required": "Для цього статусу потрібне GPS-місцезнаходження",
+      "hold_to_set_hint": "Утримуйте 2 секунди, щоб встановити статус",
+      "hold_to_set_instructions": "Утримуйте статус 2 секунди, щоб встановити його",
+      "hold_to_submit": "Утримуйте, щоб надіслати",
       "loading_pois": "Завантаження POI...",
       "loading_stations": "Завантаження станцій...",
       "missing_required_info": "Бракує обов’язкової інформації",
@@ -1793,6 +1800,8 @@
       "select_responding_to": "Встановити статус: {{status}}",
       "selected_call": "Вибраний виклик",
       "set_status": "Встановити статус персоналу",
+      "show_all_statuses": "Показати всі статуси (ще {{count}})",
+      "show_next_statuses": "Показати лише наступні статуси",
       "stations_tab": "Станції",
       "status": "Статус"
     }

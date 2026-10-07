@@ -86,6 +86,11 @@ export interface CloseCallRequest {
   callId: string;
   type: number;
   note?: string;
+  /**
+   * Alert everyone attached to the call (dispatched personnel, groups, roles, units and the incident
+   * command team) that it is closed. Omitted from the request when not set, leaving the server default.
+   */
+  sendNotification?: boolean;
 }
 
 export const createCall = async (callData: CreateCallRequest) => {
@@ -185,6 +190,7 @@ export const closeCall = async (callData: CloseCallRequest) => {
     Id: callData.callId,
     Type: callData.type,
     Notes: callData.note || '',
+    ...(callData.sendNotification !== undefined ? { SendNotification: callData.sendNotification } : {}),
   };
 
   const response = await closeCallApi.put<SaveCallResult>(data);

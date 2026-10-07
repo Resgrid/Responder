@@ -37,6 +37,9 @@ const EVENT_CODE_TYPES: Record<string, NotificationType> = {
   nwo: 'work-order',
   // "NA:{approvalRequestId}": another app asks this member to approve a sign-in or action (passkey plan section 7.9).
   na: 'mfa-approval',
+  // "NC:{callId}": a call this member was on has been closed. Leads with "n" so the server sends it as an ordinary
+  // notification, not a critical call alert; a tap still opens the call.
+  nc: 'call',
 };
 
 // First character of the event code prefix sent by the Resgrid backend, e.g.
@@ -71,6 +74,16 @@ export const parseNotificationData = (notificationData: PushNotificationData): P
 
     type = EVENT_CODE_TYPES[lowerPrefix] ?? EVENT_CODE_PREFIXES[lowerPrefix.charAt(0)] ?? 'unknown';
     id = notificationId || '';
+  } else {
+    // Legacy colon-less form: Core still sends dispatches as "C{callId}" and messages as "M{messageId}"
+    // (PushService.PushCall / PushMessage). Only a single type letter followed by a numeric id is read
+    // this way, so a multi-letter code that lost its colon ("CT123") is never mistaken for a call.
+    const legacy = /^([A-Za-z])(\d+)$/.exec(eventCode);
+
+    if (legacy) {
+      type = EVENT_CODE_PREFIXES[legacy[1].toLowerCase()] ?? 'unknown';
+      id = type === 'unknown' ? '' : legacy[2];
+    }
   }
 
   return {
