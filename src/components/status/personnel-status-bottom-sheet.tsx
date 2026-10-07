@@ -39,6 +39,91 @@ import { HoldToConfirmButton } from './hold-to-confirm-button';
 /** The red outline that marks the member's current status (crews asked for it to be unmistakable). */
 const CURRENT_STATUS_BORDER = '#dc2626';
 
+const CurrentStatusPill: React.FC = React.memo(() => {
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.currentPill}>
+      <Text style={styles.currentPillText}>{t('personnel.status.current')}</Text>
+    </View>
+  );
+});
+
+CurrentStatusPill.displayName = 'CurrentStatusPill';
+
+interface PersonnelStatusOptionProps {
+  status: StatusesResultData;
+  isSelected: boolean;
+  isCurrent: boolean;
+  isHoldMode: boolean;
+  isDisabled: boolean;
+  onSelect: (statusId: number) => void;
+  onHold: (status: StatusesResultData) => void;
+  onHoldTap: () => void;
+}
+
+const PersonnelStatusOption: React.FC<PersonnelStatusOptionProps> = React.memo(({ status, isSelected, isCurrent, isHoldMode, isDisabled, onSelect, onHold, onHoldTap }) => {
+  const { t } = useTranslation();
+  const textColor = invertColor(status.BColor, true);
+
+  const handleSelect = useCallback(() => onSelect(status.Id), [onSelect, status.Id]);
+  const handleHold = useCallback(() => onHold(status), [onHold, status]);
+
+  if (isHoldMode) {
+    return (
+      <View className="mb-3">
+        <HoldToConfirmButton
+          testID={`personnel-status-hold-${status.Id}`}
+          onConfirm={handleHold}
+          onTap={onHoldTap}
+          disabled={isDisabled}
+          backgroundColor={status.BColor}
+          foregroundColor={textColor}
+          style={isCurrent ? styles.currentOutline : null}
+          contentStyle={styles.holdOptionContent}
+          accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : status.Text}
+          accessibilityHint={t('personnel.status.hold_to_set_hint')}
+        >
+          <HStack space="sm" className="items-center">
+            <Text className="flex-1 font-bold" style={{ color: textColor }}>
+              {status.Text}
+            </Text>
+            {isCurrent ? <CurrentStatusPill /> : null}
+          </HStack>
+        </HoldToConfirmButton>
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      testID={`personnel-status-option-${status.Id}`}
+      onPress={handleSelect}
+      className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 dark:border-primary-400' : 'border-transparent'}`}
+      style={[{ backgroundColor: status.BColor }, isCurrent && !isSelected ? styles.currentOutline : null]}
+      accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : undefined}
+    >
+      <HStack space="sm" className="items-center">
+        <VStack
+          className="flex size-5 items-center justify-center rounded border-2"
+          style={{
+            borderColor: textColor,
+            backgroundColor: isSelected ? textColor : 'transparent',
+          }}
+        >
+          {isSelected ? <Check size={12} color={status.BColor} /> : null}
+        </VStack>
+        <Text className="flex-1 font-bold" style={{ color: textColor }}>
+          {status.Text}
+        </Text>
+        {isCurrent ? <CurrentStatusPill /> : null}
+      </HStack>
+    </TouchableOpacity>
+  );
+});
+
+PersonnelStatusOption.displayName = 'PersonnelStatusOption';
+
 export const PersonnelStatusBottomSheet = () => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
@@ -262,26 +347,29 @@ export const PersonnelStatusBottomSheet = () => {
     reset();
   };
 
-  const handleStatusSelect = (statusId: number) => {
-    const status = visibleStatuses.find((currentStatus) => currentStatus.Id === statusId);
+  const handleStatusSelect = useCallback(
+    (statusId: number) => {
+      const status = visibleStatuses.find((currentStatus) => currentStatus.Id === statusId);
 
-    if (!status) {
-      return;
-    }
+      if (!status) {
+        return;
+      }
 
-    setSelectedStatus(status);
+      setSelectedStatus(status);
 
-    try {
-      trackEvent('personnel_status_option_selected', {
-        timestamp: new Date().toISOString(),
-        statusId: status.Id,
-        statusText: status.Text,
-        statusDetail: status.Detail,
-      });
-    } catch (error) {
-      console.warn('Failed to track status option analytics:', error);
-    }
-  };
+      try {
+        trackEvent('personnel_status_option_selected', {
+          timestamp: new Date().toISOString(),
+          statusId: status.Id,
+          statusText: status.Text,
+          statusDetail: status.Detail,
+        });
+      } catch (error) {
+        console.warn('Failed to track status option analytics:', error);
+      }
+    },
+    [setSelectedStatus, trackEvent, visibleStatuses]
+  );
 
   // Toasts render beneath this modal, so a tap in hold mode is explained inline instead.
   const [isHoldHintVisible, setIsHoldHintVisible] = React.useState(false);
@@ -292,21 +380,28 @@ export const PersonnelStatusBottomSheet = () => {
     }
   }, [isOpen]);
 
-  const handleStatusHold = (status: StatusesResultData) => {
-    try {
-      trackEvent('personnel_status_option_held', {
-        timestamp: new Date().toISOString(),
-        statusId: status.Id,
-        statusText: status.Text,
-        statusDetail: status.Detail,
-      });
-    } catch (error) {
-      console.warn('Failed to track status hold analytics:', error);
-    }
+  const showHoldHint = useCallback(() => setIsHoldHintVisible(true), []);
+  const handleShowAllStatuses = useCallback(() => setShowAllStatuses(true), []);
+  const handleShowNextStatuses = useCallback(() => setShowAllStatuses(false), []);
 
-    setIsHoldHintVisible(false);
-    void confirmHeldStatus(status);
-  };
+  const handleStatusHold = useCallback(
+    (status: StatusesResultData) => {
+      try {
+        trackEvent('personnel_status_option_held', {
+          timestamp: new Date().toISOString(),
+          statusId: status.Id,
+          statusText: status.Text,
+          statusDetail: status.Detail,
+        });
+      } catch (error) {
+        console.warn('Failed to track status hold analytics:', error);
+      }
+
+      setIsHoldHintVisible(false);
+      void confirmHeldStatus(status);
+    },
+    [confirmHeldStatus, trackEvent]
+  );
 
   const handleCallSelect = (callId: string) => {
     const call = calls.find((currentCall) => currentCall.CallId === callId);
@@ -441,6 +536,10 @@ export const PersonnelStatusBottomSheet = () => {
     await submitStatus();
   };
 
+  const handleHoldSubmit = () => {
+    void handleSubmit();
+  };
+
   const handleTabSelect = (tab: StatusDestinationTab) => {
     const fromTab = selectedTab;
     setSelectedTab(tab);
@@ -547,12 +646,6 @@ export const PersonnelStatusBottomSheet = () => {
       </Text>
     ) : null;
 
-  const renderCurrentPill = () => (
-    <View style={styles.currentPill}>
-      <Text style={styles.currentPillText}>{t('personnel.status.current')}</Text>
-    </View>
-  );
-
   const renderCurrentStatusBanner = (status: StatusesResultData) => {
     const textColor = invertColor(status.BColor, true);
 
@@ -563,68 +656,9 @@ export const PersonnelStatusBottomSheet = () => {
           <Text className="flex-1 font-bold" style={{ color: textColor }}>
             {status.Text}
           </Text>
-          {renderCurrentPill()}
+          <CurrentStatusPill />
         </HStack>
       </View>
-    );
-  };
-
-  const renderStatusOption = (status: StatusesResultData) => {
-    const isSelected = selectedStatus?.Id === status.Id;
-    const isCurrent = String(status.Id) === currentStatusId;
-    const textColor = invertColor(status.BColor, true);
-
-    if (isHoldMode) {
-      return (
-        <View key={status.Id} className="mb-3">
-          <HoldToConfirmButton
-            testID={`personnel-status-hold-${status.Id}`}
-            onConfirm={() => handleStatusHold(status)}
-            onTap={() => setIsHoldHintVisible(true)}
-            disabled={isLoading}
-            backgroundColor={status.BColor}
-            foregroundColor={textColor}
-            style={isCurrent ? styles.currentOutline : null}
-            contentStyle={styles.holdOptionContent}
-            accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : status.Text}
-            accessibilityHint={t('personnel.status.hold_to_set_hint')}
-          >
-            <HStack space="sm" className="items-center">
-              <Text className="flex-1 font-bold" style={{ color: textColor }}>
-                {status.Text}
-              </Text>
-              {isCurrent ? renderCurrentPill() : null}
-            </HStack>
-          </HoldToConfirmButton>
-        </View>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        key={status.Id}
-        testID={`personnel-status-option-${status.Id}`}
-        onPress={() => handleStatusSelect(status.Id)}
-        className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 dark:border-primary-400' : 'border-transparent'}`}
-        style={[{ backgroundColor: status.BColor }, isCurrent && !isSelected ? styles.currentOutline : null]}
-        accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : undefined}
-      >
-        <HStack space="sm" className="items-center">
-          <VStack
-            className="flex size-5 items-center justify-center rounded border-2"
-            style={{
-              borderColor: textColor,
-              backgroundColor: isSelected ? textColor : 'transparent',
-            }}
-          >
-            {isSelected ? <Check size={12} color={status.BColor} /> : null}
-          </VStack>
-          <Text className="flex-1 font-bold" style={{ color: textColor }}>
-            {status.Text}
-          </Text>
-          {isCurrent ? renderCurrentPill() : null}
-        </HStack>
-      </TouchableOpacity>
     );
   };
 
@@ -652,8 +686,8 @@ export const PersonnelStatusBottomSheet = () => {
           <View style={styles.holdSave}>
             <HoldToConfirmButton
               testID="personnel-status-hold-save"
-              onConfirm={() => void handleSubmit()}
-              onTap={() => setIsHoldHintVisible(true)}
+              onConfirm={handleHoldSubmit}
+              onTap={showHoldHint}
               disabled={isLoading || !canProceedFromCurrentStep()}
               backgroundColor="#16a34a"
               foregroundColor="#ffffff"
@@ -733,17 +767,29 @@ export const PersonnelStatusBottomSheet = () => {
                     <Text className="text-center text-gray-600 dark:text-gray-400">{t('common.loading')}</Text>
                   </VStack>
                 ) : visibleStatuses.length > 0 ? (
-                  visibleStatuses.map((status) => renderStatusOption(status))
+                  visibleStatuses.map((status) => (
+                    <PersonnelStatusOption
+                      key={status.Id}
+                      status={status}
+                      isSelected={selectedStatus?.Id === status.Id}
+                      isCurrent={String(status.Id) === currentStatusId}
+                      isHoldMode={isHoldMode}
+                      isDisabled={isLoading}
+                      onSelect={handleStatusSelect}
+                      onHold={handleStatusHold}
+                      onHoldTap={showHoldHint}
+                    />
+                  ))
                 ) : (
                   <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('home.status.no_options_available')}</Text>
                 )}
 
                 {offeredStatuses.isRestricted ? (
-                  <TouchableOpacity testID="personnel-status-show-all" onPress={() => setShowAllStatuses(true)} className="items-center py-2">
+                  <TouchableOpacity testID="personnel-status-show-all" onPress={handleShowAllStatuses} className="items-center py-2">
                     <Text className="font-semibold text-primary-600 dark:text-primary-400">{t('personnel.status.show_all_statuses', { count: offeredStatuses.hiddenCount })}</Text>
                   </TouchableOpacity>
                 ) : hasNextStatusRestriction ? (
-                  <TouchableOpacity testID="personnel-status-show-next" onPress={() => setShowAllStatuses(false)} className="items-center py-2">
+                  <TouchableOpacity testID="personnel-status-show-next" onPress={handleShowNextStatuses} className="items-center py-2">
                     <Text className="font-semibold text-primary-600 dark:text-primary-400">{t('personnel.status.show_next_statuses')}</Text>
                   </TouchableOpacity>
                 ) : null}
