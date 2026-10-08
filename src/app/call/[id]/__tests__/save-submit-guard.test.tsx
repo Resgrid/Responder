@@ -52,6 +52,15 @@ jest.mock('@/hooks/use-analytics', () => ({ useAnalytics: () => ({ trackEvent: m
 const mockToastShow = jest.fn();
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 
+jest.mock('@/hooks/use-new-call-field-policy', () => ({
+  useNewCallFieldPolicy: () => ({
+    isLoaded: true,
+    isVisible: () => true,
+    isRequired: () => false,
+    missingRequired: () => [],
+  }),
+}));
+
 jest.mock('@/components/maps/location-picker', () => 'LocationPicker');
 jest.mock('@/components/maps/full-screen-location-picker', () => 'FullScreenLocationPicker');
 jest.mock('@/components/calls/dispatch-selection-modal', () => ({ DispatchSelectionModal: () => null }));
