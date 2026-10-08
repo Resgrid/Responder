@@ -86,7 +86,7 @@ export default function WorkOrderScreen() {
   const attach = async (source: 'camera' | 'library') => {
     setMessage(null);
     try {
-      const photo = await capturePhoto(source, `work-order-${order?.Number ?? 'photo'}.jpg`);
+      const photo = await capturePhoto(source, `work-order-${(order?.Number ?? 'photo').replace(/[^A-Za-z0-9._-]+/g, '-')}.jpg`);
       if (!photo) return;
       const ok = await useWorkOrdersStore.getState().attach({ uri: photo.uri, name: photo.name, type: photo.contentType });
       await discardPhoto(photo);

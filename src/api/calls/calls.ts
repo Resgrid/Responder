@@ -43,6 +43,17 @@ export interface CreateCallRequest {
   type?: string;
   contactName?: string;
   contactInfo?: string;
+  /** External (CAD) call id. On update a blank value keeps the stored one. */
+  externalId?: string;
+  /** Incident id. On update a blank value keeps the stored one. */
+  incidentId?: string;
+  /** Reference id. On update a blank value keeps the stored one. */
+  referenceId?: string;
+  /**
+   * Scheduled dispatch time, ISO 8601 UTC. Left out of the request when not set: on create the call goes out
+   * now, on update the stored schedule is kept (the API has no way to clear it).
+   */
+  dispatchOnUtc?: string;
   /** Primary Contact (premises/customer record) to link; the contact must belong to the department. */
   contactId?: string | null;
   /** Additional Contacts to link. On update, supplying either list replaces the existing links; omitting both leaves them alone. */
@@ -69,6 +80,17 @@ export interface UpdateCallRequest {
   type?: string;
   contactName?: string;
   contactInfo?: string;
+  /** External (CAD) call id. On update a blank value keeps the stored one. */
+  externalId?: string;
+  /** Incident id. On update a blank value keeps the stored one. */
+  incidentId?: string;
+  /** Reference id. On update a blank value keeps the stored one. */
+  referenceId?: string;
+  /**
+   * Scheduled dispatch time, ISO 8601 UTC. Left out of the request when not set: on create the call goes out
+   * now, on update the stored schedule is kept (the API has no way to clear it).
+   */
+  dispatchOnUtc?: string;
   /** Primary Contact (premises/customer record) to link; the contact must belong to the department. */
   contactId?: string | null;
   /** Additional Contacts to link. On update, supplying either list replaces the existing links; omitting both leaves them alone. */
@@ -128,6 +150,10 @@ export const createCall = async (callData: CreateCallRequest) => {
     Type: callData.type || '',
     ContactName: callData.contactName || '',
     ContactInfo: callData.contactInfo || '',
+    ExternalId: callData.externalId || '',
+    IncidentId: callData.incidentId || '',
+    ReferenceId: callData.referenceId || '',
+    ...(callData.dispatchOnUtc ? { DispatchOnUtc: callData.dispatchOnUtc } : {}),
     ...(callData.contactId !== undefined ? { ContactId: callData.contactId || '' } : {}),
     ...(callData.additionalContactIds !== undefined ? { AdditionalContactIds: callData.additionalContactIds } : {}),
     What3Words: callData.what3words || '',
@@ -175,6 +201,10 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     Type: callData.type || '',
     ContactName: callData.contactName || '',
     ContactInfo: callData.contactInfo || '',
+    ExternalId: callData.externalId || '',
+    IncidentId: callData.incidentId || '',
+    ReferenceId: callData.referenceId || '',
+    ...(callData.dispatchOnUtc ? { DispatchOnUtc: callData.dispatchOnUtc } : {}),
     ...(callData.contactId !== undefined ? { ContactId: callData.contactId || '' } : {}),
     ...(callData.additionalContactIds !== undefined ? { AdditionalContactIds: callData.additionalContactIds } : {}),
     What3Words: callData.what3words || '',
