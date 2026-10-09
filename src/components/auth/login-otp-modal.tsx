@@ -86,7 +86,7 @@ export const LoginOtpModal: React.FC<LoginOtpModalProps> = ({ isOpen, isSubmitti
             <ButtonText>{t('common.cancel', 'Cancel')}</ButtonText>
           </Button>
           <Button action="primary" onPress={handleSubmit} isDisabled={isSubmitting || code.trim().length === 0} testID="login-otp-submit">
-            {isSubmitting ? <Spinner size="small" /> : <ButtonText>{t('login.otp_verify', 'Verify')}</ButtonText>}
+            {isSubmitting ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('login.otp_verify', 'Verify')}</ButtonText>}
           </Button>
         </ModalFooter>
       </ModalContent>

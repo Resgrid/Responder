@@ -29,6 +29,12 @@ jest.mock('lucide-react-native', () => {
   return { ChevronDownIcon: View, ChevronUpIcon: View, HistoryIcon: View, InfoIcon: View, LockIcon: View, MapPinIcon: View };
 });
 
+// ProtectedText draws its lock with the themed icon set.
+jest.mock('@/components/ui/lucide-icons', () => {
+  const { View } = jest.requireActual('react-native');
+  return { Lock: View };
+});
+
 jest.mock('@/lib/logging', () => ({
   logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
 }));

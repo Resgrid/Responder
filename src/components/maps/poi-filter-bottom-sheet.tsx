@@ -135,7 +135,7 @@ export const PoiFilterBottomSheet: React.FC<PoiFilterBottomSheetProps> = ({ isOp
                 <RotateCcwIcon size={16} className="mr-2 text-gray-600 dark:text-gray-400" />
                 <ButtonText>{t('poi.reset_filters', 'Reset')}</ButtonText>
               </Button>
-              <Button className="flex-1 bg-primary-600 dark:bg-primary-500" onPress={handleDone}>
+              <Button className="flex-1 bg-primary-600" onPress={handleDone}>
                 <ButtonText>{t('common.done', 'Done')}</ButtonText>
               </Button>
             </HStack>

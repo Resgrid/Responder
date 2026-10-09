@@ -226,7 +226,7 @@ export const MessageDetailsSheet: React.FC = () => {
         <VStack space="md" className="w-full border-b border-gray-200 px-6 py-4 dark:border-gray-700">
           <HStack space="md" className="w-full items-start justify-between">
             <HStack space="md" className="flex-1 items-start">
-              <Box className="rounded-full bg-primary-100 p-3 dark:bg-primary-900">{selectedMessage.Responded ? <MailOpen size={24} color="#6366F1" /> : <Mail size={24} color="#6366F1" />}</Box>
+              <Box className="rounded-full bg-primary-100 p-3">{selectedMessage.Responded ? <MailOpen size={24} color="#6366F1" /> : <Mail size={24} color="#6366F1" />}</Box>
 
               <VStack space="xs" className="flex-1">
                 <Text className="text-lg font-bold leading-tight">{selectedMessage.Subject || t('messages.no_subject')}</Text>

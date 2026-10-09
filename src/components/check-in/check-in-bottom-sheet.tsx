@@ -76,7 +76,7 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
     onClose();
   }, [callId, selectedType, defaultUnitId, latitude, longitude, note, onSubmit, onClose]);
 
-  const activeBg = 'bg-primary-100 dark:bg-primary-700';
+  const activeBg = 'bg-primary-100 dark:bg-primary-300';
   const inactiveBg = 'bg-gray-100 dark:bg-neutral-800';
 
   return (

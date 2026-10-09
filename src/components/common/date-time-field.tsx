@@ -73,7 +73,7 @@ export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled 
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: chosen }}
       onPress={onPress}
-      className={chosen ? 'min-h-11 items-center justify-center rounded bg-primary-600 px-2 py-3' : 'min-h-11 items-center justify-center rounded px-2 py-3'}
+      className={chosen ? 'min-h-11 items-center justify-center rounded bg-primary-600 px-2 py-3 dark:bg-primary-400' : 'min-h-11 items-center justify-center rounded px-2 py-3'}
     >
       <Text className={chosen ? 'text-center text-white' : 'text-center text-typography-900'}>{text}</Text>
     </Pressable>

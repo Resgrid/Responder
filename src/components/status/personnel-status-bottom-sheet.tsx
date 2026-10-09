@@ -18,7 +18,7 @@ import {
   type StatusDestinationTab,
 } from '@/lib/status-destinations';
 import { getOfferedStatuses, resolveCurrentStatusId } from '@/lib/status-flow';
-import { invertColor } from '@/lib/utils';
+import { readableTextColor } from '@/lib/utils';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useActiveCallStore } from '@/stores/calls/active-call-store';
@@ -64,7 +64,7 @@ interface PersonnelStatusOptionProps {
 
 const PersonnelStatusOption: React.FC<PersonnelStatusOptionProps> = React.memo(({ status, isSelected, isCurrent, isHoldMode, isDisabled, onSelect, onHold, onHoldTap }) => {
   const { t } = useTranslation();
-  const textColor = invertColor(status.BColor, true);
+  const textColor = readableTextColor(status.BColor) ?? '#000000';
 
   const handleSelect = useCallback(() => onSelect(status.Id), [onSelect, status.Id]);
   const handleHold = useCallback(() => onHold(status), [onHold, status]);
@@ -647,7 +647,7 @@ export const PersonnelStatusBottomSheet = () => {
     ) : null;
 
   const renderCurrentStatusBanner = (status: StatusesResultData) => {
-    const textColor = invertColor(status.BColor, true);
+    const textColor = readableTextColor(status.BColor) ?? '#000000';
 
     return (
       <View testID="personnel-status-current-banner" style={[styles.currentBanner, { backgroundColor: status.BColor }]}>
@@ -709,7 +709,7 @@ export const PersonnelStatusBottomSheet = () => {
           </Button>
         ) : (
           <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-            <ButtonText>{t('common.next')}</ButtonText>
+            <ButtonText className="text-white">{t('common.next')}</ButtonText>
             <ArrowRight size={16} color="#fff" />
           </Button>
         )}
@@ -786,11 +786,11 @@ export const PersonnelStatusBottomSheet = () => {
 
                 {offeredStatuses.isRestricted ? (
                   <TouchableOpacity testID="personnel-status-show-all" onPress={handleShowAllStatuses} className="items-center py-2">
-                    <Text className="font-semibold text-primary-600 dark:text-primary-400">{t('personnel.status.show_all_statuses', { count: offeredStatuses.hiddenCount })}</Text>
+                    <Text className="font-semibold text-primary-600">{t('personnel.status.show_all_statuses', { count: offeredStatuses.hiddenCount })}</Text>
                   </TouchableOpacity>
                 ) : hasNextStatusRestriction ? (
                   <TouchableOpacity testID="personnel-status-show-next" onPress={handleShowNextStatuses} className="items-center py-2">
-                    <Text className="font-semibold text-primary-600 dark:text-primary-400">{t('personnel.status.show_next_statuses')}</Text>
+                    <Text className="font-semibold text-primary-600">{t('personnel.status.show_next_statuses')}</Text>
                   </TouchableOpacity>
                 ) : null}
               </ScrollView>
@@ -809,7 +809,7 @@ export const PersonnelStatusBottomSheet = () => {
                 </Button>
                 {!isHoldMode ? (
                   <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                    <ButtonText>{t('common.next')}</ButtonText>
+                    <ButtonText className="text-white">{t('common.next')}</ButtonText>
                     <ArrowRight size={16} color="#fff" />
                   </Button>
                 ) : isLoading ? (
@@ -837,7 +837,7 @@ export const PersonnelStatusBottomSheet = () => {
               {!destinationRequired ? (
                 <TouchableOpacity
                   onPress={handleNoDestinationSelect}
-                  className={`mb-4 rounded-lg border-2 p-3 ${responseType === 'none' ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                  className={`mb-4 rounded-lg border-2 p-3 ${responseType === 'none' ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-100/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
                 >
                   <HStack space="sm" className="items-center">
                     <VStack
@@ -898,7 +898,7 @@ export const PersonnelStatusBottomSheet = () => {
                           <TouchableOpacity
                             key={call.CallId}
                             onPress={() => handleCallSelect(call.CallId)}
-                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-100/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
                           >
                             <HStack space="sm" className="items-center">
                               <VStack
@@ -939,7 +939,7 @@ export const PersonnelStatusBottomSheet = () => {
                           <TouchableOpacity
                             key={group.GroupId}
                             onPress={() => handleGroupSelect(group.GroupId)}
-                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-100/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
                           >
                             <HStack space="sm" className="items-center">
                               <VStack
@@ -981,7 +981,7 @@ export const PersonnelStatusBottomSheet = () => {
                           <TouchableOpacity
                             key={poi.PoiId}
                             onPress={() => handlePoiSelect(poi.PoiId)}
-                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                            className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-100/20' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
                           >
                             <HStack space="sm" className="items-center">
                               <VStack

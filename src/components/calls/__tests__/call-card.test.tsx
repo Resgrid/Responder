@@ -84,7 +84,7 @@ jest.mock('lucide-react-native', () => ({
 
 jest.mock('@/lib/utils', () => ({
   getTimeAgoUtc: jest.fn(() => '5m ago'),
-  invertColor: jest.fn(() => '#FFFFFF'),
+  readableTextColor: jest.requireActual('@/lib/utils').readableTextColor,
 }));
 
 jest.mock('@/stores/home/home-store', () => ({
@@ -197,5 +197,36 @@ describe('CallCard', () => {
     );
 
     expect(screen.getByText('calls.assigned_to_me')).toBeTruthy();
+  });
+
+  describe('priority text colour', () => {
+    const baseCall = {
+      CallId: 'call-3',
+      Number: '2024-042',
+      Name: 'Structure Fire',
+      Address: '123 Main St',
+      LoggedOnUtc: '2024-01-01T00:00:00Z',
+      CheckInTimersEnabled: false,
+      Nature: '',
+      Priority: 1,
+    } as any;
+
+    it('picks the higher-contrast text colour for the priority background', () => {
+      const red = render(<CallCard call={baseCall} priority={{ Color: '#FF0000' } as any} callExtraData={{ Dispatches: [] } as any} />);
+      expect(red.getByText('#2024-042').props.style).toEqual(expect.objectContaining({ color: '#000000' }));
+      red.unmount();
+
+      const navy = render(<CallCard call={baseCall} priority={{ Color: '#1e3a8a' } as any} callExtraData={{ Dispatches: [] } as any} />);
+      expect(navy.getByText('#2024-042').props.style).toEqual(expect.objectContaining({ color: '#FFFFFF' }));
+      navy.unmount();
+    });
+
+    it('renders a priority colour that is not hex instead of throwing', () => {
+      const { getByText, unmount } = render(<CallCard call={baseCall} priority={{ Color: 'rgb(200, 0, 0)' } as any} callExtraData={{ Dispatches: [] } as any} />);
+
+      expect(getByText('#2024-042').props.style).toEqual(expect.objectContaining({ color: '#000000' }));
+
+      unmount();
+    });
   });
 });

@@ -136,7 +136,7 @@ export default function CalendarScreen() {
           toTab: tab,
         });
       }}
-      className={`flex-1 ${activeTab === tab ? 'bg-primary-600' : 'border-primary-600 bg-transparent'}`}
+      className={`flex-1 ${activeTab === tab ? 'bg-primary-600 dark:bg-primary-400' : 'border-primary-600 bg-transparent'}`}
     >
       <ButtonText className={activeTab === tab ? 'text-white' : 'text-primary-600'}>{label}</ButtonText>
     </Button>

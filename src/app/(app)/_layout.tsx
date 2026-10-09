@@ -18,6 +18,7 @@ import SideMenu from '@/components/sidebar/side-menu-content';
 import { View } from '@/components/ui';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Drawer, DrawerBackdrop, DrawerBody, DrawerContent, DrawerFooter } from '@/components/ui/drawer/index';
+import { StatusBarOverDarkHeaderContext } from '@/components/ui/focus-aware-status-bar';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
@@ -419,7 +420,7 @@ export default function TabLayout() {
       <RecoveryCodesModal />
 
       {/* Top Navigation Bar */}
-      <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
+      <View className="flex-row items-center justify-between bg-primary-600 px-4 dark:bg-primary-400" style={{ paddingTop: insets.top }}>
         <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} onBack={backHandler} />
         <View className="flex-1 items-center">
           <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
@@ -456,7 +457,10 @@ export default function TabLayout() {
 
         {/* Main content area */}
         <View className={`flex-1 ${isLandscape ? 'w-3/4' : 'w-full'}`}>
-          <Slot />
+          {/* The header above stays dark in both themes, so screens keep a light status bar over it. */}
+          <StatusBarOverDarkHeaderContext.Provider value={true}>
+            <Slot />
+          </StatusBarOverDarkHeaderContext.Provider>
         </View>
       </View>
     </View>

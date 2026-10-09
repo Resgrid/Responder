@@ -145,6 +145,8 @@
 
   @media (prefers-color-scheme: dark) {
     :root {
+      /* Primary is the light ramp reversed, like every other scale: 600+ must be light, since
+         text-primary-600, focus borders and checked controls sit on dark surfaces here. */
       --color-primary-0: 15 23 42;
       --color-primary-50: 30 41 59;
       --color-primary-100: 39 49 66;
@@ -152,11 +154,11 @@
       --color-primary-300: 51 65 85;
       --color-primary-400: 71 85 105;
       --color-primary-500: 100 116 139;
-      --color-primary-600: 71 85 105;
-      --color-primary-700: 51 65 85;
-      --color-primary-800: 45 55 72;
-      --color-primary-900: 39 49 66;
-      --color-primary-950: 30 41 59;
+      --color-primary-600: 148 163 184;
+      --color-primary-700: 203 213 225;
+      --color-primary-800: 226 232 240;
+      --color-primary-900: 241 245 249;
+      --color-primary-950: 248 250 252;
       --color-secondary-0: 11 12 12;
       --color-secondary-50: 24 23 23;
       --color-secondary-100: 39 38 38;
@@ -284,11 +286,11 @@
     --color-primary-300: 51 65 85;
     --color-primary-400: 71 85 105;
     --color-primary-500: 100 116 139;
-    --color-primary-600: 71 85 105;
-    --color-primary-700: 51 65 85;
-    --color-primary-800: 45 55 72;
-    --color-primary-900: 39 49 66;
-    --color-primary-950: 30 41 59;
+    --color-primary-600: 148 163 184;
+    --color-primary-700: 203 213 225;
+    --color-primary-800: 226 232 240;
+    --color-primary-900: 241 245 249;
+    --color-primary-950: 248 250 252;
     --color-secondary-0: 11 12 12;
     --color-secondary-50: 24 23 23;
     --color-secondary-100: 39 38 38;

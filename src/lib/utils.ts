@@ -57,6 +57,7 @@ export function getAvatarUrl(userId: string) {
   return getBaseApiUrl() + '/Avatars/Get?id=' + userId;
 }
 
+/** For black-or-white text on a coloured background prefer `readableTextColor`; the `bw` cutoff here picks white on many mid-tones. */
 export function invertColor(hex: string, bw: boolean): string {
   if (hex.indexOf('#') === 0) {
     hex = hex.slice(1);
@@ -86,6 +87,24 @@ export function invertColor(hex: string, bw: boolean): string {
     b2 = (255 - b).toString(16);
   // pad each with zeros and return
   return '#' + padZero(r2, 2) + padZero(g2, 2) + padZero(b2, 2);
+}
+
+/**
+ * Black or white, whichever has the higher WCAG contrast against `hex`. Returns undefined for a
+ * value that isn't a 3- or 6-digit hex colour, so callers can fall back to their themed text.
+ * Unlike `invertColor(hex, true)`, this picks black on mid-tones such as orange, teal and green.
+ */
+export function readableTextColor(hex: string): '#000000' | '#FFFFFF' | undefined {
+  const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) return undefined;
+  const digits = match[1].length === 3 ? match[1].replace(/./g, (c) => c + c) : match[1];
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(digits.slice(i, i + 2), 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  // Contrast with black is (L + 0.05) / 0.05 and with white 1.05 / (L + 0.05); they are equal at L ≈ 0.179.
+  return luminance > 0.179 ? '#000000' : '#FFFFFF';
 }
 
 export function padZero(str: string, len: number): string {

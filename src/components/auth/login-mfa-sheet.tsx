@@ -234,7 +234,7 @@ export const LoginMfaSheet: React.FC<LoginMfaSheetProps> = ({ isOpen, onLostFact
 
             {!approval && showsCodeInput ? (
               <Button action="primary" onPress={submitCode} isDisabled={busy || code.trim().length === 0} testID="login-mfa-submit">
-                {busy ? <Spinner size="small" /> : <ButtonText>{t('mfa.login.verify')}</ButtonText>}
+                {busy ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('mfa.login.verify')}</ButtonText>}
               </Button>
             ) : null}
 

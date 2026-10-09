@@ -7,7 +7,7 @@ import { Platform, ScrollView } from 'react-native';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { translate } from '@/lib/i18n/utils';
-import { invertColor } from '@/lib/utils';
+import { readableTextColor } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useStaffingBottomSheetStore } from '@/stores/staffing/staffing-bottom-sheet-store';
 
@@ -235,7 +235,10 @@ export const StaffingBottomSheet = () => {
                         <RadioLabel>
                           <VStack>
                             <HStack space="sm" className="items-center">
-                              <Text className="min-w-[60px] rounded px-2 py-1 text-center text-xs font-bold text-white" style={{ backgroundColor: staffing.BColor, color: invertColor(staffing.BColor, true) }}>
+                              <Text
+                                className="min-w-[60px] rounded px-2 py-1 text-center text-xs font-bold text-white"
+                                style={{ backgroundColor: staffing.BColor, color: readableTextColor(staffing.BColor) ?? '#000000' }}
+                              >
                                 {staffing.Text}
                               </Text>
                             </HStack>
@@ -251,7 +254,7 @@ export const StaffingBottomSheet = () => {
 
               <HStack space="sm" className="mt-4 justify-end">
                 <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="bg-blue-600">
-                  <ButtonText>{safeT('common.next')}</ButtonText>
+                  <ButtonText className="text-white">{safeT('common.next')}</ButtonText>
                   <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
                 </Button>
               </HStack>
@@ -268,7 +271,7 @@ export const StaffingBottomSheet = () => {
                 <VStack space="sm">
                   <Text className="font-medium">{safeT('home.staffing.selected_staffing')}:</Text>
                   <HStack space="sm" className="items-center">
-                    <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: invertColor(selectedStaffing?.BColor || '#000000', true) }}>
+                    <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: readableTextColor(selectedStaffing?.BColor || '#000000') ?? '#000000' }}>
                       {selectedStaffing?.Text}
                     </Text>
                   </HStack>
@@ -289,7 +292,7 @@ export const StaffingBottomSheet = () => {
                     <ButtonText>{safeT('common.previous')}</ButtonText>
                   </Button>
                   <Button onPress={handleNext} isDisabled={!canProceedFromCurrentStep()} className="flex-1 bg-blue-600">
-                    <ButtonText>{safeT('common.next')}</ButtonText>
+                    <ButtonText className="text-white">{safeT('common.next')}</ButtonText>
                     <ArrowRight size={16} color={colorScheme === 'dark' ? '#fff' : '#fff'} />
                   </Button>
                 </HStack>
@@ -305,7 +308,7 @@ export const StaffingBottomSheet = () => {
                 <VStack space="xs">
                   <Text className="font-medium">{safeT('home.staffing.staffing_level')}:</Text>
                   <HStack space="sm" className="items-center">
-                    <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: invertColor(selectedStaffing?.BColor || '#000000', true) }}>
+                    <Text className="rounded px-2 py-1 text-sm font-bold text-white" style={{ backgroundColor: selectedStaffing?.BColor, color: readableTextColor(selectedStaffing?.BColor || '#000000') ?? '#000000' }}>
                       {selectedStaffing?.Text}
                     </Text>
                   </HStack>

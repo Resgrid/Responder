@@ -45,7 +45,7 @@ const SiteContactCard: React.FC<SiteContactCardProps> = ({ site, callId }) => {
   return (
     <Box className="mb-4 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" testID={`site-contact-${site.ContactId}`}>
       <HStack space="sm" className="items-center border-b border-gray-100 p-3 dark:border-gray-800">
-        <Box className="size-10 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900">
+        <Box className="size-10 items-center justify-center rounded-full bg-primary-100">
           {nameRedacted ? <LockIcon size={18} color="#6b7280" /> : site.ContactType === 1 ? <BuildingIcon size={18} color="#6366F1" /> : <UserIcon size={18} color="#6366F1" />}
         </Box>
         <VStack className="flex-1">
@@ -64,7 +64,7 @@ const SiteContactCard: React.FC<SiteContactCardProps> = ({ site, callId }) => {
           <Pressable onPress={handleCall} className="mb-2" testID={`site-contact-phone-${site.ContactId}`}>
             <HStack space="xs" className="items-center">
               <PhoneIcon size={14} color="#6366F1" />
-              <Text className="text-sm text-primary-600 dark:text-primary-400">{site.PhoneNumber}</Text>
+              <Text className="text-sm text-primary-600">{site.PhoneNumber}</Text>
             </HStack>
           </Pressable>
         ) : null}

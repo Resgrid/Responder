@@ -7,7 +7,7 @@ import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { isNoteRequiredForStatus } from '@/lib/status-destinations';
-import { invertColor } from '@/lib/utils';
+import { readableTextColor } from '@/lib/utils';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -24,7 +24,7 @@ interface StaffingButtonProps {
 const StaffingButton: React.FC<StaffingButtonProps> = React.memo(({ staffing, isSubmitting, isDisabled, onQuickSet, onOpenSheet }) => {
   const { t } = useTranslation();
   const noteRequired = isNoteRequiredForStatus(staffing);
-  const textColor = invertColor(staffing.BColor, true);
+  const textColor = readableTextColor(staffing.BColor) ?? '#000000';
 
   // A level that needs a note still goes through the sheet; everything else is one tap, with a
   // long press as the way to attach a note anyway.

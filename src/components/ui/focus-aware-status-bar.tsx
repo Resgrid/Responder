@@ -6,9 +6,19 @@ import { Platform, StatusBar } from 'react-native';
 import { SystemBars } from 'react-native-edge-to-edge';
 
 type Props = { hidden?: boolean };
+
+/**
+ * Provided by a layout whose header stays dark in both themes (the app shell's primary bar), so the
+ * status bar drawn over it keeps light content instead of following the theme.
+ */
+export const StatusBarOverDarkHeaderContext = React.createContext(false);
+
 export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
   const isFocused = useIsFocused();
   const { colorScheme } = useColorScheme();
+  const isOverDarkHeader = React.useContext(StatusBarOverDarkHeaderContext);
+  // Light content (white icons) is for a dark surface: the dark theme, or the shell's dark header.
+  const wantsLightContent = isOverDarkHeader || colorScheme === 'dark';
 
   React.useEffect(() => {
     // Early return if screen is not focused to prevent off-screen instances from overriding UI
@@ -34,7 +44,7 @@ export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
         }
 
         // Adapt status bar content based on theme
-        StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
+        StatusBar.setBarStyle(wantsLightContent ? 'light-content' : 'dark-content');
       } catch (error) {
         // Silently handle errors if StatusBar methods are not available
       }
@@ -48,16 +58,16 @@ export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
         }
 
         // Set status bar style for iOS
-        StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
+        StatusBar.setBarStyle(wantsLightContent ? 'light-content' : 'dark-content');
       } catch (error) {
         // Silently handle errors if StatusBar methods are not available
       }
     }
-  }, [hidden, colorScheme, isFocused]);
+  }, [hidden, wantsLightContent, isFocused]);
 
   // Don't render anything on web
   if (Platform.OS === 'web') return null;
 
-  // Only render SystemBars when focused and on supported platforms
-  return isFocused && (Platform.OS === 'android' || Platform.OS === 'ios') ? <SystemBars style={colorScheme === 'dark' ? 'dark' : 'light'} hidden={{ statusBar: hidden, navigationBar: true }} /> : null;
+  // Only render SystemBars when focused and on supported platforms. Edge-to-edge 'light' means light content.
+  return isFocused && (Platform.OS === 'android' || Platform.OS === 'ios') ? <SystemBars style={wantsLightContent ? 'light' : 'dark'} hidden={{ statusBar: hidden, navigationBar: true }} /> : null;
 };

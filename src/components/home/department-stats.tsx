@@ -24,7 +24,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, testID }) => {
           <Box className="rounded-lg bg-primary-500 p-2">{icon}</Box>
           <Text className="text-2xl font-bold text-primary-600">{value}</Text>
         </HStack>
-        <Text className="text-sm font-medium text-gray-600">{title}</Text>
+        <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</Text>
       </VStack>
     </Card>
   );

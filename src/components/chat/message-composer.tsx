@@ -174,7 +174,13 @@ export function MessageComposer({ onSendText, onSendImage, onSendLocation, onOpe
           </Textarea>
         </Box>
 
-        <Pressable className={`rounded-full p-2 ${canSend ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'}`} onPress={handleSend} disabled={!canSend} accessibilityRole="button" accessibilityLabel={t('chat.send')}>
+        <Pressable
+          className={`rounded-full p-2 ${canSend ? 'bg-primary-600 dark:bg-primary-400' : 'bg-gray-300 dark:bg-gray-600'}`}
+          onPress={handleSend}
+          disabled={!canSend}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.send')}
+        >
           <Send size={20} color="#ffffff" />
         </Pressable>
       </HStack>

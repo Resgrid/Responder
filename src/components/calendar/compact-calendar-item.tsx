@@ -106,7 +106,7 @@ export const CompactCalendarItem: React.FC<CompactCalendarItemProps> = ({ item, 
                   </Text>
                 </Badge>
               ) : null}
-              {isSignedUp && canSignUp ? <CheckCircle size={16} className="text-success-500 dark:text-success-400" /> : null}
+              {isSignedUp && canSignUp ? <CheckCircle size={16} className="text-success-500" /> : null}
             </HStack>
           </HStack>
 
@@ -130,7 +130,7 @@ export const CompactCalendarItem: React.FC<CompactCalendarItemProps> = ({ item, 
                 </Badge>
               ) : (
                 <Badge action="info" variant="outline" className="px-2 py-0.5">
-                  <Text className="text-xs text-info-600 dark:text-info-400">{t('calendar.tapToSignUp')}</Text>
+                  <Text className="text-xs text-info-600">{t('calendar.tapToSignUp')}</Text>
                 </Badge>
               )}
             </HStack>

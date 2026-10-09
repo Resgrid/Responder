@@ -56,9 +56,9 @@ const CalendarFilterChip: React.FC<CalendarFilterChipProps> = React.memo(({ id, 
       accessibilityRole="button"
       accessibilityState={{ selected: isActive }}
       testID={`shifts-calendar-filter-${id ?? 'all'}`}
-      className={`mr-2 rounded-full border px-3 py-1.5 ${isActive ? 'border-primary-600 bg-primary-100 dark:bg-primary-900/40' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'}`}
+      className={`mr-2 rounded-full border px-3 py-1.5 ${isActive ? 'border-primary-600 bg-primary-100 dark:bg-primary-100/40' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'}`}
     >
-      <Text className={`text-xs font-medium ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}>{label}</Text>
+      <Text className={`text-xs font-medium ${isActive ? 'text-primary-700' : 'text-gray-700 dark:text-gray-300'}`}>{label}</Text>
     </Pressable>
   );
 });

@@ -186,10 +186,10 @@ export const LoginForm = ({ onSubmit = () => {}, isLoading = false, error = unde
           {/* Server URL and SSO Buttons */}
           <View className="mt-14 w-full flex-row gap-2">
             <Pressable accessibilityRole="button" className="h-10 flex-1 items-center justify-center rounded border border-outline-300 bg-transparent px-4" onPress={handleServerUrlPress} testID="server-url-button">
-              <Text className="text-xs text-primary-500">{t('login.change_server_url')}</Text>
+              <Text className="text-xs text-primary-600">{t('login.change_server_url')}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" className="h-10 flex-1 items-center justify-center rounded border border-outline-300 bg-transparent px-4" onPress={onSsoPress} testID="sso-button">
-              <Text className="text-xs text-primary-500">{t('login.sso.login_with_sso_button')}</Text>
+              <Text className="text-xs text-primary-600">{t('login.sso.login_with_sso_button')}</Text>
             </Pressable>
           </View>
 
