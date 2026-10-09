@@ -167,7 +167,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
           {t('calendar.title')}
         </Heading>
         <Button variant="outline" size="sm" onPress={goToToday} className="border-primary-500" testID={`${testID}-today-button`}>
-          <ButtonText className="text-primary-600 dark:text-primary-400">{t('calendar.tabs.today')}</ButtonText>
+          <ButtonText className="text-primary-600">{t('calendar.tabs.today')}</ButtonText>
         </Button>
       </HStack>
 

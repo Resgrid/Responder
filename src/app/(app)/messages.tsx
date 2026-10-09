@@ -257,7 +257,7 @@ export default function MessagesScreen() {
             <Pressable className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800" onPress={() => setIsFilterMenuOpen(true)} testID="messages-filter-button">
               <HStack space="xs" className="items-center">
                 <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{getFilterLabel(currentFilter)}</Text>
-                <Badge variant="solid" className="bg-primary-500 dark:bg-primary-400">
+                <Badge variant="solid" className="bg-primary-500 dark:bg-primary-600">
                   <Text className="text-xs text-white dark:text-gray-900">{getFilterCount(currentFilter)}</Text>
                 </Badge>
                 <ChevronDown size={16} className="text-gray-700 dark:text-gray-300" />

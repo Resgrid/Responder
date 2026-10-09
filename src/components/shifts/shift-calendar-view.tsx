@@ -64,8 +64,8 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = React.memo(({ date, date
     onSelect(dateKey);
   }, [dateKey, onSelect]);
 
-  const containerClass = isSelected ? 'bg-primary-600' : isToday ? 'bg-primary-50 dark:bg-primary-900/40' : 'bg-white dark:bg-gray-800';
-  const textClass = isSelected ? 'text-white' : isToday ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white';
+  const containerClass = isSelected ? 'bg-primary-600 dark:bg-primary-400' : isToday ? 'bg-primary-50 dark:bg-primary-100/40' : 'bg-white dark:bg-gray-800';
+  const textClass = isSelected ? 'text-white' : isToday ? 'text-primary-700' : 'text-gray-900 dark:text-white';
 
   return (
     <View style={styles.cell}>

@@ -5,7 +5,6 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Loading } from '@/components/common/loading';
 import { HoldToConfirmButton } from '@/components/status/hold-to-confirm-button';
 import { Button, ButtonText } from '@/components/ui/button';
-import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { getOfferedStatuses, resolveCurrentStatusId } from '@/lib/status-flow';
@@ -18,8 +17,17 @@ import { useToastStore } from '@/stores/toast/store';
 
 const LEGACY_HIDDEN_STATUS_IDS = [4, 5, 6, 7];
 
-/** The red outline that marks the member's current status. */
-const CURRENT_STATUS_BORDER = '#dc2626';
+/**
+ * The member's current status gets a thin ring just outside the button: a small gap, then a neutral line
+ * that follows the theme. Keeping it off the button means it shows whatever colour the status is.
+ */
+const CURRENT_RING_GAP = 2;
+const CURRENT_RING_WIDTH = 2;
+const CURRENT_RING_OUTSET = CURRENT_RING_GAP + CURRENT_RING_WIDTH;
+
+/** Corner radii of the two button kinds (gluestack `rounded`, HoldToConfirmButton), so the ring follows them. */
+const BUTTON_RADIUS = 4;
+const HOLD_BUTTON_RADIUS = 8;
 
 interface StatusButtonProps {
   status: StatusesResultData;
@@ -37,48 +45,46 @@ const StatusButton: React.FC<StatusButtonProps> = React.memo(({ status, isCurren
   const handlePress = useCallback(() => onPress(status), [onPress, status]);
   const handleHold = useCallback(() => onHold(status), [onHold, status]);
 
-  const label = (
-    <HStack space="xs" className="items-center justify-center">
-      <ButtonText style={{ color: textColor, flexShrink: 1 }}>{status.Text}</ButtonText>
-      {isCurrent ? (
-        <View style={styles.currentPill}>
-          <Text style={styles.currentPillText}>{t('personnel.status.current')}</Text>
-        </View>
-      ) : null}
-    </HStack>
-  );
+  const label = <ButtonText style={[styles.labelText, { color: textColor }]}>{status.Text}</ButtonText>;
+  const accessibilityLabel = isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : undefined;
 
-  if (isHoldMode) {
-    return (
-      <HoldToConfirmButton
-        testID={`status-hold-button-${status.Id}`}
-        onConfirm={handleHold}
-        onTap={onHoldTap}
-        backgroundColor={status.BColor}
-        foregroundColor={textColor}
-        style={isCurrent ? styles.currentOutline : null}
-        contentStyle={styles.holdContent}
-        accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : status.Text}
-        accessibilityHint={t('personnel.status.hold_to_set_hint')}
-      >
-        {label}
-      </HoldToConfirmButton>
-    );
-  }
-
-  return (
+  const button = isHoldMode ? (
+    <HoldToConfirmButton
+      testID={`status-hold-button-${status.Id}`}
+      onConfirm={handleHold}
+      onTap={onHoldTap}
+      backgroundColor={status.BColor}
+      foregroundColor={textColor}
+      contentStyle={styles.holdContent}
+      accessibilityLabel={accessibilityLabel ?? status.Text}
+      accessibilityHint={t('personnel.status.hold_to_set_hint')}
+    >
+      {label}
+    </HoldToConfirmButton>
+  ) : (
     <Button
       variant="solid"
       className="w-full justify-center px-3 py-2"
       action="primary"
       size="lg"
-      style={[{ backgroundColor: status.BColor }, isCurrent ? styles.currentOutline : null]}
+      style={{ backgroundColor: status.BColor }}
       onPress={handlePress}
       testID={`status-button-${status.Id}`}
-      accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : undefined}
+      accessibilityLabel={accessibilityLabel}
     >
       {label}
     </Button>
+  );
+
+  if (!isCurrent) {
+    return button;
+  }
+
+  return (
+    <View>
+      <View pointerEvents="none" testID={`status-current-ring-${status.Id}`} className="border-gray-500 dark:border-gray-400" style={[styles.currentRing, isHoldMode ? styles.currentRingHold : null]} />
+      {button}
+    </View>
   );
 });
 
@@ -162,21 +168,21 @@ export const StatusButtons: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  currentOutline: {
-    borderWidth: 3,
-    borderColor: CURRENT_STATUS_BORDER,
+  labelText: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
-  currentPill: {
-    backgroundColor: CURRENT_STATUS_BORDER,
-    borderRadius: 999,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+  currentRing: {
+    position: 'absolute',
+    top: -CURRENT_RING_OUTSET,
+    right: -CURRENT_RING_OUTSET,
+    bottom: -CURRENT_RING_OUTSET,
+    left: -CURRENT_RING_OUTSET,
+    borderWidth: CURRENT_RING_WIDTH,
+    borderRadius: BUTTON_RADIUS + CURRENT_RING_OUTSET,
   },
-  currentPillText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+  currentRingHold: {
+    borderRadius: HOLD_BUTTON_RADIUS + CURRENT_RING_OUTSET,
   },
   holdContent: {
     paddingHorizontal: 12,

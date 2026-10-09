@@ -225,8 +225,8 @@ export const LiveKitBottomSheet = () => {
             {isTalking && <Text className="text-center text-green-500">{t('livekit.speaking')}</Text>}
 
             {/* Audio Device Info */}
-            <View className="mt-2 border-t border-gray-200 pt-2">
-              <Text className="mb-1 text-sm font-medium text-gray-600">{t('livekit.audio_devices')}</Text>
+            <View className="mt-2 border-t border-gray-200 pt-2 dark:border-gray-700">
+              <Text className="mb-1 text-sm font-medium text-gray-600 dark:text-gray-400">{t('livekit.audio_devices')}</Text>
               <HStack className="items-center justify-between">
                 <VStack space="xs" className="flex-1">
                   <Text className="text-xs text-gray-500">{t('livekit.microphone')}</Text>

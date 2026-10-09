@@ -338,22 +338,22 @@ export const ComposeMessageSheet: React.FC = () => {
           <Pressable key={recipient.Id} onPress={() => toggleRecipient(recipient.Id)} className="w-full" testID={`recipient-item-${recipient.Id}`}>
             <HStack
               space="md"
-              className={`w-full items-center rounded-lg border-2 p-4 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}
+              className={`w-full items-center rounded-lg border-2 p-4 ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-100/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}
             >
               <Avatar size="md" className="shrink-0">
                 <AvatarFallbackText>{recipient.Name?.charAt(0) || 'U'}</AvatarFallbackText>
               </Avatar>
 
               <VStack className="min-w-0 flex-1">
-                <Text className={`font-semibold ${isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-gray-100'}`} numberOfLines={1}>
+                <Text className={`font-semibold ${isSelected ? 'text-primary-700' : 'text-gray-900 dark:text-gray-100'}`} numberOfLines={1}>
                   {recipient.Name}
                 </Text>
-                <Text className={`text-sm ${isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`} numberOfLines={1}>
+                <Text className={`text-sm ${isSelected ? 'text-primary-600' : 'text-gray-600 dark:text-gray-400'}`} numberOfLines={1}>
                   {type}
                 </Text>
               </VStack>
 
-              {isSelected && <Check size={20} className="shrink-0 text-primary-600 dark:text-primary-400" />}
+              {isSelected && <Check size={20} className="shrink-0 text-primary-600" />}
             </HStack>
           </Pressable>
         );
@@ -458,7 +458,7 @@ export const ComposeMessageSheet: React.FC = () => {
                       </Text>
                     )}
                   </VStack>
-                  <ChevronDown size={20} color={errors.recipients ? '#dc2626' : 'currentColor'} />
+                  <ChevronDown size={20} className={errors.recipients ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'} />
                 </HStack>
               </Pressable>
               {errors.recipients && <Text className="text-sm text-red-600 dark:text-red-400">{errors.recipients}</Text>}

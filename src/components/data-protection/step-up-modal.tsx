@@ -222,7 +222,7 @@ export const StepUpModal: React.FC<StepUpModalProps> = ({ isOpen, onClose, onVer
           </Button>
           {offersCode && !approval ? (
             <Button action="primary" onPress={handleVerify} isDisabled={isVerifying || code.trim().length === 0} testID="step-up-submit">
-              {isVerifying ? <Spinner size="small" /> : <ButtonText>{t('data_protection.step_up_verify', 'Verify')}</ButtonText>}
+              {isVerifying ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('data_protection.step_up_verify', 'Verify')}</ButtonText>}
             </Button>
           ) : null}
         </ModalFooter>

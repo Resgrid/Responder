@@ -173,8 +173,32 @@ describe('StatusButtons', () => {
       render(<StatusButtons />);
 
       expect(screen.getByText('Departed')).toBeTruthy();
-      expect(screen.getByText('personnel.status.current')).toBeTruthy();
+      expect(screen.getByTestId('status-current-ring-10')).toBeTruthy();
+      expect(screen.getByTestId('status-button-10').props.accessibilityLabel).toBe('Available, personnel.status.current');
       expect(screen.queryByTestId('status-buttons-show-all')).toBeNull();
+    });
+
+    it('rings only the current status, without a "Current" badge', () => {
+      setStores(12);
+
+      render(<StatusButtons />);
+      fireEvent.press(screen.getByTestId('status-buttons-show-all'));
+
+      expect(screen.getByTestId('status-current-ring-12')).toBeTruthy();
+      expect(screen.queryByTestId('status-current-ring-10')).toBeNull();
+      expect(screen.queryByTestId('status-current-ring-13')).toBeNull();
+      expect(screen.queryByText('personnel.status.current')).toBeNull();
+    });
+
+    it('rings the current status in hold mode', () => {
+      setStores(12, { StatusHoldToConfirm: true });
+
+      render(<StatusButtons />);
+      fireEvent.press(screen.getByTestId('status-buttons-show-all'));
+
+      expect(screen.getByTestId('status-current-ring-12')).toBeTruthy();
+      expect(screen.getByTestId('status-hold-button-12').props.accessibilityLabel).toBe('Departed, personnel.status.current');
+      expect(screen.getByTestId('status-hold-button-13').props.accessibilityLabel).toBe('On Scene');
     });
 
     it('in hold mode opens the sheet and confirms the status once the hold completes', () => {

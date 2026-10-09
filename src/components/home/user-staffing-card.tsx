@@ -57,7 +57,7 @@ export const UserStaffingCard: React.FC = () => {
             <Box className="rounded-lg bg-gray-500 p-2">
               <UserCheck size={16} color="white" />
             </Box>
-            <Text className="text-sm font-medium text-gray-600">{t('home.user.my_staffing')}</Text>
+            <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('home.user.my_staffing')}</Text>
           </HStack>
         </HStack>
         <Text className="text-lg font-bold" style={{ color: displayColor }} testID="user-staffing-text">

@@ -1,5 +1,6 @@
 import { Redirect, Stack, useFocusEffect } from 'expo-router';
 import { RefreshCw, Send, Sparkles } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardState } from 'react-native-keyboard-controller';
@@ -29,6 +30,7 @@ import { useToastStore } from '@/stores/toast/store';
 
 export default function ChatbotScreen() {
   const { t } = useTranslation();
+  const { colorScheme } = useColorScheme();
   const insets = useSafeAreaInsets();
   const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
   const currentUserId = useAuthStore((s) => s.userId);
@@ -115,7 +117,7 @@ export default function ChatbotScreen() {
           </VStack>
         </HStack>
         <Pressable className="flex-row items-center rounded-full bg-purple-100 px-3 py-1 dark:bg-purple-900" onPress={() => useChatStore.getState().newChatbotSession()} accessibilityLabel={t('chatbot.new_session')}>
-          <RefreshCw size={14} color="#7c3aed" />
+          <RefreshCw size={14} color={colorScheme === 'dark' ? '#d8b4fe' : '#7c3aed'} />
           <Text className="ml-1 text-xs font-medium text-purple-700 dark:text-purple-300">{t('chatbot.new_session')}</Text>
         </Pressable>
       </HStack>
@@ -154,7 +156,7 @@ export default function ChatbotScreen() {
             </Input>
           </Box>
           <Pressable className={`rounded-full p-2 ${text.trim() ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'}`} onPress={send} disabled={!text.trim()} accessibilityRole="button" accessibilityLabel={t('chat.send')}>
-            <Send size={20} color="#ffffff" />
+            <Send size={20} color={text.trim() || colorScheme === 'dark' ? '#ffffff' : '#737373'} />
           </Pressable>
         </HStack>
       </BottomAnchoredKeyboardView>

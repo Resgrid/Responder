@@ -63,7 +63,7 @@ export const CheckInTimerCard: React.FC<CheckInTimerCardProps> = React.memo(({ s
         </HStack>
 
         {/* Progress bar */}
-        <View style={styles.progressBarContainer}>
+        <View style={styles.progressBarContainer} className="bg-gray-200 dark:bg-gray-700">
           <View
             style={[
               styles.progressBar,
@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#E5E7EB',
     overflow: 'hidden',
   },
   progressBar: {

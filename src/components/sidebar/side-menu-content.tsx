@@ -275,7 +275,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
           <Box className={`rounded-xl p-3 ${isDark ? 'border border-gray-700 bg-gray-800' : 'border border-gray-200 bg-gray-50'}`} testID="side-menu-profile">
             <HStack space="md" className="items-center">
               <Avatar size="lg" className="border-2 border-primary-500">
-                <AvatarFallbackText className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{getInitials(displayName)}</AvatarFallbackText>
+                <AvatarFallbackText className="text-lg font-semibold">{getInitials(displayName)}</AvatarFallbackText>
                 {profile?.sub && <AvatarImage source={{ uri: getAvatarUrl(profile.sub) }} alt={`${displayName} avatar`} />}
               </Avatar>
 
@@ -362,7 +362,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
                   ]}
                 >
                   <HStack space="md" className="items-center">
-                    <Box className={`rounded-lg p-2 ${isDark ? 'bg-primary-900' : 'bg-primary-50'}`}>
+                    <Box className={`rounded-lg p-2 ${isDark ? 'bg-primary-100' : 'bg-primary-50'}`}>
                       <IconComponent size={20} color={isDark ? '#60a5fa' : '#3b82f6'} />
                     </Box>
                     <Text className={`flex-1 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.title}</Text>

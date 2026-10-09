@@ -13,7 +13,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { ProtectedFieldIds } from '@/lib/data-protection/redacted';
-import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
+import { formatDateForDisplay, parseDateISOString, readableColors } from '@/lib/utils';
 import { type LocationHistoryCallData, type LocationHistoryMatch } from '@/models/v4/calls/locationHistoryResult';
 import { locationHistoryKey, type LocationHistorySource, useLocationHistoryStore } from '@/stores/calls/location-history-store';
 import { dataProtectionStore } from '@/stores/data-protection/store';
@@ -53,6 +53,7 @@ const HistoryCallCard: React.FC<HistoryCallCardProps> = React.memo(({ call, onOp
   // The closing note counts as one, so a call with only a closing note never reads "Notes (0)".
   const noteCount = call.Notes.length + (call.CompletedNotes ? 1 : 0);
   const loggedOn = call.LoggedOn || formatTimestamp(call.LoggedOnUtc);
+  const priorityColors = readableColors(call.PriorityColor, '#6b7280');
   const handleOpen = useCallback(() => onOpenCall(call.CallId), [onOpenCall, call.CallId]);
   const toggleNotes = useCallback(() => setExpanded((value) => !value), []);
 
@@ -62,9 +63,11 @@ const HistoryCallCard: React.FC<HistoryCallCardProps> = React.memo(({ call, onOp
         <HStack space="sm" className="items-start">
           <VStack className="flex-1">
             <HStack space="xs" className="flex-wrap items-center">
-              <Text className="text-sm font-semibold text-primary-600 dark:text-primary-400">{call.Number}</Text>
-              <Box className="rounded px-1.5 py-0.5" style={{ backgroundColor: call.PriorityColor || '#6b7280' }}>
-                <Text className="text-xs font-medium text-white">{call.PriorityText || t('location_history.unknown_priority')}</Text>
+              <Text className="text-sm font-semibold text-primary-600">{call.Number}</Text>
+              <Box className="rounded px-1.5 py-0.5" style={{ backgroundColor: priorityColors.backgroundColor }} testID={`location-history-priority-${call.CallId}`}>
+                <Text className="text-xs font-medium" style={{ color: priorityColors.textColor }}>
+                  {call.PriorityText || t('location_history.unknown_priority')}
+                </Text>
               </Box>
               <Text className={`text-xs ${call.State === 0 ? 'font-semibold text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{t(`location_history.state.${call.State}`, String(call.State))}</Text>
             </HStack>
@@ -103,7 +106,7 @@ const HistoryCallCard: React.FC<HistoryCallCardProps> = React.memo(({ call, onOp
           <Pressable onPress={toggleNotes} className="px-3 py-2" testID={`location-history-notes-toggle-${call.CallId}`}>
             <HStack space="xs" className="items-center">
               {expanded ? <ChevronUpIcon size={16} color="#6366F1" /> : <ChevronDownIcon size={16} color="#6366F1" />}
-              <Text className="text-sm text-primary-600 dark:text-primary-400">{expanded ? t('location_history.hide_notes') : t('location_history.show_notes', { count: noteCount })}</Text>
+              <Text className="text-sm text-primary-600">{expanded ? t('location_history.hide_notes') : t('location_history.show_notes', { count: noteCount })}</Text>
             </HStack>
           </Pressable>
           {expanded ? (

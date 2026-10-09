@@ -52,7 +52,7 @@ const PoiListItem: React.FC<PoiListItemProps> = React.memo(({ poi, onPoiPress, o
         <HStack className="items-start justify-between">
           <VStack className="flex-1 pr-3">
             <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{displayName}</Text>
-            <Text className="text-sm text-primary-600 dark:text-primary-400">{poi.PoiTypeName}</Text>
+            <Text className="text-sm text-primary-600">{poi.PoiTypeName}</Text>
           </VStack>
           {poi.IsDestination ? (
             <Badge action="success" size="sm" variant="solid">
@@ -68,7 +68,7 @@ const PoiListItem: React.FC<PoiListItemProps> = React.memo(({ poi, onPoiPress, o
           <Button variant="outline" className="flex-1 border-neutral-300 dark:border-neutral-700" onPress={handleViewOnMap}>
             <ButtonText>{t('poi.view_on_map')}</ButtonText>
           </Button>
-          <Button className="flex-1 bg-primary-600 dark:bg-primary-500" onPress={handleViewDetails}>
+          <Button className="flex-1 bg-primary-600" onPress={handleViewDetails}>
             <ButtonText>{t('poi.view_details')}</ButtonText>
           </Button>
         </HStack>
@@ -163,8 +163,8 @@ export const PoiListPanel: React.FC<PoiListPanelProps> = ({ onPoiPress, onViewOn
       <HStack className="mb-3 items-center justify-between rounded-xl bg-neutral-100 px-3 py-2 dark:bg-neutral-950/70">
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('poi.results_count', { count: filteredPois.length })}</Text>
         <HStack space="xs" className="ml-2 flex-1 items-center">
-          <MapIcon size={14} color={colorScheme === 'dark' ? '#475569' : '#334155'} />
-          <Text className="flex-1 text-xs text-primary-600 dark:text-primary-400" numberOfLines={2}>
+          <MapIcon size={14} color={colorScheme === 'dark' ? '#94a3b8' : '#334155'} />
+          <Text className="flex-1 text-xs text-primary-600" numberOfLines={2}>
             {t('poi.view_on_map_hint')}
           </Text>
         </HStack>

@@ -1,8 +1,8 @@
-import { LockIcon } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { HStack } from '@/components/ui/hstack';
+import { Lock } from '@/components/ui/lucide-icons';
 import { Text } from '@/components/ui/text';
 import { isFieldRedacted } from '@/lib/data-protection/redacted';
 
@@ -37,7 +37,7 @@ export const ProtectedText: React.FC<ProtectedTextProps> = ({ value, fieldId, re
   if (isFieldRedacted(redactedFields, fieldId, value)) {
     return (
       <HStack space="xs" className="items-center" testID={testID ?? `protected-field-${fieldId}`}>
-        <LockIcon size={size === 'xs' || size === 'sm' ? 12 : 14} />
+        <Lock size={size === 'xs' || size === 'sm' ? 12 : 14} className="text-typography-500" />
         <Text size={size} className={`italic text-typography-500 ${className ?? ''}`}>
           {t('data_protection.protected_value', 'Protected')}
         </Text>
