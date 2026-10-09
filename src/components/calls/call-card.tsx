@@ -12,7 +12,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { buildCallAssignmentContext, getDispatchTypeStyle, getUniqueDispatches, isCurrentUserOnCall } from '@/lib/call-dispatch';
-import { getTimeAgoUtc, readableTextColor } from '@/lib/utils';
+import { getTimeAgoUtc, readableColors } from '@/lib/utils';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallExtraDataResultData } from '@/models/v4/calls/callExtraDataResultData';
 import type { CallResultData } from '@/models/v4/calls/callResultData';
@@ -136,7 +136,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({ 
   const roles = useRolesStore((state) => state.roles);
   const fetchCallExtraData = useCallsStore((state) => state.fetchCallExtraData);
   const cachedCallExtraData = useCallsStore((state) => state.callExtrasById[call.CallId]);
-  const textColor = readableTextColor(getColor(call, priority)) ?? '#000000';
+  const { backgroundColor, textColor } = readableColors(getColor(call, priority));
   const resolvedCallExtraData = callExtraData ?? cachedCallExtraData ?? null;
 
   useEffect(() => {
@@ -151,7 +151,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({ 
   return (
     <Box
       style={{
-        backgroundColor: getColor(call, priority),
+        backgroundColor,
         borderWidth: isAssignedToCurrentUser ? 3 : 0,
         borderColor: isAssignedToCurrentUser ? '#FDE047' : 'transparent',
       }}

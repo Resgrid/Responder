@@ -18,7 +18,7 @@ import {
   type StatusDestinationTab,
 } from '@/lib/status-destinations';
 import { getOfferedStatuses, resolveCurrentStatusId } from '@/lib/status-flow';
-import { readableTextColor } from '@/lib/utils';
+import { readableColors } from '@/lib/utils';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useActiveCallStore } from '@/stores/calls/active-call-store';
@@ -64,7 +64,7 @@ interface PersonnelStatusOptionProps {
 
 const PersonnelStatusOption: React.FC<PersonnelStatusOptionProps> = React.memo(({ status, isSelected, isCurrent, isHoldMode, isDisabled, onSelect, onHold, onHoldTap }) => {
   const { t } = useTranslation();
-  const textColor = readableTextColor(status.BColor) ?? '#000000';
+  const { backgroundColor, textColor } = readableColors(status.BColor);
 
   const handleSelect = useCallback(() => onSelect(status.Id), [onSelect, status.Id]);
   const handleHold = useCallback(() => onHold(status), [onHold, status]);
@@ -77,7 +77,7 @@ const PersonnelStatusOption: React.FC<PersonnelStatusOptionProps> = React.memo((
           onConfirm={handleHold}
           onTap={onHoldTap}
           disabled={isDisabled}
-          backgroundColor={status.BColor}
+          backgroundColor={backgroundColor}
           foregroundColor={textColor}
           style={isCurrent ? styles.currentOutline : null}
           contentStyle={styles.holdOptionContent}
@@ -100,7 +100,7 @@ const PersonnelStatusOption: React.FC<PersonnelStatusOptionProps> = React.memo((
       testID={`personnel-status-option-${status.Id}`}
       onPress={handleSelect}
       className={`mb-3 rounded-lg border-2 p-3 ${isSelected ? 'border-primary-500 dark:border-primary-400' : 'border-transparent'}`}
-      style={[{ backgroundColor: status.BColor }, isCurrent && !isSelected ? styles.currentOutline : null]}
+      style={[{ backgroundColor }, isCurrent && !isSelected ? styles.currentOutline : null]}
       accessibilityLabel={isCurrent ? `${status.Text}, ${t('personnel.status.current')}` : undefined}
     >
       <HStack space="sm" className="items-center">
@@ -111,7 +111,7 @@ const PersonnelStatusOption: React.FC<PersonnelStatusOptionProps> = React.memo((
             backgroundColor: isSelected ? textColor : 'transparent',
           }}
         >
-          {isSelected ? <Check size={12} color={status.BColor} /> : null}
+          {isSelected ? <Check size={12} color={backgroundColor} /> : null}
         </VStack>
         <Text className="flex-1 font-bold" style={{ color: textColor }}>
           {status.Text}
@@ -647,10 +647,10 @@ export const PersonnelStatusBottomSheet = () => {
     ) : null;
 
   const renderCurrentStatusBanner = (status: StatusesResultData) => {
-    const textColor = readableTextColor(status.BColor) ?? '#000000';
+    const { backgroundColor, textColor } = readableColors(status.BColor);
 
     return (
-      <View testID="personnel-status-current-banner" style={[styles.currentBanner, { backgroundColor: status.BColor }]}>
+      <View testID="personnel-status-current-banner" style={[styles.currentBanner, { backgroundColor }]}>
         <Text style={[styles.currentBannerCaption, { color: textColor }]}>{t('personnel.status.current_status')}</Text>
         <HStack space="sm" className="items-center">
           <Text className="flex-1 font-bold" style={{ color: textColor }}>

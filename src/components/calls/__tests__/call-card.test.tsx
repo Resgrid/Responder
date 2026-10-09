@@ -84,7 +84,7 @@ jest.mock('lucide-react-native', () => ({
 
 jest.mock('@/lib/utils', () => ({
   getTimeAgoUtc: jest.fn(() => '5m ago'),
-  readableTextColor: jest.requireActual('@/lib/utils').readableTextColor,
+  readableColors: jest.requireActual('@/lib/utils').readableColors,
 }));
 
 jest.mock('@/stores/home/home-store', () => ({
@@ -221,9 +221,20 @@ describe('CallCard', () => {
       navy.unmount();
     });
 
-    it('renders a priority colour that is not hex instead of throwing', () => {
-      const { getByText, unmount } = render(<CallCard call={baseCall} priority={{ Color: 'rgb(200, 0, 0)' } as any} callExtraData={{ Dispatches: [] } as any} />);
+    it('picks the text colour for an rgb() priority colour', () => {
+      const { getByText, root, unmount } = render(<CallCard call={baseCall} priority={{ Color: 'rgb(200, 0, 0)' } as any} callExtraData={{ Dispatches: [] } as any} />);
 
+      expect(root).toHaveStyle({ backgroundColor: 'rgb(200, 0, 0)' });
+      expect(getByText('#2024-042').props.style).toEqual(expect.objectContaining({ color: '#FFFFFF' }));
+      expect(screen.getByTestId('alert-triangle-icon').props.color).toBe('#FFFFFF');
+
+      unmount();
+    });
+
+    it('draws the default grey behind the text when the priority colour cannot be read', () => {
+      const { getByText, root, unmount } = render(<CallCard call={baseCall} priority={{ Color: 'hsl(0, 100%, 25%)' } as any} callExtraData={{ Dispatches: [] } as any} />);
+
+      expect(root).toHaveStyle({ backgroundColor: '#808080' });
       expect(getByText('#2024-042').props.style).toEqual(expect.objectContaining({ color: '#000000' }));
 
       unmount();

@@ -55,9 +55,9 @@ jest.mock('react-i18next', () => ({
 jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/staffing/staffing-bottom-sheet-store');
 
-// Mock the readableTextColor utility
+// Mock the readableColors utility
 jest.mock('@/lib/utils', () => ({
-  readableTextColor: jest.fn(() => '#000000'),
+  readableColors: jest.fn((color?: string) => ({ backgroundColor: color, textColor: '#000000' })),
 }));
 
 // Mock NativeWind useColorScheme

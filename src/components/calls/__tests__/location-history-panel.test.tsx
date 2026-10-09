@@ -130,6 +130,20 @@ describe('LocationHistoryPanel', () => {
     expect(screen.getByText('location_history.show_notes:{"count":2}')).toBeTruthy();
   });
 
+  it('pairs each priority badge with text that reads on it, falling back to grey for a colour it cannot read', async () => {
+    const yellow = { ...baseHistory.Calls[0], CallId: '7100', PriorityText: 'Caution', PriorityColor: 'rgb(255, 255, 0)' };
+    const unreadable = { ...baseHistory.Calls[0], CallId: '7200', PriorityText: 'Odd', PriorityColor: 'hsl(60, 100%, 50%)' };
+    mockCallHistory.mockResolvedValueOnce({ Data: { ...baseHistory, Calls: [yellow, unreadable] } } as never);
+
+    render(<LocationHistoryPanel source={{ kind: 'call', id: '42' }} />);
+
+    await waitFor(() => expect(screen.getByTestId('location-history-priority-7100')).toBeTruthy());
+    expect(screen.getByTestId('location-history-priority-7100')).toHaveStyle({ backgroundColor: 'rgb(255, 255, 0)' });
+    expect(screen.getByText('Caution')).toHaveStyle({ color: '#000000' });
+    expect(screen.getByTestId('location-history-priority-7200')).toHaveStyle({ backgroundColor: '#6b7280' });
+    expect(screen.getByText('Odd')).toHaveStyle({ color: '#FFFFFF' });
+  });
+
   it('shows a lock instead of the REDACTED sentinel for protected call text', async () => {
     mockCallHistory.mockResolvedValueOnce({ Data: baseHistory } as never);
 
