@@ -51,6 +51,7 @@ interface QueueItem {
 export class RealOfflineQueueProcessor {
   private static instance: RealOfflineQueueProcessor | null = null;
   private processing = false;
+  private rerunRequested = false;
   private storageKey = 'offline_queue';
   private queueMutationChain: Promise<void> = Promise.resolve();
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -127,7 +128,12 @@ export class RealOfflineQueueProcessor {
   }
 
   async processQueue(): Promise<void> {
-    if (this.processing) return;
+    if (this.processing) {
+      // Run once more when the active pass ends: an item it already held back may be sendable by then (its owner
+      // signed in mid-pass), and on a steady connection nothing else would wake the queue for it.
+      this.rerunRequested = true;
+      return;
+    }
     this.processing = true;
     try {
       await this.serializeQueueMutation(async () => {
@@ -179,6 +185,11 @@ export class RealOfflineQueueProcessor {
       logger.error({ message: 'Processing offline queue failed', context: { error } });
     } finally {
       this.processing = false;
+    }
+
+    if (this.rerunRequested) {
+      this.rerunRequested = false;
+      await this.processQueue();
     }
   }
 

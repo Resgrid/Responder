@@ -68,6 +68,10 @@ const migrateCoreStorage = (persistedState: unknown, version: number): Persisted
   return state as unknown as PersistedCoreState;
 };
 
+// Bumped when sign-out resets the store: a request still in flight then belongs to the ended session (and maybe another
+// server) and must not write its data or flags over the reset.
+let sessionGeneration = 0;
+
 export const useCoreStore = create<CoreState>()(
   persist(
     (set, get) => ({
@@ -94,6 +98,7 @@ export const useCoreStore = create<CoreState>()(
         }
 
         set({ isLoading: true, isInitializing: true, error: null });
+        const generation = sessionGeneration;
 
         try {
           const userId = useAuthStore.getState().userId;
@@ -108,6 +113,9 @@ export const useCoreStore = create<CoreState>()(
             userId ? getCurrentPersonStatus(userId) : Promise.resolve(null),
             userId ? getCurrentPersonStaffing(userId) : Promise.resolve(null),
           ]);
+          if (generation !== sessionGeneration) {
+            return;
+          }
 
           set({
             isInitialized: true,
@@ -129,6 +137,10 @@ export const useCoreStore = create<CoreState>()(
             message: 'Core store initialization completed successfully',
           });
         } catch (error) {
+          if (generation !== sessionGeneration) {
+            return;
+          }
+
           set({
             error: 'Failed to init core app data',
             isLoading: false,
@@ -142,6 +154,8 @@ export const useCoreStore = create<CoreState>()(
       },
       getStatusesAndStaffing: async () => {
         set({ error: null });
+        const generation = sessionGeneration;
+
         try {
           const userId = useAuthStore.getState().userId;
 
@@ -151,6 +165,9 @@ export const useCoreStore = create<CoreState>()(
             userId ? getCurrentPersonStatus(userId) : Promise.resolve(null),
             userId ? getCurrentPersonStaffing(userId) : Promise.resolve(null),
           ]);
+          if (generation !== sessionGeneration) {
+            return;
+          }
 
           set({
             activeStatuses: personnelStatuses.Data,
@@ -158,6 +175,10 @@ export const useCoreStore = create<CoreState>()(
             ...(userId ? { currentStatus: currentStatus?.Data ?? null, currentStaffing: currentStaffing?.Data ?? null } : {}),
           });
         } catch (error) {
+          if (generation !== sessionGeneration) {
+            return;
+          }
+
           set({
             error: 'Failed to fetch and set active statuses and staffing',
             isLoading: false,
@@ -169,8 +190,14 @@ export const useCoreStore = create<CoreState>()(
         }
       },
       fetchConfig: async () => {
+        const generation = sessionGeneration;
+
         try {
           const config = await getConfig(Env.APP_KEY);
+          if (generation !== sessionGeneration) {
+            return;
+          }
+
           set({ config: config.Data });
 
           // Fire and forget: checking the token with Mapbox must never hold up or fail the config load.
@@ -178,6 +205,10 @@ export const useCoreStore = create<CoreState>()(
             void applyServerMapboxToken(config.Data.AppMapboxAccessToken);
           }
         } catch (error) {
+          if (generation !== sessionGeneration) {
+            return;
+          }
+
           set({ error: 'Failed to fetch config', isLoading: false });
           logger.error({
             message: `Failed to fetch config: ${JSON.stringify(error)}`,
@@ -222,7 +253,8 @@ export const useCoreStore = create<CoreState>()(
 // signs out, and the next session must connect to its own server's endpoints, never ones left over in memory (an
 // init() that failed used to leave the hubs pointed at the previous server). Clearing isInitializing also keeps an
 // init() that was in flight at sign-out from making the next session's init() skip as "already in progress".
-registerStoreReset('core', () =>
+registerStoreReset('core', () => {
+  sessionGeneration += 1;
   useCoreStore.setState({
     config: null,
     isLoading: false,
@@ -235,5 +267,5 @@ registerStoreReset('core', () =>
     currentStatusValue: null,
     currentStaffing: null,
     currentStaffingValue: null,
-  })
-);
+  });
+});

@@ -81,6 +81,24 @@ describe('registerAndroidPackage', () => {
     expect(result).toContain('add(InCallAudioPackage())');
   });
 
+  it('registers a package whose only registration is commented out', () => {
+    const commentedOut = applyTemplate
+      .replace('// add(MyReactNativePackage())', '// add(MediaButtonPackage())')
+      .replace('        }\n    )', '          /* add(MediaButtonPackage()) */\n        }\n    )');
+
+    const result = registerAndroidPackage(commentedOut, 'com.resgridresponder', 'MediaButtonPackage');
+
+    expect(result.split('\n')).toContain('          add(MediaButtonPackage())');
+  });
+
+  it('adds the import when the only one is commented out', () => {
+    const commentedImport = applyTemplate.replace('package wtdt.resgrid.andriod.development\n', 'package wtdt.resgrid.andriod.development\n// import com.resgridresponder.MediaButtonPackage\n');
+
+    const result = registerAndroidPackage(commentedImport, 'com.resgridresponder', 'MediaButtonPackage');
+
+    expect(result.split('\n')).toContain('import com.resgridresponder.MediaButtonPackage');
+  });
+
   it('throws when MainApplication.kt has no recognised package list', () => {
     const unknown = 'package com.example\n\nclass MainApplication : Application()\n';
 

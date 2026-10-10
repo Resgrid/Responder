@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 import Settings from '../settings';
@@ -139,6 +139,8 @@ jest.mock('@/components/settings/login-info-bottom-sheet', () => ({
   },
 }));
 
+// What the sheet's last submit is waiting on before it saves the new URL
+let mockBeforeUrlChangeResult: Promise<void> | undefined;
 jest.mock('@/components/settings/server-url-bottom-sheet', () => ({
   ServerUrlBottomSheet: ({ isOpen, onClose, onBeforeUrlChange }: any) => {
     const { View, TouchableOpacity, Text } = require('react-native');
@@ -152,7 +154,7 @@ jest.mock('@/components/settings/server-url-bottom-sheet', () => ({
             <TouchableOpacity
               testID="submit-server-url-change"
               onPress={() => {
-                void onBeforeUrlChange?.();
+                mockBeforeUrlChangeResult = onBeforeUrlChange?.();
               }}
             >
               <Text>Save Server</Text>
@@ -447,6 +449,44 @@ describe('Settings Screen', () => {
     // Logout and clear should not be called
     expect(mockClearAllAppData).not.toHaveBeenCalled();
     expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it('waits for a sign-out already in progress before the new server url is saved', async () => {
+    let finishCleanup: () => void = () => undefined;
+    mockClearAllAppData.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishCleanup = resolve;
+        })
+    );
+    render(<Settings />);
+
+    fireEvent.press(screen.getByTestId('item-settings.logout'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as Array<{ text: string; onPress?: () => void }>;
+    act(() => {
+      buttons.find((button) => button.text === 'settings.logout_confirm_yes')?.onPress?.();
+    });
+
+    fireEvent.press(screen.getByTestId('item-settings.server'));
+    fireEvent.press(screen.getByTestId('submit-server-url-change'));
+
+    let urlChangeReleased = false;
+    void mockBeforeUrlChangeResult?.then(() => {
+      urlChangeReleased = true;
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(urlChangeReleased).toBe(false);
+
+    await act(async () => {
+      finishCleanup();
+      await mockBeforeUrlChangeResult;
+    });
+
+    expect(urlChangeReleased).toBe(true);
+    expect(mockClearAllAppData).toHaveBeenCalledTimes(1);
+    expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 
   it('logs out after server url changes while authenticated', async () => {

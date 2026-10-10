@@ -103,6 +103,7 @@ describe('RealOfflineQueueProcessor', () => {
     storage.set.mockResolvedValue(undefined);
     savePersonnelStatus.mockResolvedValue(undefined);
     processor.processing = false;
+    processor.rerunRequested = false;
     processor.queueMutationChain = Promise.resolve();
     processor.cleanup();
   });
@@ -462,6 +463,46 @@ describe('RealOfflineQueueProcessor', () => {
 
       expect(savePersonnelStatus).toHaveBeenCalledWith(status);
       expect(persistedQueue()).toEqual([]);
+    });
+
+    it('runs again after the active pass when an owner signs in during it, so the item it held is not stranded', async () => {
+      const otherOwner = { serverUrl: US_SERVER, userId: 'user-2' };
+      const otherStatus = { ...status, UserId: 'user-2' };
+      let storedQueue = JSON.stringify([
+        { id: 'held', type: 'personnelStatus', payload: otherStatus, retries: 0, attempts: 0, owner: otherOwner, queuedAt: Date.now() },
+        { id: 'sending', type: 'personnelStatus', payload: status, retries: 0, attempts: 0, owner: usOwner, queuedAt: Date.now() },
+      ]);
+      storage.getString.mockImplementation(() => storedQueue);
+      storage.set.mockImplementation((_key: string, value: string) => {
+        storedQueue = value;
+        return Promise.resolve();
+      });
+
+      let signalSendStarted: () => void;
+      const sendStarted = new Promise<void>((resolve) => {
+        signalSendStarted = resolve;
+      });
+      let finishSend: () => void;
+      const sendBlocked = new Promise<void>((resolve) => {
+        finishSend = resolve;
+      });
+      savePersonnelStatus.mockImplementationOnce(() => {
+        signalSendStarted!();
+        return sendBlocked;
+      });
+
+      const processing = processor.processQueue();
+      await sendStarted;
+
+      // user-2 signs in while user-1's status is still going out; the pass already held user-2's item
+      mockSession.userId = 'user-2';
+      await processor.processQueue();
+      finishSend!();
+      await processing;
+
+      expect(savePersonnelStatus).toHaveBeenCalledTimes(2);
+      expect(savePersonnelStatus).toHaveBeenLastCalledWith(otherStatus);
+      expect(JSON.parse(storedQueue)).toEqual([]);
     });
 
     it('never sends an item queued while nobody was signed in', async () => {

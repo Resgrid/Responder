@@ -644,5 +644,50 @@ describe('Core Store', () => {
 			expect(state.activeStatuses).toBeNull();
 			expect(state.currentStatus).toBeNull();
 		});
+
+		it('ignores an init() from the signed-out session that finishes after the reset', async () => {
+			const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+			const config = await mockGetConfig('test-app-key');
+			let resolveConfig: (value: typeof config) => void = () => undefined;
+			mockGetConfig.mockReturnValueOnce(
+				new Promise((resolve) => {
+					resolveConfig = resolve;
+				})
+			);
+			mockApplyServerMapboxToken.mockClear();
+
+			const pending = useCoreStore.getState().init();
+			await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+			resolveConfig({ ...config, Data: { ...config.Data, EventingUrl: 'https://events.us.example/' } });
+			await pending;
+
+			const state = useCoreStore.getState();
+			expect(state.config).toBeNull();
+			expect(state.isInitialized).toBe(false);
+			expect(state.activeStatuses).toBeNull();
+			expect(mockApplyServerMapboxToken).not.toHaveBeenCalled();
+
+			// The next session's init() still runs and loads its own server's config.
+			await useCoreStore.getState().init();
+			expect(useCoreStore.getState().isInitialized).toBe(true);
+		});
+
+		it('ignores a fetchConfig() from the signed-out session that finishes after the reset', async () => {
+			const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+			const config = await mockGetConfig('test-app-key');
+			let resolveConfig: (value: typeof config) => void = () => undefined;
+			mockGetConfig.mockReturnValueOnce(
+				new Promise((resolve) => {
+					resolveConfig = resolve;
+				})
+			);
+
+			const pending = useCoreStore.getState().fetchConfig();
+			await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+			resolveConfig(config);
+			await pending;
+
+			expect(useCoreStore.getState().config).toBeNull();
+		});
 	});
 });

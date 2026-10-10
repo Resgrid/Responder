@@ -1,5 +1,8 @@
 /* eslint-env node */
 
+/** Kotlin source without its comments, so a commented-out import or `add(...)` is not taken for a real one. */
+const withoutComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
 /**
  * Registers a manually linked ReactPackage in MainApplication.kt.
  *
@@ -22,13 +25,13 @@ function registerAndroidPackage(contents, basePackageName, packageClass) {
   let result = contents;
 
   const importStatement = `import ${basePackageName}.${packageClass}`;
-  if (!result.includes(importStatement)) {
+  if (!withoutComments(result).includes(importStatement)) {
     result = result.replace(/^(package\s+[^\n]+\n)/, `$1${importStatement}\n`);
   }
 
   // Checked separately from the import: a MainApplication.kt that already imports the package
   // without registering it must still get the registration
-  if (result.includes(`add(${packageClass}())`)) {
+  if (withoutComments(result).includes(`add(${packageClass}())`)) {
     return result;
   }
 
