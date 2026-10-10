@@ -14,6 +14,9 @@ export interface CallKeepServiceInterface {
   startCall(roomName: string, handle?: string): Promise<string>;
   endCall(): Promise<void>;
   setMuteStateCallback(callback: ((muted: boolean) => void) | null): void;
+  ignoreMuteEvents(durationMs: number): void;
+  removeMuteListener(): void;
+  restoreMuteListener(): void;
   isCallActiveNow(): boolean;
   getCurrentCallUUID(): string | null;
   cleanup(): Promise<void>;
@@ -25,6 +28,9 @@ export declare class CallKeepService implements CallKeepServiceInterface {
   startCall(roomName: string, handle?: string): Promise<string>;
   endCall(): Promise<void>;
   setMuteStateCallback(callback: ((muted: boolean) => void) | null): void;
+  ignoreMuteEvents(durationMs: number): void;
+  removeMuteListener(): void;
+  restoreMuteListener(): void;
   isCallActiveNow(): boolean;
   getCurrentCallUUID(): string | null;
   cleanup(): Promise<void>;

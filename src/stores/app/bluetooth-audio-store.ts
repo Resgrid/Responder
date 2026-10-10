@@ -1,6 +1,11 @@
 import { type Peripheral } from 'react-native-ble-manager';
 import { create } from 'zustand';
 
+import { createDefaultPTTSettings, DEFAULT_MEDIA_BUTTON_PTT_SETTINGS, type MediaButtonPTTSettings, type PTTMode } from '@/types/ptt';
+
+// Re-export PTT types for backwards compatibility
+export { DEFAULT_MEDIA_BUTTON_PTT_SETTINGS, type MediaButtonPTTSettings, type PTTMode };
+
 // Re-export Peripheral as Device for compatibility
 export type Device = Peripheral;
 
@@ -22,6 +27,7 @@ export interface BluetoothAudioDevice {
   hasAudioCapability: boolean;
   supportsMicrophoneControl: boolean;
   device: Device;
+  type: 'specialized' | 'system';
 }
 
 export const SYSTEM_AUDIO_DEVICE: BluetoothAudioDevice = {
@@ -30,6 +36,7 @@ export const SYSTEM_AUDIO_DEVICE: BluetoothAudioDevice = {
   isConnected: false,
   hasAudioCapability: true,
   supportsMicrophoneControl: true,
+  type: 'system',
   device: {
     id: 'system-audio',
     name: 'System Audio / Airpods',
@@ -56,7 +63,7 @@ export interface ButtonAction {
 export interface AudioDeviceInfo {
   id: string;
   name: string;
-  type: 'bluetooth' | 'wired' | 'speaker' | 'default';
+  type: 'bluetooth' | 'wired' | 'speaker' | 'default' | 'microphone';
   isAvailable: boolean;
 }
 
@@ -104,6 +111,9 @@ interface BluetoothAudioState {
   isHeadsetButtonMonitoring: boolean;
   headsetButtonConfig: HeadsetButtonConfig;
 
+  // Media button PTT settings (for AirPods/earbuds)
+  mediaButtonPTTSettings: MediaButtonPTTSettings;
+
   // Actions
   setBluetoothState: (state: State) => void;
   setIsScanning: (isScanning: boolean) => void;
@@ -138,6 +148,10 @@ interface BluetoothAudioState {
   // Headset button PTT actions
   setIsHeadsetButtonMonitoring: (isMonitoring: boolean) => void;
   setHeadsetButtonConfig: (config: Partial<HeadsetButtonConfig>) => void;
+
+  // Media button PTT settings (for AirPods/earbuds)
+  setMediaButtonPTTSettings: (settings: Partial<MediaButtonPTTSettings>) => void;
+  setMediaButtonPTTEnabled: (enabled: boolean) => void;
 }
 
 export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => ({
@@ -168,6 +182,7 @@ export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => 
     longPressAction: 'none',
     soundFeedback: true,
   },
+  mediaButtonPTTSettings: createDefaultPTTSettings(),
 
   // Bluetooth state actions
   setBluetoothState: (state) => set({ bluetoothState: state }),
@@ -281,6 +296,27 @@ export const useBluetoothAudioStore = create<BluetoothAudioState>((set, get) => 
       headsetButtonConfig: {
         ...headsetButtonConfig,
         ...config,
+      },
+    });
+  },
+
+  // Media button PTT settings actions
+  setMediaButtonPTTSettings: (settings) => {
+    const { mediaButtonPTTSettings } = get();
+    set({
+      mediaButtonPTTSettings: {
+        ...mediaButtonPTTSettings,
+        ...settings,
+      },
+    });
+  },
+
+  setMediaButtonPTTEnabled: (enabled) => {
+    const { mediaButtonPTTSettings } = get();
+    set({
+      mediaButtonPTTSettings: {
+        ...mediaButtonPTTSettings,
+        enabled,
       },
     });
   },

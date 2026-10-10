@@ -1,6 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Mock dependencies
+jest.mock('@/services/callkeep.service', () => ({
+  callKeepService: {
+    ignoreMuteEvents: jest.fn(),
+    removeMuteListener: jest.fn(),
+    restoreMuteListener: jest.fn(),
+  },
+}));
+
 jest.mock('react-native', () => ({
   Platform: { OS: 'android' },
   PermissionsAndroid: {
@@ -153,6 +161,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
 
       // Test AINA button event
       service.handleButtonEventFromCharacteristic(
+        'test-device',
         '127FACE1-CB21-11E5-93D0-0002A5D5C51B',
         '127FBEEF-CB21-11E5-93D0-0002A5D5C51B',
         'testvalue1'
@@ -161,6 +170,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
 
       // Test B01 Inrico button event
       service.handleButtonEventFromCharacteristic(
+        'test-device',
         '00006666-0000-1000-8000-00805F9B34FB',
         '00008888-0000-1000-8000-00805F9B34FB',
         'testvalue2'
@@ -169,6 +179,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
 
       // Test generic button event (using button control characteristic)
       service.handleButtonEventFromCharacteristic(
+        'test-device',
         'SOME-UNKNOWN-SERVICE-UUID',
         '0000FE59-0000-1000-8000-00805F9B34FB', // Common button control characteristic
         'testvalue3'
@@ -186,6 +197,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
 
       // Test with 16-bit characteristic UUID that should be normalized
       service.handleButtonEventFromCharacteristic(
+        'test-device',
         'SOME-UNKNOWN-SERVICE-UUID',
         'FE59', // 16-bit version of common button control characteristic
         'testvalue'
@@ -201,6 +213,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
       // Test that service UUIDs are NOT treated as characteristic UUIDs
       // Battery Service UUID should not trigger button event (it's a service, not a characteristic)
       service.handleButtonEventFromCharacteristic(
+        'test-device',
         'SOME-SERVICE-UUID',
         '0000180F-0000-1000-8000-00805F9B34FB', // Battery Service UUID (was incorrectly used as characteristic before fix)
         'testvalue'
@@ -211,6 +224,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
 
       // HID Service UUID should not trigger button event (it's a service, not a characteristic)
       service.handleButtonEventFromCharacteristic(
+        'test-device',
         'SOME-SERVICE-UUID',
         '00001812-0000-1000-8000-00805F9B34FB', // HID Service UUID (was incorrectly used as characteristic before fix)
         'testvalue2'
@@ -221,6 +235,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
 
       // But actual button control characteristic should work
       service.handleButtonEventFromCharacteristic(
+        'test-device',
         'SOME-SERVICE-UUID',
         '0000FE59-0000-1000-8000-00805F9B34FB', // Common button control characteristic
         'testvalue3'
@@ -244,7 +259,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
       ];
 
       standardCharacteristics.forEach((characteristic) => {
-        service.handleButtonEventFromCharacteristic('00001812-0000-1000-8000-00805F9B34FB', characteristic, 'ZA==');
+        service.handleButtonEventFromCharacteristic('test-device', '00001812-0000-1000-8000-00805F9B34FB', characteristic, 'ZA==');
       });
 
       expect(mockHandleGenericButtonEvent).not.toHaveBeenCalled();
@@ -269,7 +284,7 @@ describe('BluetoothAudioService Button Control Fixes', () => {
       expect(mockProcessButtonEvent).not.toHaveBeenCalled();
 
       // The vendor characteristic still works with the same payload.
-      service.handleButtonEventFromCharacteristic('SOME-SERVICE-UUID', '0000FE59-0000-1000-8000-00805F9B34FB', batteryFullBase64);
+      service.handleButtonEventFromCharacteristic('test-device', 'SOME-SERVICE-UUID', '0000FE59-0000-1000-8000-00805F9B34FB', batteryFullBase64);
 
       expect(mockProcessButtonEvent).toHaveBeenCalledWith(expect.objectContaining({ button: 'mute' }));
 
