@@ -2,6 +2,8 @@ const { withDangerousMod, withMainApplication } = require('expo/config-plugins')
 const fs = require('fs');
 const path = require('path');
 
+const { registerAndroidPackage } = require('./utils/register-android-package');
+
 /**
  * iOS MediaButtonModule.swift content
  */
@@ -505,34 +507,14 @@ const withMediaButtonModule = (config) => {
 
   // Update MainApplication.kt to register the package
   config = withMainApplication(config, (config) => {
-    const mainApplication = config.modResults;
-    const projectRoot = config.modRequest.projectRoot;
+    // Resolve the BASE package name from build.gradle or build.gradle.kts
+    // This is where the native module files are actually created
+    const basePackageName = resolveBasePackageName(config.modRequest.projectRoot);
+    const contents = config.modResults.contents;
 
-    // Check if MediaButtonPackage is already imported/added
-    if (!mainApplication.contents.includes('MediaButtonPackage')) {
-      // Resolve the BASE package name from build.gradle or build.gradle.kts
-      // This is where the native module files are actually created
-      const basePackageName = resolveBasePackageName(projectRoot);
-
-      // Add import statement using the BASE package name (not the variant-specific package)
-      // The native module files are created in the base package, not in variant packages like 'development'
-      const importStatement = `import ${basePackageName}.MediaButtonPackage`;
-      if (!mainApplication.contents.includes(importStatement)) {
-        // Add import after the package declaration line
-        mainApplication.contents = mainApplication.contents.replace(/^(package\s+[^\n]+\n)/, `$1${importStatement}\n`);
-        console.log(`[withMediaButtonModule] Added MediaButtonPackage import from base package: ${basePackageName}`);
-      }
-
-      // Add the package to getPackages()
-      // Find the packages list and add our package
-      const packagesPattern = /val packages = PackageList\(this\)\.packages(\.toMutableList\(\))?/;
-      const packagesMatch = mainApplication.contents.match(packagesPattern);
-
-      if (packagesMatch) {
-        // Replace the packages declaration, ensuring toMutableList() is present so we can add our package
-        mainApplication.contents = mainApplication.contents.replace(packagesPattern, `val packages = PackageList(this).packages.toMutableList()\n            packages.add(MediaButtonPackage())`);
-        console.log('[withMediaButtonModule] Registered MediaButtonPackage in MainApplication.kt');
-      }
+    config.modResults.contents = registerAndroidPackage(contents, basePackageName, 'MediaButtonPackage');
+    if (config.modResults.contents !== contents) {
+      console.log(`[withMediaButtonModule] Registered MediaButtonPackage from base package ${basePackageName} in MainApplication.kt`);
     }
 
     return config;

@@ -254,4 +254,16 @@ describe('Security Store', () => {
       });
     });
   });
+
+  describe('sign-out', () => {
+    it('drops the session\'s rights so the next sign-in never registers push under the old department code', async () => {
+      const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+      securityStore.setState({ rights: { DepartmentCode: 'US123', DepartmentId: '1' } as any, error: 'stale' });
+
+      await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+
+      expect(securityStore.getState().rights).toBeNull();
+      expect(securityStore.getState().error).toBeNull();
+    });
+  });
 });

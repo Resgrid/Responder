@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { zustandStorage } from '@/lib/storage';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 
 import { useCallsStore } from './store';
@@ -60,3 +61,7 @@ export const useActiveCallStore = create<ActiveCallState>()(
     }
   )
 );
+
+// The active call is the default destination of a status update; one from the previous session (or server) must not
+// be sent by the next.
+registerStoreReset('active-call', () => useActiveCallStore.getState().clearActiveCall());

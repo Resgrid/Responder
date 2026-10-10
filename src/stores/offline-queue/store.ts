@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { logger } from '@/lib/logging';
+import { currentQueueOwner, isAbandonedQueueItem, isOwnedByCurrentSession } from '@/lib/offline-queue-owner';
 import { secureOfflineQueueStorage } from '@/lib/storage/offline-queue-storage';
 import { type QueuedEvent, QueuedEventStatus, type QueuedEventType } from '@/models/offline-queue/queued-event';
 import { generateEventId } from '@/utils/id-generator';
@@ -30,12 +31,14 @@ interface OfflineQueueState {
   removeEvent: (eventId: string) => void;
   getEventById: (eventId: string) => QueuedEvent | undefined;
   getEventsByType: (type: QueuedEventType) => QueuedEvent[];
+  /** Events ready to send for the signed-in session. Other sessions' events are held, never returned. */
   getPendingEvents: () => QueuedEvent[];
   getFailedEvents: () => QueuedEvent[];
   clearCompletedEvents: () => void;
   clearAllEvents: () => void;
   retryEvent: (eventId: string) => void;
   retryAllFailedEvents: () => void;
+  /** Drops expired dead letters and events abandoned by another session, and enforces the size cap. */
   purgeStaleFailedEvents: () => void;
 
   // Internal actions
@@ -58,12 +61,17 @@ const isStaleFailedEvent = (event: QueuedEvent, now: number): boolean => {
   return now - referenceTime > FAILED_EVENT_TTL_MS;
 };
 
-const pruneEvents = (events: QueuedEvent[]): { events: QueuedEvent[]; purgedStale: number } => {
+const pruneEvents = (events: QueuedEvent[]): { events: QueuedEvent[]; purgedStale: number; purgedAbandoned: number } => {
   const now = Date.now();
   let purgedStale = 0;
+  let purgedAbandoned = 0;
   let pruned = events.filter((event) => {
     if (isStaleFailedEvent(event, now)) {
       purgedStale++;
+      return false;
+    }
+    if (isAbandonedQueueItem(event.owner, event.createdAt, now)) {
+      purgedAbandoned++;
       return false;
     }
     return true;
@@ -95,7 +103,7 @@ const pruneEvents = (events: QueuedEvent[]): { events: QueuedEvent[]; purgedStal
     }
   }
 
-  return { events: pruned, purgedStale };
+  return { events: pruned, purgedStale, purgedAbandoned };
 };
 
 export const useOfflineQueueStore = create<OfflineQueueState>()(
@@ -170,14 +178,15 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
           retryCount: 0,
           maxRetries,
           createdAt: now,
+          owner: currentQueueOwner(),
         };
 
         set((state) => {
-          const { events, purgedStale } = pruneEvents(state.queuedEvents);
-          if (purgedStale > 0) {
+          const { events, purgedStale, purgedAbandoned } = pruneEvents(state.queuedEvents);
+          if (purgedStale > 0 || purgedAbandoned > 0) {
             logger.info({
-              message: 'Purged stale failed events from offline queue',
-              context: { purgedStale },
+              message: 'Purged expired events from offline queue',
+              context: { purgedStale, purgedAbandoned },
             });
           }
           return {
@@ -254,7 +263,9 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
       // Get pending events
       getPendingEvents: () => {
         return get().queuedEvents.filter(
-          (event) => event.status === QueuedEventStatus.PENDING || (event.status === QueuedEventStatus.FAILED && event.retryCount < event.maxRetries && (!event.nextRetryAt || event.nextRetryAt <= Date.now()))
+          (event) =>
+            isOwnedByCurrentSession(event.owner) &&
+            (event.status === QueuedEventStatus.PENDING || (event.status === QueuedEventStatus.FAILED && event.retryCount < event.maxRetries && (!event.nextRetryAt || event.nextRetryAt <= Date.now())))
         );
       },
 
@@ -338,11 +349,11 @@ export const useOfflineQueueStore = create<OfflineQueueState>()(
       // Purge dead-letter events older than the TTL and enforce queue size cap
       purgeStaleFailedEvents: () => {
         set((state) => {
-          const { events, purgedStale } = pruneEvents(state.queuedEvents);
+          const { events, purgedStale, purgedAbandoned } = pruneEvents(state.queuedEvents);
           if (purgedStale > 0 || events.length !== state.queuedEvents.length) {
             logger.info({
               message: 'Purged events from offline queue',
-              context: { purgedStale, removed: state.queuedEvents.length - events.length },
+              context: { purgedStale, purgedAbandoned, removed: state.queuedEvents.length - events.length },
             });
             return { queuedEvents: events };
           }

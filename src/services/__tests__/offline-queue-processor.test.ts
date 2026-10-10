@@ -26,6 +26,14 @@ jest.mock('@/api/personnel/personnelStatuses', () => ({
   savePersonnelStatus: jest.fn().mockResolvedValue(undefined),
 }));
 
+// The session queued items belong to: user-1 signed in to the US server, unless a test changes it.
+const US_SERVER = 'https://api.us.example/api/v4';
+const EU_SERVER = 'https://api.eu.example/api/v4';
+const mockSession: { status: string; userId: string | null } = { status: 'signedIn', userId: 'user-1' };
+let mockServerUrl = US_SERVER;
+jest.mock('@/stores/auth/store', () => ({ __esModule: true, default: { getState: () => mockSession } }));
+jest.mock('@/lib/storage/app', () => ({ getBaseApiUrl: () => mockServerUrl }));
+
 // Require modules after mocks are set up
 const { offlineQueueProcessor, OfflineQueueProcessor, RealOfflineQueueProcessor } = require('@/services/offline-queue-processor');
 const { savePersonnelStatus } = require('@/api/personnel/personnelStatuses');
@@ -87,6 +95,9 @@ describe('RealOfflineQueueProcessor', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockSession.status = 'signedIn';
+    mockSession.userId = 'user-1';
+    mockServerUrl = US_SERVER;
     storage = await getOfflineQueueStorage();
     storage.getString.mockReturnValue('[]');
     storage.set.mockResolvedValue(undefined);
@@ -390,6 +401,123 @@ describe('RealOfflineQueueProcessor', () => {
 
       expect(persistedQueue()).toEqual([]);
       expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'Dropping offline queue item after max retries' }));
+    });
+  });
+
+  describe('owner', () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const usOwner = { serverUrl: US_SERVER, userId: 'user-1' };
+    const status = { UserId: 'user-1', Type: '3', RespondingTo: '321', Timestamp: '2026-09-23T10:00:00.000Z' };
+    const persistedQueue = () => JSON.parse(storage.set.mock.calls[storage.set.mock.calls.length - 1][1]);
+
+    const queueItem = (extra: Record<string, unknown>) => {
+      storage.getString.mockReturnValue(JSON.stringify([{ id: 'item-1', type: 'personnelStatus', payload: status, retries: 0, attempts: 0, ...extra }]));
+    };
+
+    it('records who an item was queued for', async () => {
+      const now = 100000;
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+
+      processor.addPersonnelStatusToQueue(status);
+      await processor.queueMutationChain;
+
+      expect(persistedQueue()).toEqual([expect.objectContaining({ payload: status, owner: usOwner, queuedAt: now })]);
+    });
+
+    it('holds an item queued on another server instead of sending it to this one', async () => {
+      mockServerUrl = EU_SERVER;
+      queueItem({ owner: usOwner, queuedAt: Date.now() });
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).not.toHaveBeenCalled();
+      expect(persistedQueue()).toEqual([expect.objectContaining({ id: 'item-1', owner: usOwner })]);
+    });
+
+    it('holds an item queued by another user', async () => {
+      mockSession.userId = 'user-2';
+      queueItem({ owner: usOwner, queuedAt: Date.now() });
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).not.toHaveBeenCalled();
+      expect(persistedQueue()).toHaveLength(1);
+    });
+
+    it('holds items while signed out rather than replaying them into a 401 that drops them', async () => {
+      mockSession.status = 'signedOut';
+      mockSession.userId = null;
+      queueItem({ owner: usOwner, queuedAt: Date.now() });
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).not.toHaveBeenCalled();
+      expect(persistedQueue()).toHaveLength(1);
+    });
+
+    it('sends a held item once its owner is signed in to its server again', async () => {
+      queueItem({ owner: usOwner, queuedAt: Date.now() });
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledWith(status);
+      expect(persistedQueue()).toEqual([]);
+    });
+
+    it('never sends an item queued while nobody was signed in', async () => {
+      queueItem({ owner: null, queuedAt: Date.now() });
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).not.toHaveBeenCalled();
+      expect(persistedQueue()).toHaveLength(1);
+    });
+
+    it('sends an item queued before owners were recorded as the signed-in session\'s', async () => {
+      queueItem({});
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).toHaveBeenCalledWith(status);
+    });
+
+    it('drops an item held for another session for more than 7 days', async () => {
+      const now = 10 * DAY_MS;
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      mockServerUrl = EU_SERVER;
+      queueItem({ owner: usOwner, queuedAt: now - 8 * DAY_MS });
+
+      await processor.processQueue();
+
+      expect(savePersonnelStatus).not.toHaveBeenCalled();
+      expect(persistedQueue()).toEqual([]);
+    });
+
+    it('keeps an item for another session while nobody is signed in, however old', async () => {
+      const now = 10 * DAY_MS;
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      mockSession.status = 'signedOut';
+      mockSession.userId = null;
+      queueItem({ owner: usOwner, queuedAt: now - 8 * DAY_MS });
+
+      await processor.processQueue();
+
+      expect(persistedQueue()).toHaveLength(1);
+    });
+
+    it('does not set a retry timer for a held item, which would fire again at once', async () => {
+      jest.useFakeTimers();
+      try {
+        const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+        mockServerUrl = EU_SERVER;
+        queueItem({ owner: usOwner, queuedAt: Date.now(), nextRetryAt: Date.now() - 1000 });
+
+        await processor.processQueue();
+
+        expect(setTimeoutSpy).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });

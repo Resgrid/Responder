@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { getCurrentUsersRights } from '@/api/security/security';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import { type DepartmentRightsResultData } from '@/models/v4/security/departmentRightsResultData';
 import type { ApiResponse } from '@/types/api';
 
@@ -60,6 +61,11 @@ export const securityStore = create<SecurityState>()(
     }
   )
 );
+
+// Rights belong to the session that loaded them. Sign-out clears the persisted copy, but the in-memory one used to
+// survive it, so the next sign-in (on another server after a switch) registered its push token and Novu inbox under
+// the previous session's department code before its own rights arrived.
+registerStoreReset('security', () => securityStore.setState({ rights: null, error: null }));
 
 /**
  * Field-level selectors plus a memoized result: subscribing to the whole store and rebuilding

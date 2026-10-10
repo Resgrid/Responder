@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import { applyServerMapboxToken } from '@/lib/mapbox-token';
 import { zustandStorage } from '@/lib/storage';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
 import { type GetCurrentStaffingResultData } from '@/models/v4/personnelStaffing/getCurrentStaffingResultData';
@@ -215,4 +216,24 @@ export const useCoreStore = create<CoreState>()(
       }),
     }
   )
+);
+
+// Config describes the server that was signed in to: its EventingUrl, Novu and web push endpoints. Every server switch
+// signs out, and the next session must connect to its own server's endpoints, never ones left over in memory (an
+// init() that failed used to leave the hubs pointed at the previous server). Clearing isInitializing also keeps an
+// init() that was in flight at sign-out from making the next session's init() skip as "already in progress".
+registerStoreReset('core', () =>
+  useCoreStore.setState({
+    config: null,
+    isLoading: false,
+    isInitialized: false,
+    isInitializing: false,
+    error: null,
+    activeStatuses: null,
+    activeStaffing: null,
+    currentStatus: null,
+    currentStatusValue: null,
+    currentStaffing: null,
+    currentStaffingValue: null,
+  })
 );

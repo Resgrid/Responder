@@ -9,9 +9,19 @@ import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-aler
 import { useAuthStore } from '@/lib/auth';
 import { logger } from '@/lib/logging';
 import { type RouterPushRetryOptions, routerPushWithRetry } from '@/lib/navigation';
-import { getDeviceUuid } from '@/lib/storage/app';
+import { getBaseApiUrl, getDeviceUuid } from '@/lib/storage/app';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
+import { useAppLifecycleStore } from '@/stores/app/app-lifecycle';
 import { isSafeRouteId, parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
+
+/** RegisterDevice answers 200 even when it fails; only these statuses mean the server took the registration (it is queued). */
+const REGISTERED_STATUSES = ['queued', 'success'];
+
+interface RegisterOptions {
+  /** Prompt for notification permission when it has not been granted. Defaults to true. */
+  requestPermission?: boolean;
+}
 
 // Define notification response types
 export interface PushNotificationData {
@@ -140,6 +150,13 @@ class PushNotificationService {
   // Identifier of the last notification response we surfaced, used to avoid presenting the launch
   // response twice (once from getLastNotificationResponseAsync and once from the response listener).
   private lastHandledResponseId: string | null = null;
+  // Server, user, department and token of the last registration the server took. Core files the token under the
+  // department code it is sent ({code}_User_{userId} on Novu), so any of the four changing needs a new registration.
+  private registeredKey: string | null = null;
+  // Bumped at sign-out so a registration still in flight cannot mark the next session as registered.
+  private registrationGeneration = 0;
+  // Registrations run one at a time, so the newest identity is always the last one written to the server.
+  private registrationQueue: Promise<unknown> = Promise.resolve();
 
   private static toErrorContext(error: unknown): { errorMessage: string; errorName: string } {
     return {
@@ -383,7 +400,24 @@ class PushNotificationService {
     }
   };
 
-  public async registerForPushNotifications(userId: string, departmentCode: string): Promise<string | null> {
+  /**
+   * Registers this device's token for the user and department at the server the app currently points at. Safe to call
+   * repeatedly: calls run one at a time and a call for an identity the server already took does nothing more than
+   * re-read the permission and token, so a token that rotated or a registration the server failed is picked up again.
+   */
+  public registerForPushNotifications(userId: string, departmentCode: string, options: RegisterOptions = {}): Promise<string | null> {
+    const run = this.registrationQueue.then(() => this.register(userId, departmentCode, options.requestPermission ?? true));
+    this.registrationQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  /** Forgets what was registered, so the next session registers again. Runs at sign-out. */
+  public resetRegistration(): void {
+    this.registeredKey = null;
+    this.registrationGeneration += 1;
+  }
+
+  private async register(userId: string, departmentCode: string, requestPermission: boolean): Promise<string | null> {
     // A browser registers through services/web-push.web.ts, and only once the person asks: asking for permission
     // here, with no click behind it, is refused by most browsers and failed for want of a web push config anyway.
     if (Platform.OS === 'web') {
@@ -397,11 +431,13 @@ class PushNotificationService {
       return null;
     }
 
+    const generation = this.registrationGeneration;
+
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
-      if (existingStatus !== 'granted') {
+      if (existingStatus !== 'granted' && requestPermission) {
         const { status } = await Notifications.requestPermissionsAsync({
           ios: {
             allowAlert: true,
@@ -414,20 +450,30 @@ class PushNotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        logger.warn({
-          message: 'Failed to get push notification permissions',
-          context: { status: finalStatus },
-        });
+        if (requestPermission) {
+          logger.warn({
+            message: 'Failed to get push notification permissions',
+            context: { status: finalStatus },
+          });
+        }
         return null;
       }
 
       // Get the token using the non-Expo push notification service method
       const devicePushToken = await Notifications.getDevicePushTokenAsync();
+      this.pushToken = devicePushToken.data as string;
 
-      // The token format depends on the platform
-      const token = Platform.OS === 'ios' ? devicePushToken.data : devicePushToken.data;
+      const serverUrl = getBaseApiUrl();
+      const key = [serverUrl, userId, departmentCode, this.pushToken].join('|');
+      if (key === this.registeredKey) {
+        return this.pushToken;
+      }
 
-      this.pushToken = token as string;
+      // The identity was captured when this call was queued. If the session has since signed out or moved to another
+      // department, registering it would park the token on a subscriber nothing notifies; the newer call does it right.
+      if (generation !== this.registrationGeneration || useAuthStore.getState().userId !== userId || securityStore.getState().rights?.DepartmentCode !== departmentCode) {
+        return null;
+      }
 
       logger.info({
         message: 'Push notification token obtained',
@@ -435,15 +481,34 @@ class PushNotificationService {
           tokenPreview: PushNotificationService.truncateToken(this.pushToken),
           userId,
           platform: Platform.OS,
+          serverUrl,
         },
       });
 
-      await registerDevice({
+      const result = await registerDevice({
         UserId: userId,
         Token: this.pushToken,
         Platform: Platform.OS === 'ios' ? 1 : 2,
         DeviceUuid: getDeviceUuid() || '',
         Prefix: departmentCode,
+      });
+
+      // Remembered only once the server took it, so the next foreground retries a registration it refused or failed.
+      if (!REGISTERED_STATUSES.includes(result?.Status?.toLowerCase() ?? '')) {
+        logger.warn({
+          message: 'Push registration was not accepted by the server',
+          context: { status: result?.Status, userId, serverUrl },
+        });
+        return null;
+      }
+
+      if (generation === this.registrationGeneration) {
+        this.registeredKey = key;
+      }
+
+      logger.info({
+        message: 'Successfully registered for push notifications',
+        context: { userId, serverUrl },
       });
 
       return this.pushToken;
@@ -505,43 +570,44 @@ class PushNotificationService {
 
 export const pushNotificationService = PushNotificationService.getInstance();
 
+registerStoreReset('push-notification', () => pushNotificationService.resetRegistration());
+
+const registerInBackground = (userId: string, departmentCode: string, requestPermission: boolean): void => {
+  pushNotificationService.registerForPushNotifications(userId, departmentCode, { requestPermission }).catch((error) => {
+    logger.error({
+      message: 'Error in push notification registration hook',
+      context: {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+      },
+    });
+  });
+};
+
 // React hook for component usage
 export const usePushNotifications = () => {
   const userId = useAuthStore((state) => state.userId);
-  const rights = securityStore((state) => state.rights);
-  const previousUserIdRef = useRef<string | null>(null);
+  const departmentCode = securityStore((state) => state.rights?.DepartmentCode);
+  const isActive = useAppLifecycleStore((state) => state.isActive);
+  const wasActiveRef = useRef(isActive);
 
+  // Keyed on the department as well as the user: the token is filed under the department code, and keying on the user
+  // alone kept whichever code was present first, including one left over from a previous session or server.
   useEffect(() => {
-    // Only register if we have an active user ID and it's different from the previous one
-    if (rights && userId && userId !== previousUserIdRef.current) {
-      pushNotificationService
-        .registerForPushNotifications(userId, rights.DepartmentCode)
-        .then((token) => {
-          if (token) {
-            logger.info({
-              message: 'Successfully registered for push notifications',
-              context: { userId: userId },
-            });
-          }
-        })
-        .catch((error) => {
-          logger.error({
-            message: 'Error in push notification registration hook',
-            context: {
-              errorMessage: error instanceof Error ? error.message : String(error),
-              errorName: error instanceof Error ? error.name : 'UnknownError',
-            },
-          });
-        });
-
-      previousUserIdRef.current = userId;
+    if (userId && departmentCode) {
+      registerInBackground(userId, departmentCode, true);
     }
+  }, [userId, departmentCode]);
 
-    // Cleanup function
-    return () => {
-      // No need to clean up here as the service handles its own cleanup
-    };
-  }, [userId, rights]);
+  // Back in the foreground, check again without prompting: this retries a registration that failed and picks up a
+  // permission granted in system settings or a token that rotated. A no-op once the server has the current token.
+  useEffect(() => {
+    const cameToForeground = isActive && !wasActiveRef.current;
+    wasActiveRef.current = isActive;
+    if (cameToForeground && userId && departmentCode) {
+      registerInBackground(userId, departmentCode, false);
+    }
+  }, [isActive, userId, departmentCode]);
 
   return {
     pushToken: pushNotificationService.getPushToken(),

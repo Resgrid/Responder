@@ -46,6 +46,7 @@ jest.mock('@/lib/logging', () => ({
 	logger: {
 		info: jest.fn(),
 		error: jest.fn(),
+		debug: jest.fn(),
 	},
 }));
 
@@ -619,6 +620,29 @@ describe('Core Store', () => {
 					Detail: 0,
 				},
 			]);
+		});
+	});
+
+	describe('sign-out', () => {
+		it('forgets the signed-out server\'s config so the next session never connects to its endpoints', async () => {
+			const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+			useCoreStore.setState({
+				config: { EventingUrl: 'https://events.us.example/', NovuBackendApiUrl: 'https://novu.us.example' } as any,
+				isInitialized: true,
+				isInitializing: true,
+				activeStatuses: [] as any,
+				currentStatus: { StatusId: 1 } as any,
+			});
+
+			await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+
+			const state = useCoreStore.getState();
+			expect(state.config).toBeNull();
+			expect(state.isInitialized).toBe(false);
+			// An init() still in flight from the old session must not make the next session's init() skip.
+			expect(state.isInitializing).toBe(false);
+			expect(state.activeStatuses).toBeNull();
+			expect(state.currentStatus).toBeNull();
 		});
 	});
 });

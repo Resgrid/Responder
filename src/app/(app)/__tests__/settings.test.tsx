@@ -140,7 +140,7 @@ jest.mock('@/components/settings/login-info-bottom-sheet', () => ({
 }));
 
 jest.mock('@/components/settings/server-url-bottom-sheet', () => ({
-  ServerUrlBottomSheet: ({ isOpen, onClose, onUrlChanged }: any) => {
+  ServerUrlBottomSheet: ({ isOpen, onClose, onBeforeUrlChange }: any) => {
     const { View, TouchableOpacity, Text } = require('react-native');
     return (
       <View testID="server-url-bottom-sheet" style={{ display: isOpen ? 'flex' : 'none' }}>
@@ -152,7 +152,7 @@ jest.mock('@/components/settings/server-url-bottom-sheet', () => ({
             <TouchableOpacity
               testID="submit-server-url-change"
               onPress={() => {
-                void onUrlChanged?.();
+                void onBeforeUrlChange?.();
               }}
             >
               <Text>Save Server</Text>

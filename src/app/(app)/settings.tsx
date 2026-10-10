@@ -239,7 +239,7 @@ export default function Settings() {
       </ScrollView>
 
       <LoginInfoBottomSheet isOpen={showLoginInfo} onClose={() => setShowLoginInfo(false)} onSubmit={handleLoginInfoSubmit} />
-      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} onUrlChanged={handleServerUrlChanged} />
+      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} onBeforeUrlChange={handleServerUrlChanged} />
     </Box>
   );
 }

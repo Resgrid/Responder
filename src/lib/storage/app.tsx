@@ -32,6 +32,7 @@ export const getActiveCallId = (): string => {
   return activeCallId;
 };
 
+export const DEVICE_UUID_STORAGE_KEY = DEVICE_UUID;
 export const removeDeviceUuid = () => removeItem(DEVICE_UUID);
 export const setDeviceUuid = (value: string) => setItem<string>(DEVICE_UUID, value);
 
