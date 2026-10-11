@@ -12,6 +12,12 @@ export enum QueuedEventStatus {
   COMPLETED = 'completed',
 }
 
+/** The server and user a queued action was made for. It is only ever sent while that user is signed in to that server. */
+export interface QueueOwner {
+  serverUrl: string;
+  userId: string;
+}
+
 export interface QueuedEvent {
   id: string;
   type: QueuedEventType;
@@ -23,6 +29,8 @@ export interface QueuedEvent {
   lastAttemptAt?: number | undefined;
   nextRetryAt?: number | undefined;
   error?: string | undefined;
+  /** Null when nobody was signed in to queue it for; absent on actions queued before owners were recorded. */
+  owner?: QueueOwner | null | undefined;
 }
 
 export interface QueuedPersonnelStatusEvent extends Omit<QueuedEvent, 'data'> {

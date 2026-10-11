@@ -144,5 +144,26 @@ describe('useActiveCallStore', () => {
       expect(useActiveCallStore.getState().activeCall).toBeNull();
       expect(mockCallsState.fetchCalls).not.toHaveBeenCalled();
     });
+
+    it('does not select the call when sign-out resets the store while the calls are loading', async () => {
+      const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+      let finishFetch: () => void = () => undefined;
+      mockCallsState.fetchCalls = jest.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finishFetch = () => {
+              mockCallsState.calls = [mockCall];
+              resolve();
+            };
+          })
+      );
+
+      const pending = useActiveCallStore.getState().setActiveCallById('123');
+      await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+      finishFetch();
+      await pending;
+
+      expect(useActiveCallStore.getState().activeCallId).toBeNull();
+    });
   });
 });

@@ -4,8 +4,10 @@ import CryptoJS from 'crypto-js';
 import { savePersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { currentQueueOwner, isAbandonedQueueItem, isOwnedByCurrentSession } from '@/lib/offline-queue-owner';
 import { getResponseStatus, isClientRejection } from '@/lib/request-errors';
 import { getOfflineQueueStorage } from '@/lib/storage/secure-storage';
+import type { QueueOwner } from '@/models/offline-queue/queued-event';
 import type { SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
 
 const MAX_RETRIES = 5;
@@ -41,11 +43,15 @@ interface QueueItem {
   retries: number;
   attempts?: number;
   nextRetryAt?: number;
+  /** Null when nobody was signed in to queue it for; absent on items queued before owners were recorded. */
+  owner?: QueueOwner | null;
+  queuedAt?: number;
 }
 
 export class RealOfflineQueueProcessor {
   private static instance: RealOfflineQueueProcessor | null = null;
   private processing = false;
+  private rerunRequested = false;
   private storageKey = 'offline_queue';
   private queueMutationChain: Promise<void> = Promise.resolve();
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -122,16 +128,35 @@ export class RealOfflineQueueProcessor {
   }
 
   async processQueue(): Promise<void> {
-    if (this.processing) return;
+    if (this.processing) {
+      // Run once more when the active pass ends: an item it already held back may be sendable by then (its owner
+      // signed in mid-pass), and on a steady connection nothing else would wake the queue for it.
+      this.rerunRequested = true;
+      return;
+    }
     this.processing = true;
     try {
       await this.serializeQueueMutation(async () => {
         const storage = await getOfflineQueueStorage();
         const items = await this.readQueue(storage);
         const remaining: QueueItem[] = [];
+        // Only the signed-in session's items get a retry timer: one for an item that is being held would fire at once
+        // and keep firing, since holding it never moves its retry time on.
+        const retrying: QueueItem[] = [];
         for (const item of items) {
+          // Each item goes to its own server under its own account, never to whoever is signed in now.
+          if (!isOwnedByCurrentSession(item.owner)) {
+            if (isAbandonedQueueItem(item.owner, item.queuedAt)) {
+              logger.warn({ message: 'Dropping offline personnel status held too long for another session', context: { id: item.id } });
+            } else {
+              remaining.push(item);
+            }
+            continue;
+          }
+
           if (item.nextRetryAt && item.nextRetryAt > Date.now()) {
             remaining.push(item);
+            retrying.push(item);
             continue;
           }
 
@@ -150,15 +175,21 @@ export class RealOfflineQueueProcessor {
           const backoff = Math.min(2 ** item.retries * 1000, 30000);
           item.nextRetryAt = Date.now() + backoff;
           remaining.push(item);
+          retrying.push(item);
           logger.warn({ message: 'Scheduled offline queue item retry', context: { id: item.id, attempts: item.attempts, nextRetryAt: item.nextRetryAt, error } });
         }
         await storage.set(this.storageKey, JSON.stringify(remaining));
-        this.scheduleNextRetry(remaining);
+        this.scheduleNextRetry(retrying);
       });
     } catch (error) {
       logger.error({ message: 'Processing offline queue failed', context: { error } });
     } finally {
       this.processing = false;
+    }
+
+    if (this.rerunRequested) {
+      this.rerunRequested = false;
+      await this.processQueue();
     }
   }
 
@@ -213,7 +244,7 @@ export class RealOfflineQueueProcessor {
 
   addPersonnelStatusToQueue(status: SavePersonStatusInput): string {
     const id = `${Date.now()}-${Math.random()}`;
-    void this.enqueue({ id, type: 'personnelStatus', payload: status, retries: 0, attempts: 0 }).catch((error) => {
+    void this.enqueue({ id, type: 'personnelStatus', payload: status, retries: 0, attempts: 0, owner: currentQueueOwner(), queuedAt: Date.now() }).catch((error) => {
       logger.error({ message: 'Failed to enqueue personnel status', context: { id, error } });
     });
     return id;

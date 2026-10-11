@@ -11,6 +11,7 @@ import { translate } from '../../lib/i18n/utils';
 import { logger } from '../../lib/logging';
 import { type DepartmentVoiceChannelResultData } from '../../models/v4/voice/departmentVoiceResultData';
 import { audioService } from '../../services/audio.service';
+import { bluetoothAudioService } from '../../services/bluetooth-audio.service';
 import { callKeepService } from '../../services/callkeep.service';
 import { headsetButtonService } from '../../services/headset-button.service';
 import { toggleMicrophone } from '../../utils/microphone-toggle';
@@ -233,6 +234,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         });
       }
 
+      bluetoothAudioService.ensurePttInputMonitoring('livekit-store connectToRoom start');
+
       // Disconnect from current room if connected. Clearing the reference matters: if this
       // connect attempt fails, the failure teardown below must not find the room we just left.
       if (currentRoom) {
@@ -423,7 +426,6 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       try {
         await headsetButtonService.initialize();
         headsetButtonService.startMonitoring();
-        useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(true);
 
         logger.info({
           message: 'Headset button monitoring started for PTT (AirPods/Bluetooth earbuds)',
@@ -434,6 +436,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
           context: { error },
         });
       }
+
+      bluetoothAudioService.ensurePttInputMonitoring('livekit-store connectToRoom connected');
     } catch (error) {
       logger.error({
         message: 'Failed to connect to room',
@@ -469,7 +473,6 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       // Stop headset button monitoring
       try {
         headsetButtonService.stopMonitoring();
-        useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(false);
 
         logger.info({
           message: 'Headset button monitoring stopped',
@@ -629,7 +632,6 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       // Initialize and start headset button service
       await headsetButtonService.initialize();
       headsetButtonService.startMonitoring();
-      useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(true);
 
       logger.info({
         message: 'Headset button monitoring started for PTT',
@@ -645,7 +647,6 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
   stopHeadsetButtonMonitoring: () => {
     try {
       headsetButtonService.stopMonitoring();
-      useBluetoothAudioStore.getState().setIsHeadsetButtonMonitoring(false);
 
       logger.info({
         message: 'Headset button monitoring stopped',

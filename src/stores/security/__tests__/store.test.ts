@@ -254,4 +254,55 @@ describe('Security Store', () => {
       });
     });
   });
+
+  describe('sign-out', () => {
+    it('drops the session\'s rights so the next sign-in never registers push under the old department code', async () => {
+      const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+      securityStore.setState({ rights: { DepartmentCode: 'US123', DepartmentId: '1' } as any, error: 'stale' });
+
+      await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+
+      expect(securityStore.getState().rights).toBeNull();
+      expect(securityStore.getState().error).toBeNull();
+    });
+
+    it('ignores rights that arrive after sign-out, but still loads the next session\'s', async () => {
+      const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+      let resolveRights: (value: unknown) => void = () => undefined;
+      getCurrentUsersRights.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveRights = resolve;
+        })
+      );
+
+      const pending = securityStore.getState().getRights();
+      await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+      resolveRights({ Data: { DepartmentCode: 'US123', DepartmentId: '1' } });
+      await pending;
+
+      expect(securityStore.getState().rights).toBeNull();
+
+      getCurrentUsersRights.mockResolvedValueOnce({ Data: { DepartmentCode: 'EU456', DepartmentId: '2' } });
+      await securityStore.getState().getRights();
+
+      expect(securityStore.getState().rights?.DepartmentCode).toBe('EU456');
+    });
+
+    it('ignores a failure that arrives after sign-out', async () => {
+      const { clearAllAppData } = require('@/lib/storage/clear-all-data');
+      let rejectRights: (error: Error) => void = () => undefined;
+      getCurrentUsersRights.mockReturnValueOnce(
+        new Promise((_resolve, reject) => {
+          rejectRights = reject;
+        })
+      );
+
+      const pending = securityStore.getState().getRights();
+      await clearAllAppData({ resetStores: true, clearStorage: false, clearFilters: false });
+      rejectRights(new Error('Network Error'));
+      await pending;
+
+      expect(securityStore.getState().error).toBeNull();
+    });
+  });
 });

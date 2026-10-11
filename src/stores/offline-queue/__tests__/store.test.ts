@@ -39,6 +39,14 @@ jest.mock('@/utils/id-generator', () => ({
   generateEventId: jest.fn(),
 }));
 
+// The session events belong to: user-1 signed in to the US server, unless a test changes it.
+const US_SERVER = 'https://api.us.example/api/v4';
+const EU_SERVER = 'https://api.eu.example/api/v4';
+const mockSession: { status: string; userId: string | null } = { status: 'signedIn', userId: 'user-1' };
+let mockServerUrl = US_SERVER;
+jest.mock('@/stores/auth/store', () => ({ __esModule: true, default: { getState: () => mockSession } }));
+jest.mock('@/lib/storage/app', () => ({ getBaseApiUrl: () => mockServerUrl }));
+
 const mockGenerateEventId = require('@/utils/id-generator').generateEventId as jest.MockedFunction<() => string>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
 
@@ -58,6 +66,10 @@ describe('OfflineQueueStore', () => {
       completedEvents: 0,
     });
     
+    mockSession.status = 'signedIn';
+    mockSession.userId = 'user-1';
+    mockServerUrl = US_SERVER;
+
     // Reset event ID counter and mock
     eventIdCounter = 0;
     mockGenerateEventId.mockImplementation(() => `test-event-id-${++eventIdCounter}`);
@@ -535,6 +547,91 @@ describe('OfflineQueueStore', () => {
         context: { droppedPending: 1, droppedDeadLetters: 1 },
       });
       expect(mockLogger.warn).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Offline queue size cap reached, dropped oldest events' }));
+    });
+  });
+
+  describe('owner', () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const usOwner = { serverUrl: US_SERVER, userId: 'user-1' };
+
+    const queueAs = (owner: QueuedEvent['owner'], createdAt = Date.now()): string => {
+      const eventId = useOfflineQueueStore.getState().addEvent(QueuedEventType.CHECK_IN, { callId: 1 });
+      useOfflineQueueStore.setState((state) => ({
+        queuedEvents: state.queuedEvents.map((event) => {
+          if (event.id !== eventId) return event;
+          const { owner: _owner, ...rest } = event;
+          return owner === undefined ? { ...rest, createdAt } : { ...rest, owner, createdAt };
+        }),
+      }));
+      return eventId;
+    };
+
+    const pendingIds = () => useOfflineQueueStore.getState().getPendingEvents().map((event) => event.id);
+    const queuedIds = () => useOfflineQueueStore.getState().queuedEvents.map((event) => event.id);
+
+    it('records the signed-in server and user on each event', () => {
+      useOfflineQueueStore.getState().addEvent(QueuedEventType.CHECK_IN, { callId: 1 });
+
+      expect(useOfflineQueueStore.getState().queuedEvents[0]?.owner).toEqual(usOwner);
+    });
+
+    it('records no owner for an event queued while nobody is signed in', () => {
+      mockSession.status = 'signedOut';
+      mockSession.userId = null;
+
+      useOfflineQueueStore.getState().addEvent(QueuedEventType.CHECK_IN, { callId: 1 });
+
+      expect(useOfflineQueueStore.getState().queuedEvents[0]?.owner).toBeNull();
+    });
+
+    it('hands out only the signed-in session\'s events to send', () => {
+      const own = queueAs(usOwner);
+      const otherServer = queueAs({ serverUrl: EU_SERVER, userId: 'user-1' });
+      const otherUser = queueAs({ serverUrl: US_SERVER, userId: 'user-2' });
+      const nobodys = queueAs(null);
+      const legacy = queueAs(undefined);
+
+      expect(pendingIds()).toEqual([own, legacy]);
+      expect(queuedIds()).toEqual(expect.arrayContaining([otherServer, otherUser, nobodys]));
+    });
+
+    it('hands out nothing while signed out', () => {
+      queueAs(usOwner);
+      mockSession.status = 'signedOut';
+      mockSession.userId = null;
+
+      expect(pendingIds()).toEqual([]);
+    });
+
+    it('hands out a held event once its owner is signed in to its server again', () => {
+      const held = queueAs(usOwner);
+      mockServerUrl = EU_SERVER;
+      expect(pendingIds()).toEqual([]);
+
+      mockServerUrl = US_SERVER;
+      expect(pendingIds()).toEqual([held]);
+    });
+
+    it('drops another session\'s events held for more than 7 days and keeps the rest', () => {
+      const now = Date.now();
+      const abandoned = queueAs({ serverUrl: EU_SERVER, userId: 'user-1' }, now - 8 * DAY_MS);
+      const recent = queueAs({ serverUrl: EU_SERVER, userId: 'user-1' }, now - DAY_MS);
+      const ownOld = queueAs(usOwner, now - 8 * DAY_MS);
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      expect(queuedIds()).not.toContain(abandoned);
+      expect(queuedIds()).toEqual(expect.arrayContaining([recent, ownOld]));
+    });
+
+    it('keeps every event while nobody is signed in, however old', () => {
+      const old = queueAs({ serverUrl: EU_SERVER, userId: 'user-1' }, Date.now() - 8 * DAY_MS);
+      mockSession.status = 'signedOut';
+      mockSession.userId = null;
+
+      useOfflineQueueStore.getState().purgeStaleFailedEvents();
+
+      expect(queuedIds()).toEqual([old]);
     });
   });
 });

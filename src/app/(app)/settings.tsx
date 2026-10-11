@@ -2,7 +2,7 @@
 import { Env } from '@env';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
@@ -29,6 +29,38 @@ import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/cl
 import { openLinkInBrowser } from '@/lib/utils';
 import { useUnitsStore } from '@/stores/units/store';
 
+/** Clears the session's app data, then signs out. Signs out even when the cleanup fails. */
+const clearDataAndSignOut = async (signOut: () => Promise<void>): Promise<void> => {
+  logger.info({
+    message: 'User confirmed logout, clearing all app data',
+  });
+
+  try {
+    // Clear all app data (stores, storage, cached values)
+    await clearAllAppData({
+      resetStores: true,
+      clearStorage: true,
+      clearFilters: true,
+      clearSecure: false, // Keep secure keys for re-login
+      preserveStorageKeys: [...LOGOUT_PRESERVED_STORAGE_KEYS],
+    });
+
+    // Sign out the user
+    await signOut();
+
+    logger.info({
+      message: 'Logout completed successfully, all data cleared',
+    });
+  } catch (error) {
+    logger.error({
+      message: 'Error during logout data cleanup',
+      context: { error },
+    });
+    // Still sign out even if cleanup fails
+    await signOut();
+  }
+};
+
 export default function Settings() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -39,7 +71,8 @@ export default function Settings() {
   const { login, status, isAuthenticated } = useAuth();
   const [showServerUrl, setShowServerUrl] = React.useState(false);
   const [showUnitSelection, setShowUnitSelection] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  // The sign-out in progress, so a second request joins it instead of starting another or racing past it
+  const logoutInFlightRef = useRef<Promise<void> | null>(null);
   const units = useUnitsStore((state) => state.units);
 
   // Track analytics when view becomes visible
@@ -83,39 +116,14 @@ export default function Settings() {
     setShowLoginInfo(true);
   }, [trackEvent]);
 
-  const performLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-
-    logger.info({
-      message: 'User confirmed logout, clearing all app data',
-    });
-
-    try {
-      // Clear all app data (stores, storage, cached values)
-      await clearAllAppData({
-        resetStores: true,
-        clearStorage: true,
-        clearFilters: true,
-        clearSecure: false, // Keep secure keys for re-login
-        preserveStorageKeys: [...LOGOUT_PRESERVED_STORAGE_KEYS],
+  const performLogout = useCallback((): Promise<void> => {
+    if (!logoutInFlightRef.current) {
+      logoutInFlightRef.current = clearDataAndSignOut(signOut).finally(() => {
+        logoutInFlightRef.current = null;
       });
-
-      // Sign out the user
-      await signOut();
-
-      logger.info({
-        message: 'Logout completed successfully, all data cleared',
-      });
-    } catch (error) {
-      logger.error({
-        message: 'Error during logout data cleanup',
-        context: { error },
-      });
-      // Still sign out even if cleanup fails
-      await signOut();
-    } finally {
-      setIsLoggingOut(false);
     }
+
+    return logoutInFlightRef.current;
   }, [signOut]);
 
   const handleLogoutConfirm = useCallback(async () => {
@@ -154,7 +162,13 @@ export default function Settings() {
   }, [handleLogoutCancel, handleLogoutConfirm, t, trackEvent]);
 
   const handleServerUrlChanged = useCallback(async () => {
-    if (!isAuthenticated || isLoggingOut) {
+    // Already signing out: wait for it, so the new URL is only saved once the old session's requests are done
+    if (logoutInFlightRef.current) {
+      await logoutInFlightRef.current;
+      return;
+    }
+
+    if (!isAuthenticated) {
       return;
     }
 
@@ -163,7 +177,7 @@ export default function Settings() {
     });
 
     await performLogout();
-  }, [isAuthenticated, isLoggingOut, performLogout, trackEvent]);
+  }, [isAuthenticated, performLogout, trackEvent]);
 
   const handleSupportLinkPress = useCallback(
     (linkType: string, url: string) => {
@@ -239,7 +253,7 @@ export default function Settings() {
       </ScrollView>
 
       <LoginInfoBottomSheet isOpen={showLoginInfo} onClose={() => setShowLoginInfo(false)} onSubmit={handleLoginInfoSubmit} />
-      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} onUrlChanged={handleServerUrlChanged} />
+      <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} onBeforeUrlChange={handleServerUrlChanged} />
     </Box>
   );
 }

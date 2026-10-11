@@ -73,6 +73,7 @@ describe('OfflineEventManager', () => {
       initializeNetworkListener: jest.fn(),
       retryAllFailedEvents: jest.fn(),
       clearCompletedEvents: jest.fn(),
+      purgeStaleFailedEvents: jest.fn(),
       _setProcessing: jest.fn(),
       totalEvents: 0,
       completedEvents: 0,
@@ -241,6 +242,16 @@ describe('OfflineEventManager', () => {
       
       // When offline, processQueuedEvents will return early and not call getPendingEvents
       // So we just verify the interval was set up
+    });
+
+    it('purges events held too long for another session on every pass, even offline', () => {
+      mockStoreState.isConnected = false;
+      mockStoreState.isNetworkReachable = false;
+
+      offlineEventManager.startProcessing();
+
+      expect(mockStoreState.purgeStaleFailedEvents).toHaveBeenCalledTimes(1);
+      expect(mockStoreState.getPendingEvents).not.toHaveBeenCalled();
     });
 
     it('should set up processing interval when online', () => {

@@ -135,6 +135,10 @@ class OfflineEventManager {
 
     const store = useOfflineQueueStore.getState();
 
+    // Events held for another session are dropped once they expire. The purge at rehydrate usually runs before the
+    // session has, so it cannot tell whose they are; this pass can.
+    store.purgeStaleFailedEvents();
+
     // Don't process if offline
     if (!store.isConnected || !store.isNetworkReachable) {
       logger.debug({

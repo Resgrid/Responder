@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { zustandStorage } from '@/lib/storage';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 
 import { useCallsStore } from './store';
@@ -21,6 +22,10 @@ interface ActiveCallState {
   isActiveCall: (callId: string) => boolean;
 }
 
+// Bumped when sign-out resets the store: a setActiveCallById() still in flight then belongs to the ended session and
+// must not select its call in the next one.
+let sessionGeneration = 0;
+
 export const useActiveCallStore = create<ActiveCallState>()(
   persist(
     (set, get) => ({
@@ -37,7 +42,12 @@ export const useActiveCallStore = create<ActiveCallState>()(
           return;
         }
 
+        const generation = sessionGeneration;
         await useCallsStore.getState().fetchCalls();
+        if (generation !== sessionGeneration) {
+          return;
+        }
+
         // Re-read after the fetch: the state captured before it still holds the old list.
         const call = useCallsStore.getState().calls.find((openCall) => openCall.CallId === callId);
 
@@ -60,3 +70,10 @@ export const useActiveCallStore = create<ActiveCallState>()(
     }
   )
 );
+
+// The active call is the default destination of a status update; one from the previous session (or server) must not
+// be sent by the next.
+registerStoreReset('active-call', () => {
+  sessionGeneration += 1;
+  useActiveCallStore.getState().clearActiveCall();
+});

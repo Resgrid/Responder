@@ -21,6 +21,11 @@ export class OfflineQueueService {
       logger.debug({
         message: 'Offline queue service already initialized, skipping',
       });
+      // Runs again on every sign-in: send what was held for this session while signed out or while someone else was.
+      // Not awaited, so a slow link never holds up the rest of start-up.
+      void offlineQueueProcessor.processQueue().catch((error: unknown) => {
+        logger.error({ message: 'Offline queue processing failed after sign-in', context: { error } });
+      });
       return;
     }
 
