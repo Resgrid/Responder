@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 
@@ -7,6 +7,7 @@ import { SideMenu } from '../side-menu';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 import { securityStore } from '@/stores/security/store';
+import { terminologyStore } from '@/stores/terminology/store';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
@@ -610,6 +611,43 @@ describe('SideMenu', () => {
       expect(screen.getByTestId('side-menu-container')).toBeTruthy();
       expect(screen.getByTestId('side-menu-ptt-button')).toBeTruthy();
       expect(screen.getByTestId('side-menu-audio-button')).toBeTruthy();
+    });
+  });
+
+  describe('Department terminology', () => {
+    beforeEach(() => {
+      terminologyStore.setState({ names: {} });
+      mockStore(mockUseLiveKitStore, {
+        isConnected: false,
+        setIsBottomSheetVisible: mockSetIsBottomSheetVisible,
+        toggleMicrophone: mockToggleMicrophone,
+      });
+    });
+
+    afterAll(() => {
+      terminologyStore.setState({ names: {} });
+    });
+
+    it('labels a renamed module with the department name and keeps the app label for the rest', () => {
+      terminologyStore.setState({ names: { 'module.contacts': 'Preplans', 'module.mapping': 'GIS' } });
+
+      render(<SideMenu />);
+
+      expect(screen.getByTestId('side-menu-contacts')).toHaveTextContent('Preplans');
+      expect(screen.getByTestId('side-menu-map')).toHaveTextContent('GIS');
+      expect(screen.getByTestId('side-menu-notes')).toHaveTextContent('tabs.notes');
+      expect(screen.getByTestId('side-menu-messages')).toHaveTextContent('tabs.messages');
+    });
+
+    it('relabels the menu when the names arrive after it rendered', () => {
+      render(<SideMenu />);
+      expect(screen.getByTestId('side-menu-calendar')).toHaveTextContent('tabs.calendar');
+
+      act(() => {
+        terminologyStore.setState({ names: { 'module.calendar': 'Schedule' } });
+      });
+
+      expect(screen.getByTestId('side-menu-calendar')).toHaveTextContent('Schedule');
     });
   });
 });

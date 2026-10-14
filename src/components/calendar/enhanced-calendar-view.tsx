@@ -12,6 +12,7 @@ import { VStack } from '@/components/ui/vstack';
 import { extractDatePart, formatLocalDateString, getTodayLocalString, isDateInRange, resolveAllDayEndDate } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 interface EnhancedCalendarViewProps {
   onDayPress?: (date: DateData) => void;
@@ -21,6 +22,7 @@ interface EnhancedCalendarViewProps {
 
 export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDayPress, onMonthChange, testID = 'enhanced-calendar-view' }) => {
   const { t } = useTranslation();
+  const calendarTitle = useTerm(TermKeys.Calendar, t('calendar.title'));
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -164,7 +166,7 @@ export const EnhancedCalendarView: React.FC<EnhancedCalendarViewProps> = ({ onDa
       {/* Calendar Header with Today Button */}
       <HStack className="items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <Heading size="md" className="text-gray-900 dark:text-white">
-          {t('calendar.title')}
+          {calendarTitle}
         </Heading>
         <Button variant="outline" size="sm" onPress={goToToday} className="border-primary-500" testID={`${testID}-today-button`}>
           <ButtonText className="text-primary-600 dark:text-primary-400">{t('calendar.tabs.today')}</ButtonText>

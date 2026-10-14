@@ -49,17 +49,18 @@ const getContrastTextColor = (hexColor: string): string => {
   return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
-// Helper function to find status data for a unit based on unit type and status ID
-const findUnitStatus = (unitType: string, statusId: string, unitTypeStatuses: UnitTypeStatusResultData[]): StatusesResultData | null => {
+// Helper function to find status data for a unit: its own custom status set (CustomStatusSetId) first, which survives a
+// renamed unit type, then the set for its unit type name.
+const findUnitStatus = (unitType: string, customStatusSetId: string | null | undefined, statusId: string, unitTypeStatuses: UnitTypeStatusResultData[]): StatusesResultData | null => {
   if (!statusId || !unitTypeStatuses.length) return null;
 
-  // Find the status set for this unit type
-  const unitTypeStatus = unitTypeStatuses.find((uts) => uts.UnitType === unitType);
+  const setId = customStatusSetId == null ? '' : String(customStatusSetId).trim();
+  const unitTypeStatus = (setId !== '' && setId !== '0' ? unitTypeStatuses.find((uts) => uts.StatusId === setId) : undefined) ?? unitTypeStatuses.find((uts) => uts.UnitType === unitType);
 
   if (!unitTypeStatus) return null;
 
-  // Find the specific status by StateId
-  const status = unitTypeStatus.Statuses.find((s) => s.StateId.toString() === statusId || s.Id.toString() === statusId);
+  // The status is the option whose Id is the unit's status id; StateId (the option's set id) is the legacy fallback.
+  const status = unitTypeStatus.Statuses.find((s) => s.Id.toString() === statusId) ?? unitTypeStatus.Statuses.find((s) => s.StateId.toString() === statusId);
 
   return status || null;
 };
@@ -87,7 +88,7 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(function UnitCard({ 
   const unitType = unit.Type || '';
 
   // Find the status data from unit type statuses (custom statuses)
-  const customStatusData = statusId ? findUnitStatus(unitType, statusId, unitTypeStatuses) : null;
+  const customStatusData = statusId ? findUnitStatus(unitType, unit.CustomStatusSetId, statusId, unitTypeStatuses) : null;
   const destinationText = 'CurrentDestinationName' in unit ? unit.CurrentDestinationName : '';
 
   // Fall back to default status if custom status not found (used for colors only)

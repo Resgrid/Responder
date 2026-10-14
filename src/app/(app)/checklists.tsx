@@ -11,9 +11,11 @@ import { useChecklistLiveUpdates } from '@/hooks/use-checklist-live-updates';
 import { useProtectedReveal } from '@/hooks/use-protected-reveal';
 import { checklistError } from '@/lib/checklists/sync';
 import { useChecklistsStore } from '@/stores/checklists/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 export default function ChecklistsScreen() {
   const { t } = useTranslation();
+  const checklistsTitle = useTerm(TermKeys.Checklists, t('checklists.labels.Checklists'));
   const { occurrenceId } = useLocalSearchParams<{ occurrenceId?: string }>();
   const unitId: string | undefined = undefined;
   const state = useChecklistsStore();
@@ -46,7 +48,7 @@ export default function ChecklistsScreen() {
   const message = error ?? state.error;
   return (
     <View className="flex-1 bg-background-0">
-      <Stack.Screen options={{ title: t('checklists.labels.Checklists') }} />
+      <Stack.Screen options={{ title: checklistsTitle }} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         <Button variant="outline" onPress={() => setCalendar((v) => !v)}>
           <ButtonText>{t('checklists.ui.calendar')}</ButtonText>

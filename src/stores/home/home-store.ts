@@ -4,6 +4,7 @@ import { getPersonnelInfo } from '@/api/personnel/personnel';
 import { getCurrentPersonnelStaffing } from '@/api/personnel/personnelStaffing';
 import { getCurrentPersonnelStatus } from '@/api/personnel/personnelStatuses';
 import { getAllPersonnelStatuses } from '@/api/satuses';
+import { isPersonnelInService } from '@/lib/base-types';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type GetCurrentStaffingResultData } from '@/models/v4/personnelStaffing/getCurrentStaffingResultData';
 import { type GetCurrentStatusResultData } from '@/models/v4/personnelStatuses/getCurrentStatusResultData';
@@ -14,6 +15,9 @@ import useAuthStore from '../auth/store';
 import { useCallsStore } from '../calls/store';
 import { useRolesStore } from '../roles/store';
 import { useUnitsStore } from '../units/store';
+
+/** "Personnel in service" on the Home stats: the one definition every app shares (lib/base-types). */
+export { isPersonnelInService };
 
 export interface DepartmentStats {
   openCalls: number;
@@ -73,7 +77,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
       // Get personnel in service count
       const users = useRolesStore.getState().users;
-      const personnelInService = users.filter((user) => user.Status && user.Status !== 'Available' && user.Status !== 'Off Duty').length;
+      const personnelInService = users.filter(isPersonnelInService).length;
 
       // Get units in service count
       const units = useUnitsStore.getState().units;

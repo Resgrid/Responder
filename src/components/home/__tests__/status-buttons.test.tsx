@@ -93,6 +93,38 @@ describe('StatusButtons', () => {
     expect(screen.queryByText('System Status 5')).toBeNull();
   });
 
+  it("shows a department's own options even when their ids collide with the legacy built-in ids", () => {
+    mockUseCoreStore.mockReturnValue({
+      activeStatuses: [
+        createStatus({ Id: 4, StateId: 1, Text: 'In Quarters', Detail: 0 }),
+        createStatus({ Id: 5, StateId: 1, Text: 'Responding', Detail: 2 }),
+        createStatus({ Id: 6, StateId: 1, Text: 'On Scene', Detail: 0 }),
+        createStatus({ Id: 7, StateId: 1, Text: 'Returning', Detail: 1 }),
+      ],
+    } as ReturnType<typeof useCoreStore>);
+
+    render(<StatusButtons />);
+
+    expect(screen.getByText('In Quarters')).toBeTruthy();
+    expect(screen.getByText('Responding')).toBeTruthy();
+    expect(screen.getByText('On Scene')).toBeTruthy();
+    expect(screen.getByText('Returning')).toBeTruthy();
+  });
+
+  it('still hides the built-in legacy ids when StateId is missing (older payloads)', () => {
+    const missingStateId = createStatus({ Id: 6, Text: 'Responding to Scene', Detail: 0 });
+    delete (missingStateId as Partial<StatusesResultData>).StateId;
+
+    mockUseCoreStore.mockReturnValue({
+      activeStatuses: [createStatus({ Id: 0, Text: 'Available', Detail: 0 }), missingStateId],
+    } as ReturnType<typeof useCoreStore>);
+
+    render(<StatusButtons />);
+
+    expect(screen.getByText('Available')).toBeTruthy();
+    expect(screen.queryByText('Responding to Scene')).toBeNull();
+  });
+
   it('does not hide non-legacy statuses just because they use newer detail values', () => {
     mockUseCoreStore.mockReturnValue({
       activeStatuses: [

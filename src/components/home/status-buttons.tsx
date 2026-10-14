@@ -18,6 +18,13 @@ import { useToastStore } from '@/stores/toast/store';
 
 const LEGACY_HIDDEN_STATUS_IDS = [4, 5, 6, 7];
 
+/**
+ * Built-in options (StateId 0 / missing) 4-7 are the legacy system-managed statuses (Available Station, Responding
+ * to Station, Responding to Scene, On Unit). A department's own options carry their set's id in StateId and can have
+ * any id, including 4-7 on a fresh install, so they are never hidden.
+ */
+const isLegacyHiddenStatus = (status: StatusesResultData): boolean => !Number(status.StateId) && LEGACY_HIDDEN_STATUS_IDS.includes(status.Id);
+
 /** The red outline that marks the member's current status. */
 const CURRENT_STATUS_BORDER = '#dc2626';
 
@@ -96,10 +103,10 @@ export const StatusButtons: React.FC = () => {
   const isHoldMode = config?.StatusHoldToConfirm === true;
   const currentStatusType = (currentUserStatus ?? coreCurrentStatus)?.StatusType;
 
-  // These IDs are legacy system-managed statuses that Resgrid sets internally.
+  // Built-in options 4-7 are legacy system-managed statuses that Resgrid sets internally.
   // They predate the newer Detail-based destination model and should stay hidden
   // from the Home tab buttons even though they may still be applied under the hood.
-  const visibleStatuses = React.useMemo(() => (activeStatuses ?? []).filter((status) => !LEGACY_HIDDEN_STATUS_IDS.includes(status.Id)), [activeStatuses]);
+  const visibleStatuses = React.useMemo(() => (activeStatuses ?? []).filter((status) => !isLegacyHiddenStatus(status)), [activeStatuses]);
   const currentStatusId = React.useMemo(() => resolveCurrentStatusId(activeStatuses, { StateId: currentStatusType }), [activeStatuses, currentStatusType]);
   const offeredStatuses = React.useMemo(() => getOfferedStatuses(visibleStatuses, currentStatusId, showAllStatuses), [currentStatusId, showAllStatuses, visibleStatuses]);
   const hasNextStatusRestriction = React.useMemo(() => showAllStatuses && getOfferedStatuses(visibleStatuses, currentStatusId, false).isRestricted, [currentStatusId, showAllStatuses, visibleStatuses]);

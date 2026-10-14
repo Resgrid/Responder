@@ -7,9 +7,12 @@ import { Platform } from 'react-native';
 import { registerDevice, registerUnitDevice } from '@/api/devices/push';
 import { openWeatherAlertDetail } from '@/components/weather-alerts/weather-alert-navigation';
 import { useAuthStore } from '@/lib/auth';
+import { registerSignOutHook } from '@/lib/auth/sign-out-hooks';
 import { logger } from '@/lib/logging';
+import { CLIENT_HEADER, RESGRID_CLIENT } from '@/lib/mfa/client-app';
 import { type RouterPushRetryOptions, routerPushWithRetry } from '@/lib/navigation';
-import { getDeviceUuid } from '@/lib/storage/app';
+import { getBaseApiUrl, getDeviceUuid } from '@/lib/storage/app';
+import { type NativePushUnRegistrationInput } from '@/models/v4/device/nativePushUnRegistrationInput';
 import { isSafeRouteId, parseNotificationData, usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
 
@@ -135,6 +138,8 @@ const NOTIFICATION_CHANNELS: NotificationChannelConfig[] = [
 class PushNotificationService {
   private static instance: PushNotificationService;
   private pushToken: string | null = null;
+  // What this phone last registered on the server, so sign-out can take exactly that token off again.
+  private registration: NativePushUnRegistrationInput | null = null;
   private notificationListener: { remove: () => void } | null = null;
   private responseListener: { remove: () => void } | null = null;
   // Identifier of the last notification response we surfaced, used to avoid presenting the launch
@@ -446,6 +451,8 @@ class PushNotificationService {
         Prefix: departmentCode,
       });
 
+      this.registration = { Token: this.pushToken, Prefix: departmentCode };
+
       return this.pushToken;
     } catch (error) {
       logger.error({
@@ -458,6 +465,33 @@ class PushNotificationService {
 
   public getPushToken(): string | null {
     return this.pushToken;
+  }
+
+  /**
+   * Takes this phone's token off the server at sign-out, as the session that is signing out (the hook below runs
+   * before logout clears its access token). Straight to the server, not through the api client: its 401 handling
+   * would re-enter logout. Quiet: sign-out goes ahead whatever the server says.
+   */
+  public async unregisterAtSignOut(accessToken: string | null): Promise<void> {
+    const registration = this.registration;
+    this.registration = null;
+
+    if (!registration || !accessToken) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${getBaseApiUrl()}/Devices/UnRegisterNativePush`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, [CLIENT_HEADER]: RESGRID_CLIENT },
+        body: JSON.stringify(registration),
+      });
+      if (!response.ok) {
+        logger.warn({ message: 'Push: the server refused to unregister the device token at sign-out', context: { status: response.status } });
+      }
+    } catch (error) {
+      logger.warn({ message: 'Push: the device token could not be unregistered at sign-out', context: { ...PushNotificationService.toErrorContext(error) } });
+    }
   }
 
   public async sendTestNotification(): Promise<void> {
@@ -504,6 +538,10 @@ class PushNotificationService {
 }
 
 export const pushNotificationService = PushNotificationService.getInstance();
+
+// Sign-out takes this phone's token off the server while the session can still authenticate, so the next person to
+// use the device never gets the previous one's calls.
+registerSignOutHook((accessToken) => pushNotificationService.unregisterAtSignOut(accessToken));
 
 // React hook for component usage
 export const usePushNotifications = () => {

@@ -30,6 +30,8 @@ export class CallResultData {
   public IncidentId: string = '';
   public AudioFileId: string = '';
   public Type: string = 'No Type';
+  /** Id of the department call type the call was logged with (survives a rename); null/undefined when none or older servers. */
+  public TypeId?: string | null;
   public LoggedOnUtc: string = '';
   public DispatchedOn: string = '';
   public DispatchedOnUtc: string = '';

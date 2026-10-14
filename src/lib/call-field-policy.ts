@@ -138,6 +138,24 @@ export const isPendingCallState = (state: number | string | null | undefined): b
   return normalized === String(CALL_STATE_PENDING) || normalized === 'pending';
 };
 
+/**
+ * The department call type a call was logged with: by `TypeId`, which survives a rename of the type, then by the
+ * type text (`Type` is the type's name, not its id; older servers send no `TypeId`).
+ */
+export const findCallType = <T extends { Id: number | string; Name: string }>(
+  callTypes: readonly T[] | null | undefined,
+  call: { Type?: string | null; TypeId?: number | string | null } | null | undefined
+): T | undefined => {
+  if (!callTypes || !call) {
+    return undefined;
+  }
+
+  const typeId = call.TypeId == null ? '' : String(call.TypeId).trim();
+  const byId = typeId !== '' ? callTypes.find((candidate) => String(candidate.Id) === typeId) : undefined;
+
+  return byId ?? callTypes.find((candidate) => candidate.Name === call.Type);
+};
+
 const REQUIRED_FIELDS_MESSAGE = /required call fields are missing:\s*(.+)$/i;
 
 const readErrorText = (error: unknown): string | null => {

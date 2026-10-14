@@ -4,6 +4,7 @@ import React from 'react';
 import { getRecord } from '@/api/records/records';
 import { RmsRecordState } from '@/models/v4/records';
 import { useRecordsStore } from '@/stores/records/store';
+import { terminologyStore } from '@/stores/terminology/store';
 
 import RecordScreen from '../[id]';
 
@@ -193,5 +194,18 @@ describe('RecordScreen', () => {
     expect(await screen.findByText('records.conflict_etag')).toBeTruthy();
     expect(store.finalize).not.toHaveBeenCalled();
     unmount();
+  });
+
+  it("heads a built-in record with the department's name for its type, never its key", async () => {
+    mockGetRecord.mockReset();
+    mockGetRecord.mockResolvedValue({ Data: { ...record(4), DefinitionKey: 'system.run' } } as never);
+    terminologyStore.setState({ names: { 'record-type.run': 'Incident' } });
+
+    const { unmount } = render(<RecordScreen />);
+
+    expect(await screen.findByText('Incident')).toBeTruthy();
+    expect(screen.queryByText('system.run')).toBeNull();
+    unmount();
+    terminologyStore.setState({ names: {} });
   });
 });

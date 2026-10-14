@@ -21,11 +21,13 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { isDateInRange } from '@/lib/utils';
 import { type CalendarItemResultData } from '@/models/v4/calendar/calendarItemResultData';
 import { useCalendarStore } from '@/stores/calendar/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 type TabType = 'today' | 'upcoming' | 'calendar';
 
 export default function CalendarScreen() {
   const { t } = useTranslation();
+  const calendarTitle = useTerm(TermKeys.Calendar, t('calendar.title'));
   const router = useRouter();
   const { trackEvent } = useAnalytics();
   const [activeTab, setActiveTab] = useState<TabType>('today');
@@ -252,7 +254,7 @@ export default function CalendarScreen() {
     <>
       <Stack.Screen
         options={{
-          title: t('calendar.title'),
+          title: calendarTitle,
           headerShown: true,
         }}
       />

@@ -15,6 +15,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useRecordDefinitionNameResolver } from '@/hooks/use-record-definition-name';
 import { useRecordsContext } from '@/hooks/use-records-context';
 import { canAuthorOffline, cellKey, toValueList, unsupportedFieldKeys, validate, type ValidationIssue, type ValueMap } from '@/lib/records/schema';
 import { type FieldRecordCatalogEntry, type RecordDefinitionSchema } from '@/models/v4/records';
@@ -30,6 +31,7 @@ export default function NewRecordScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ draft?: string; definitionKey?: string }>();
   const context = useRecordsContext();
+  const definitionName = useRecordDefinitionNameResolver();
 
   const catalog = useRecordsStore((state) => state.catalog);
   const pendingDrafts = useRecordsStore((state) => state.pendingDrafts);
@@ -179,7 +181,7 @@ export default function NewRecordScreen() {
                 <Pressable className="px-4 py-4" onPress={() => void choose(definition)} testID={`records-choose-${definition.DefinitionKey}`}>
                   <HStack className="items-center" space="md">
                     <VStack className="flex-1">
-                      <Text className="font-medium text-typography-900">{definition.Name}</Text>
+                      <Text className="font-medium text-typography-900">{definitionName(definition.DefinitionKey, definition.Name)}</Text>
                       <HStack space="xs" className="mt-1 flex-wrap items-center">
                         {definition.Category ? <Text className="text-xs text-typography-500">{definition.Category}</Text> : null}
                         {definition.RequiresProtectedGrant ? (
@@ -208,7 +210,7 @@ export default function NewRecordScreen() {
 
   return (
     <Box className="flex-1 bg-background-0">
-      <Stack.Screen options={{ title: entry.Name }} />
+      <Stack.Screen options={{ title: definitionName(entry.DefinitionKey, entry.Name) ?? entry.Name }} />
       <ScrollView contentContainerClassName="p-4">
         {unsupported.length > 0 ? (
           <Box className="mb-4 rounded-md border border-warning-300 bg-background-warning p-3">

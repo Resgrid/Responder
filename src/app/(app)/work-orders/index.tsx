@@ -12,12 +12,14 @@ import { VStack } from '@/components/ui/vstack';
 import { isOpen } from '@/lib/workOrders/status';
 import { WorkOrderPriority } from '@/models/v4/workOrders';
 import { useWorkOrdersStatus } from '@/stores/feature-flags/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 import { useWorkOrdersStore } from '@/stores/workOrders/store';
 
 // Work orders the person reported or that are assigned to them or their roles (Maintenance.WorkOrders).
 // Reporting a problem needs the department's Readiness Pro maintenance; reading never does.
 export default function WorkOrdersScreen() {
   const { t } = useTranslation();
+  const workOrdersTitle = useTerm(TermKeys.WorkOrders, t('workOrders.title'));
   const router = useRouter();
   const flagStatus = useWorkOrdersStatus();
   const { access, assignedToMe, items, hasMore, canWrite, busy, error } = useWorkOrdersStore();
@@ -32,10 +34,10 @@ export default function WorkOrdersScreen() {
 
   return (
     <VStack className="flex-1 bg-background-0">
-      <Stack.Screen options={{ title: t('workOrders.title') }} />
+      <Stack.Screen options={{ title: workOrdersTitle }} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} refreshControl={<RefreshControl refreshing={busy} onRefresh={() => void useWorkOrdersStore.getState().load()} />}>
         <HStack className="items-center justify-between">
-          <Text className="text-xl font-bold">{t('workOrders.title')}</Text>
+          <Text className="text-xl font-bold">{workOrdersTitle}</Text>
           {canWrite ? (
             <Button size="sm" onPress={() => router.push('/work-orders/new' as Href)} testID="work-orders-report">
               <ButtonText>{t('workOrders.report')}</ButtonText>

@@ -18,6 +18,7 @@ import { capturePhoto, discardPhoto, PhotoPermissionError } from '@/lib/media/ph
 import { missingField, todayKey, type TransitionFields, transitionNeeds } from '@/lib/workOrders/status';
 import { WorkOrderActivityType } from '@/models/v4/workOrders';
 import { useWorkOrdersStatus } from '@/stores/feature-flags/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 import { useWorkOrdersStore } from '@/stores/workOrders/store';
 
 const blankFields: TransitionFields = { reason: '', resolution: '', cause: '', verification: '', duplicateOf: '', confirmTasks: false };
@@ -31,6 +32,7 @@ const hoursOf = (text: string) => {
 // Transitions and Can* flags drive every button; a stale revision reloads the order and says so.
 export default function WorkOrderScreen() {
   const { t } = useTranslation();
+  const workOrdersTitle = useTerm(TermKeys.WorkOrders, t('workOrders.title'));
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const flagStatus = useWorkOrdersStatus();
@@ -110,13 +112,13 @@ export default function WorkOrderScreen() {
 
   return (
     <VStack className="flex-1 bg-background-0">
-      <Stack.Screen options={{ title: order?.Number ?? t('workOrders.title') }} />
+      <Stack.Screen options={{ title: order?.Number ?? workOrdersTitle }} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} keyboardShouldPersistTaps="handled">
         <HStack space="sm" className="items-center">
           <Pressable onPress={() => router.back()} testID="work-order-back" accessibilityRole="button" accessibilityLabel={t('workOrders.back')}>
             <ArrowLeft size={22} color="#2563eb" />
           </Pressable>
-          <Text className="flex-1 text-xl font-bold">{order?.Title ?? t('workOrders.title')}</Text>
+          <Text className="flex-1 text-xl font-bold">{order?.Title ?? workOrdersTitle}</Text>
         </HStack>
         {busy && !detail ? <Spinner /> : null}
         {error ? (

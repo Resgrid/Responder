@@ -33,6 +33,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { useNewCallFieldPolicy } from '@/hooks/use-new-call-field-policy';
 import {
   CALL_FORM_UNCOLLECTED_FIELD_KEYS,
+  findCallType,
   formatCallFieldLabels,
   formatCallGeolocation,
   getMissingCallFieldsFromError,
@@ -320,7 +321,7 @@ export default function EditCall() {
           timestamp: new Date().toISOString(),
           callId: callId || '',
           priority: callPriorities.find((p) => p.Id === call.Priority)?.Name || 'Unknown',
-          type: callTypes.find((t) => t.Name === call.Type)?.Name || 'Unknown',
+          type: findCallType(callTypes, call)?.Name || 'Unknown',
           priorityCount: callPriorities.length,
           typeCount: callTypes.length,
           hasGoogleMapsKey: !!config?.GoogleMapsKey,
@@ -351,8 +352,8 @@ export default function EditCall() {
       });
 
       const priority = useCallsStore.getState().callPriorities.find((p) => p.Id === call.Priority);
-      // Call.Type is the type's text, not its id -- matching on Id left the picker blank on every edit.
-      const type = useCallsStore.getState().callTypes.find((t) => t.Name === call.Type);
+      // Call.Type is the type's text, not its id -- matching it on Id left the picker blank on every edit; TypeId is the id.
+      const type = findCallType(useCallsStore.getState().callTypes, call);
 
       // Parse dispatched items from callExtraData
       const dispatchedUsers: string[] = [];
@@ -449,7 +450,7 @@ export default function EditCall() {
       setValue('priority', priority.Name);
     }
 
-    const type = callTypes.find((candidate) => candidate.Name === call.Type);
+    const type = findCallType(callTypes, call);
     if (type && !getValues('type')) {
       setValue('type', type.Name);
     }

@@ -5,11 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { useWindowDimensions } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 export default function HomeLayout() {
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const personnelTitle = useTerm(TermKeys.Personnel, t('tabs.personnel'));
+  const unitsTitle = useTerm(TermKeys.Units, t('units.title'));
+  const callsTitle = useTerm(TermKeys.Calls, t('tabs.calls'));
 
   return (
     <Tabs
@@ -43,7 +47,7 @@ export default function HomeLayout() {
       <Tabs.Screen
         name="personnel"
         options={{
-          title: t('tabs.personnel'),
+          title: personnelTitle,
           tabBarIcon: ({ color }) => <Icon as={User} stroke={color as string} className="text-primary-500 dark:text-primary-400" />,
           tabBarButtonTestID: 'home-people-tab',
         }}
@@ -52,7 +56,7 @@ export default function HomeLayout() {
       <Tabs.Screen
         name="units"
         options={{
-          title: t('units.title'),
+          title: unitsTitle,
           tabBarIcon: ({ color }) => <Icon as={Car} stroke={color as string} className="text-primary-500 dark:text-primary-400" />,
           tabBarButtonTestID: 'home-units-tab',
         }}
@@ -61,7 +65,7 @@ export default function HomeLayout() {
       <Tabs.Screen
         name="calls"
         options={{
-          title: t('tabs.calls'),
+          title: callsTitle,
           tabBarIcon: ({ color }) => <Icon as={Phone} stroke={color as string} className="text-primary-500 dark:text-primary-400" />,
           tabBarButtonTestID: 'home-calls-tab',
         }}

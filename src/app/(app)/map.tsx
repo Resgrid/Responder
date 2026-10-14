@@ -9,9 +9,11 @@ import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { usePoiStore } from '@/stores/poi/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 export default function HomeMap() {
   const { t } = useTranslation();
+  const mapTitle = useTerm(TermKeys.Mapping, t('map.tabs.map'));
   const router = useRouter();
   const { tab, poiId } = useLocalSearchParams<{ tab?: string | string[]; poiId?: string | string[] }>();
   const { width, height } = useWindowDimensions();
@@ -50,7 +52,7 @@ export default function HomeMap() {
     () => [
       {
         key: 'map',
-        title: t('map.tabs.map'),
+        title: mapTitle,
         content: (
           <View className="flex-1 overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
             <MapPanel focusedPoi={focusedPoi} />
@@ -67,7 +69,7 @@ export default function HomeMap() {
         ),
       },
     ],
-    [focusedPoi, handlePoiPress, handleViewPoiOnMap, t]
+    [focusedPoi, handlePoiPress, handleViewPoiOnMap, mapTitle, t]
   );
 
   return (

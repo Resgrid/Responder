@@ -14,16 +14,19 @@ import { Heading } from '@/components/ui/heading';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useRecordDefinitionName } from '@/hooks/use-record-definition-name';
 import { logger } from '@/lib/logging';
 import { toValueList, toValueMap, unsupportedFieldKeys, validate, type ValidationIssue, type ValueMap } from '@/lib/records/schema';
 import { type RecordData, type RecordDefinitionSchema, RmsRecordState } from '@/models/v4/records';
 import { useRecordsStore } from '@/stores/records/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 // One Record: edit while it is a draft or returned, then submit or finalize online. Amendment, void
 // and approval stay Web-first (RMS plan RMS-1D), so they are not offered here.
 
 export default function RecordScreen() {
   const { t } = useTranslation();
+  const recordsTitle = useTerm(TermKeys.Records, t('records.title'));
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -83,6 +86,7 @@ export default function RecordScreen() {
   const unsupported = useMemo(() => unsupportedFieldKeys(schema), [schema]);
   const editable = record ? record.State === RmsRecordState.Draft || record.State === RmsRecordState.Returned : false;
   const entry = record?.DefinitionKey ? entryFor(record.DefinitionKey, record.DefinitionVersion) : null;
+  const definitionName = useRecordDefinitionName(record?.DefinitionKey, entry?.Name);
 
   const handleChange = useCallback((next: ValueMap) => {
     setValues(next);
@@ -98,7 +102,7 @@ export default function RecordScreen() {
         recordId: current.RecordId,
         definitionKey: current.DefinitionKey ?? '',
         definitionVersion: current.DefinitionVersion,
-        name: current.RecordNumber ?? current.DraftReference ?? entry?.Name ?? t('records.untitled'),
+        name: current.RecordNumber ?? current.DraftReference ?? definitionName ?? t('records.untitled'),
         values: toValueList(values),
         rowVersion: current.RowVersion,
         updatedOn: new Date().toISOString(),
@@ -114,7 +118,7 @@ export default function RecordScreen() {
       discardDraft(clientRecordId);
       return fetchRecord();
     },
-    [values, entry, stageDraft, pushDraft, discardDraft, fetchRecord, t]
+    [values, definitionName, stageDraft, pushDraft, discardDraft, fetchRecord, t]
   );
 
   const save = useCallback(async () => {
@@ -196,7 +200,7 @@ export default function RecordScreen() {
   if (!record) {
     return (
       <Box className="flex-1 items-center justify-center bg-background-0">
-        <Stack.Screen options={{ title: t('records.title') }} />
+        <Stack.Screen options={{ title: recordsTitle }} />
         {isBusy ? <Spinner /> : <Text className="text-typography-500">{message ?? t('records.not_found')}</Text>}
       </Box>
     );
@@ -204,10 +208,10 @@ export default function RecordScreen() {
 
   return (
     <Box className="flex-1 bg-background-0">
-      <Stack.Screen options={{ title: record.RecordNumber ?? record.DraftReference ?? t('records.title') }} />
+      <Stack.Screen options={{ title: record.RecordNumber ?? record.DraftReference ?? recordsTitle }} />
       <ScrollView contentContainerClassName="p-4">
         <VStack space="sm" className="mb-4">
-          <Heading size="sm">{entry?.Name ?? record.DefinitionKey ?? t('records.title')}</Heading>
+          <Heading size="sm">{definitionName ?? recordsTitle}</Heading>
           <Badge action="muted" size="sm" className="self-start">
             <BadgeText>{record.StateName ?? RmsRecordState[record.State] ?? ''}</BadgeText>
           </Badge>
