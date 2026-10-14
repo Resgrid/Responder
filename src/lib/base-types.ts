@@ -161,7 +161,7 @@ export const isStatusOnScene = (baseType: unknown): boolean => {
   return n === ActionBaseTypes.OnScene || n === ActionBaseTypes.MadeContact || n === ActionBaseTypes.Investigating || n === ActionBaseTypes.AtPatient || n === ActionBaseTypes.Searching || n === ActionBaseTypes.Staging;
 };
 
-/** On duty for staffing purposes: available, on shift, on call or delayed (not off duty or unavailable). */
+/** On duty for staffing purposes: available, on shift, on call, delayed or committed (not off duty or unavailable). */
 export const isStaffingOnDuty = (baseType: unknown): boolean => {
   const availability = staffingAvailability(baseType);
   return availability === 'available' || availability === 'delayed' || availability === 'committed';

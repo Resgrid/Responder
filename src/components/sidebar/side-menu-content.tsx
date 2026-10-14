@@ -78,6 +78,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const isWorkOrdersEnabled = useIsWorkOrdersEnabled();
   // The department's own names for its modules; an unrenamed module keeps the app's translated label.
   const termNames = terminologyStore((state) => state.names);
+  const term = useCallback((key: string, fallback: string): string => termNames[key] || fallback, [termNames]);
 
   const menuItems: MenuItem[] = useMemo(
     () =>
@@ -98,21 +99,21 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
         },
         {
           id: 'contacts',
-          title: termNames[TermKeys.Contacts] || t('tabs.contacts'),
+          title: term(TermKeys.Contacts, t('tabs.contacts')),
           icon: Contact,
           route: '/(app)/contacts',
           testID: 'side-menu-contacts',
         },
         {
           id: 'map',
-          title: termNames[TermKeys.Mapping] || t('tabs.map'),
+          title: term(TermKeys.Mapping, t('tabs.map')),
           icon: MapIcon,
           route: '/(app)/map',
           testID: 'side-menu-map',
         },
         {
           id: 'notes',
-          title: termNames[TermKeys.Notes] || t('tabs.notes'),
+          title: term(TermKeys.Notes, t('tabs.notes')),
           icon: Notebook,
           route: '/(app)/notes',
           testID: 'side-menu-notes',
@@ -126,14 +127,14 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
         },
         {
           id: 'calendar',
-          title: termNames[TermKeys.Calendar] || t('tabs.calendar'),
+          title: term(TermKeys.Calendar, t('tabs.calendar')),
           icon: Calendar,
           route: '/calendar',
           testID: 'side-menu-calendar',
         },
         {
           id: 'shifts',
-          title: termNames[TermKeys.Shifts] || t('tabs.shifts'),
+          title: term(TermKeys.Shifts, t('tabs.shifts')),
           icon: CalendarCheck,
           route: '/(app)/shifts',
           testID: 'side-menu-shifts',
@@ -147,14 +148,14 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
         },
         {
           id: 'checklists',
-          title: termNames[TermKeys.Checklists] || t('checklists.labels.Checklists'),
+          title: term(TermKeys.Checklists, t('checklists.labels.Checklists')),
           icon: FileText,
           route: '/(app)/checklists',
           testID: 'side-menu-checklists',
         },
         {
           id: 'records',
-          title: termNames[TermKeys.Records] || t('tabs.records'),
+          title: term(TermKeys.Records, t('tabs.records')),
           icon: FileText,
           route: '/(app)/records',
           testID: 'side-menu-records',
@@ -168,7 +169,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
         },
         {
           id: 'workOrders',
-          title: termNames[TermKeys.WorkOrders] || t('workOrders.title'),
+          title: term(TermKeys.WorkOrders, t('workOrders.title')),
           icon: Wrench,
           route: '/(app)/work-orders',
           testID: 'side-menu-work-orders',
@@ -215,7 +216,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
         }
         return true;
       }),
-    [t, termNames, isChatEnabled, isRecordsEnabled, isChecklistsEnabled, isDeploymentsEnabled, isWorkOrdersEnabled]
+    [t, term, isChatEnabled, isRecordsEnabled, isChecklistsEnabled, isDeploymentsEnabled, isWorkOrdersEnabled]
   );
 
   const handleNavigation = useCallback(
