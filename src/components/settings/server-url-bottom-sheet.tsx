@@ -31,7 +31,8 @@ interface ServerUrlForm {
 interface ServerUrlBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  onUrlChanged?: () => Promise<void>;
+  /** Signs the current session out. Runs before the new URL is saved, while requests still reach the session's server. */
+  onBeforeUrlChange?: () => Promise<void>;
 }
 
 const URL_PATTERN = /^https?:\/\/.+/;
@@ -54,7 +55,7 @@ const normalizeCustomDisplayUrl = (url: string) => normalizeBaseUrl(url).replace
 
 const buildApiUrl = (url: string) => `${normalizeBaseUrl(url)}${API_PATH_SUFFIX}`;
 
-export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUrlBottomSheetProps) {
+export function ServerUrlBottomSheet({ isOpen, onClose, onBeforeUrlChange }: ServerUrlBottomSheetProps) {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const keyboardHeight = useKeyboardHeight();
@@ -163,11 +164,13 @@ export function ServerUrlBottomSheet({ isOpen, onClose, onUrlChanged }: ServerUr
         console.warn('Failed to track server URL form submission analytics:', error);
       }
 
-      await setUrl(buildApiUrl(normalizedResolvedBaseUrl));
-
-      if (isAuthenticated && onUrlChanged) {
-        await onUrlChanged();
+      // Sign out first: sign-out still has work for the old server (taking this browser's push token off it), and
+      // switching before it sent that, and anything else the old session had in flight, to the new server instead.
+      if (isAuthenticated && onBeforeUrlChange) {
+        await onBeforeUrlChange();
       }
+
+      await setUrl(buildApiUrl(normalizedResolvedBaseUrl));
 
       // Track successful submission
       try {

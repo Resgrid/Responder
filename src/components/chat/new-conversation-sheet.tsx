@@ -7,7 +7,7 @@ import { getRecipients } from '@/api/messaging/messages';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Box } from '@/components/ui/box';
-import { Button, ButtonText } from '@/components/ui/button';
+import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
 import { Center } from '@/components/ui/center';
 import { HStack } from '@/components/ui/hstack';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
@@ -192,7 +192,7 @@ export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewCo
                         </Text>
                       </HStack>
                       {mode === 'group' && isSelected ? (
-                        <Box className="rounded-full bg-primary-600 p-1">
+                        <Box className="rounded-full bg-primary-600 p-1 dark:bg-primary-400">
                           <Check size={14} color="#ffffff" />
                         </Box>
                       ) : null}
@@ -205,8 +205,8 @@ export function NewConversationSheet({ isOpen, onClose, mode, onCreated }: NewCo
 
           {mode === 'group' ? (
             <Button className="mb-2 w-full bg-primary-600" onPress={createGroup} isDisabled={submitting || selected.size === 0}>
-              <Users size={18} color="#ffffff" />
-              <ButtonText className="ml-2">{t('chat.create_group_with', { count: selected.size })}</ButtonText>
+              <ButtonIcon as={Users} />
+              <ButtonText>{t('chat.create_group_with', { count: selected.size })}</ButtonText>
             </Button>
           ) : null}
         </VStack>

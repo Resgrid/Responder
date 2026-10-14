@@ -140,7 +140,7 @@ const buttonTextStyle = tva({
     {
       variant: 'outline',
       action: 'primary',
-      class: 'text-primary-500 data-[hover=true]:text-primary-500 data-[active=true]:text-primary-500',
+      class: 'text-primary-600 data-[hover=true]:text-primary-600 data-[active=true]:text-primary-700',
     },
     {
       variant: 'outline',

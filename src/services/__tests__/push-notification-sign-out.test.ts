@@ -52,7 +52,7 @@ jest.mock('@/api/devices/push', () => ({
   registerUnitDevice: jest.fn(),
 }));
 
-jest.mock('@/stores/security/store', () => ({ securityStore: { getState: jest.fn(() => ({})) } }));
+jest.mock('@/stores/security/store', () => ({ securityStore: { getState: jest.fn(() => ({ rights: { DepartmentCode: 'DEPT' } })) } }));
 
 describe('push notification sign-out', () => {
   const originalFetch = global.fetch;
@@ -103,6 +103,17 @@ describe('push notification sign-out', () => {
     await runSignOutHooks('access-token');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers again after sign-out took the token off the server', async () => {
+    await pushNotificationService.registerForPushNotifications('user-1', 'DEPT');
+    await runSignOutHooks('access-token');
+
+    await pushNotificationService.registerForPushNotifications('user-1', 'DEPT');
+    await runSignOutHooks('access-token');
+
+    expect(registerDevice).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('does not call the server without an access token', async () => {

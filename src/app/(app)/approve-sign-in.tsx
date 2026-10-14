@@ -141,7 +141,7 @@ export default function ApproveSignIn() {
                 />
               </Input>
               <Button action="primary" onPress={() => void approve()} isDisabled={busy || number.trim().length !== 2} testID="approve-confirm">
-                {busy ? <Spinner size="small" /> : <ButtonText>{t('mfa.approve.approve')}</ButtonText>}
+                {busy ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('mfa.approve.approve')}</ButtonText>}
               </Button>
               <Button variant="outline" action="secondary" onPress={() => void deny('declined')} isDisabled={busy} testID="approve-deny">
                 <ButtonText>{t('mfa.approve.deny')}</ButtonText>

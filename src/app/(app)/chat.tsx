@@ -64,7 +64,7 @@ function ChannelRow({ channel, onPress }: { channel: ChatChannelResultData; onPr
           ) : null}
         </VStack>
         {unread ? (
-          <Badge className="rounded-full bg-primary-600" size="sm">
+          <Badge className="rounded-full bg-primary-600 dark:bg-primary-400" size="sm">
             <BadgeText className="text-white">{channel.UnreadCount > 99 ? '99+' : String(channel.UnreadCount)}</BadgeText>
           </Badge>
         ) : null}

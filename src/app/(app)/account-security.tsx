@@ -200,7 +200,7 @@ export default function AccountSecurity() {
                 {ownGroup && ownGroup.Passkeys.length > 0 ? ownGroup.Passkeys.map(renderPasskey) : <Text size="sm">{t('mfa.account.no_passkeys')}</Text>}
                 {ownGroup?.RegistrationAvailable && passkeysSupported() ? (
                   <Button action="primary" onPress={addPasskey} isDisabled={busy} testID="account-add-passkey">
-                    {busy ? <Spinner size="small" /> : <ButtonText>{t('mfa.account.add_passkey')}</ButtonText>}
+                    {busy ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('mfa.account.add_passkey')}</ButtonText>}
                   </Button>
                 ) : null}
                 {otherGroups.map((group) => (

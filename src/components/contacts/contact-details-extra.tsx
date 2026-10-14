@@ -44,7 +44,7 @@ const AddressRow = ({ label, address }: { label: string; address: ContactAddress
         </View>
         <VStack space="xs" className="flex-1">
           <Text className="text-sm text-gray-500 dark:text-gray-400">{label}</Text>
-          <Text className="text-base text-primary-600 dark:text-primary-400">{line}</Text>
+          <Text className="text-base text-primary-600">{line}</Text>
         </VStack>
       </HStack>
     </Pressable>

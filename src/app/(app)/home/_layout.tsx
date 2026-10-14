@@ -39,7 +39,7 @@ export default function HomeLayout() {
         name="index"
         options={{
           title: t('tabs.home'),
-          tabBarIcon: ({ color }) => <Icon as={Home} stroke={color as string} className="text-primary-500 dark:text-primary-400" />,
+          tabBarIcon: ({ color }) => <Icon as={Home} stroke={color as string} className="text-primary-500" />,
           tabBarButtonTestID: 'home-status-tab',
         }}
       />
@@ -48,7 +48,7 @@ export default function HomeLayout() {
         name="personnel"
         options={{
           title: personnelTitle,
-          tabBarIcon: ({ color }) => <Icon as={User} stroke={color as string} className="text-primary-500 dark:text-primary-400" />,
+          tabBarIcon: ({ color }) => <Icon as={User} stroke={color as string} className="text-primary-500" />,
           tabBarButtonTestID: 'home-people-tab',
         }}
       />
@@ -57,7 +57,7 @@ export default function HomeLayout() {
         name="units"
         options={{
           title: unitsTitle,
-          tabBarIcon: ({ color }) => <Icon as={Car} stroke={color as string} className="text-primary-500 dark:text-primary-400" />,
+          tabBarIcon: ({ color }) => <Icon as={Car} stroke={color as string} className="text-primary-500" />,
           tabBarButtonTestID: 'home-units-tab',
         }}
       />
@@ -66,7 +66,7 @@ export default function HomeLayout() {
         name="calls"
         options={{
           title: callsTitle,
-          tabBarIcon: ({ color }) => <Icon as={Phone} stroke={color as string} className="text-primary-500 dark:text-primary-400" />,
+          tabBarIcon: ({ color }) => <Icon as={Phone} stroke={color as string} className="text-primary-500" />,
           tabBarButtonTestID: 'home-calls-tab',
         }}
       />

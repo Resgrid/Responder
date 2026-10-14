@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { AlertTriangle, Clock, MapPin, MessageSquare, Pin, RefreshCw } from 'lucide-react-native';
+import { Clock, MapPin, MessageSquare, Pin, RefreshCw } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking } from 'react-native';
@@ -8,6 +8,7 @@ import { getChatAttachmentImageSource } from '@/api/chat/chat';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
+import { AlertTriangle } from '@/components/ui/lucide-icons';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
@@ -67,7 +68,7 @@ function MessageBubbleComponent({ message, isOwn, showSender, currentUserId, onL
   const isPending = message._localStatus === 'pending';
   const isFailed = message._localStatus === 'failed';
 
-  const bubbleTone = isOwn ? 'bg-primary-600' : 'bg-white dark:bg-gray-800';
+  const bubbleTone = isOwn ? 'bg-primary-600 dark:bg-primary-400' : 'bg-white dark:bg-gray-800';
   const textTone = isOwn ? 'text-white' : 'text-typography-900';
   const urgentClasses = isUrgent && !isOwn ? 'border-2 border-error-500 bg-error-50' : isUrgent && isOwn ? 'border-2 border-error-300' : '';
 
@@ -145,7 +146,7 @@ function MessageBubbleComponent({ message, isOwn, showSender, currentUserId, onL
           <Box className={`rounded-2xl px-3 py-2 ${bubbleTone} ${urgentClasses}`}>
             {isUrgent && !isDeleted ? (
               <HStack className="mb-1 items-center" space="xs">
-                <AlertTriangle size={14} color={isOwn ? '#ffffff' : '#dc2626'} />
+                <AlertTriangle size={14} className={isOwn ? 'text-white' : 'text-error-600'} />
                 <Text className={`text-xs font-bold ${isOwn ? 'text-white' : 'text-error-600'}`}>{t('chat.urgent')}</Text>
               </HStack>
             ) : null}

@@ -11,7 +11,7 @@ export const UIProgress = createProgress({
 });
 
 const progressStyle = tva({
-  base: 'bg-background-300 rounded-full w-full',
+  base: 'bg-background-200 rounded-full w-full',
   variants: {
     size: {
       xs: 'h-1',
@@ -24,7 +24,7 @@ const progressStyle = tva({
   },
 });
 const progressFilledTrackStyle = tva({
-  base: 'bg-primary-500 rounded-full',
+  base: 'bg-primary-600 rounded-full',
   parentVariants: {
     size: {
       xs: 'h-1',

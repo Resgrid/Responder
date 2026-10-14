@@ -24,9 +24,10 @@ const mockGetSystemConfig = jest.fn().mockResolvedValue({
   },
 });
 const mockFormSetValue = jest.fn();
+const mockFormSetError = jest.fn();
 let mockFormValues: { url: string } = { url: 'https://test.com' };
 let mockSelectOnValueChange: ((value: string) => void) | undefined;
-const mockOnUrlChanged = jest.fn().mockResolvedValue(undefined);
+const mockOnBeforeUrlChange = jest.fn().mockResolvedValue(undefined);
 const mockIsAuthenticated = jest.fn(() => false);
 
 // Mock all dependencies
@@ -81,6 +82,7 @@ jest.mock('react-hook-form', () => ({
       control: {},
       handleSubmit: (fn: Function) => () => fn({ ...mockFormValues }),
       setValue,
+      setError: mockFormSetError,
       formState: { errors: {} },
     };
   },
@@ -224,7 +226,7 @@ describe('ServerUrlBottomSheet', () => {
   const defaultProps = {
     isOpen: true,
     onClose: mockOnClose,
-    onUrlChanged: mockOnUrlChanged,
+    onBeforeUrlChange: mockOnBeforeUrlChange,
   };
 
   beforeEach(() => {
@@ -233,7 +235,7 @@ describe('ServerUrlBottomSheet', () => {
     mockGetUrl.mockClear();
     mockGetSystemConfig.mockClear();
     mockFormSetValue.mockClear();
-    mockOnUrlChanged.mockClear();
+    mockOnBeforeUrlChange.mockClear();
     mockIsAuthenticated.mockReset();
     mockIsAuthenticated.mockReturnValue(false);
     mockTrackEvent.mockReset();
@@ -416,7 +418,7 @@ describe('ServerUrlBottomSheet', () => {
         expect(mockSetUrl).toHaveBeenCalledWith('https://test.com/api/v4');
       });
 
-      expect(mockOnUrlChanged).not.toHaveBeenCalled();
+      expect(mockOnBeforeUrlChange).not.toHaveBeenCalled();
     });
 
     it('disables text input when current url matches a configured location', async () => {
@@ -466,7 +468,7 @@ describe('ServerUrlBottomSheet', () => {
       expect(screen.getByTestId('input-field').props.editable).toBe(true);
     });
 
-    it('logs out through callback after saving when authenticated', async () => {
+    it('signs out against the old server before saving the new url when authenticated', async () => {
       mockIsAuthenticated.mockReturnValue(true);
 
       render(<ServerUrlBottomSheet {...defaultProps} />);
@@ -477,9 +479,25 @@ describe('ServerUrlBottomSheet', () => {
         expect(mockSetUrl).toHaveBeenCalledWith('https://test.com/api/v4');
       });
 
+      expect(mockOnBeforeUrlChange).toHaveBeenCalledTimes(1);
+      // Sign-out still has requests for the old server (taking a push token off it), so the new url waits for it.
+      expect(mockOnBeforeUrlChange.mock.invocationCallOrder[0]).toBeLessThan(mockSetUrl.mock.invocationCallOrder[0]);
+    });
+
+    it('keeps the old url when signing out fails', async () => {
+      mockIsAuthenticated.mockReturnValue(true);
+      mockOnBeforeUrlChange.mockRejectedValueOnce(new Error('sign-out failed'));
+
+      render(<ServerUrlBottomSheet {...defaultProps} />);
+
+      fireEvent.press(screen.getByText('Save'));
+
       await waitFor(() => {
-        expect(mockOnUrlChanged).toHaveBeenCalledTimes(1);
+        expect(mockOnBeforeUrlChange).toHaveBeenCalledTimes(1);
       });
+
+      expect(mockSetUrl).not.toHaveBeenCalled();
+      expect(mockFormSetError).toHaveBeenCalledWith('root', { message: 'sign-out failed' });
     });
   });
 

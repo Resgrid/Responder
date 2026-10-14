@@ -1,7 +1,7 @@
-import { ArrowRight } from 'lucide-react-native';
 import * as React from 'react';
 
 import { Pressable, View } from '@/components/ui';
+import { ArrowRight } from '@/components/ui/lucide-icons';
 import { Text } from '@/components/ui/text';
 
 type ItemProps = {
@@ -26,7 +26,7 @@ export const Item = ({ text, value, icon, onPress, textStyle }: ItemProps) => {
         <Text className="text-neutral-600 dark:text-white">{truncatedValue}</Text>
         {isPressable && (
           <View className="pl-2">
-            <ArrowRight />
+            <ArrowRight className="text-typography-500" />
           </View>
         )}
       </View>

@@ -56,7 +56,7 @@ const ContactNoteCard: React.FC<ContactNoteCardProps> = ({ note }) => {
         {/* Header with type and indicators */}
         <HStack className="items-center justify-between">
           <HStack space="xs" className="items-center">
-            {note.NoteType ? <Text className="rounded bg-primary-100 px-2 py-1 text-xs font-medium text-primary-800 dark:bg-primary-900 dark:text-primary-200">{note.NoteType}</Text> : null}
+            {note.NoteType ? <Text className="rounded bg-primary-100 px-2 py-1 text-xs font-medium text-primary-800">{note.NoteType}</Text> : null}
             {note.ShouldAlert ? (
               <HStack space="xs" className="items-center">
                 <ShieldAlertIcon size={14} color="#ef4444" />

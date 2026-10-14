@@ -7,7 +7,7 @@ import { ScrollView, useWindowDimensions } from 'react-native';
 import { Badge, BadgeText } from '@/components/ui/badge';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Box } from '@/components/ui/box';
-import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
+import { Button, ButtonIcon, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { HStack } from '@/components/ui/hstack';
 import { Input, InputField } from '@/components/ui/input';
@@ -430,7 +430,7 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
       <VStack space="sm">
         {day.CanSignup ? (
           <Button action="primary" onPress={openSignup} isDisabled={isShiftDayLoading || anyBusy} accessibilityHint={t('shifts.signup_panel.hint')} testID="shift-day-signup-button">
-            <UserPlus size={16} color="#ffffff" />
+            <ButtonIcon as={UserPlus} />
             <ButtonText>{t('shifts.signup')}</ButtonText>
           </Button>
         ) : null}

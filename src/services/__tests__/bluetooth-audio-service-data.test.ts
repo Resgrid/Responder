@@ -1,4 +1,12 @@
 // Mock audio.service to avoid loading expo modules
+jest.mock('@/services/callkeep.service', () => ({
+  callKeepService: {
+    ignoreMuteEvents: jest.fn(),
+    removeMuteListener: jest.fn(),
+    restoreMuteListener: jest.fn(),
+  },
+}));
+
 jest.mock('@/services/audio.service', () => ({
   audioService: {},
 }));

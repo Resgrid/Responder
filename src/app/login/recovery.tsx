@@ -109,7 +109,7 @@ export default function FactorRecovery() {
                 />
               </Input>
               <Button action="primary" onPress={() => void begin()} isDisabled={busy || code.trim().length === 0} testID="recovery-begin">
-                {busy ? <Spinner size="small" /> : <ButtonText>{t('mfa.recovery.begin')}</ButtonText>}
+                {busy ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('mfa.recovery.begin')}</ButtonText>}
               </Button>
               <Button variant="link" action="secondary" onPress={() => setStep('help')} testID="recovery-no-code">
                 <ButtonText>{t('mfa.recovery.no_code')}</ButtonText>
@@ -165,7 +165,7 @@ export default function FactorRecovery() {
                 />
               </Input>
               <Button action="primary" onPress={() => void finish()} isDisabled={busy || !key || code.trim().length === 0} testID="recovery-finish">
-                {busy ? <Spinner size="small" /> : <ButtonText>{t('mfa.recovery.finish')}</ButtonText>}
+                {busy ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('mfa.recovery.finish')}</ButtonText>}
               </Button>
               <Button variant="outline" action="secondary" onPress={() => void cancel()} isDisabled={busy} testID="recovery-cancel">
                 <ButtonText>{t('mfa.recovery.cancel')}</ButtonText>

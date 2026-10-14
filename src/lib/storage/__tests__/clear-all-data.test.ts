@@ -46,7 +46,7 @@ jest.mock('@/lib/mapbox-token', () => ({
   clearMapboxToken: () => mockClearMapboxToken(),
 }));
 
-import { clearAllAppData, getRegisteredStoreCount, getRegisteredStoreNames, registerStoreReset, unregisterStoreReset } from '../clear-all-data';
+import { clearAllAppData, getRegisteredStoreCount, getRegisteredStoreNames, LOGOUT_PRESERVED_STORAGE_KEYS, registerStoreReset, unregisterStoreReset } from '../clear-all-data';
 
 describe('clearAllAppData', () => {
   beforeEach(() => {
@@ -137,6 +137,11 @@ describe('clearAllAppData', () => {
         message: 'MMKV storage cleared with preserved keys',
         context: { preservedKeys: ['baseUrl', 'IS_FIRST_TIME'] },
       });
+    });
+
+    it('should keep the server url and this install\'s device id across sign-out', () => {
+      // A server switch signs out; the push registration of the next sign-in still needs both.
+      expect(LOGOUT_PRESERVED_STORAGE_KEYS).toEqual(expect.arrayContaining(['baseUrl', 'IS_FIRST_TIME', 'unitDeviceUuid']));
     });
 
     it('should forget the server Mapbox token so maps fall back to the built-in token', async () => {

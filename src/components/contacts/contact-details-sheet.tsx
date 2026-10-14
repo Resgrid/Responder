@@ -59,7 +59,7 @@ const Section: React.FC<SectionProps> = ({ title, icon, children, isCollapsible 
     <VStack space="md" className="border-b border-gray-200 pb-4 dark:border-gray-700">
       <Pressable onPress={isCollapsible ? () => setIsExpanded(!isExpanded) : undefined} className="flex-row items-center justify-between" disabled={!isCollapsible}>
         <HStack space="sm" className="items-center">
-          <View className="size-8 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900">{icon}</View>
+          <View className="size-8 items-center justify-center rounded-full bg-primary-100">{icon}</View>
           <Text className="text-lg font-semibold text-gray-900 dark:text-white">{title}</Text>
         </HStack>
         {isCollapsible ? isExpanded ? <ChevronDownIcon size={20} color="#6366F1" /> : <ChevronRightIcon size={20} color="#6366F1" /> : null}
@@ -136,7 +136,7 @@ const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink,
         {icon ? <View className="size-6 items-center justify-center">{icon}</View> : null}
         <VStack space="xs" className="flex-1">
           <Text className="text-sm text-gray-500 dark:text-gray-400">{label}</Text>
-          <Text className={`text-base ${isActionable ? 'text-primary-600 underline dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>{displayValue}</Text>
+          <Text className={`text-base ${isActionable ? 'text-primary-600 underline' : 'text-gray-900 dark:text-white'}`}>{displayValue}</Text>
         </VStack>
       </HStack>
     </Pressable>
@@ -403,7 +403,7 @@ export const ContactDetailsSheet: React.FC = () => {
                 <AvatarImage source={{ uri: selectedContact.ImageUrl }} alt={displayName} />
               ) : (
                 <View className="size-full items-center justify-center bg-primary-500">
-                  {selectedContact.ContactType === ContactType.Person ? <UserIcon size={48} color="#000" /> : <BuildingIcon size={48} color="#000" />}
+                  {selectedContact.ContactType === ContactType.Person ? <UserIcon size={48} color="#ffffff" /> : <BuildingIcon size={48} color="#ffffff" />}
                 </View>
               )}
             </Avatar>
@@ -415,38 +415,26 @@ export const ContactDetailsSheet: React.FC = () => {
               </HStack>
               <Text className="text-sm text-gray-500 dark:text-gray-400">{selectedContact.ContactType === ContactType.Person ? t('contacts.person') : t('contacts.company')}</Text>
               {selectedContact.OtherName ? <Text className="text-sm text-gray-600 dark:text-gray-300">({selectedContact.OtherName})</Text> : null}
-              {selectedContact.CategoryName || selectedContact.Category?.Name ? (
-                <Text className="text-sm text-primary-600 dark:text-primary-400">{selectedContact.CategoryName || selectedContact.Category?.Name}</Text>
-              ) : null}
+              {selectedContact.CategoryName || selectedContact.Category?.Name ? <Text className="text-sm text-primary-600">{selectedContact.CategoryName || selectedContact.Category?.Name}</Text> : null}
             </VStack>
           </VStack>
 
           {/* Tab Navigation */}
           <HStack className="mb-4 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
             <Pressable onPress={() => handleTabChange('details')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'details' ? 'bg-white shadow-xs dark:bg-gray-700' : ''}`}>
-              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'details' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                {t('contacts.tabs.details')}
-              </Text>
+              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'details' ? 'text-primary-600' : 'text-gray-600 dark:text-gray-400'}`}>{t('contacts.tabs.details')}</Text>
             </Pressable>
             <Pressable onPress={() => handleTabChange('notes')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'notes' ? 'bg-white shadow-xs dark:bg-gray-700' : ''}`}>
-              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'notes' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                {t('contacts.tabs.notes')}
-              </Text>
+              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'notes' ? 'text-primary-600' : 'text-gray-600 dark:text-gray-400'}`}>{t('contacts.tabs.notes')}</Text>
             </Pressable>
             <Pressable onPress={() => handleTabChange('preplan')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'preplan' ? 'bg-white shadow-xs dark:bg-gray-700' : ''}`}>
-              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'preplan' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                {t('contacts.tabs.preplan')}
-              </Text>
+              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'preplan' ? 'text-primary-600' : 'text-gray-600 dark:text-gray-400'}`}>{t('contacts.tabs.preplan')}</Text>
             </Pressable>
             <Pressable onPress={() => handleTabChange('files')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'files' ? 'bg-white shadow-xs dark:bg-gray-700' : ''}`}>
-              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'files' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                {t('contacts.tabs.files')}
-              </Text>
+              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'files' ? 'text-primary-600' : 'text-gray-600 dark:text-gray-400'}`}>{t('contacts.tabs.files')}</Text>
             </Pressable>
             <Pressable onPress={() => handleTabChange('calls')} className={`flex-1 rounded-md ${isLandscape ? 'px-4 py-2' : 'px-3 py-1.5'} ${activeTab === 'calls' ? 'bg-white shadow-xs dark:bg-gray-700' : ''}`}>
-              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'calls' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                {t('contacts.tabs.calls')}
-              </Text>
+              <Text className={`text-center font-medium ${isLandscape ? 'text-sm' : 'text-xs'} ${activeTab === 'calls' ? 'text-primary-600' : 'text-gray-600 dark:text-gray-400'}`}>{t('contacts.tabs.calls')}</Text>
             </Pressable>
           </HStack>
 

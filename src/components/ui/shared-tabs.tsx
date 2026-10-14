@@ -152,9 +152,9 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     }[size];
 
     const variantStyles = {
-      default: isActive ? 'border-b-2 border-primary-500 text-primary-500' : 'border-b-2 border-transparent text-gray-500 dark:text-gray-400',
+      default: isActive ? 'border-b-2 border-primary-600 text-primary-600' : 'border-b-2 border-transparent text-gray-500 dark:text-gray-400',
       pills: isActive ? 'bg-primary-500 text-white rounded-full' : 'bg-transparent text-gray-500 dark:text-gray-400',
-      underlined: isActive ? 'border-b-2 border-primary-500 text-primary-500' : 'border-b-2 border-transparent text-gray-500 dark:text-gray-400',
+      underlined: isActive ? 'border-b-2 border-primary-600 text-primary-600' : 'border-b-2 border-transparent text-gray-500 dark:text-gray-400',
       segmented: isActive ? 'bg-primary-600 shadow-sm dark:bg-primary-500' : 'bg-transparent',
     }[variant];
 
@@ -169,7 +169,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
       return `${baseStyles} ${isActive ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`;
     }
 
-    return `${baseStyles} ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-500 dark:text-neutral-400'}`;
+    return `${baseStyles} ${isActive ? 'text-primary-600' : 'text-neutral-500 dark:text-neutral-400'}`;
   };
 
   // Container styles based on variant

@@ -39,12 +39,12 @@ const SegmentButton: React.FC<SegmentButtonProps> = React.memo(({ segment, isAct
       accessibilityLabel={badge > 0 ? t('shifts.segments.with_count', { label: segment.label, count: badge }) : segment.label}
       accessibilityHint={t('shifts.segments.a11y_hint')}
       testID={`shifts-segment-${segment.key}`}
-      className={`mr-2 min-h-[40px] flex-row items-center rounded-full border px-4 py-2 ${isActive ? 'border-primary-600 bg-primary-600' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'}`}
+      className={`mr-2 min-h-[40px] flex-row items-center rounded-full border px-4 py-2 ${isActive ? 'border-primary-600 bg-primary-600 dark:border-primary-400 dark:bg-primary-400' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'}`}
     >
       <Text className={`text-sm font-medium ${isActive ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{segment.label}</Text>
       {badge > 0 ? (
         <Box className={`ml-2 min-w-[20px] items-center rounded-full px-1.5 ${isActive ? 'bg-white' : 'bg-red-600'}`} testID={`shifts-segment-badge-${segment.key}`}>
-          <Text className={`text-xs font-bold ${isActive ? 'text-primary-700' : 'text-white'}`}>{badge}</Text>
+          <Text className={`text-xs font-bold ${isActive ? 'text-slate-700' : 'text-white'}`}>{badge}</Text>
         </Box>
       ) : null}
     </Pressable>

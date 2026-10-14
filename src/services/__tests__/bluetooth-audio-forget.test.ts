@@ -3,6 +3,14 @@ import { useBluetoothAudioStore } from '../../stores/app/bluetooth-audio-store';
 import { removeItem } from '../../lib/storage';
 
 // Mock dependencies
+jest.mock('@/services/callkeep.service', () => ({
+  callKeepService: {
+    ignoreMuteEvents: jest.fn(),
+    removeMuteListener: jest.fn(),
+    restoreMuteListener: jest.fn(),
+  },
+}));
+
 jest.mock('../../lib/logging', () => ({
   logger: {
     info: jest.fn(),
@@ -62,10 +70,15 @@ describe('BluetoothAudioService - forgetPreferredDevice', () => {
         microphone: { id: 'test-device-id', name: 'Test Device', type: 'bluetooth' },
         speaker: { id: 'test-device-id', name: 'Test Device', type: 'bluetooth' },
       },
+      availableAudioDevices: [
+        { id: 'default-mic', name: 'Default Microphone', type: 'default', isAvailable: true },
+        { id: 'default-speaker', name: 'Default Speaker', type: 'speaker', isAvailable: true },
+      ],
       setPreferredDevice: jest.fn(),
       setConnectedDevice: jest.fn(),
       setSelectedMicrophone: jest.fn(),
       setSelectedSpeaker: jest.fn(),
+      setIsHeadsetButtonMonitoring: jest.fn(),
       updateDevice: jest.fn(),
       availableDevices: [],
     };

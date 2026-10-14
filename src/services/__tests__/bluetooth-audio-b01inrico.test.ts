@@ -2,6 +2,14 @@ import { Buffer } from 'buffer';
 import { bluetoothAudioService } from '../bluetooth-audio.service';
 
 // Mock the dependencies
+jest.mock('@/services/callkeep.service', () => ({
+  callKeepService: {
+    ignoreMuteEvents: jest.fn(),
+    removeMuteListener: jest.fn(),
+    restoreMuteListener: jest.fn(),
+  },
+}));
+
 jest.mock('@/lib/logging', () => ({
   logger: {
     info: jest.fn(),

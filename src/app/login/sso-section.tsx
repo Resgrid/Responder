@@ -206,21 +206,21 @@ export const SsoLoginButtons: React.FC<SsoLoginButtonsProps> = ({ departmentCode
       {showOidc ? (
         <Button className="mb-3 w-full bg-indigo-600" variant="solid" onPress={onOidcPress} isDisabled={!oidcRequestReady || isLoading}>
           <LogIn size={18} color="#fff" />
-          <ButtonText className="ml-2">{t('login.sso.sign_in_with_sso')}</ButtonText>
+          <ButtonText className="ml-2 text-white">{t('login.sso.sign_in_with_sso')}</ButtonText>
         </Button>
       ) : null}
 
       {showSaml ? (
         <Button className="mb-3 w-full bg-indigo-600" variant="solid" onPress={onSamlPress} isDisabled={isLoading}>
           <LogIn size={18} color="#fff" />
-          <ButtonText className="ml-2">{t('login.sso.sign_in_with_sso')}</ButtonText>
+          <ButtonText className="ml-2 text-white">{t('login.sso.sign_in_with_sso')}</ButtonText>
         </Button>
       ) : null}
 
       {showDivider ? <Text className="my-4 text-center text-sm text-gray-400">{t('login.sso.or_sign_in_with_password')}</Text> : null}
 
       <Button className="mt-2 w-full" variant="link" onPress={onChangeDepartment}>
-        <ChevronLeft size={16} />
+        <ChevronLeft size={16} className="text-primary-600" />
         <ButtonText className="text-sm">{t('login.sso.change_department')}</ButtonText>
       </Button>
     </View>

@@ -1,6 +1,7 @@
 import {
   AlertCircle as RawAlertCircle,
   AlertTriangle as RawAlertTriangle,
+  ArrowRight as RawArrowRight,
   BluetoothIcon as RawBluetoothIcon,
   BuildingIcon as RawBuildingIcon,
   Calendar as RawCalendar,
@@ -27,6 +28,7 @@ import {
   IdCard as RawIdCard,
   Info as RawInfo,
   Loader2 as RawLoader2,
+  Lock as RawLock,
   LogIn as RawLogIn,
   type LucideProps,
   Mail as RawMail,
@@ -49,6 +51,7 @@ import {
   SearchIcon as RawSearchIcon,
   Send as RawSend,
   SettingsIcon as RawSettingsIcon,
+  ShieldIcon as RawShieldIcon,
   SmartphoneIcon as RawSmartphoneIcon,
   Speaker as RawSpeaker,
   StarIcon as RawStarIcon,
@@ -99,6 +102,7 @@ const themed = <T extends LucideIcon>(Component: T): T => styled(Component as Lu
 
 export const AlertCircle = themed(RawAlertCircle);
 export const AlertTriangle = themed(RawAlertTriangle);
+export const ArrowRight = themed(RawArrowRight);
 export const BluetoothIcon = themed(RawBluetoothIcon);
 export const BuildingIcon = themed(RawBuildingIcon);
 export const Calendar = themed(RawCalendar);
@@ -125,6 +129,7 @@ export const HomeIcon = themed(RawHomeIcon);
 export const IdCard = themed(RawIdCard);
 export const Info = themed(RawInfo);
 export const Loader2 = themed(RawLoader2);
+export const Lock = themed(RawLock);
 export const LogIn = themed(RawLogIn);
 export const Mail = themed(RawMail);
 export const MailIcon = themed(RawMailIcon);
@@ -146,6 +151,7 @@ export const Search = themed(RawSearch);
 export const SearchIcon = themed(RawSearchIcon);
 export const Send = themed(RawSend);
 export const SettingsIcon = themed(RawSettingsIcon);
+export const ShieldIcon = themed(RawShieldIcon);
 export const SmartphoneIcon = themed(RawSmartphoneIcon);
 export const Speaker = themed(RawSpeaker);
 export const StarIcon = themed(RawStarIcon);

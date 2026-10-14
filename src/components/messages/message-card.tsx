@@ -85,7 +85,7 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message, onPress, onLo
       testID="message-card"
       className={`
         mx-4 mb-2 rounded-lg border p-4 
-        ${isSelected ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700'}
+        ${isSelected ? 'border-primary-500 bg-primary-50 dark:bg-primary-100/20' : 'border-gray-200 dark:border-gray-700'}
         ${isExpired ? 'opacity-60' : ''}
         bg-white dark:bg-gray-800
       `}

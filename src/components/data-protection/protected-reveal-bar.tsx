@@ -1,9 +1,10 @@
-import { EyeIcon, EyeOffIcon, ShieldIcon } from 'lucide-react-native';
+import { EyeIcon, EyeOffIcon } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
+import { ShieldIcon } from '@/components/ui/lucide-icons';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { useProtectedReveal } from '@/hooks/use-protected-reveal';
@@ -53,7 +54,7 @@ export const ProtectedRevealBar: React.FC<ProtectedRevealBarProps> = ({ onRefres
 
   return (
     <HStack space="sm" className="items-center px-4 py-2" testID={testID ?? 'protected-reveal-bar'}>
-      <ShieldIcon size={16} />
+      <ShieldIcon size={16} className="text-typography-700" />
       <Text size="sm" className="flex-1">
         {isRevealed ? t('data_protection.revealed_notice', 'Protected information is visible.') : t('data_protection.protected_notice', 'Some information on this screen is protected.')}
       </Text>
@@ -65,7 +66,7 @@ export const ProtectedRevealBar: React.FC<ProtectedRevealBarProps> = ({ onRefres
       ) : (
         <Button size="sm" action="primary" onPress={reveal} isDisabled={isRequesting} testID="protected-reveal-button">
           {isRequesting ? (
-            <Spinner size="small" />
+            <Spinner size="small" className="text-typography-0" />
           ) : (
             <>
               <ButtonIcon as={EyeIcon} />

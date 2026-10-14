@@ -293,7 +293,9 @@ jest.mock('@/lib/env', () => ({
 
 jest.mock('@/lib/logging', () => ({
   logger: {
+    debug: jest.fn(),
     info: jest.fn(),
+    warn: jest.fn(),
     error: jest.fn(),
   },
 }));

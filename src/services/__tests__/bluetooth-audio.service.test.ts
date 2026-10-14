@@ -24,11 +24,13 @@ RN.PermissionsAndroid = {
   PERMISSIONS: {
     BLUETOOTH_SCAN: 'android.permission.BLUETOOTH_SCAN',
     BLUETOOTH_CONNECT: 'android.permission.BLUETOOTH_CONNECT',
+    ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
   },
   RESULTS: {
     GRANTED: 'granted',
     DENIED: 'denied',
   },
+  check: jest.fn(),
   requestMultiple: jest.fn(),
 };
 
@@ -40,6 +42,14 @@ if (!RN.DeviceEventEmitter) {
 }
 
 // Mock other dependencies
+jest.mock('@/services/callkeep.service', () => ({
+  callKeepService: {
+    ignoreMuteEvents: jest.fn(),
+    removeMuteListener: jest.fn(),
+    restoreMuteListener: jest.fn(),
+  },
+}));
+
 jest.mock('react-native-ble-manager', () => ({
   __esModule: true,
   default: {
@@ -106,6 +116,8 @@ jest.mock('@/stores/app/bluetooth-audio-store', () => ({
       setSelectedMicrophone: jest.fn(),
       setSelectedSpeaker: jest.fn(),
       setAudioRoutingActive: jest.fn(),
+      setIsHeadsetButtonMonitoring: jest.fn(),
+      isHeadsetButtonMonitoring: false,
       availableDevices: [],
       connectedDevice: null,
       preferredDevice: null,
@@ -133,14 +145,17 @@ describe('BluetoothAudioService Refactoring', () => {
     
     // Reset all mock implementations
     RN.PermissionsAndroid.requestMultiple.mockReset();
+    RN.PermissionsAndroid.check.mockReset();
+    RN.PermissionsAndroid.check.mockResolvedValue(false);
     mockStart.mockReset();
     mockCheckState.mockReset();
     mockScan.mockReset();
     mockStopScan.mockReset();
     mockConnect.mockReset();
     
-    // Reset Platform.OS to Android for each test
+    // Reset Platform to Android 12+ for each test
     (RN.Platform as any).OS = 'android';
+    (RN.Platform as any).Version = 31;
   });
 
   afterEach(() => {
@@ -176,7 +191,7 @@ describe('BluetoothAudioService Refactoring', () => {
   });
 
   describe('Permission Requests', () => {
-    it('should add 500ms delay before requesting permissions', async () => {
+    it('should wait 500ms before prompting for permissions that are not yet granted', async () => {
       // Ensure Android platform
       (RN.Platform as any).OS = 'android';
       
@@ -190,8 +205,10 @@ describe('BluetoothAudioService Refactoring', () => {
       // Start the permission request
       const permissionPromise = service.requestPermissions();
       
-      // Fast-forward time by 500ms
-      jest.advanceTimersByTime(500);
+      // Android drops a prompt raised while another one is showing, so nothing is requested before the delay
+      await jest.advanceTimersByTimeAsync(499);
+      expect(RN.PermissionsAndroid.requestMultiple).not.toHaveBeenCalled();
+      await jest.advanceTimersByTimeAsync(1);
       
       // Wait for the promise to resolve
       const result = await permissionPromise;
@@ -214,7 +231,7 @@ describe('BluetoothAudioService Refactoring', () => {
       const permissionPromise = service.requestPermissions();
       
       // Fast-forward time by 500ms to handle the delay
-      jest.advanceTimersByTime(500);
+      await jest.advanceTimersByTimeAsync(500);
       
       const result = await permissionPromise;
       
@@ -237,7 +254,7 @@ describe('BluetoothAudioService Refactoring', () => {
       const permissionPromise = service.requestPermissions();
       
       // Fast-forward time by 500ms
-      jest.advanceTimersByTime(500);
+      await jest.advanceTimersByTimeAsync(500);
       
       const result = await permissionPromise;
       
@@ -260,7 +277,7 @@ describe('BluetoothAudioService Refactoring', () => {
       const permissionPromise = service.requestPermissions();
       
       // Fast-forward time by 500ms
-      jest.advanceTimersByTime(500);
+      await jest.advanceTimersByTimeAsync(500);
       
       const result = await permissionPromise;
       

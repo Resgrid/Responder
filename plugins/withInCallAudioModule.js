@@ -2,6 +2,8 @@ const { withDangerousMod, withMainApplication } = require('@expo/config-plugins'
 const fs = require('fs');
 const path = require('path');
 
+const { registerAndroidPackage } = require('./utils/register-android-package');
+
 /**
  * Android InCallAudioModule.kt content
  * Uses SoundPool to play sounds on the VOICE_COMMUNICATION stream.
@@ -222,34 +224,12 @@ const withInCallAudioModule = (config) => {
 
   // 3. Register Package in MainApplication.kt
   config = withMainApplication(config, (config) => {
-    const mainApplication = config.modResults;
-    const projectRoot = config.modRequest.projectRoot;
+    const basePackageName = resolveBasePackageName(config.modRequest.projectRoot);
+    const contents = config.modResults.contents;
 
-    if (!mainApplication.contents.includes('InCallAudioPackage')) {
-      const basePackageName = resolveBasePackageName(projectRoot);
-      const importStatement = `import ${basePackageName}.InCallAudioPackage`;
-
-      if (!mainApplication.contents.includes(importStatement)) {
-        mainApplication.contents = mainApplication.contents.replace(/^(package\s+[^\n]+\n)/, `$1${importStatement}\n`);
-      }
-
-      const packagesPattern = /val packages = PackageList\(this\)\.packages(\.toMutableList\(\))?/;
-      const packagesMatch = mainApplication.contents.match(packagesPattern);
-
-      if (packagesMatch) {
-        // Using the simplest replacement that ensures toMutableList()
-        const replacement = `val packages = PackageList(this).packages.toMutableList()\n            packages.add(InCallAudioPackage())`;
-
-        // Avoid double adding if MediaButtonPackage logic already changed it to mutable
-        if (mainApplication.contents.includes('packages.add(MediaButtonPackage()')) {
-          // Add ours after MediaButtonPackage
-          mainApplication.contents = mainApplication.contents.replace('packages.add(MediaButtonPackage())', 'packages.add(MediaButtonPackage())\n            packages.add(InCallAudioPackage())');
-        } else {
-          // Standard replacement
-          mainApplication.contents = mainApplication.contents.replace(packagesPattern, replacement);
-        }
-        console.log('[withInCallAudioModule] Registered InCallAudioPackage in MainApplication.kt');
-      }
+    config.modResults.contents = registerAndroidPackage(contents, basePackageName, 'InCallAudioPackage');
+    if (config.modResults.contents !== contents) {
+      console.log('[withInCallAudioModule] Registered InCallAudioPackage in MainApplication.kt');
     }
 
     return config;

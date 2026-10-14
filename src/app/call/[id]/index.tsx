@@ -428,10 +428,10 @@ export default function CallDetail() {
                   <Box key={index} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
                     <Text className="font-semibold">{dispatched.Name}</Text>
                     <HStack className="mt-1">
-                      <Text className="mr-2 text-sm text-gray-600">
+                      <Text className="mr-2 text-sm text-gray-600 dark:text-gray-400">
                         {t('call_detail.group')}: {dispatched.Group}
                       </Text>
-                      <Text className="text-sm text-gray-600">
+                      <Text className="text-sm text-gray-600 dark:text-gray-400">
                         {t('call_detail.type')}: {dispatched.Type}
                       </Text>
                     </HStack>
@@ -461,7 +461,7 @@ export default function CallDetail() {
                       {/* Marks a status the sender did not explicitly attach to this call. */}
                       <ActivityLinkMarker source={event.DestinationSource} />
                     </HStack>
-                    <Text className="text-sm text-gray-600">
+                    <Text className="text-sm text-gray-600 dark:text-gray-400">
                       {event.Name} - {event.Group}
                     </Text>
                     <Text className="text-xs text-gray-500">{new Date(event.Timestamp).toLocaleString()}</Text>

@@ -58,7 +58,7 @@ export const UserStatusCard: React.FC = () => {
             <Box className="rounded-lg bg-gray-500 p-2">
               <User size={16} color="white" />
             </Box>
-            <Text className="text-sm font-medium text-gray-600">{t('home.user.my_status')}</Text>
+            <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('home.user.my_status')}</Text>
           </HStack>
         </HStack>
         <Text className="text-lg font-bold" style={{ color: displayColor }} testID="user-status-text">

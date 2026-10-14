@@ -144,7 +144,7 @@ export default function PoiDetail() {
                   </Badge>
                 ) : null}
               </HStack>
-              <Text className="text-sm text-primary-600 dark:text-primary-400">{poi.PoiTypeName}</Text>
+              <Text className="text-sm text-primary-600">{poi.PoiTypeName}</Text>
             </VStack>
 
             <StaticMap latitude={poi.Latitude} longitude={poi.Longitude} address={poi.Address || title} zoom={15} height={220} showUserLocation={true} />

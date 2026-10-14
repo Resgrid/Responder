@@ -39,7 +39,7 @@ const ShiftSelectRowComponent: React.FC<ShiftSelectRowProps> = ({ id, title, sub
       accessibilityState={mode === 'radio' ? { selected, disabled } : { checked: selected, disabled }}
       accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
       testID={testID}
-      className={`rounded-lg border px-3 py-3 ${selected ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'} ${disabled ? 'opacity-50' : ''}`}
+      className={`rounded-lg border px-3 py-3 ${selected ? 'border-primary-500 bg-primary-50 dark:bg-primary-100/30' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'} ${disabled ? 'opacity-50' : ''}`}
     >
       <HStack space="sm" className="items-center">
         {icon}

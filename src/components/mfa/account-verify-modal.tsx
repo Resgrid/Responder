@@ -151,7 +151,7 @@ export const AccountVerifyModal: React.FC<AccountVerifyModalProps> = ({ proof, o
           </Button>
           {(reauth && !useProvider) || offersCode ? (
             <Button action="primary" onPress={reauth ? submitPassword : submitCode} isDisabled={busy || secret.trim().length === 0} testID="account-verify-submit">
-              {busy ? <Spinner size="small" /> : <ButtonText>{t('mfa.login.verify')}</ButtonText>}
+              {busy ? <Spinner size="small" className="text-typography-0" /> : <ButtonText>{t('mfa.login.verify')}</ButtonText>}
             </Button>
           ) : null}
         </ModalFooter>

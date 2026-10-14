@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { getCurrentUsersRights } from '@/api/security/security';
+import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import { type DepartmentRightsResultData } from '@/models/v4/security/departmentRightsResultData';
 import type { ApiResponse } from '@/types/api';
 
@@ -14,14 +15,23 @@ export interface SecurityState {
   rights: DepartmentRightsResultData | null;
 }
 
+// Bumped when sign-out resets the store: a getRights() still in flight then belongs to the ended session and must not
+// write its rights (or its failure) over the reset.
+let sessionGeneration = 0;
+
 export const securityStore = create<SecurityState>()(
   persist(
     (set, _get) => ({
       error: null,
       rights: null,
       getRights: async () => {
+        const generation = sessionGeneration;
+
         try {
           const response = await getCurrentUsersRights();
+          if (generation !== sessionGeneration) {
+            return;
+          }
 
           // Type guard to ensure response is properly structured
           if (response && typeof response === 'object' && 'Data' in response) {
@@ -46,6 +56,10 @@ export const securityStore = create<SecurityState>()(
             });
           }
         } catch (error) {
+          if (generation !== sessionGeneration) {
+            return;
+          }
+
           // Set error state and null out rights on failure
           set({
             rights: null,
@@ -60,6 +74,14 @@ export const securityStore = create<SecurityState>()(
     }
   )
 );
+
+// Rights belong to the session that loaded them. Sign-out clears the persisted copy, but the in-memory one used to
+// survive it, so the next sign-in (on another server after a switch) registered its push token and Novu inbox under
+// the previous session's department code before its own rights arrived.
+registerStoreReset('security', () => {
+  sessionGeneration += 1;
+  securityStore.setState({ rights: null, error: null });
+});
 
 /**
  * Field-level selectors plus a memoized result: subscribing to the whole store and rebuilding

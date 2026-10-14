@@ -108,7 +108,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
                 </Badge>
               ) : null}
             </VStack>
-            {isSignedUp && canSignUp ? <CheckCircle size={20} className="ml-2 mt-1 text-success-500 dark:text-success-400" /> : null}
+            {isSignedUp && canSignUp ? <CheckCircle size={20} className="ml-2 mt-1 text-success-500" /> : null}
           </HStack>
 
           {/* Date and Time */}
@@ -193,7 +193,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ item, onPress, testI
                 </Badge>
               ) : (
                 <Badge action="info" variant="outline">
-                  <Text className="text-xs text-info-600 dark:text-info-400">{t('calendar.tapToSignUp')}</Text>
+                  <Text className="text-xs text-info-600">{t('calendar.tapToSignUp')}</Text>
                 </Badge>
               )}
             </HStack>

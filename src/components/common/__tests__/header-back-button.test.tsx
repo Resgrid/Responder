@@ -36,4 +36,19 @@ describe('HeaderBackButton', () => {
       })
     );
   });
+
+  it('fills the wrapper and centres the icon, so the arrow sits in the middle of the glass', () => {
+    render(<HeaderBackButton onPress={jest.fn()} />);
+
+    const pressable = screen.getByTestId('back-button');
+    const flatStyle = Array.isArray(pressable.props.style) ? Object.assign({}, ...pressable.props.style.flat().filter(Boolean)) : pressable.props.style;
+
+    expect(flatStyle).toEqual(
+      expect.objectContaining({
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+      })
+    );
+  });
 });

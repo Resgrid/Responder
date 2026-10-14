@@ -141,7 +141,7 @@ export const VideoFeedBottomSheet: React.FC<VideoFeedBottomSheetProps> = ({ isOp
     onClose();
   }, [name, url, feedType, feedFormat, description, status, sortOrder, callId, existingFeed, isEditing, onSubmit, onClose]);
 
-  const activeBg = colorScheme === 'dark' ? 'bg-primary-700' : 'bg-primary-100';
+  const activeBg = colorScheme === 'dark' ? 'bg-primary-300' : 'bg-primary-100';
   const inactiveBg = colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-gray-100';
   const isValid = name.trim().length > 0 && url.trim().length > 0;
 
