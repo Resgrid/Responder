@@ -6,6 +6,7 @@ import { NewCallFieldKeys } from '@/models/v4/calls/newCallFieldPolicyResultData
 import {
   CALL_FIELD_LABEL_KEYS,
   CALL_FORM_UNCOLLECTED_FIELD_KEYS,
+  findCallType,
   formatCallFieldLabels,
   formatCallGeolocation,
   getMissingCallFieldsFromError,
@@ -126,6 +127,32 @@ describe('call field policy helpers', () => {
       expect(isPendingCallState('Active')).toBe(false);
       expect(isPendingCallState(undefined)).toBe(false);
       expect(isPendingCallState(null)).toBe(false);
+    });
+  });
+
+  describe('findCallType', () => {
+    const callTypes = [
+      { Id: '3', Name: 'Structure Fire' },
+      { Id: '7', Name: 'Medical' },
+    ];
+
+    it('should find the type by TypeId, so a renamed type still matches', () => {
+      expect(findCallType(callTypes, { Type: 'Fire (old name)', TypeId: '3' })?.Name).toBe('Structure Fire');
+    });
+
+    it('should fall back to the type text when no TypeId is sent (older servers)', () => {
+      expect(findCallType(callTypes, { Type: 'Medical' })?.Name).toBe('Medical');
+      expect(findCallType(callTypes, { Type: 'Medical', TypeId: null })?.Name).toBe('Medical');
+    });
+
+    it('should fall back to the type text when the TypeId matches none of the types', () => {
+      expect(findCallType(callTypes, { Type: 'Medical', TypeId: '99' })?.Name).toBe('Medical');
+    });
+
+    it('should return undefined when nothing matches', () => {
+      expect(findCallType(callTypes, { Type: 'Unknown Type' })).toBeUndefined();
+      expect(findCallType(null, { Type: 'Medical' })).toBeUndefined();
+      expect(findCallType(callTypes, null)).toBeUndefined();
     });
   });
 

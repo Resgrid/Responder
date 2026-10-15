@@ -33,6 +33,7 @@ import { formatShiftLongDate, getDateKey, getMonthRange, parseWallClock, toDateP
 import { type ShiftDayResultData } from '@/models/v4/shifts/shiftDayResultData';
 import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
 import { type ShiftViewMode, useShiftsStore } from '@/stores/shifts/store';
+import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 const SUPERVISOR_VIEWS: ShiftViewMode[] = ['approvals'];
 const TRADE_MUTATIONS = new Set(['respond-trade', 'finish-trade', 'cancel-trade', 'review-trade']);
@@ -67,6 +68,7 @@ CalendarFilterChip.displayName = 'CalendarFilterChip';
 
 const ShiftsScreen: React.FC = () => {
   const { t } = useTranslation();
+  const shiftsTitle = useTerm(TermKeys.Shifts, t('shifts.title'));
   const { trackEvent } = useAnalytics();
   const { colorScheme } = useColorScheme();
 
@@ -400,7 +402,7 @@ const ShiftsScreen: React.FC = () => {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('shifts.title'), headerShown: true }} />
+      <Stack.Screen options={{ title: shiftsTitle, headerShown: true }} />
       <View className="flex-1 bg-gray-50 dark:bg-gray-900" testID="shifts-screen">
         <FocusAwareStatusBar />
         <ShiftSegmentBar segments={segments} active={activeView} onChange={handleSegmentChange} />

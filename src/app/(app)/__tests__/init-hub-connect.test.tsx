@@ -123,6 +123,11 @@ jest.mock('@/stores/feature-flags/store', () => ({
   featureFlagsStore: { getState: () => ({ fetchFlags: jest.fn().mockResolvedValue(undefined), isEnabled: mockIsChatEnabled }) },
 }));
 
+const mockFetchTerminology = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/stores/terminology/store', () => ({
+  terminologyStore: { getState: () => ({ fetchTerminology: mockFetchTerminology }) },
+}));
+
 const mockConnectUpdateHub = jest.fn().mockResolvedValue(undefined);
 const mockConnectGeolocationHub = jest.fn().mockResolvedValue(undefined);
 const mockConnectChatHub = jest.fn().mockResolvedValue(undefined);
@@ -148,6 +153,7 @@ describe('app initialization connects the SignalR update hub', () => {
     mockConnectUpdateHub.mockResolvedValue(undefined);
     mockConnectGeolocationHub.mockResolvedValue(undefined);
     mockConnectChatHub.mockResolvedValue(undefined);
+    mockFetchTerminology.mockResolvedValue(undefined);
     mockUseSignalRLifecycle.mockImplementation(({ hasInitialized }) => {
       lifecycleCalls.push({ hasInitialized, updateConnectsSoFar: mockConnectUpdateHub.mock.calls.length });
       return undefined as unknown as ReturnType<typeof useSignalRLifecycle>;
@@ -160,6 +166,17 @@ describe('app initialization connects the SignalR update hub', () => {
     await waitFor(() => {
       expect(mockConnectUpdateHub).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('fetches the department terminology after rights and before the hubs connect', async () => {
+    render(<TabLayout />);
+
+    await waitFor(() => {
+      expect(mockConnectUpdateHub).toHaveBeenCalledTimes(1);
+    });
+    expect(mockFetchTerminology).toHaveBeenCalledTimes(1);
+    expect(mockSecurityState.getRights.mock.invocationCallOrder[0]).toBeLessThan(mockFetchTerminology.mock.invocationCallOrder[0]);
+    expect(mockFetchTerminology.mock.invocationCallOrder[0]).toBeLessThan(mockConnectUpdateHub.mock.invocationCallOrder[0]);
   });
 
   it('connects the update hub before arming useSignalRLifecycle, so the two cannot both connect', async () => {
@@ -221,5 +238,6 @@ describe('app initialization connects the SignalR update hub', () => {
     expect(mockConnectUpdateHub).not.toHaveBeenCalled();
     expect(mockConnectGeolocationHub).not.toHaveBeenCalled();
     expect(mockConnectChatHub).not.toHaveBeenCalled();
+    expect(mockFetchTerminology).not.toHaveBeenCalled();
   });
 });

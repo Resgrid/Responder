@@ -48,6 +48,7 @@ import { usePersonnelStore } from '@/stores/personnel/store';
 import { useRolesStore } from '@/stores/roles/store';
 import { securityStore } from '@/stores/security/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
+import { terminologyStore } from '@/stores/terminology/store';
 import { useWeatherAlertsStore } from '@/stores/weather-alerts/weather-alerts-store';
 
 // Sets the SDK token now (stored server token, else the built-in one) and again whenever it changes.
@@ -142,9 +143,10 @@ export default function TabLayout() {
       //await usePersonnelStore.getState().init();
       if (!isCurrentRun()) return;
 
-      // Feature flags must follow rights: the identity key that decides whether persisted
-      // flags belong to this account reads securityStore.rights.DepartmentId.
-      await Promise.all([featureFlagsStore.getState().fetchFlags(), dataProtectionStore.getState().fetchCapabilities()]);
+      // Feature flags and terminology must follow rights: the identity key that decides whether
+      // persisted flags or names belong to this account reads securityStore.rights.DepartmentId.
+      // Terminology only relabels screens, and its fetch never rejects.
+      await Promise.all([featureFlagsStore.getState().fetchFlags(), dataProtectionStore.getState().fetchCapabilities(), terminologyStore.getState().fetchTerminology()]);
       if (!isCurrentRun()) return;
 
       // Realtime feeds. Every one of them has to follow the Promise.all above: opening a hub reads
@@ -477,6 +479,9 @@ export default function TabLayout() {
   return (
     <NovuProvider
       subscriberId={isNovuConfigured ? `${rights?.DepartmentCode}_User_${userId}` : ''}
+      // Issued by the server for this user's own subscriber; Novu refuses the session without it once
+      // HMAC is enforced. Absent from older servers, which is fine until then.
+      subscriberHash={isNovuConfigured ? (rights?.NovuSubscriberHash ?? undefined) : undefined}
       applicationIdentifier={config?.NovuApplicationId ?? ''}
       backendUrl={config?.NovuBackendApiUrl ?? ''}
       socketUrl={config?.NovuSocketUrl ?? ''}

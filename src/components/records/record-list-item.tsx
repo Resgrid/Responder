@@ -8,6 +8,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { useRecordDefinitionName } from '@/hooks/use-record-definition-name';
 import { type FieldRecordAssignmentData, type RecordSummaryData, RmsRecordState } from '@/models/v4/records';
 import { type PendingRecordDraft } from '@/stores/records/store';
 
@@ -29,7 +30,8 @@ const stateAction = (state: number): 'muted' | 'info' | 'warning' | 'success' | 
 
 export const RecordListItem: React.FC<{ record: RecordSummaryData; onPress: () => void; testID?: string }> = ({ record, onPress, testID }) => {
   const { t } = useTranslation();
-  const title = record.RecordNumber || record.DraftReference || record.DefinitionKey || t('records.untitled');
+  const definitionName = useRecordDefinitionName(record.DefinitionKey, null, record.RecordType);
+  const title = record.RecordNumber || record.DraftReference || definitionName || t('records.untitled');
 
   return (
     <Pressable onPress={onPress} className="px-4 py-3" testID={testID}>
@@ -42,7 +44,7 @@ export const RecordListItem: React.FC<{ record: RecordSummaryData; onPress: () =
             {title}
           </Text>
           <Text className="text-xs text-typography-500" numberOfLines={1}>
-            {record.DisplaySummary || record.DefinitionKey || ''}
+            {record.DisplaySummary || definitionName || ''}
           </Text>
         </VStack>
         <Badge action={stateAction(record.State)} size="sm">
@@ -55,6 +57,9 @@ export const RecordListItem: React.FC<{ record: RecordSummaryData; onPress: () =
 
 export const PendingDraftItem: React.FC<{ draft: PendingRecordDraft; onPress: () => void; testID?: string }> = ({ draft, onPress, testID }) => {
   const { t } = useTranslation();
+  // A new draft is labelled with its definition's name; an edit keeps the record's own number.
+  const definitionName = useRecordDefinitionName(draft.definitionKey, draft.name);
+  const name = draft.recordId ? draft.name : definitionName;
 
   return (
     <Pressable onPress={onPress} className="px-4 py-3" testID={testID}>
@@ -62,7 +67,7 @@ export const PendingDraftItem: React.FC<{ draft: PendingRecordDraft; onPress: ()
         <Box className="size-10 items-center justify-center rounded-full bg-background-100">{draft.conflict ? <AlertTriangle size={18} color="#d97706" /> : <CloudOff size={18} color="#64748b" />}</Box>
         <VStack className="flex-1">
           <Text className="font-medium text-typography-900" numberOfLines={1}>
-            {draft.name}
+            {name}
           </Text>
           <Text className="text-xs text-typography-500" numberOfLines={1}>
             {draft.conflict ? t(`records.conflict_${draft.conflict.replace('-', '_')}`) : t('records.not_sent_yet')}

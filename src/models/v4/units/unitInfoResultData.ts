@@ -18,6 +18,8 @@ export class UnitInfoResultData {
   public CurrentStatusId: string = '';
   public CurrentStatus: string = '';
   public CurrentStatusColor: string = '';
+  /** What the unit's current status means (ActionBaseTypes); null/-1 none, undefined from older servers. */
+  public CurrentStatusBaseType?: number | null;
   public CurrentStatusTimestampUtc: string = '';
   public Latitude: string = '';
   public Longitude: string = '';
