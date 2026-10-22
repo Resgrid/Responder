@@ -27,13 +27,24 @@ jest.mock('../pin-marker', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
 
-  return function MockPinMarker({ title, imagePath }: { title: string; imagePath: string }) {
+  return function MockPinMarker({ title, imagePath, iconUrl }: { title: string; imagePath: string; iconUrl?: string | null }) {
     return React.createElement(
       View,
       { testID: `pin-marker-${title}` },
       React.createElement(Text, null, title),
-      React.createElement(Text, { testID: `imagepath-${title}` }, imagePath)
+      React.createElement(Text, { testID: `imagepath-${title}` }, imagePath),
+      React.createElement(Text, { testID: `iconurl-${title}` }, iconUrl ?? '')
     );
+  };
+});
+
+// Mock PoiPinMarker component (POI pins render the shape marker, not PinMarker)
+jest.mock('../poi-pin-marker', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return function MockPoiPinMarker({ title, iconUrl }: { title: string; iconUrl?: string | null }) {
+    return React.createElement(Text, { testID: `poi-iconurl-${title}` }, iconUrl ?? '');
   };
 });
 
@@ -236,5 +247,81 @@ describe('MapPins PII Protection', () => {
     expect(screen.queryByTestId('pin-marker-Uppercase Person')).toBeFalsy();
     expect(screen.queryByTestId('pin-marker-Mixed Case Person')).toBeFalsy();
     expect(screen.getByTestId('pin-marker-Engine 1')).toBeTruthy();
+  });
+
+  it('passes the uploaded type icon to call, unit and POI pins', () => {
+    mockCanUserViewPII(true);
+    const unitUrl = 'https://api.resgrid.dev/api/v4/TypeIcons/unit';
+    const callUrl = 'https://api.resgrid.dev/api/v4/TypeIcons/call';
+    const poiUrl = 'https://api.resgrid.dev/api/v4/TypeIcons/poi';
+    const poiPin: MapMakerInfoData = {
+      ...callPin,
+      Id: 'poi-1',
+      Title: 'Memorial Hospital',
+      ImagePath: '',
+      PoiImage: 'map-icon-hospital',
+      Type: 4,
+      PoiTypeId: 7,
+      IconUrl: poiUrl,
+    };
+
+    render(
+      <MapPins
+        pins={[{ ...callPin, IconUrl: callUrl }, { ...unitPin, ImagePath: 'ambulance', IconUrl: unitUrl }, poiPin]}
+        onPinPress={mockOnPinPress}
+      />
+    );
+
+    expect(screen.getByTestId('iconurl-Engine 1')).toHaveTextContent(unitUrl);
+    expect(screen.getByTestId('imagepath-Engine 1')).toHaveTextContent('ambulance');
+    expect(screen.getByTestId('iconurl-Medical Emergency')).toHaveTextContent(callUrl);
+    expect(screen.getByTestId('poi-iconurl-Memorial Hospital')).toHaveTextContent(poiUrl);
+  });
+
+  it('passes the uploaded role icon to personnel pins and keeps their person ImagePath', () => {
+    mockCanUserViewPII(true);
+    const roleUrl = 'https://api.resgrid.dev/api/v4/TypeIcons/role';
+
+    render(
+      <MapPins
+        pins={[{ ...personnelPin, ImagePath: 'Person_RespondingCall', IconUrl: roleUrl }]}
+        onPinPress={mockOnPinPress}
+      />
+    );
+
+    expect(screen.getByTestId('iconurl-John Doe')).toHaveTextContent(roleUrl);
+    expect(screen.getByTestId('imagepath-John Doe')).toHaveTextContent('Person_RespondingCall');
+  });
+
+  it('hides personnel pins with a role icon, and Type 3 pins whatever their ImagePath, when PII cannot be viewed', () => {
+    mockCanUserViewPII(false);
+
+    render(
+      <MapPins
+        pins={[
+          { ...personnelPin, ImagePath: 'Person_RespondingCall', IconUrl: 'https://api.resgrid.dev/api/v4/TypeIcons/role' },
+          { ...personnelPin, Id: 'p14', Title: 'Odd Person', ImagePath: 'call' },
+          unitPin,
+        ]}
+        onPinPress={mockOnPinPress}
+      />
+    );
+
+    expect(screen.queryByTestId('pin-marker-John Doe')).toBeFalsy();
+    expect(screen.queryByTestId('pin-marker-Odd Person')).toBeFalsy();
+    expect(screen.getByTestId('pin-marker-Engine 1')).toBeTruthy();
+  });
+
+  it('leaves unit pins on the bundled icon when the server sends no IconUrl (older servers)', () => {
+    mockCanUserViewPII(true);
+
+    render(
+      <MapPins
+        pins={[unitPin]}
+        onPinPress={mockOnPinPress}
+      />
+    );
+
+    expect(screen.getByTestId('iconurl-Engine 1')).toHaveTextContent('');
   });
 });

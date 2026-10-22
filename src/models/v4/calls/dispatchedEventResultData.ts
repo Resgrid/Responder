@@ -20,4 +20,9 @@ export class DispatchedEventResultData {
    * absent on older rows and non-status entries. See `getActivityLinkKind`.
    */
   public DestinationSource?: number | null = null;
+
+  /** Unit rows only: department-uploaded type icon URL; null/undefined otherwise or from older servers. */
+  public TypeIconUrl?: string | null;
+  /** Unit rows only: built-in type icon name (lowercase `MAP_ICONS` key). */
+  public TypeMapIcon?: string | null;
 }

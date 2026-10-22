@@ -14,6 +14,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { TypeIcon } from '@/components/units/unit-type-icon';
 import { getPoiDisplayName } from '@/lib/poi';
 import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { usePoiStore } from '@/stores/poi/store';
@@ -49,7 +50,8 @@ const PoiListItem: React.FC<PoiListItemProps> = React.memo(({ poi, onPoiPress, o
   return (
     <Box className="mb-3 rounded-2xl border border-neutral-200 bg-neutral-50/90 p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-950/70">
       <VStack space="sm">
-        <HStack className="items-start justify-between">
+        <HStack className="items-start justify-between" space="sm">
+          <TypeIcon iconUrl={poi.IconUrl} size={28} testID={`poi-type-icon-${poi.PoiId}`} />
           <VStack className="flex-1 pr-3">
             <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{displayName}</Text>
             <Text className="text-sm text-primary-600">{poi.PoiTypeName}</Text>

@@ -35,6 +35,7 @@ import { HStack } from '@/components/ui/hstack';
 import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { TypeIcon, UnitTypeIcon } from '@/components/units/unit-type-icon';
 import { VideoFeedTabPanel } from '@/components/video-feeds/video-feed-tab-panel';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { isFieldRedacted, ProtectedFieldIds } from '@/lib/data-protection/redacted';
@@ -426,7 +427,10 @@ export default function CallDetail() {
               <VStack className="space-y-3">
                 {callExtraData.Dispatches.map((dispatched, index) => (
                   <Box key={index} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                    <Text className="font-semibold">{dispatched.Name}</Text>
+                    <HStack className="items-center" space="sm">
+                      {dispatched.Type === 'Unit' ? <UnitTypeIcon iconUrl={dispatched.TypeIconUrl} mapIcon={dispatched.TypeMapIcon} size={20} testID={`dispatched-unit-type-icon-${dispatched.Id || index}`} /> : null}
+                      <Text className="shrink font-semibold">{dispatched.Name}</Text>
+                    </HStack>
                     <HStack className="mt-1">
                       <Text className="mr-2 text-sm text-gray-600 dark:text-gray-400">
                         {t('call_detail.group')}: {dispatched.Group}
@@ -730,8 +734,9 @@ export default function CallDetail() {
 
         {/* Header */}
         <Box className="mx-4 mt-3 rounded-xl bg-white p-4 shadow-xs dark:bg-gray-800">
-          <HStack className="mb-2 items-center">
-            <Heading size="md">
+          <HStack className="mb-2 items-center" space="sm">
+            <TypeIcon iconUrl={call.TypeIconUrl} mapIcon={call.TypeMapIcon} size={28} testID="call-detail-type-icon" />
+            <Heading size="md" className="shrink">
               {/* The call NUMBER is not cataloged, so it stays visible and the record stays findable. */}
               {isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callName, call.Name) ? (
                 <ProtectedText value={call.Name} fieldId={ProtectedFieldIds.callName} redactedFields={call.RedactedFields} />

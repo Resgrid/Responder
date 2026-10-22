@@ -14,6 +14,13 @@ jest.mock('@/services/offline-queue-processor', () => ({
 import { usePersonnelStatusBottomSheetStore } from '@/stores/status/personnel-status-store';
 import { PersonnelStatusBottomSheet } from '../personnel-status-bottom-sheet';
 
+// expo-image's native view does not render under jest; stand in a View that keeps its props.
+jest.mock('expo-image', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { Image: (props: any) => React.createElement(View, { ...props, testID: 'expo-image' }) };
+});
+
 // Mock NetInfo
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
@@ -525,6 +532,46 @@ describe('PersonnelStatusBottomSheet', () => {
       expect(screen.getByText('Hospital - Memorial Hospital - 300 Medical Plaza')).toBeTruthy();
       expect(screen.getByText('ER Entrance')).toBeTruthy();
       expect(screen.getByText('Shelter - North Shelter - 400 Relief Ave')).toBeTruthy();
+    });
+
+    it('should show the POI type icon on POI rows that have one', () => {
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Detail: 3 },
+        currentStep: 'select-responding-to',
+        selectedTab: 'pois',
+        arePoisAllowed: jest.fn(() => true),
+        pois: [{ ...mockPois[0], IconUrl: 'https://api.resgrid.dev/api/v4/TypeIcons/poi1' }, mockPois[1]],
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      // The icon is decorative (hidden from accessibility), so the query opts in to hidden elements.
+      expect(screen.getByTestId('status-poi-type-icon-101', { includeHiddenElements: true })).toBeTruthy();
+      // Older servers omit IconUrl: the row shows its text alone.
+      expect(screen.queryByTestId('status-poi-type-icon-102', { includeHiddenElements: true })).toBeNull();
+    });
+
+    it('should show the call type icon on call rows that have one', () => {
+      applySelector(mockUseCallsStore, {
+        ...mockCallsStore,
+        calls: [{ ...mockCalls[0], TypeIconUrl: null, TypeMapIcon: 'fire' }, mockCalls[1]],
+      });
+      mockUsePersonnelStatusBottomSheetStore.mockReturnValue({
+        ...mockStore,
+        isOpen: true,
+        selectedStatus: { ...mockStatus, Detail: 3 },
+        currentStep: 'select-responding-to',
+        selectedTab: 'calls',
+        groups: mockGroups,
+      });
+
+      render(<PersonnelStatusBottomSheet />);
+
+      expect(screen.getByTestId('status-call-type-icon-1', { includeHiddenElements: true })).toBeTruthy();
+      expect(screen.queryByTestId('status-call-type-icon-2', { includeHiddenElements: true })).toBeNull();
     });
 
     it('should handle no destination selection', () => {

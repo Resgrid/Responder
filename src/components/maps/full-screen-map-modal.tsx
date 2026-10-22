@@ -2,7 +2,7 @@ import Mapbox from '@rnmapbox/maps';
 import { XIcon } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Box } from '@/components/ui/box';
@@ -79,23 +79,32 @@ const FullScreenMapModal: React.FC<FullScreenMapModalProps> = ({ isOpen, onClose
     };
   }, [polygon]);
 
+  // rnmapbox's web build (the dev-only `yarn web` target) exports only MapView, Camera, MarkerView and Logger, and its
+  // Camera ignores `bounds`: on web, center on the location, mark it with a MarkerView, and skip the polygon layers and
+  // the user-location puck.
+  const isWeb = Platform.OS === 'web';
+
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <View style={styles.container} testID="full-screen-map-modal">
         {isMapboxConfigured ? (
           <Mapbox.MapView styleURL={mapStyle} style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={true} zoomEnabled={true} scrollEnabled={true} rotateEnabled={true} pitchEnabled={true}>
-            {polygonBounds ? <Mapbox.Camera bounds={polygonBounds} animationDuration={0} /> : <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />}
-            {polygonShape ? (
+            {polygonBounds && !isWeb ? <Mapbox.Camera bounds={polygonBounds} animationDuration={0} /> : <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationDuration={0} />}
+            {polygonShape && !isWeb ? (
               <Mapbox.ShapeSource id="fullScreenAreaPolygon" shape={polygonShape as GeoJSON.Feature}>
                 <Mapbox.FillLayer id="fullScreenAreaPolygonFill" style={{ fillColor: accentColor, fillOpacity: 0.2 }} />
                 <Mapbox.LineLayer id="fullScreenAreaPolygonLine" style={{ lineColor: accentColor, lineWidth: 2 }} />
               </Mapbox.ShapeSource>
+            ) : isWeb ? (
+              <Mapbox.MarkerView id="callLocation" coordinate={[longitude, latitude]} anchor={{ x: 0.5, y: 0.5 }}>
+                <View style={[styles.marker, { backgroundColor: accentColor }]} />
+              </Mapbox.MarkerView>
             ) : (
               <Mapbox.PointAnnotation id="callLocation" coordinate={[longitude, latitude]} title={address || 'Location'}>
                 <View style={[styles.marker, { backgroundColor: accentColor }]} />
               </Mapbox.PointAnnotation>
             )}
-            {showUserLocation ? <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} /> : null}
+            {showUserLocation && !isWeb ? <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} /> : null}
           </Mapbox.MapView>
         ) : (
           <Box className="flex-1 items-center justify-center p-6">

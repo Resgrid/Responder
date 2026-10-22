@@ -6,4 +6,6 @@ export class PoiLayerData {
   public PoiImage: string = '';
   public Marker: string = '';
   public IsDestination: boolean = false;
+  /** Department-uploaded icon for the layer's POI type (absolute URL); null when none, undefined from older servers. */
+  public IconUrl?: string | null;
 }

@@ -9,6 +9,7 @@ import { Alert, Pressable, ScrollView } from 'react-native';
 import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { TypeIcon } from '@/components/units/unit-type-icon';
 import { openMapsWithAddress, openMapsWithDirections } from '@/lib/navigation';
 import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -153,6 +154,7 @@ export const SidebarCallCard = () => {
                   testID={`call-item-${call.CallId}`}
                 >
                   <HStack space="md" className="items-center justify-between">
+                    <TypeIcon iconUrl={call.TypeIconUrl} mapIcon={call.TypeMapIcon} size={24} testID={`call-item-type-icon-${call.CallId}`} />
                     <VStack className="flex-1">
                       <Text className={`font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{call.Name}</Text>
                       <Text size="sm" className={colorScheme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}>

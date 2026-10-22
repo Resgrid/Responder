@@ -14,6 +14,7 @@ import { HStack } from '../ui/hstack';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
+import { UnitTypeIcon } from './unit-type-icon';
 
 // Default unit statuses when custom statuses are not defined
 const DEFAULT_UNIT_STATUSES: Record<string, { text: string; color: string }> = {
@@ -105,7 +106,7 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(function UnitCard({ 
         <VStack space="sm">
           <HStack className="items-center justify-between">
             <HStack className="flex-1 items-center" space="sm">
-              <Icon as={Truck} size="md" className="text-primary-600" />
+              <UnitTypeIcon iconUrl={unit.TypeIconUrl} mapIcon={unit.TypeMapIcon} size={24} fallback={<Icon as={Truck} size="md" className="text-primary-600" />} testID={`unit-type-icon-${unit.UnitId}`} />
               <Text className="flex-1 text-lg font-semibold text-typography-900" numberOfLines={1}>
                 {unit.Name}
               </Text>

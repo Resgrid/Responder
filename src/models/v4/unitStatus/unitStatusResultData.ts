@@ -18,4 +18,8 @@ export class UnitStatusResultData {
   public GroupName: string = '';
   public GroupId: number | string = '';
   public Eta: string = '';
+  /** Department-uploaded icon for the unit's type (absolute URL, 128x128 PNG, anonymous GET); null when none, undefined from older servers. */
+  public TypeIconUrl?: string | null;
+  /** Built-in icon the unit's type picked (lowercase `MAP_ICONS` key, e.g. "ambulance"); null when none, undefined from older servers. */
+  public TypeMapIcon?: string | null;
 }

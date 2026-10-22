@@ -141,15 +141,21 @@ jest.mock('@/components/common/zero-state', () => {
   return { __esModule: true, default: ZeroState };
 });
 
+// Every unit a UnitCard was rendered with, so tests can check what the screen hands the card.
+const mockUnitCardUnits: any[] = [];
+
 jest.mock('@/components/units/unit-card', () => ({
-  UnitCard: ({ unit, onPress }: { unit: any; onPress: (id: string) => void }) => (
-    <div
-      data-testid={`unit-card-${unit.UnitId}`}
-      onClick={() => onPress(unit.UnitId)}
-    >
-      {unit.Name}
-    </div>
-  ),
+  UnitCard: ({ unit, onPress }: { unit: any; onPress: (id: string) => void }) => {
+    mockUnitCardUnits.push(unit);
+    return (
+      <div
+        data-testid={`unit-card-${unit.UnitId}`}
+        onClick={() => onPress(unit.UnitId)}
+      >
+        {unit.Name}
+      </div>
+    );
+  },
 }));
 
 jest.mock('@/components/units/unit-details-sheet', () => ({
@@ -293,6 +299,26 @@ describe('Units', () => {
     });
 
     expect(() => render(<Units />)).not.toThrow();
+  });
+
+  it('should hand each unit card the type icon fields from the store', () => {
+    const url = 'https://api.resgrid.dev/api/v4/UnitTypeIcons/abc';
+    Object.assign(mockUnitsStore, {
+      units: [
+        { ...mockUnits[0], TypeIconUrl: url, TypeMapIcon: 'fourbyfour' },
+        { ...mockUnits[1], TypeIconUrl: null, TypeMapIcon: 'ambulance' },
+        mockUnits[2],
+      ],
+      isLoading: false,
+    });
+    mockUnitCardUnits.length = 0;
+
+    render(<Units />);
+
+    expect(mockUnitCardUnits.find((unit) => unit.UnitId === '1')).toMatchObject({ TypeIconUrl: url, TypeMapIcon: 'fourbyfour' });
+    expect(mockUnitCardUnits.find((unit) => unit.UnitId === '2')).toMatchObject({ TypeIconUrl: null, TypeMapIcon: 'ambulance' });
+    // Older servers omit the fields; the card falls back to its generic icon.
+    expect(mockUnitCardUnits.find((unit) => unit.UnitId === '3')?.TypeIconUrl).toBeUndefined();
   });
 
   it('should render component without errors when no units are provided', () => {

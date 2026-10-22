@@ -11,6 +11,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { TypeIcon, UnitTypeIcon } from '@/components/units/unit-type-icon';
 import { buildCallAssignmentContext, getDispatchTypeStyle, getUniqueDispatches, isCurrentUserOnCall } from '@/lib/call-dispatch';
 import { getTimeAgoUtc, readableColors } from '@/lib/utils';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
@@ -98,6 +99,7 @@ const DispatchTicker: React.FC<DispatchTickerProps> = ({ dispatches }) => {
       return (
         <View key={`${dispatch.Id || `${dispatch.Type}:${dispatch.Name}`}-${suffix}`} style={[styles.dispatchBadge, { backgroundColor: typeStyle.backgroundColor }]}>
           <Text style={[styles.dispatchBadgeType, { color: typeStyle.textColor }]}>{typeStyle.label}</Text>
+          {dispatch.Type === 'Unit' ? <UnitTypeIcon iconUrl={dispatch.TypeIconUrl} mapIcon={dispatch.TypeMapIcon} size={14} testID={`dispatch-badge-type-icon-${dispatch.Id || dispatch.Name}-${suffix}`} /> : null}
           <Text style={[styles.dispatchBadgeName, { color: typeStyle.textColor }]} numberOfLines={1}>
             {dispatch.Name}
           </Text>
@@ -159,7 +161,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({ 
     >
       <HStack className="mb-4 items-center justify-between">
         <HStack className="items-center space-x-2">
-          <AlertTriangle size={20} color={textColor} />
+          <TypeIcon iconUrl={call.TypeIconUrl} mapIcon={call.TypeMapIcon} size={24} fallback={<AlertTriangle size={20} color={textColor} />} testID={`call-type-icon-${call.CallId}`} />
           <Text
             style={{
               color: textColor,
