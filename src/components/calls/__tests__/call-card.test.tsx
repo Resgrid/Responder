@@ -263,6 +263,44 @@ describe('CallCard', () => {
     expect(screen.getByText('calls.assigned_to_me')).toBeTruthy();
   });
 
+  it('shows assigned badge when the user is riding on a dispatched unit', () => {
+    const { useHomeStore } = require('@/stores/home/home-store');
+    const { useRolesStore } = require('@/stores/roles/store');
+    useHomeStore.mockImplementation((selector?: (state: { currentUser: { UserId: string; GroupId: string; Roles: string[] } }) => unknown) => {
+      const state = { currentUser: { UserId: 'user-1', GroupId: '', Roles: [] } };
+      return selector ? selector(state) : state;
+    });
+    useRolesStore.mockImplementation((selector?: (state: { roles: unknown[] }) => unknown) => {
+      const state = { roles: [{ UnitId: 'unit-1', UnitRoleId: 'seat-1', Name: 'Driver', UserId: 'user-1' }] };
+      return selector ? selector(state) : state;
+    });
+
+    render(
+      <CallCard
+        call={
+          {
+            CallId: 'call-4',
+            Number: '100',
+            Name: 'Structure Fire',
+            Address: '789 Pine St',
+            LoggedOnUtc: '2024-01-01T00:00:00Z',
+            CheckInTimersEnabled: false,
+            Nature: '',
+            Priority: 1,
+          } as any
+        }
+        priority={{ Color: '#00AA00' } as any}
+        callExtraData={
+          {
+            Dispatches: [{ Id: 'unit-1', Type: 'Unit', Name: 'Engine 1' }],
+          } as any
+        }
+      />
+    );
+
+    expect(screen.getByText('calls.assigned_to_me')).toBeTruthy();
+  });
+
   describe('priority text colour', () => {
     const baseCall = {
       CallId: 'call-3',

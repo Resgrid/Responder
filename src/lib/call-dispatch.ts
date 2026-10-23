@@ -8,6 +8,8 @@ export interface CallAssignmentContext {
   groupId: string | null;
   roleIds: string[];
   roleNames: string[];
+  /** Units the user currently holds an active seat (unit role) on. */
+  unitIds: string[];
 }
 
 export interface DispatchTypeStyle {
@@ -40,11 +42,18 @@ export const buildCallAssignmentContext = (currentUser: PersonnelInfoResultData 
     .map((role) => role.UnitRoleId)
     .filter((roleId) => roleId.length > 0);
 
+  // `roles` comes from GetAllUnitRolesAndAssignmentsForDepartment, where UserId is whoever is
+  // currently riding in that seat. A unit dispatch does not add its crew to the dispatch list,
+  // so these units are how the user is "on" a call they were sent to as part of an apparatus.
+  const normalizedUserId = normalizeValue(currentUser?.UserId);
+  const unitIds = normalizedUserId.length > 0 ? roles.filter((role) => normalizeValue(role.UserId) === normalizedUserId).map((role) => role.UnitId) : [];
+
   return {
     userId: currentUser?.UserId ?? null,
     groupId: currentUser?.GroupId ?? null,
     roleIds: uniqueValues(roleIds),
     roleNames: uniqueValues(currentUser?.Roles ?? []),
+    unitIds: uniqueValues(unitIds),
   };
 };
 
@@ -118,11 +127,11 @@ export const isDispatchAssignedToUser = (dispatch: DispatchedEventResultData, co
     return roleIdSet.has(normalizedDispatchId) || roleNameSet.has(normalizedDispatchName);
   }
 
-  // Responder is a personnel app: it never signs this device onto an apparatus, so a dispatch
-  // aimed at a unit is never an assignment for the current user. Matched explicitly so unit
-  // dispatches cannot fall through to the identifier comparison below.
+  // A unit dispatch is the user's only when they hold an active role on that unit. Matched
+  // explicitly so unit dispatches cannot fall through to the identifier comparison below.
   if (normalizedType.includes('unit')) {
-    return false;
+    const unitIdSet = new Set(context.unitIds.map((unitId) => normalizeValue(unitId)));
+    return normalizedDispatchId.length > 0 && unitIdSet.has(normalizedDispatchId);
   }
 
   return normalizedDispatchId === normalizedUserId || normalizedDispatchId === normalizedGroupId || roleIdSet.has(normalizedDispatchId) || roleNameSet.has(normalizedDispatchName);
