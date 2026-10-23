@@ -84,6 +84,11 @@ jest.mock('react-native', () => ({
   ScrollView: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+// The role icon (react-native is stubbed above, so the real expo-image icon cannot render here; its own tests cover it)
+jest.mock('@/components/units/unit-type-icon', () => ({
+  TypeIcon: ({ iconUrl, size, testID }: { iconUrl?: string | null; size?: number; testID?: string }) => require('react').createElement('img', { testID, src: iconUrl ?? '', width: size }),
+}));
+
 // Mock the personnel store
 const mockPersonnelStore = {
   personnel: [] as PersonnelInfoResultData[],
@@ -416,5 +421,31 @@ describe('PersonnelDetailsSheet', () => {
 
     const closeButton = screen.getByTestId('close-button');
     expect(closeButton).toBeTruthy();
+  });
+
+  it('shows the uploaded role icon in the header when the person has one', () => {
+    const iconUrl = 'https://api.resgrid.dev/api/v4/TypeIcons/role-abc';
+    mockPersonnelStore.isDetailsOpen = true;
+    mockPersonnelStore.selectedPersonnelId = mockPersonnel.UserId;
+    mockPersonnelStore.personnel = [{ ...mockPersonnel, RoleIconUrl: iconUrl }];
+
+    render(<PersonnelDetailsSheet />);
+
+    const icon = screen.getByTestId('personnel-details-role-icon');
+    expect(icon.props.src).toBe(iconUrl);
+    expect(icon.props.width).toBe(24);
+  });
+
+  it('shows no role icon in the header when RoleIconUrl is null or absent', () => {
+    mockPersonnelStore.isDetailsOpen = true;
+    mockPersonnelStore.selectedPersonnelId = mockPersonnel.UserId;
+    mockPersonnelStore.personnel = [{ ...mockPersonnel, RoleIconUrl: null }];
+
+    const { rerender } = render(<PersonnelDetailsSheet />);
+    expect(screen.queryByTestId('personnel-details-role-icon')).toBeNull();
+
+    mockPersonnelStore.personnel = [mockPersonnel];
+    rerender(<PersonnelDetailsSheet />);
+    expect(screen.queryByTestId('personnel-details-role-icon')).toBeNull();
   });
 });

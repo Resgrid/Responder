@@ -9,6 +9,15 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+jest.mock('expo-image', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    Image: (props: any) => React.createElement(View, { ...props, testID: 'expo-image' }),
+  };
+});
+
 jest.mock('react-native-webview', () => ({
   __esModule: true,
   default: ({ source }: { source: { html: string } }) => {
@@ -159,6 +168,61 @@ describe('CallCard', () => {
     expect(screen.getByTestId('dispatch-ticker-copy-1')).toBeTruthy();
   });
 
+  it('shows the unit type icon on unit dispatch badges only', () => {
+    // The type icon is decorative (hidden from accessibility), so queries must opt in to hidden elements.
+    const HIDDEN = { includeHiddenElements: true };
+
+    render(
+      <CallCard
+        call={{ CallId: 'call-3', Number: '7', Name: 'Cardiac Arrest', Address: '1 Elm St', LoggedOnUtc: '2024-01-01T00:00:00Z', CheckInTimersEnabled: false, Nature: '', Priority: 1 } as any}
+        priority={{ Color: '#FF0000' } as any}
+        callExtraData={
+          {
+            Dispatches: [
+              { Id: 'unit-1', Type: 'Unit', Name: 'Medic 1', TypeIconUrl: null, TypeMapIcon: 'ambulance' },
+              { Id: 'unit-2', Type: 'Unit', Name: 'Engine 2' },
+              { Id: 'user-1', Type: 'Personnel', Name: 'Alex Morgan', TypeMapIcon: 'ambulance' },
+            ],
+          } as any
+        }
+      />
+    );
+
+    expect(screen.getByTestId('dispatch-badge-type-icon-unit-1-dispatch-ticker-set-primary', HIDDEN)).toBeTruthy();
+    expect(screen.queryByTestId('dispatch-badge-type-icon-unit-2-dispatch-ticker-set-primary', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('dispatch-badge-type-icon-user-1-dispatch-ticker-set-primary', HIDDEN)).toBeNull();
+    expect(screen.getByText('Medic 1')).toBeTruthy();
+  });
+
+  describe('call type icon', () => {
+    // The type icon is decorative (hidden from accessibility), so queries must opt in to hidden elements.
+    const HIDDEN = { includeHiddenElements: true };
+    const baseCall = { CallId: 'call-4', Number: '8', Name: 'House Fire', Address: '2 Elm St', LoggedOnUtc: '2024-01-01T00:00:00Z', CheckInTimersEnabled: false, Nature: '', Priority: 1 };
+
+    it("replaces the header warning icon with the call type's uploaded icon", () => {
+      const url = 'https://api.resgrid.dev/api/v4/TypeIcons/fire';
+      render(<CallCard call={{ ...baseCall, TypeIconUrl: url, TypeMapIcon: 'fire' } as any} priority={{ Color: '#FF0000' } as any} callExtraData={{ Dispatches: [] } as any} />);
+
+      expect(screen.getByTestId('call-type-icon-call-4', HIDDEN)).toBeTruthy();
+      expect(screen.getByTestId('expo-image', HIDDEN).props.source).toEqual({ uri: url });
+      expect(screen.queryByTestId('alert-triangle-icon', HIDDEN)).toBeNull();
+    });
+
+    it('shows the built-in call type icon when there is no upload', () => {
+      render(<CallCard call={{ ...baseCall, TypeIconUrl: null, TypeMapIcon: 'fire' } as any} priority={{ Color: '#FF0000' } as any} callExtraData={{ Dispatches: [] } as any} />);
+
+      expect(screen.getByTestId('call-type-icon-call-4', HIDDEN)).toBeTruthy();
+      expect(screen.queryByTestId('alert-triangle-icon', HIDDEN)).toBeNull();
+    });
+
+    it('keeps the warning icon when the server sends no type icon (older servers)', () => {
+      render(<CallCard call={baseCall as any} priority={{ Color: '#FF0000' } as any} callExtraData={{ Dispatches: [] } as any} />);
+
+      expect(screen.queryByTestId('call-type-icon-call-4', HIDDEN)).toBeNull();
+      expect(screen.getByTestId('alert-triangle-icon', HIDDEN)).toBeTruthy();
+    });
+  });
+
   it('shows assigned badge for current user dispatches', () => {
     const { useHomeStore } = require('@/stores/home/home-store');
     useHomeStore.mockImplementation((selector?: (state: { currentUser: { UserId: string; GroupId: string; Roles: string[] } }) => unknown) => {
@@ -191,6 +255,44 @@ describe('CallCard', () => {
         callExtraData={
           {
             Dispatches: [{ Id: 'user-1', Type: 'Personnel', Name: 'Me' }],
+          } as any
+        }
+      />
+    );
+
+    expect(screen.getByText('calls.assigned_to_me')).toBeTruthy();
+  });
+
+  it('shows assigned badge when the user is riding on a dispatched unit', () => {
+    const { useHomeStore } = require('@/stores/home/home-store');
+    const { useRolesStore } = require('@/stores/roles/store');
+    useHomeStore.mockImplementation((selector?: (state: { currentUser: { UserId: string; GroupId: string; Roles: string[] } }) => unknown) => {
+      const state = { currentUser: { UserId: 'user-1', GroupId: '', Roles: [] } };
+      return selector ? selector(state) : state;
+    });
+    useRolesStore.mockImplementation((selector?: (state: { roles: unknown[] }) => unknown) => {
+      const state = { roles: [{ UnitId: 'unit-1', UnitRoleId: 'seat-1', Name: 'Driver', UserId: 'user-1' }] };
+      return selector ? selector(state) : state;
+    });
+
+    render(
+      <CallCard
+        call={
+          {
+            CallId: 'call-4',
+            Number: '100',
+            Name: 'Structure Fire',
+            Address: '789 Pine St',
+            LoggedOnUtc: '2024-01-01T00:00:00Z',
+            CheckInTimersEnabled: false,
+            Nature: '',
+            Priority: 1,
+          } as any
+        }
+        priority={{ Color: '#00AA00' } as any}
+        callExtraData={
+          {
+            Dispatches: [{ Id: 'unit-1', Type: 'Unit', Name: 'Engine 1' }],
           } as any
         }
       />

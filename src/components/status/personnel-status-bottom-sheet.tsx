@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { TypeIcon } from '@/components/units/unit-type-icon';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import {
@@ -910,6 +911,7 @@ export const PersonnelStatusBottomSheet = () => {
                               >
                                 {isSelected ? <Check size={12} color="#fff" /> : null}
                               </VStack>
+                              <TypeIcon iconUrl={call.TypeIconUrl} mapIcon={call.TypeMapIcon} size={24} testID={`status-call-type-icon-${call.CallId}`} />
                               <VStack className="flex-1">
                                 <Text className="font-bold">{getCallDestinationDisplay(call)}</Text>
                                 {call.Address ? <Text className="text-sm text-gray-600 dark:text-gray-400">{call.Address}</Text> : null}
@@ -993,6 +995,7 @@ export const PersonnelStatusBottomSheet = () => {
                               >
                                 {isSelected ? <Check size={12} color="#fff" /> : null}
                               </VStack>
+                              <TypeIcon iconUrl={poi.IconUrl} size={24} testID={`status-poi-type-icon-${poi.PoiId}`} />
                               <VStack className="flex-1">
                                 <Text className="font-bold">{getPoiDestinationDisplay(poi)}</Text>
                                 {poi.Address ? <Text className="text-sm text-gray-600 dark:text-gray-400">{poi.Address}</Text> : null}

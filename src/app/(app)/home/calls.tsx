@@ -36,6 +36,7 @@ export default function Calls() {
   const { t } = useTranslation();
   const currentUser = useHomeStore((state) => state.currentUser);
   const roles = useRolesStore((state) => state.roles);
+  const fetchRoles = useRolesStore((state) => state.fetchRoles);
   const { filter } = useLocalSearchParams<{ filter?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyCallsImOn, setOnlyCallsImOn] = useState(filter === 'mine');
@@ -59,11 +60,13 @@ export default function Calls() {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([fetchCalls(), fetchCallPriorities()]);
+      // Unit seat assignments decide which unit dispatches count as "calls I'm on", and they
+      // change mid-session as crews board apparatus, so a manual refresh picks them up too.
+      await Promise.all([fetchCalls(), fetchCallPriorities(), fetchRoles()]);
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchCalls, fetchCallPriorities]);
+  }, [fetchCalls, fetchCallPriorities, fetchRoles]);
 
   const handleNewCall = useCallback(() => {
     router.push('/call/new/');

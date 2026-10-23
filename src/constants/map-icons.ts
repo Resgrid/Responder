@@ -232,7 +232,8 @@ const stripMapIconPrefix = (value: string): string => {
   return value;
 };
 
-const normalizeMapIconToken = (value: string) => {
+/** Lowercase name without a "map-icon-" prefix or file extension; separators ("_", "-", spaces) are kept. */
+const normalizeMapIconName = (value: string) => {
   // First strip "map-icon-" prefix if present, so "map-icon-hospital"
   // normalizes to "hospital" instead of "mapiconhospital".
   const stripped = stripMapIconPrefix(value);
@@ -240,16 +241,20 @@ const normalizeMapIconToken = (value: string) => {
   return stripped
     .trim()
     .toLowerCase()
-    .replace(/\.[a-z0-9]+$/i, '')
-    .replace(/[^a-z0-9]+/g, '');
+    .replace(/\.[a-z0-9]+$/i, '');
 };
 
 export const resolveMapIconKey = ({ poiImage, imagePath, marker, fallback = 'call' }: { poiImage?: string | null; imagePath?: string | null; marker?: string | null; fallback?: MapIconKey }): MapIconKey => {
-  const tokens = [poiImage, imagePath, marker].filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(normalizeMapIconToken);
+  const names = [poiImage, imagePath, marker].filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(normalizeMapIconName);
 
-  for (const token of tokens) {
-    if (MAP_ICON_KEYS.has(token)) {
-      return token as MapIconKey;
+  for (const name of names) {
+    // The exact name first, so the keys that contain "_" resolve ("Person_RespondingCall" -> person_respondingcall,
+    // "Engine_Responding" -> engine_responding); then the name with separators removed ("Car Two" -> cartwo).
+    // A key without "_" matches both forms identically, and no "_" key matches once its "_" is removed.
+    for (const candidate of [name, name.replace(/[^a-z0-9]+/g, '')]) {
+      if (MAP_ICON_KEYS.has(candidate)) {
+        return candidate as MapIconKey;
+      }
     }
   }
 

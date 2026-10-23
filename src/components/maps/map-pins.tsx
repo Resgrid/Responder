@@ -39,7 +39,7 @@ const PoiPinItem = React.memo<PinItemProps>(({ pin, onPinPress }) => {
     <>
       {/* Shape + icon: 36x48 exact dimensions, anchor at bottom-center tip */}
       <Mapbox.MarkerView id={`poi-${pin.Id}`} coordinate={[pin.Longitude, pin.Latitude]} anchor={{ x: 0.5, y: 1 }} allowOverlap={true}>
-        <PoiPinMarker color={pin.Color} poiImage={pin.PoiImage} imagePath={pin.ImagePath} marker={pin.Marker} title={pin.Title} onPress={handlePress} />
+        <PoiPinMarker color={pin.Color} poiImage={pin.PoiImage} imagePath={pin.ImagePath} marker={pin.Marker} iconUrl={pin.IconUrl} title={pin.Title} onPress={handlePress} />
       </Mapbox.MarkerView>
       {/* Title label: separate MarkerView so it does NOT affect shape anchor measurement */}
       {pin.Title ? (
@@ -56,7 +56,7 @@ const StandardPinItem = React.memo<PinItemProps>(({ pin, onPinPress }) => {
 
   return (
     <Mapbox.MarkerView id={`pin-${pin.Id}`} coordinate={[pin.Longitude, pin.Latitude]} anchor={{ x: 0.5, y: 0.5 }} allowOverlap={true}>
-      <PinMarker imagePath={pin.ImagePath} poiImage={pin.PoiImage} marker={pin.Marker} fallbackIconKey={pin.Type === 4 ? 'flag' : 'call'} title={pin.Title} size={32} onPress={handlePress} />
+      <PinMarker imagePath={pin.ImagePath} poiImage={pin.PoiImage} marker={pin.Marker} fallbackIconKey={pin.Type === 4 ? 'flag' : 'call'} iconUrl={pin.IconUrl} title={pin.Title} size={32} onPress={handlePress} />
     </Mapbox.MarkerView>
   );
 });
@@ -68,8 +68,9 @@ const MapPins: React.FC<MapPinsProps> = ({ pins, onPinPress }) => {
   const filteredPins = useMemo(
     () =>
       pins.filter((pin) => {
-        // Check if this is a personnel pin by ImagePath
-        const isPersonnelPin = pin.ImagePath && pin.ImagePath.toLowerCase().startsWith('person');
+        // Personnel pins: ImagePath "Person_*", or Type 3 (the map API's personnel marker type), so a personnel pin
+        // that now carries an uploaded role icon is still recognized whatever its ImagePath says.
+        const isPersonnelPin = (pin.ImagePath && pin.ImagePath.toLowerCase().startsWith('person')) || pin.Type === 3;
 
         // If it's a personnel pin and user can't view PII, filter it out
         if (isPersonnelPin && !canUserViewPII) {

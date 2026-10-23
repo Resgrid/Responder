@@ -16,6 +16,7 @@ import { Heading } from '@/components/ui/heading';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { TypeIcon } from '@/components/units/unit-type-icon';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { getPoiDisplayName } from '@/lib/poi';
@@ -137,7 +138,12 @@ export default function PoiDetail() {
           <VStack space="md">
             <VStack space="xs">
               <HStack className="items-center justify-between">
-                <Heading size="lg">{title}</Heading>
+                <HStack className="shrink items-center" space="sm">
+                  <TypeIcon iconUrl={poi.IconUrl} size={32} testID="poi-detail-type-icon" />
+                  <Heading size="lg" className="shrink">
+                    {title}
+                  </Heading>
+                </HStack>
                 {poi.IsDestination ? (
                   <Badge action="success" size="sm" variant="solid">
                     <Text className="text-xs text-white">{t('poi.destination_enabled')}</Text>

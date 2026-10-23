@@ -22,6 +22,7 @@ import { HStack } from '../ui/hstack';
 import { ScrollView } from '../ui/scroll-view';
 import { Text } from '../ui/text';
 import { VStack } from '../ui/vstack';
+import { UnitTypeIcon } from './unit-type-icon';
 
 export const UnitDetailsSheet: React.FC = React.memo(() => {
   const { t } = useTranslation();
@@ -140,7 +141,7 @@ export const UnitDetailsSheet: React.FC = React.memo(() => {
         <Box className="w-full flex-1 px-4 pb-4">
           <HStack className="mb-6 items-center justify-between pt-2">
             <HStack className="flex-1 items-center" space="sm">
-              <Truck size={24} color={isDark ? '#60a5fa' : '#2563eb'} />
+              <UnitTypeIcon iconUrl={selectedUnit.TypeIconUrl} mapIcon={selectedUnit.TypeMapIcon} size={28} fallback={<Truck size={24} color={isDark ? '#60a5fa' : '#2563eb'} />} testID="unit-details-type-icon" />
               <Heading size="lg" className="flex-1 text-gray-800 dark:text-gray-100" numberOfLines={1}>
                 {selectedUnit.Name}
               </Heading>

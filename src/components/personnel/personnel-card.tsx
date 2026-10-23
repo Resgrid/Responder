@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Pressable } from 'react-native';
 
 import { Mail, Phone, Users } from '@/components/ui/lucide-icons';
+import { TypeIcon } from '@/components/units/unit-type-icon';
 import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { useSecurityStore } from '@/stores/security/store';
@@ -42,7 +43,15 @@ export const PersonnelCard: React.FC<PersonnelCardProps> = React.memo(function P
           </Avatar>
 
           <VStack space="xs" className="flex-1">
-            <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{fullName}</Text>
+            {/* The uploaded icon of the person's first role that has one (the same icon as their map pin); decorative. */}
+            {personnel.RoleIconUrl ? (
+              <HStack space="sm" className="items-center">
+                <TypeIcon iconUrl={personnel.RoleIconUrl} size={20} testID={`personnel-role-icon-${personnel.UserId}`} />
+                <Text className="shrink text-lg font-semibold text-gray-800 dark:text-gray-100">{fullName}</Text>
+              </HStack>
+            ) : (
+              <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{fullName}</Text>
+            )}
             {/* Contact Information */}
             {canUserViewPII ? (
               <VStack space="xs">
