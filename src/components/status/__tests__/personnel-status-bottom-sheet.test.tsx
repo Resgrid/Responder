@@ -18,7 +18,7 @@ import { PersonnelStatusBottomSheet } from '../personnel-status-bottom-sheet';
 jest.mock('expo-image', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return { Image: (props: any) => React.createElement(View, { ...props, testID: 'expo-image' }) };
+  return { Image: (props: Record<string, unknown>) => React.createElement(View, { ...props, testID: 'expo-image' }) };
 });
 
 // Mock NetInfo

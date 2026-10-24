@@ -54,7 +54,9 @@ export default function Calls() {
 
       void fetchCallPriorities();
       void fetchCalls();
-    }, [fetchCallPriorities, fetchCalls, trackEvent])
+      // Seat assignments drive the "calls I'm on" filter for unit dispatches, so they refresh with the calls.
+      void fetchRoles();
+    }, [fetchCallPriorities, fetchCalls, fetchRoles, trackEvent])
   );
 
   const handleRefresh = useCallback(async () => {

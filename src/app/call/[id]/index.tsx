@@ -38,6 +38,7 @@ import { VStack } from '@/components/ui/vstack';
 import { TypeIcon, UnitTypeIcon } from '@/components/units/unit-type-icon';
 import { VideoFeedTabPanel } from '@/components/video-feeds/video-feed-tab-panel';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { isUnitDispatchType } from '@/lib/call-dispatch';
 import { isFieldRedacted, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
@@ -428,7 +429,9 @@ export default function CallDetail() {
                 {callExtraData.Dispatches.map((dispatched, index) => (
                   <Box key={index} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
                     <HStack className="items-center" space="sm">
-                      {dispatched.Type === 'Unit' ? <UnitTypeIcon iconUrl={dispatched.TypeIconUrl} mapIcon={dispatched.TypeMapIcon} size={20} testID={`dispatched-unit-type-icon-${dispatched.Id || index}`} /> : null}
+                      {isUnitDispatchType(dispatched.Type) ? (
+                        <UnitTypeIcon iconUrl={dispatched.TypeIconUrl} mapIcon={dispatched.TypeMapIcon} size={20} testID={`dispatched-unit-type-icon-${dispatched.Id || index}`} />
+                      ) : null}
                       <Text className="shrink font-semibold">{dispatched.Name}</Text>
                     </HStack>
                     <HStack className="mt-1">

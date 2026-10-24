@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { MAP_ICONS, type MapIconKey } from '@/constants/map-icons';
@@ -43,6 +43,8 @@ export const UnitTypeIcon: React.FC<UnitTypeIconProps> = ({ iconUrl, mapIcon, si
   const remoteUrl = typeof iconUrl === 'string' && iconUrl.trim().length > 0 && iconUrl !== failedUrl ? iconUrl : null;
   const mapIconKey = remoteUrl ? null : resolveUnitTypeMapIconKey(mapIcon);
 
+  const handleRemoteError = useCallback(() => setFailedUrl(remoteUrl), [remoteUrl]);
+
   if (!remoteUrl && !mapIconKey) {
     return <>{fallback}</>;
   }
@@ -50,7 +52,7 @@ export const UnitTypeIcon: React.FC<UnitTypeIconProps> = ({ iconUrl, mapIcon, si
   return (
     <View testID={testID} style={{ width: size, height: size }} accessible={false} accessibilityElementsHidden={true} importantForAccessibility="no-hide-descendants">
       {remoteUrl ? (
-        <Image source={{ uri: remoteUrl }} style={{ width: size, height: size }} contentFit="contain" cachePolicy="memory-disk" onError={() => setFailedUrl(remoteUrl)} />
+        <Image source={{ uri: remoteUrl }} style={{ width: size, height: size }} contentFit="contain" cachePolicy="memory-disk" onError={handleRemoteError} />
       ) : (
         <Image source={MAP_ICONS[mapIconKey as MapIconKey].uri} style={{ width: size, height: size }} contentFit="contain" />
       )}

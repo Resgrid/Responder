@@ -79,6 +79,12 @@ export const getDispatchTypeStyle = (type: string): DispatchTypeStyle => {
   return { backgroundColor: '#6B7280', textColor: '#FFFFFF', label: '•' };
 };
 
+/** Whether a dispatch row is a unit, using the same case-insensitive match as the "U" badge styling. */
+export const isUnitDispatchType = (type: string): boolean => {
+  const normalizedType = normalizeValue(type);
+  return !normalizedType.includes('user') && !normalizedType.includes('personnel') && normalizedType.includes('unit');
+};
+
 export const getUniqueDispatches = (dispatches: DispatchedEventResultData[]): DispatchedEventResultData[] => {
   const seen = new Set<string>();
 

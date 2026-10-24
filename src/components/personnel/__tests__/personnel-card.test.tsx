@@ -10,7 +10,7 @@ jest.mock('expo-image', () => {
   const { View } = require('react-native');
 
   return {
-    Image: (props: any) => React.createElement(View, { ...props, testID: 'expo-image' }),
+    Image: (props: Record<string, unknown>) => React.createElement(View, { ...props, testID: 'expo-image' }),
   };
 });
 

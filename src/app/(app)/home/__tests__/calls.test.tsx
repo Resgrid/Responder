@@ -168,6 +168,7 @@ const setCallsStoreMock = (state: unknown) =>
 describe('Calls Screen', () => {
   const mockFetchCalls = jest.fn();
   const mockFetchCallPriorities = jest.fn();
+  const mockFetchRoles = jest.fn();
   const mockTrackEvent = jest.fn();
 
   beforeEach(() => {
@@ -193,8 +194,8 @@ describe('Calls Screen', () => {
       return selector ? selector(state) : state;
     }) as any);
 
-    mockUseRolesStore.mockImplementation(((selector?: (state: { roles: any[] }) => unknown) => {
-      const state = { roles: [] as any[] };
+    mockUseRolesStore.mockImplementation(((selector?: (state: { roles: any[]; fetchRoles: jest.Mock }) => unknown) => {
+      const state = { roles: [] as any[], fetchRoles: mockFetchRoles };
       return selector ? selector(state) : state;
     }) as any);
 
@@ -261,11 +262,13 @@ describe('Calls Screen', () => {
     expect(router.push).toHaveBeenCalledWith('/call/new/');
   });
 
-  it('fetches calls and priorities on focus', () => {
+  it('fetches calls, priorities and unit roles on focus', () => {
     render(<Calls />);
 
     expect(mockFetchCalls).toHaveBeenCalled();
     expect(mockFetchCallPriorities).toHaveBeenCalled();
+    // Seat assignments decide which unit dispatches count as "calls I'm on".
+    expect(mockFetchRoles).toHaveBeenCalled();
     expect(mockTrackEvent).toHaveBeenCalledWith('calls_viewed', {
       timestamp: expect.any(String),
     });

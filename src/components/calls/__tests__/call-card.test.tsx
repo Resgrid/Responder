@@ -14,7 +14,7 @@ jest.mock('expo-image', () => {
   const { View } = require('react-native');
 
   return {
-    Image: (props: any) => React.createElement(View, { ...props, testID: 'expo-image' }),
+    Image: (props: Record<string, unknown>) => React.createElement(View, { ...props, testID: 'expo-image' }),
   };
 });
 
@@ -181,6 +181,7 @@ describe('CallCard', () => {
             Dispatches: [
               { Id: 'unit-1', Type: 'Unit', Name: 'Medic 1', TypeIconUrl: null, TypeMapIcon: 'ambulance' },
               { Id: 'unit-2', Type: 'Unit', Name: 'Engine 2' },
+              { Id: 'unit-3', Type: 'unit', Name: 'Ladder 3', TypeMapIcon: 'fire' },
               { Id: 'user-1', Type: 'Personnel', Name: 'Alex Morgan', TypeMapIcon: 'ambulance' },
             ],
           } as any
@@ -189,6 +190,8 @@ describe('CallCard', () => {
     );
 
     expect(screen.getByTestId('dispatch-badge-type-icon-unit-1-dispatch-ticker-set-primary', HIDDEN)).toBeTruthy();
+    // The type is matched case-insensitively, like the "U" badge styling.
+    expect(screen.getByTestId('dispatch-badge-type-icon-unit-3-dispatch-ticker-set-primary', HIDDEN)).toBeTruthy();
     expect(screen.queryByTestId('dispatch-badge-type-icon-unit-2-dispatch-ticker-set-primary', HIDDEN)).toBeNull();
     expect(screen.queryByTestId('dispatch-badge-type-icon-user-1-dispatch-ticker-set-primary', HIDDEN)).toBeNull();
     expect(screen.getByText('Medic 1')).toBeTruthy();

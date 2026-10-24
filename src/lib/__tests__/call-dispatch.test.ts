@@ -1,4 +1,4 @@
-import { buildCallAssignmentContext, isCurrentUserOnCall, isDispatchAssignedToUser } from '@/lib/call-dispatch';
+import { buildCallAssignmentContext, getDispatchTypeStyle, isCurrentUserOnCall, isDispatchAssignedToUser, isUnitDispatchType } from '@/lib/call-dispatch';
 import { type CallExtraDataResultData } from '@/models/v4/calls/callExtraDataResultData';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
@@ -86,5 +86,21 @@ describe('isCurrentUserOnCall', () => {
     const context = buildCallAssignmentContext(user(), [seat({ UnitId: 'unit-1', UserId: 'user-1' })]);
 
     expect(isCurrentUserOnCall(undefined, context)).toBe(false);
+  });
+});
+
+describe('isUnitDispatchType', () => {
+  it('matches unit rows regardless of casing, like the "U" badge', () => {
+    expect(isUnitDispatchType('Unit')).toBe(true);
+    expect(isUnitDispatchType('unit')).toBe(true);
+    expect(isUnitDispatchType(' UNIT ')).toBe(true);
+    expect(getDispatchTypeStyle('unit').label).toBe('U');
+  });
+
+  it('does not match other dispatch types', () => {
+    expect(isUnitDispatchType('User')).toBe(false);
+    expect(isUnitDispatchType('Group')).toBe(false);
+    expect(isUnitDispatchType('Role')).toBe(false);
+    expect(isUnitDispatchType('')).toBe(false);
   });
 });
