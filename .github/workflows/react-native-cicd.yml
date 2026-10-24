@@ -139,6 +139,34 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      # The step above drops the image's swap. The native (CMake/clang) and Kotlin compiles run
+      # alongside 4 GB Gradle and Node heaps; with no swap the runner starves and GitHub drops it
+      # ("hosted runner lost communication"). Prefer the /mnt temp disk when it is mounted.
+      - name: 💾 Enable swap (Android)
+        if: matrix.platform == 'android'
+        run: |
+          sudo swapoff -a || true
+          sudo rm -f /swapfile /mnt/swapfile || true
+          SWAP_FILE=/swapfile
+          if mountpoint -q /mnt; then SWAP_FILE=/mnt/swapfile; fi
+          if sudo fallocate -l 8G "$SWAP_FILE" && sudo chmod 600 "$SWAP_FILE" && sudo mkswap "$SWAP_FILE" && sudo swapon "$SWAP_FILE"; then
+            echo "Enabled 8G swap at $SWAP_FILE"
+          else
+            echo "::warning::Could not enable swap at $SWAP_FILE"
+          fi
+          free -h
+
+      # ubuntu-26.04 mounts /tmp as an ~8 GB RAM-backed tmpfs, and eas build --local works under
+      # /tmp by default, so the Gradle/CMake output eats the runner's memory. Move EAS's working
+      # dir and the general temp dir onto the runner's disk.
+      - name: 📂 Move build temp dirs off tmpfs (Android)
+        if: matrix.platform == 'android'
+        run: |
+          mkdir -p "${RUNNER_TEMP}/tmp" "${RUNNER_TEMP}/eas-build"
+          echo "TMPDIR=${RUNNER_TEMP}/tmp" >> "$GITHUB_ENV"
+          echo "EAS_LOCAL_BUILD_WORKINGDIR=${RUNNER_TEMP}/eas-build" >> "$GITHUB_ENV"
+          df -h /tmp "${RUNNER_TEMP}"
+
       - name: 🏗 Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -245,6 +273,9 @@ jobs:
         run: |
           mkdir -p ~/.gradle/
           echo ${GRADLE_PROPERTIES} > ~/.gradle/gradle.properties
+          # Each Gradle worker can drive its own CMake/ninja native build, so cap workers to
+          # keep concurrent clang processes within the runner's memory.
+          echo "org.gradle.workers.max=2" >> ~/.gradle/gradle.properties
 
       - name: 📱 Build Development APK
         if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'dev'))
