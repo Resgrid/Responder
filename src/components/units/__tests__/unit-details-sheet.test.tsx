@@ -106,6 +106,15 @@ jest.mock('lucide-react-native', () => ({
   X: ({ size, className }: { size?: number; className?: string }) => <div data-testid="x-icon" />,
 }));
 
+jest.mock('expo-image', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    Image: (props: Record<string, unknown>) => React.createElement(View, { ...props, testID: 'expo-image' }),
+  };
+});
+
 // Mock the units store
 const mockUnitsStore = {
   units: [],
@@ -582,6 +591,52 @@ describe('UnitDetailsSheet', () => {
 
     // Component should render when unit with special permit is selected
     expect(screen.getByTestId('close-button')).toBeTruthy();
+  });
+
+  describe('Type icon', () => {
+    // The type icon is decorative (hidden from accessibility), so queries must opt in to hidden elements.
+    const HIDDEN = { includeHiddenElements: true };
+
+    it("shows the department's uploaded type icon in place of the generic truck", () => {
+      const url = 'https://api.resgrid.dev/api/v4/UnitTypeIcons/abc';
+      Object.assign(mockUnitsStore, {
+        units: [{ ...mockUnit, TypeIconUrl: url, TypeMapIcon: 'ambulance' }],
+        selectedUnitId: '1',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(screen.getByTestId('unit-details-type-icon', HIDDEN)).toBeTruthy();
+      expect(screen.getByTestId('expo-image', HIDDEN).props.source).toEqual({ uri: url });
+      expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'truck-icon' })).toHaveLength(0);
+    });
+
+    it('shows the built-in type icon when there is no upload', () => {
+      Object.assign(mockUnitsStore, {
+        units: [{ ...mockUnit, TypeIconUrl: null, TypeMapIcon: 'ambulance' }],
+        selectedUnitId: '1',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(screen.getByTestId('unit-details-type-icon', HIDDEN)).toBeTruthy();
+      expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'truck-icon' })).toHaveLength(0);
+    });
+
+    it('keeps the generic truck when the server sends no type icon (older servers)', () => {
+      Object.assign(mockUnitsStore, {
+        units: [mockUnit],
+        selectedUnitId: '1',
+        isDetailsOpen: true,
+      });
+
+      render(<UnitDetailsSheet />);
+
+      expect(screen.queryByTestId('unit-details-type-icon', HIDDEN)).toBeNull();
+      expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'truck-icon' })).toHaveLength(1);
+    });
   });
 
   describe('Analytics Tracking', () => {

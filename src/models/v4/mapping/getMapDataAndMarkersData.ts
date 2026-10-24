@@ -26,4 +26,9 @@ export class MapMakerInfoData {
   public Note?: string;
   public LayerId?: string;
   public LayerName?: string;
+  /**
+   * Department-uploaded icon for call (0), unit (1) and POI (4) pins (the type's icon) and personnel (3) pins (the icon of
+   * the person's first role, in role order, that has one); null/undefined when none or from older servers.
+   */
+  public IconUrl?: string | null;
 }

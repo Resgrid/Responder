@@ -4,6 +4,7 @@ import { ScrollView } from 'react-native';
 
 import { ProtectedText } from '@/components/data-protection/protected-text';
 import { Calendar, IdCard, Mail, Phone, Tag, Users, X } from '@/components/ui/lucide-icons';
+import { TypeIcon } from '@/components/units/unit-type-icon';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { isRedactedValue, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { formatDateForDisplay, getAvatarUrl, getColorFromString, getInitials, parseDateISOString, safeFormatTimestamp } from '@/lib/utils';
@@ -99,6 +100,8 @@ export const PersonnelDetailsSheet: React.FC = () => {
                 {!imageError && <AvatarImage source={{ uri: avatarUrl }} onError={() => setImageError(true)} />}
                 {imageError && <AvatarFallbackText className="text-white">{initials}</AvatarFallbackText>}
               </Avatar>
+              {/* The uploaded icon of the person's first role that has one (the same icon as their map pin); decorative. */}
+              {selectedPersonnel.RoleIconUrl ? <TypeIcon iconUrl={selectedPersonnel.RoleIconUrl} size={24} testID="personnel-details-role-icon" /> : null}
               <Heading size="lg" className="flex-1 text-gray-800 dark:text-gray-100">
                 {fullName}
               </Heading>

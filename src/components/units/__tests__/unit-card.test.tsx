@@ -11,6 +11,25 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+// The card's lucide icons (generic truck, location pin) render through the ui Icon; tag them so the tests can count them.
+jest.mock('../../ui/icon', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    Icon: () => React.createElement(View, { testID: 'ui-icon' }),
+  };
+});
+
+jest.mock('expo-image', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    Image: (props: Record<string, unknown>) => React.createElement(View, { ...props, testID: 'expo-image' }),
+  };
+});
+
 const createStatus = (overrides: Partial<StatusesResultData>): StatusesResultData => ({
   Id: 0,
   Type: 0,
@@ -107,5 +126,36 @@ describe('UnitCard status lookup', () => {
     render(<UnitCard unit={createUnit({ Type: 'Ladder', CustomStatusSetId: '', CurrentStatusId: '7' })} unitTypeStatuses={unitTypeStatuses} onPress={jest.fn()} />);
 
     expect(screen.getByText('Server Status Text')).toBeTruthy();
+  });
+});
+
+describe('UnitCard type icon', () => {
+  // The type icon is decorative (hidden from accessibility), so queries must opt in to hidden elements.
+  const HIDDEN = { includeHiddenElements: true };
+
+  it("shows the department's uploaded type icon next to the name", () => {
+    const url = 'https://api.resgrid.dev/api/v4/UnitTypeIcons/abc';
+    render(<UnitCard unit={createUnit({ TypeIconUrl: url, TypeMapIcon: 'ambulance' })} unitTypeStatuses={[]} onPress={jest.fn()} />);
+
+    expect(screen.getByTestId('unit-type-icon-unit-1', HIDDEN)).toBeTruthy();
+    expect(screen.getByTestId('expo-image', HIDDEN).props.source).toEqual({ uri: url });
+    // The generic truck (the only lucide icon on a card with no location) is replaced, not shown alongside.
+    expect(screen.queryAllByTestId('ui-icon', HIDDEN)).toHaveLength(0);
+  });
+
+  it('shows the built-in type icon when there is no upload', () => {
+    render(<UnitCard unit={createUnit({ TypeIconUrl: null, TypeMapIcon: 'ambulance' })} unitTypeStatuses={[]} onPress={jest.fn()} />);
+
+    expect(screen.getByTestId('unit-type-icon-unit-1', HIDDEN)).toBeTruthy();
+    expect(screen.getByTestId('expo-image', HIDDEN).props.source).toBeTruthy();
+  });
+
+  it('keeps the generic truck icon when the server sends no type icon (older servers)', () => {
+    render(<UnitCard unit={createUnit({})} unitTypeStatuses={[]} onPress={jest.fn()} />);
+
+    expect(screen.queryByTestId('unit-type-icon-unit-1', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('expo-image', HIDDEN)).toBeNull();
+    expect(screen.getAllByTestId('ui-icon', HIDDEN)).toHaveLength(1);
+    expect(screen.getByText('Engine 1')).toBeTruthy();
   });
 });

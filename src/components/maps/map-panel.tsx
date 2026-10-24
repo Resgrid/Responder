@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { NavigationIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { Loading } from '@/components/common/loading';
@@ -309,6 +309,36 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
     setSelectedPin(null);
   }, []);
 
+  // rnmapbox's web build (the dev-only `yarn web` target) exports only MapView, Camera, MarkerView and Logger, so
+  // PointAnnotation and UserTrackingMode are undefined there: use MarkerView and skip the tracking mode on web.
+  const isWeb = Platform.OS === 'web';
+
+  const userLocationMarker = (
+    <Animated.View
+      style={[
+        styles.markerContainer,
+        {
+          transform: [{ scale: pulseAnim }],
+        },
+      ]}
+    >
+      <View style={styles.markerOuterRing} />
+      <View style={styles.markerInnerContainer}>
+        <View style={styles.markerDot} />
+        {heading != null ? (
+          <View
+            style={[
+              styles.directionIndicator,
+              {
+                transform: [{ rotate: `${heading}deg` }],
+              },
+            ]}
+          />
+        ) : null}
+      </View>
+    </Animated.View>
+  );
+
   return (
     <View className="flex-1">
       <Mapbox.MapView
@@ -327,36 +357,20 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
           ref={cameraRef}
           followZoomLevel={isMapLocked ? 16 : 12}
           followUserLocation={isFollowingUser}
-          {...(isFollowingUser ? { followUserMode: Mapbox.UserTrackingMode.FollowWithHeading } : {})}
+          {...(isFollowingUser && !isWeb ? { followUserMode: Mapbox.UserTrackingMode.FollowWithHeading } : {})}
           {...(isFollowingUser ? { followPitch: 45 } : {})}
         />
 
         {latitude != null && longitude != null ? (
-          <Mapbox.PointAnnotation id="userLocation" coordinate={[longitude, latitude]} anchor={{ x: 0.5, y: 0.5 }}>
-            <Animated.View
-              style={[
-                styles.markerContainer,
-                {
-                  transform: [{ scale: pulseAnim }],
-                },
-              ]}
-            >
-              <View style={styles.markerOuterRing} />
-              <View style={styles.markerInnerContainer}>
-                <View style={styles.markerDot} />
-                {heading != null ? (
-                  <View
-                    style={[
-                      styles.directionIndicator,
-                      {
-                        transform: [{ rotate: `${heading}deg` }],
-                      },
-                    ]}
-                  />
-                ) : null}
-              </View>
-            </Animated.View>
-          </Mapbox.PointAnnotation>
+          isWeb ? (
+            <Mapbox.MarkerView id="userLocation" coordinate={[longitude, latitude]} anchor={{ x: 0.5, y: 0.5 }}>
+              {userLocationMarker}
+            </Mapbox.MarkerView>
+          ) : (
+            <Mapbox.PointAnnotation id="userLocation" coordinate={[longitude, latitude]} anchor={{ x: 0.5, y: 0.5 }}>
+              {userLocationMarker}
+            </Mapbox.PointAnnotation>
+          )
         ) : null}
         <MapPins pins={mapPins} onPinPress={handlePinPress} />
       </Mapbox.MapView>

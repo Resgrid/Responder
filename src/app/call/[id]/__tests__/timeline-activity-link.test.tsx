@@ -34,6 +34,13 @@ jest.mock('@/components/ui/shared-tabs', () => {
 // The screen uses the WebView default import; the global mock has no __esModule flag.
 jest.mock('react-native-webview', () => ({ __esModule: true, default: () => null }));
 
+// expo-image's native view does not render under jest; stand in a View that keeps its props.
+jest.mock('expo-image', () => {
+  const ReactModule = require('react');
+  const { View } = require('react-native');
+  return { Image: (props: Record<string, unknown>) => ReactModule.createElement(View, { ...props, testID: 'expo-image' }) };
+});
+
 jest.mock('@/components/ui', () => {
   const { View } = require('react-native');
   return { FocusAwareStatusBar: () => null, SafeAreaView: View };
@@ -102,7 +109,7 @@ const buildActivity = (DestinationSource?: number | null) => {
   return activity;
 };
 
-const mountWithActivity = (activity: Record<string, unknown>[]) => {
+const mountWithActivity = (activity: Record<string, unknown>[], dispatches: Record<string, unknown>[] = [], callOverrides: Record<string, unknown> = {}) => {
   mockDetailState = {
     call: {
       CallId: '1',
@@ -122,8 +129,9 @@ const mountWithActivity = (activity: Record<string, unknown>[]) => {
       ContactInfo: '',
       RedactedFields: [],
       CheckInTimersEnabled: false,
+      ...callOverrides,
     },
-    callExtraData: { CallFormData: '', Activity: activity, Dispatches: [], Protocols: [] },
+    callExtraData: { CallFormData: '', Activity: activity, Dispatches: dispatches, Protocols: [] },
     callPriority: { Name: 'High', Color: '#FF0000' },
     isLoading: false,
     error: null,
@@ -176,5 +184,51 @@ describe('CallDetail timeline activity-link markers', () => {
     expect(timeline.getAllByText('Responding')).toHaveLength(7);
     expect(timeline.getAllByTestId('activity-link-marker-auto')).toHaveLength(3);
     expect(timeline.getAllByTestId('activity-link-marker-inferred')).toHaveLength(1);
+  });
+});
+
+describe('CallDetail dispatched tab unit type icons', () => {
+  // The type icon is decorative (hidden from accessibility), so queries must opt in to hidden elements.
+  const HIDDEN = { includeHiddenElements: true };
+  const URL = 'https://api.resgrid.dev/api/v4/UnitTypeIcons/abc';
+
+  it('shows the type icon next to unit dispatches only', () => {
+    mountWithActivity(
+      [],
+      [
+        { Id: '7', Type: 'Unit', Name: 'Medic 7', Group: 'Station 1', TypeIconUrl: URL, TypeMapIcon: 'ambulance' },
+        { Id: '8', Type: 'Unit', Name: 'Engine 8', Group: 'Station 1' },
+        { Id: 'abc', Type: 'User', Name: 'Jane Smith', Group: 'Station 1', TypeMapIcon: 'ambulance' },
+      ]
+    );
+    const dispatched = within(screen.getByTestId('tab-dispatched'));
+
+    expect(dispatched.getByText('Medic 7')).toBeTruthy();
+    expect(dispatched.getByText('Engine 8')).toBeTruthy();
+    expect(dispatched.getByText('Jane Smith')).toBeTruthy();
+    expect(dispatched.getByTestId('dispatched-unit-type-icon-7', HIDDEN)).toBeTruthy();
+    expect(dispatched.getByTestId('expo-image', HIDDEN).props.source).toEqual({ uri: URL });
+    // Older servers omit the fields: the unit shows its name alone. Non-unit rows never get one.
+    expect(dispatched.queryByTestId('dispatched-unit-type-icon-8', HIDDEN)).toBeNull();
+    expect(dispatched.queryByTestId('dispatched-unit-type-icon-abc', HIDDEN)).toBeNull();
+  });
+});
+
+describe('CallDetail header call type icon', () => {
+  // The type icon is decorative (hidden from accessibility), so queries must opt in to hidden elements.
+  const HIDDEN = { includeHiddenElements: true };
+
+  it("shows the call type's uploaded icon next to the call name", () => {
+    const url = 'https://api.resgrid.dev/api/v4/TypeIcons/fire';
+    mountWithActivity([], [], { TypeIconUrl: url, TypeMapIcon: 'fire' });
+
+    expect(screen.getByTestId('call-detail-type-icon', HIDDEN)).toBeTruthy();
+    expect(screen.getAllByTestId('expo-image', HIDDEN).some((image) => image.props.source?.uri === url)).toBe(true);
+  });
+
+  it('shows the name alone when the server sends no type icon (older servers)', () => {
+    mountWithActivity([]);
+
+    expect(screen.queryByTestId('call-detail-type-icon', HIDDEN)).toBeNull();
   });
 });

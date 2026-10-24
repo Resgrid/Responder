@@ -12,4 +12,6 @@ export class PoiResultData {
   public PoiImage: string = '';
   public Marker: string = '';
   public IsDestination: boolean = false;
+  /** Department-uploaded icon for the POI's type (absolute URL); null when none, undefined from older servers. */
+  public IconUrl?: string | null;
 }
