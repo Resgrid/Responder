@@ -64,3 +64,97 @@ describe('PinMarker', () => {
     expect(drawn(MAP_ICONS.call.uri)).toHaveLength(0);
   });
 });
+
+// Core's PinIconUrl: the built-in pin recoloured to the call's priority or the unit's/person's status.
+describe('PinMarker status/priority pin', () => {
+  const PIN_URL = 'https://api.resgrid.dev/api/v4/TypeIcons/Pins/ambulance-responding?v=1';
+
+  const remoteImages = () => screen.queryAllByTestId('expo-image', HIDDEN);
+
+  it('draws the status pin in place of the bundled pin, in the same box and fit, untinted', () => {
+    render(<PinMarker imagePath="ambulance" title="Medic 1" pinIconUrl={PIN_URL} size={32} />);
+
+    const image = screen.getByTestId('expo-image', HIDDEN);
+    expect(image.props.source).toEqual({ uri: PIN_URL });
+    // The bundled pin is a 32 x 37 PNG drawn into a size x size box with resizeMode "cover"; the status pin matches it.
+    expect(image.props.style).toEqual({ width: 32, height: 32 });
+    expect(image.props.contentFit).toBe('cover');
+    expect(image.props.cachePolicy).toBe('memory-disk');
+    expect(image.props.tintColor).toBeUndefined();
+    expect(screen.getByTestId('pin-marker-status-pin', HIDDEN)).toBeTruthy();
+    expect(bundledImage()).toHaveLength(0);
+    expect(screen.getByText('Medic 1')).toBeTruthy();
+  });
+
+  it('prefers the uploaded icon over the status pin', () => {
+    render(<PinMarker imagePath="ambulance" title="Medic 1" iconUrl={URL} pinIconUrl={PIN_URL} />);
+
+    const images = remoteImages();
+    expect(images).toHaveLength(1);
+    expect(images[0]!.props.source).toEqual({ uri: URL });
+    expect(images[0]!.props.contentFit).toBe('contain');
+    expect(screen.queryByTestId('pin-marker-status-pin', HIDDEN)).toBeNull();
+    expect(bundledImage()).toHaveLength(0);
+  });
+
+  it('falls back to the bundled pin when the status pin fails to load', () => {
+    render(<PinMarker imagePath="ambulance" title="Medic 1" pinIconUrl={PIN_URL} />);
+
+    act(() => {
+      screen.getByTestId('expo-image', HIDDEN).props.onError({ error: 'boom' });
+    });
+
+    expect(remoteImages()).toHaveLength(0);
+    expect(bundledImage().length).toBeGreaterThan(0);
+    expect(screen.getByText('Medic 1')).toBeTruthy();
+  });
+
+  it('falls back from a failed uploaded icon to the status pin, then to the bundled pin', () => {
+    render(<PinMarker imagePath="ambulance" title="Medic 1" iconUrl={URL} pinIconUrl={PIN_URL} />);
+
+    act(() => {
+      screen.getByTestId('expo-image', HIDDEN).props.onError({ error: 'boom' });
+    });
+
+    expect(screen.getByTestId('expo-image', HIDDEN).props.source).toEqual({ uri: PIN_URL });
+    expect(bundledImage()).toHaveLength(0);
+
+    act(() => {
+      screen.getByTestId('expo-image', HIDDEN).props.onError({ error: 'boom' });
+    });
+
+    expect(remoteImages()).toHaveLength(0);
+    expect(bundledImage().length).toBeGreaterThan(0);
+  });
+
+  it.each([null, undefined, '', '   ', '/api/v4/TypeIcons/Pins/ambulance-responding', 'data:image/png;base64,AAAA', 'javascript:alert(1)'])('draws the bundled pin when PinIconUrl is %p', (pinIconUrl) => {
+    render(<PinMarker imagePath="ambulance" title="Medic 1" pinIconUrl={pinIconUrl} />);
+
+    expect(remoteImages()).toHaveLength(0);
+    expect(bundledImage().length).toBeGreaterThan(0);
+  });
+
+  it('redraws when only the status pin changes', () => {
+    const NEXT_PIN_URL = 'https://api.resgrid.dev/api/v4/TypeIcons/Pins/ambulance-onscene?v=1';
+    const { rerender } = render(<PinMarker imagePath="ambulance" title="Medic 1" pinIconUrl={PIN_URL} />);
+
+    rerender(<PinMarker imagePath="ambulance" title="Medic 1" pinIconUrl={NEXT_PIN_URL} />);
+
+    expect(screen.getByTestId('expo-image', HIDDEN).props.source).toEqual({ uri: NEXT_PIN_URL });
+  });
+
+  it('tries the next status pin after an earlier one failed', () => {
+    const NEXT_PIN_URL = 'https://api.resgrid.dev/api/v4/TypeIcons/Pins/ambulance-onscene?v=1';
+    const { rerender } = render(<PinMarker imagePath="ambulance" title="Medic 1" pinIconUrl={PIN_URL} />);
+
+    act(() => {
+      screen.getByTestId('expo-image', HIDDEN).props.onError({ error: 'boom' });
+    });
+    expect(bundledImage().length).toBeGreaterThan(0);
+
+    rerender(<PinMarker imagePath="ambulance" title="Medic 1" pinIconUrl={NEXT_PIN_URL} />);
+
+    expect(screen.getByTestId('expo-image', HIDDEN).props.source).toEqual({ uri: NEXT_PIN_URL });
+    expect(bundledImage()).toHaveLength(0);
+  });
+});

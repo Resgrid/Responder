@@ -1,7 +1,7 @@
 import Mapbox from '@rnmapbox/maps';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { NavigationIcon } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { InfoIcon, NavigationIcon } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -11,7 +11,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { useMapLiveLocations } from '@/hooks/use-map-live-locations';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { logger } from '@/lib/logging';
-import { getPinEntityId } from '@/lib/map-pin-ids';
+import { getPinEntityId, MapPinType } from '@/lib/map-pin-ids';
 import { useDepartmentMapStyle } from '@/lib/map-style';
 import { isPoiMarker } from '@/lib/poi';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
@@ -20,6 +20,7 @@ import { useLocationStore } from '@/stores/app/location-store';
 import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useToastStore } from '@/stores/toast/store';
 
+import MapLegendSheet from './map-legend-sheet';
 import MapPins from './map-pins';
 import PinDetailModal from './pin-detail-modal';
 
@@ -45,6 +46,9 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
   const [selectedPin, setSelectedPin] = useState<MapMakerInfoData | null>(null);
   const [isPinDetailModalOpen, setIsPinDetailModalOpen] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
+  // The legend sheet mounts on first open (nothing to build while the map loads) and stays mounted so it can animate closed.
+  const [isLegendMounted, setIsLegendMounted] = useState(false);
   const latitude = useLocationStore((state) => state.latitude);
   const longitude = useLocationStore((state) => state.longitude);
   const heading = useLocationStore((state) => state.heading);
@@ -309,6 +313,17 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
     setSelectedPin(null);
   }, []);
 
+  const handleOpenLegend = useCallback(() => {
+    setIsLegendMounted(true);
+    setIsLegendOpen(true);
+    trackEvent('map_legend_opened', { timestamp: new Date().toISOString() });
+  }, [trackEvent]);
+
+  const handleCloseLegend = useCallback(() => setIsLegendOpen(false), []);
+
+  // The legend shows a hydrant row only while the map is drawing hydrants, drawn like this one.
+  const hydrantPin = useMemo(() => mapPins.find((pin) => pin.Type === MapPinType.Hydrant) ?? null, [mapPins]);
+
   // rnmapbox's web build (the dev-only `yarn web` target) exports only MapView, Camera, MarkerView and Logger, so
   // PointAnnotation and UserTrackingMode are undefined there: use MarkerView and skip the tracking mode on web.
   const isWeb = Platform.OS === 'web';
@@ -375,6 +390,10 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
         <MapPins pins={mapPins} onPinPress={handlePinPress} />
       </Mapbox.MapView>
 
+      <TouchableOpacity style={styles.legendButton} onPress={handleOpenLegend} accessibilityRole="button" accessibilityLabel={t('maps.legend.open')} testID="map-legend-button">
+        <InfoIcon size={20} color="#ffffff" />
+      </TouchableOpacity>
+
       {showRecenterButton ? (
         <TouchableOpacity style={styles.recenterButton} onPress={handleRecenterMap} testID="recenter-button">
           <NavigationIcon size={20} color="#ffffff" />
@@ -384,6 +403,8 @@ export const MapPanel: React.FC<MapPanelProps> = ({ focusedPoi }) => {
       {isLoading ? <Loading text={t('map.loading_markers')} transparent={true} fullscreen={true} /> : null}
 
       <PinDetailModal pin={selectedPin} isOpen={isPinDetailModalOpen} onClose={handleClosePinDetail} onSetAsCurrentCall={handleSetAsCurrentCall} />
+
+      {isLegendMounted ? <MapLegendSheet isOpen={isLegendOpen} onClose={handleCloseLegend} hydrantPin={hydrantPin} /> : null}
     </View>
   );
 };
@@ -445,6 +466,25 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderBottomColor: '#3b82f6',
     top: -36,
+  },
+  legendButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   recenterButton: {
     position: 'absolute',

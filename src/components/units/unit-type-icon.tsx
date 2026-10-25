@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { Image, type ImageContentFit } from 'expo-image';
 import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
@@ -12,6 +12,8 @@ export interface UnitTypeIconProps {
   size?: number;
   /** Rendered when there is no icon to show (nothing set, or the uploaded icon failed with no built-in to fall back to). */
   fallback?: React.ReactNode;
+  /** How the image fits its `size` square; "contain" (the default) for square type icons, "cover" to match a bundled map pin. */
+  contentFit?: ImageContentFit;
   testID?: string;
 }
 
@@ -36,7 +38,7 @@ export const resolveUnitTypeMapIconKey = (mapIcon?: string | null): MapIconKey |
  * The icon a department gave a unit's type: the uploaded image when there is one (falling back if it fails to load),
  * else the built-in map icon the type picked, else `fallback`. Decorative: the unit's name is always shown beside it.
  */
-export const UnitTypeIcon: React.FC<UnitTypeIconProps> = ({ iconUrl, mapIcon, size = 24, fallback = null, testID }) => {
+export const UnitTypeIcon: React.FC<UnitTypeIconProps> = ({ iconUrl, mapIcon, size = 24, fallback = null, contentFit = 'contain', testID }) => {
   // Keyed on the URL that failed, so a new upload (a new URL) gets its own attempt.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
@@ -52,9 +54,9 @@ export const UnitTypeIcon: React.FC<UnitTypeIconProps> = ({ iconUrl, mapIcon, si
   return (
     <View testID={testID} style={{ width: size, height: size }} accessible={false} accessibilityElementsHidden={true} importantForAccessibility="no-hide-descendants">
       {remoteUrl ? (
-        <Image source={{ uri: remoteUrl }} style={{ width: size, height: size }} contentFit="contain" cachePolicy="memory-disk" onError={handleRemoteError} />
+        <Image source={{ uri: remoteUrl }} style={{ width: size, height: size }} contentFit={contentFit} cachePolicy="memory-disk" onError={handleRemoteError} />
       ) : (
-        <Image source={MAP_ICONS[mapIconKey as MapIconKey].uri} style={{ width: size, height: size }} contentFit="contain" />
+        <Image source={MAP_ICONS[mapIconKey as MapIconKey].uri} style={{ width: size, height: size }} contentFit={contentFit} />
       )}
     </View>
   );

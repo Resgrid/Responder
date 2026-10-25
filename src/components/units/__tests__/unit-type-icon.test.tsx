@@ -63,6 +63,18 @@ describe('UnitTypeIcon', () => {
     expect(screen.queryByText('fallback')).toBeNull();
   });
 
+  it('passes a requested content fit through to the uploaded and the bundled image', () => {
+    const { rerender } = render(<UnitTypeIcon iconUrl={URL} size={32} contentFit="cover" testID="type-icon" />);
+
+    expect(screen.getByTestId('expo-image', HIDDEN).props.contentFit).toBe('cover');
+    expect(screen.getByTestId('expo-image', HIDDEN).props.style).toEqual({ width: 32, height: 32 });
+
+    rerender(<UnitTypeIcon mapIcon="ambulance" size={32} contentFit="cover" testID="type-icon" />);
+
+    expect(screen.getByTestId('expo-image', HIDDEN).props.source).toBe(MAP_ICONS.ambulance.uri);
+    expect(screen.getByTestId('expo-image', HIDDEN).props.contentFit).toBe('cover');
+  });
+
   it('renders the fallback when there is neither a url nor a known map icon', () => {
     render(<UnitTypeIcon mapIcon="unknown" testID="type-icon" fallback={<Text>fallback</Text>} />);
 

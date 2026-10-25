@@ -176,6 +176,21 @@ jest.mock('@/components/maps/pin-detail-modal', () => ({
   },
 }));
 
+// The legend sheet has its own tests; here only the map's button and the wiring matter.
+jest.mock('@/components/maps/map-legend-sheet', () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose, hydrantPin }: any) => {
+    const { View, Text, Pressable } = require('react-native');
+    if (!isOpen) return null;
+    return (
+      <View testID="map-legend-sheet">
+        <Text>{hydrantPin ? `hydrant:${hydrantPin.Id}` : 'no-hydrant'}</Text>
+        <Pressable testID="map-legend-sheet-close" onPress={onClose} />
+      </View>
+    );
+  },
+}));
+
 jest.mock('@/components/sidebar/side-menu', () => ({
   SideMenu: ({ onNavigate }: any) => {
     const { View, Text, Pressable } = require('react-native');
@@ -625,6 +640,66 @@ describe('HomeMap', () => {
     // In landscape mode, the map container should still render correctly
     // (side menu is handled by the parent _layout.tsx)
     expect(screen.getByTestId('home-map-container')).toBeTruthy();
+  });
+
+  describe('map legend', () => {
+    it('shows a labelled legend button that opens the legend sheet', async () => {
+      render(<HomeMap />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('map-pins')).toBeTruthy();
+      });
+
+      const button = screen.getByTestId('map-legend-button');
+      expect(button.props.accessibilityLabel).toBe('maps.legend.open');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(screen.queryByTestId('map-legend-sheet')).toBeNull();
+
+      fireEvent.press(button);
+
+      expect(screen.getByTestId('map-legend-sheet')).toBeTruthy();
+      expect(screen.getByText('no-hydrant')).toBeTruthy();
+      expect(mockTrackEvent).toHaveBeenCalledWith('map_legend_opened', { timestamp: expect.any(String) });
+
+      fireEvent.press(screen.getByTestId('map-legend-sheet-close'));
+
+      expect(screen.queryByTestId('map-legend-sheet')).toBeNull();
+
+      // Reopening opens it again (the sheet fetches on every open).
+      fireEvent.press(screen.getByTestId('map-legend-button'));
+      expect(screen.getByTestId('map-legend-sheet')).toBeTruthy();
+    });
+
+    it('hands the sheet a hydrant marker while the map draws hydrants', async () => {
+      const mapping = jest.requireMock('@/api/mapping/mapping') as { getMapDataAndMarkers: jest.Mock };
+      const originalImplementation = mapping.getMapDataAndMarkers.getMockImplementation();
+      mapping.getMapDataAndMarkers.mockImplementation(() =>
+        Promise.resolve({
+          Data: {
+            MapMakerInfos: [
+              { Id: 'c1', Title: 'Test Pin 1', Latitude: 40.7128, Longitude: -74.006, Type: 0, ImagePath: 'call', InfoWindowContent: '', Color: '#ff0000', zIndex: '1' },
+              { Id: 'hydrant-9', Title: 'Hydrant 9', Latitude: 40.7129, Longitude: -74.007, Type: 5, ImagePath: 'hydrant', InfoWindowContent: '', Color: '#ff0000', zIndex: '5' },
+            ],
+          },
+        })
+      );
+
+      try {
+        render(<HomeMap />);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('map-pin-hydrant-9')).toBeTruthy();
+        });
+
+        fireEvent.press(screen.getByTestId('map-legend-button'));
+
+        expect(screen.getByText('hydrant:hydrant-9')).toBeTruthy();
+      } finally {
+        if (originalImplementation) {
+          mapping.getMapDataAndMarkers.mockImplementation(originalImplementation);
+        }
+      }
+    });
   });
 
   describe('department map style', () => {

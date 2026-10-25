@@ -24,8 +24,9 @@ export const registerLocationServiceRealtimeUpdater = (updater: LocationServiceR
 /**
  * Hook for managing realtime geolocation functionality
  * This hook manages the connection to the SignalR geolocation hub
- * When enabled, the app will receive real-time location updates from other personnel/units
- * and will also send location updates to the API
+ * When enabled, the app will receive real-time location updates from other personnel/units.
+ * It does not govern sending: this device's position is posted whenever the app is open
+ * (and in the background under Background Geolocation) by the location service.
  */
 export const useRealtimeGeolocation = () => {
   const [realtimeGeolocationEnabled, _setRealtimeGeolocationEnabled] = useMMKVBoolean(getRealtimeGeolocationStorageKey(), storage);

@@ -56,7 +56,17 @@ const StandardPinItem = React.memo<PinItemProps>(({ pin, onPinPress }) => {
 
   return (
     <Mapbox.MarkerView id={`pin-${pin.Id}`} coordinate={[pin.Longitude, pin.Latitude]} anchor={{ x: 0.5, y: 0.5 }} allowOverlap={true}>
-      <PinMarker imagePath={pin.ImagePath} poiImage={pin.PoiImage} marker={pin.Marker} fallbackIconKey={pin.Type === 4 ? 'flag' : 'call'} iconUrl={pin.IconUrl} title={pin.Title} size={32} onPress={handlePress} />
+      <PinMarker
+        imagePath={pin.ImagePath}
+        poiImage={pin.PoiImage}
+        marker={pin.Marker}
+        fallbackIconKey={pin.Type === 4 ? 'flag' : 'call'}
+        iconUrl={pin.IconUrl}
+        pinIconUrl={pin.PinIconUrl}
+        title={pin.Title}
+        size={32}
+        onPress={handlePress}
+      />
     </Mapbox.MarkerView>
   );
 });
