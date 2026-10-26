@@ -1,4 +1,5 @@
 import { type GetMapDataAndMarkersResult } from '@/models/v4/mapping/getMapDataAndMarkersResult';
+import { type GetMapIconLegendResult } from '@/models/v4/mapping/getMapIconLegendResult';
 import { type GetMapLayersResult } from '@/models/v4/mapping/getMapLayersResult';
 import { type PoiResult } from '@/models/v4/mapping/poiResult';
 import { type PoisResult } from '@/models/v4/mapping/poisResult';
@@ -11,9 +12,16 @@ const getMayLayersApi = createApiEndpoint('/Mapping/GetMapLayers');
 const getMapDataAndMarkersApi = createApiEndpoint('/Mapping/GetMapDataAndMarkers');
 const getPoiTypesApi = createApiEndpoint('/Mapping/GetPoiTypes');
 const getPoisApi = createApiEndpoint('/Mapping/GetPois');
+const getMapIconLegendApi = createApiEndpoint('/Mapping/GetMapIconLegend');
 
 export const getMapDataAndMarkers = async (signal?: AbortSignal) => {
   const response = await getMapDataAndMarkersApi.get<GetMapDataAndMarkersResult>(undefined, signal);
+  return response.data;
+};
+
+/** Every icon the department's map can show; not cached, so the legend asks again each time it opens. */
+export const getMapIconLegend = async (signal?: AbortSignal) => {
+  const response = await getMapIconLegendApi.get<GetMapIconLegendResult>(undefined, signal);
   return response.data;
 };
 

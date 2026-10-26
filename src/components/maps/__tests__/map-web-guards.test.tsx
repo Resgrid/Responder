@@ -60,6 +60,7 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('lucide-react-native', () => ({
+  InfoIcon: () => null,
   NavigationIcon: () => null,
   XIcon: () => null,
 }));

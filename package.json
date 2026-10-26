@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "versionCode": "1",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "scripts": {
     "start": "cross-env EXPO_NO_DOTENV=1 expo start",
     "postinstall": "patch-package",

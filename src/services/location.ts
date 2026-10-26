@@ -1,34 +1,27 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, type AppStateStatus, Platform } from 'react-native';
 
-import { setPersonLocation } from '@/api/personnel/personnelLocation';
-import { useAuthStore } from '@/lib/auth';
 import { registerLocationServiceUpdater } from '@/lib/hooks/use-background-geolocation';
 import { registerLocationServiceRealtimeUpdater } from '@/lib/hooks/use-realtime-geolocation';
 import { translate } from '@/lib/i18n/utils';
 import { logger } from '@/lib/logging';
 import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
-import { loadRealtimeGeolocationState, saveRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
-import { SavePersonnelLocationInput } from '@/models/v4/personnelLocation/savePersonnelLocationInput';
+import { saveRealtimeGeolocationState } from '@/lib/storage/realtime-geolocation';
 import { useLocationStore } from '@/stores/app/location-store';
 
-const LOCATION_TASK_NAME = 'location-updates';
+import { LOCATION_TASK_NAME, resetLocationUploadState, sendLocationToAPI, submitLocationUpdate } from './location-task';
 
 // Minimum gap between foreground location log lines (updates can fire every second).
 const FOREGROUND_LOCATION_LOG_INTERVAL_MS = 30000;
 
-// Minimum gap between foreground location API posts. iOS ignores `timeInterval` on
-// watchPositionAsync, so fixes can arrive every second; match the background cadence.
-const FOREGROUND_LOCATION_API_INTERVAL_MS = 15000;
-
 /**
  * Options for the OS-managed background task.
  *
- * `deferredUpdates*` is the significant battery lever on Android: it lets the OS collect fixes
- * while the screen is off and hand them over in one batch, instead of waking the JS runtime for
- * every individual fix. iOS ignores it, so the pair below is chosen so that a responder who is
- * actually moving still reports at roughly the foreground cadence.
+ * `deferredUpdates*` is the significant battery lever: while the app is backgrounded, both platforms
+ * collect fixes natively and hand them over in one batch once 30 s (and on iOS 25 m) have passed, instead of
+ * waking the JS runtime -- and the radio, for the post -- on every fix. In the foreground neither
+ * platform defers, so the task alone keeps the map current there too.
  *
  * `pausesUpdatesAutomatically` is deliberately false. iOS will otherwise stop updates when it
  * decides the device has been stationary for a while and only resume on significant motion — which
@@ -37,13 +30,20 @@ const FOREGROUND_LOCATION_API_INTERVAL_MS = 15000;
  * `showsBackgroundLocationIndicator` keeps the iOS status-bar indicator lit while we hold a
  * background fix. It is not just an App Store expectation; a responder is entitled to see that the
  * app is tracking them.
+ *
+ * Android drops both distance filters. It pauses JS timers in the background, so the uploader's
+ * heartbeat timer cannot keep a stationary responder fresh there; a batch every 30 s, moving or
+ * not, is what carries the heartbeat instead. It costs no extra positioning -- the fused provider
+ * computes a fix every `timeInterval` either way and the distance filter only withholds delivery --
+ * just a short JS run per batch, with the post itself still skipped until the heartbeat is due.
+ * iOS keeps timers running while background location holds the app alive, so it keeps the filters.
  */
 const getBackgroundTaskOptions = (): Location.LocationTaskOptions => ({
   accuracy: Location.Accuracy.Balanced,
   timeInterval: 15000,
-  distanceInterval: 10,
+  distanceInterval: Platform.OS === 'android' ? 0 : 10,
   deferredUpdatesInterval: 30000,
-  deferredUpdatesDistance: 25,
+  deferredUpdatesDistance: Platform.OS === 'android' ? 0 : 25,
   pausesUpdatesAutomatically: false,
   activityType: Location.LocationActivityType.Other,
   showsBackgroundLocationIndicator: true,
@@ -53,141 +53,35 @@ const getBackgroundTaskOptions = (): Location.LocationTaskOptions => ({
   },
 });
 
-// Helper to safely convert numeric values to strings, guarding against invalid numbers.
-const safeNumericString = (value: number | null | undefined, field: string): string => {
-  // Treat null, undefined, NaN, and Infinity as invalid
-  if (value == null || !isFinite(value)) {
-    logger.warn({ message: `Invalid ${field} value: ${value}, defaulting to '0'` });
-    return '0';
-  }
-  return value.toString();
-};
-
 /**
- * Post a fix to the personnel-location endpoint.
+ * Owns which consumer of the location hardware is running. Exactly one is, at any moment:
  *
- * `isTransmissionEnabled` is resolved by the caller, because which setting governs a fix depends on
- * where it came from: a foreground fix is governed by Realtime Geolocation, a background one by
- * Background Geolocation. Deciding that here would collapse two independent settings into one.
+ * - Background Geolocation on: the OS task, in the foreground and the background alike. It delivers
+ *   foreground fixes at the same cadence a watcher would, so a watcher alongside it only doubled the
+ *   location requests and the JS work per fix.
+ * - Background Geolocation off: a `watchPositionAsync` watcher, held only while foregrounded.
  *
- * Resolves `true` once the request has been attempted — success or failure — and `false` when a
- * precondition rejected the fix before any request went out. The foreground watcher uses that to
- * decide whether its send throttle has actually been spent: stamping on a fix that was never sent
- * (poor accuracy, no signed-in user) would suppress the good fix arriving a second later for the
- * rest of the window.
+ * Whichever it is, every foreground fix is posted: the open app always reports where the responder
+ * is. Realtime Geolocation has no say here -- it only governs receiving other people's positions
+ * over the geolocation hub, which the settings hook connects and disconnects.
  */
-const sendLocationToAPI = async (location: Location.LocationObject, isTransmissionEnabled: boolean): Promise<boolean> => {
-  // Check location accuracy early - skip if accuracy is poor (> 100 meters)
-  if (location.coords.accuracy != null && location.coords.accuracy > 100) {
-    logger.debug({
-      message: 'Skipping low-accuracy location',
-      context: { accuracy: location.coords.accuracy },
-    });
-    return false;
-  }
-
-  if (!isTransmissionEnabled) {
-    logger.debug({
-      message: 'Location transmission disabled for this fix, skipping API call',
-    });
-    return false;
-  }
-
-  try {
-    // Responder reports personnel locations, keyed on the signed-in user.
-    const userId = useAuthStore.getState().userId;
-    if (!userId) {
-      logger.warn({ message: 'No authenticated user, skipping location API call' });
-      return false;
-    }
-    const locationInput = new SavePersonnelLocationInput();
-    locationInput.UserId = userId;
-    locationInput.Timestamp = new Date(location.timestamp).toISOString();
-    locationInput.Latitude = location.coords.latitude.toString();
-    locationInput.Longitude = location.coords.longitude.toString();
-    locationInput.Accuracy = safeNumericString(location.coords.accuracy, 'accuracy');
-    locationInput.Altitude = safeNumericString(location.coords.altitude, 'altitude');
-    locationInput.AltitudeAccuracy = safeNumericString(location.coords.altitudeAccuracy, 'altitudeAccuracy');
-    locationInput.Speed = safeNumericString(location.coords.speed, 'speed');
-    locationInput.Heading = safeNumericString(location.coords.heading, 'heading');
-    const result = await setPersonLocation(locationInput);
-    logger.info({
-      message: 'Location successfully sent to API',
-      context: {
-        resultId: result.Id,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      },
-    });
-  } catch (error) {
-    logger.error({
-      message: 'Failed to send location to API',
-      context: {
-        error: error instanceof Error ? error.message : String(error),
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      },
-    });
-  }
-
-  // A request that went out and failed still counts as spent: retrying every fix would hammer an
-  // endpoint that is already refusing us.
-  return true;
-};
-
-// Define the task
-TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
-  if (error) {
-    logger.error({
-      message: 'Location task error',
-      context: { error },
-    });
-    return;
-  }
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-    const location = locations[0];
-    if (location) {
-      logger.info({
-        message: 'Background location update received',
-        context: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          heading: location.coords.heading,
-        },
-      });
-
-      // Always update local store
-      useLocationStore.getState().setLocation(location);
-
-      // The OS task keeps delivering while the app is foregrounded, so the fix has to be attributed
-      // to the right setting before it can be sent. Foreground fixes belong to Realtime
-      // Geolocation, background ones to Background Geolocation. Reading only the realtime flag here
-      // meant a responder with background tracking on and realtime off transmitted nothing at all —
-      // the exact combination the background setting exists to serve.
-      const isTransmissionEnabled = AppState.currentState === 'active' ? await loadRealtimeGeolocationState() : await loadBackgroundGeolocationState();
-
-      await sendLocationToAPI(location, isTransmissionEnabled);
-    }
-  }
-});
-
 class LocationService {
   private static instance: LocationService;
   private locationSubscription: Location.LocationSubscription | null = null;
   private startLocationUpdatesPromise: Promise<void> | null = null;
   private isBackgroundGeolocationEnabled = false;
-  private isRealtimeGeolocationEnabled = false;
   private isBackgroundTaskRegistered = false;
   private lastForegroundLocationLogAt = 0;
-  private lastForegroundLocationSentAt = 0;
   private appStateSubscription: { remove: () => void } | null = null;
+  // Set when the signed-in session asks for tracking and cleared on sign-out, whether or not the
+  // start succeeded, so a start that failed on permission can be retried once it is granted.
+  private isTrackingRequested = false;
   // Set once a start has succeeded, so returning to the foreground only re-subscribes for a session
   // that was actually tracking — not for one that is signed out or was denied permission.
   private hasStartedLocationUpdates = false;
-  // Bumped whenever a backgrounding releases the foreground watcher. `watchPositionAsync` is async,
-  // so a start that was in flight at that moment resolves with a live watcher that nothing asked
-  // for any more; comparing generations is how that start knows to throw it away.
+  // Bumped whenever the foreground watcher is released. `watchPositionAsync` is async, so a start
+  // that was in flight at that moment resolves with a live watcher that nothing asked for any more;
+  // comparing generations is how that start knows to throw it away.
   private foregroundWatchGeneration = 0;
 
   private constructor() {
@@ -199,13 +93,11 @@ class LocationService {
 
   /**
    * `watchPositionAsync` holds the GPS on for as long as it is subscribed. On Android it keeps
-   * doing that after the app is backgrounded, so leaving it running alongside the OS task meant two
-   * independent consumers of the radio — and when background tracking is off, it meant tracking a
+   * doing that after the app is backgrounded, which with background tracking off meant tracking a
    * responder who has explicitly asked not to be tracked in the background.
    *
-   * Dropping it on the way out and re-subscribing on the way back in leaves exactly one consumer at
-   * any moment: the OS task while backgrounded (only registered when the setting allows it), the
-   * watcher while foregrounded.
+   * So the watcher is dropped on the way out and re-subscribed on the way back in. The OS task needs
+   * neither: it already runs in both states.
    */
   private handleAppStateChange = async (nextAppState: AppStateStatus): Promise<void> => {
     // AppState does not await this, so an unhandled rejection here — a permission revoked while the
@@ -213,8 +105,8 @@ class LocationService {
     try {
       if (nextAppState === 'background') {
         this.removeForegroundSubscription();
-      } else if (nextAppState === 'active' && !this.locationSubscription && this.hasStartedLocationUpdates) {
-        await this.startLocationUpdates();
+      } else if (nextAppState === 'active') {
+        await this.resumeForegroundTracking();
       }
     } catch (error) {
       logger.warn({
@@ -223,6 +115,25 @@ class LocationService {
       });
     }
   };
+
+  private async resumeForegroundTracking(): Promise<void> {
+    if (!this.isTrackingRequested || this.locationSubscription || this.isBackgroundTaskRegistered) {
+      return;
+    }
+
+    // The start this session asked for never succeeded, most often because the permission prompt
+    // was declined. Granting location in the OS settings brings the responder back through here, so
+    // retry -- but only on a grant that has already been made. Requesting would re-prompt on every
+    // return to the app, nagging a responder who has said no.
+    if (!this.hasStartedLocationUpdates) {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+    }
+
+    await this.startLocationUpdates();
+  }
 
   private removeForegroundSubscription(): void {
     // Invalidate first, and unconditionally: the watcher being released may still be in flight
@@ -236,7 +147,7 @@ class LocationService {
 
     this.locationSubscription.remove();
     this.locationSubscription = null;
-    logger.info({ message: 'Foreground location watcher released while backgrounded' });
+    logger.info({ message: 'Foreground location watcher released' });
   }
 
   static getInstance(): LocationService {
@@ -264,6 +175,8 @@ class LocationService {
   }
 
   startLocationUpdates(): Promise<void> {
+    this.isTrackingRequested = true;
+
     if (!this.startLocationUpdatesPromise) {
       this.startLocationUpdatesPromise = this.startLocationUpdatesInternal()
         .catch((error) => {
@@ -281,6 +194,53 @@ class LocationService {
     return this.startLocationUpdatesPromise;
   }
 
+  /**
+   * Bring the OS task in line with the Background Geolocation setting and report whether it is
+   * running.
+   *
+   * A task left registered while the setting is off -- by an earlier session, or after background
+   * permission was withdrawn -- kept the GPS on in the background for fixes nothing would send. An
+   * already-registered task is registered again on purpose: that replaces its options in place, so
+   * an install upgraded from a build with different options does not keep running the old ones.
+   *
+   * A registration that fails falls back to the foreground watcher rather than failing the start:
+   * a responder without background tracking should still be tracked while the app is open.
+   */
+  private async syncBackgroundTask(): Promise<boolean> {
+    const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
+
+    if (this.isBackgroundGeolocationEnabled) {
+      const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
+      if (backgroundStatus === 'granted') {
+        try {
+          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, getBackgroundTaskOptions());
+          logger.info({
+            message: isTaskRegistered ? 'Background location task options refreshed' : 'Background location task registered',
+          });
+          return true;
+        } catch (error) {
+          logger.error({
+            message: 'Failed to register background location task, falling back to the foreground watcher',
+            context: { error },
+          });
+          return false;
+        }
+      }
+
+      logger.warn({
+        message: 'Background location permission not granted, skipping background task registration',
+        context: { backgroundStatus },
+      });
+    }
+
+    if (isTaskRegistered) {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+      logger.info({ message: 'Stopped background location task the current settings do not allow' });
+    }
+
+    return false;
+  }
+
   private async startLocationUpdatesInternal(): Promise<void> {
     // Captured before the first await: a backgrounding at any point during the start — the
     // permission prompt and the settings reads are all async — has to invalidate the watcher this
@@ -292,28 +252,20 @@ class LocationService {
       throw new Error('Location permissions not granted');
     }
 
-    // Load background and realtime geolocation settings
     this.isBackgroundGeolocationEnabled = await loadBackgroundGeolocationState();
-    this.isRealtimeGeolocationEnabled = await loadRealtimeGeolocationState();
 
-    // Check if task is already registered for background updates
-    const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
-    this.isBackgroundTaskRegistered = isTaskRegistered;
-    if (!isTaskRegistered && this.isBackgroundGeolocationEnabled) {
-      // Check background permission before registering background task
-      const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
-      if (backgroundStatus === 'granted') {
-        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, getBackgroundTaskOptions());
-        this.isBackgroundTaskRegistered = true;
-        logger.info({
-          message: 'Background location task registered',
-        });
-      } else {
-        logger.warn({
-          message: 'Background location permission not granted, skipping background task registration',
-          context: { backgroundStatus },
-        });
-      }
+    this.isBackgroundTaskRegistered = await this.syncBackgroundTask();
+
+    if (this.isBackgroundTaskRegistered) {
+      // The task delivers foreground fixes itself, feeding the store and posting them; a watcher
+      // here would be a second consumer of the same fixes.
+      this.removeForegroundSubscription();
+      this.hasStartedLocationUpdates = true;
+      logger.info({
+        message: 'Location updates started on the background task',
+        context: { backgroundEnabled: this.isBackgroundGeolocationEnabled },
+      });
+      return;
     }
 
     // Remove any existing foreground subscription so repeated calls stay idempotent
@@ -322,7 +274,6 @@ class LocationService {
       this.locationSubscription = null;
     }
     this.lastForegroundLocationLogAt = 0;
-    this.lastForegroundLocationSentAt = 0;
 
     // Start foreground updates
     const subscription = await Location.watchPositionAsync(
@@ -348,19 +299,9 @@ class LocationService {
         }
         useLocationStore.getState().setLocation(location);
 
-        // When the background task is registered it posts the fixes. When it is not
-        // (realtime on, background off) the foreground watcher is the only sender, so
-        // dispatch would otherwise never see the responder move.
-        //
-        // The throttle is stamped from the result, not before the call: a fix rejected for poor
-        // accuracy never reached the API, and burning the window on it would drop the usable fix
-        // that lands a second later.
-        if (!this.isBackgroundTaskRegistered && now - this.lastForegroundLocationSentAt >= FOREGROUND_LOCATION_API_INTERVAL_MS) {
-          const wasSent = await sendLocationToAPI(location, this.isRealtimeGeolocationEnabled);
-          if (wasSent) {
-            this.lastForegroundLocationSentAt = now;
-          }
-        }
+        // No background task is running, so the watcher is the only sender; dispatch would
+        // otherwise never see the responder move. The uploader paces the posts.
+        await submitLocationUpdate(location, true);
       }
     );
 
@@ -368,12 +309,12 @@ class LocationService {
     // so the session counts as tracking and a return to the foreground should re-subscribe.
     this.hasStartedLocationUpdates = true;
 
-    // The app went to the background while this call was in flight. Adopting the watcher now would
-    // hold the GPS on exactly where handleAppStateChange just released it, and with background
-    // tracking off it would track a responder who asked not to be.
+    // The watcher was released while this call was in flight: the app went to the background, or
+    // the background task took over. Adopting it now would hold the GPS on exactly where it was
+    // just released, and with background tracking off it would track a responder who asked not to be.
     if (generation !== this.foregroundWatchGeneration) {
       subscription.remove();
-      logger.info({ message: 'Discarded foreground location watcher that resolved after backgrounding' });
+      logger.info({ message: 'Discarded foreground location watcher that resolved after it was released' });
       return;
     }
 
@@ -381,10 +322,7 @@ class LocationService {
 
     logger.info({
       message: 'Foreground location updates started',
-      context: {
-        backgroundEnabled: this.isBackgroundGeolocationEnabled,
-        realtimeEnabled: this.isRealtimeGeolocationEnabled,
-      },
+      context: { backgroundEnabled: this.isBackgroundGeolocationEnabled },
     });
   }
 
@@ -416,36 +354,13 @@ class LocationService {
     useLocationStore.getState().setBackgroundEnabled(false);
   }
 
+  /**
+   * Realtime Geolocation only governs receiving other people's positions, and the settings hook
+   * owns that hub connection. Sending this device's position does not depend on it, so the location
+   * consumers are left exactly as they are.
+   */
   async updateRealtimeGeolocationSetting(enabled: boolean): Promise<void> {
-    this.isRealtimeGeolocationEnabled = enabled;
-
     await saveRealtimeGeolocationState(enabled);
-
-    // Flipping the flag is worthless without a watcher, and one is not guaranteed to exist:
-    // `startLocationUpdates` runs once per sign-in and throws when the permission prompt was
-    // declined. A responder who denied location at launch, granted it in the OS settings and then
-    // switched realtime on would otherwise have transmitted nothing until the next cold start.
-    //
-    // Restarting is idempotent — the existing subscription is replaced, not stacked — and it clears
-    // the send throttle so the first fix after the toggle goes out immediately rather than up to
-    // FOREGROUND_LOCATION_API_INTERVAL_MS later. Failures are logged rather than rethrown: the
-    // setting itself was saved, and permissions can still be granted later.
-    if (enabled) {
-      try {
-        await this.startLocationUpdates();
-      } catch (error) {
-        logger.error({
-          message: 'Failed to start location updates after enabling realtime geolocation',
-          context: { error },
-        });
-      }
-
-      // startLocationUpdatesInternal re-reads the setting from storage, and
-      // loadRealtimeGeolocationState answers `false` for a read that threw. The caller's explicit
-      // choice wins over that guess -- otherwise one bad read would silently stop transmitting for
-      // a responder who has the toggle switched on.
-      this.isRealtimeGeolocationEnabled = enabled;
-    }
 
     logger.info({
       message: `Realtime geolocation setting updated to: ${enabled}`,
@@ -468,15 +383,15 @@ class LocationService {
         return;
       }
 
-      // Register the task if not already registered
-      const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
-      if (!isTaskRegistered) {
-        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, getBackgroundTaskOptions());
-        logger.info({
-          message: 'Background location task registered after setting change',
-        });
-      }
+      // Registering an existing task only replaces its options, so this is safe either way.
+      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, getBackgroundTaskOptions());
+      logger.info({
+        message: 'Background location task registered after setting change',
+      });
       this.isBackgroundTaskRegistered = true;
+
+      // The task now delivers the foreground fixes as well.
+      this.removeForegroundSubscription();
 
       // Start background updates if app is currently backgrounded
       if (AppState.currentState === 'background') {
@@ -493,16 +408,30 @@ class LocationService {
         });
       }
       this.isBackgroundTaskRegistered = false;
+
+      // Hand foreground tracking back to the watcher, or the open app would stop updating the map.
+      if (this.hasStartedLocationUpdates && AppState.currentState === 'active') {
+        try {
+          await this.startLocationUpdates();
+        } catch (error) {
+          logger.error({
+            message: 'Failed to start the foreground watcher after disabling background geolocation',
+            context: { error },
+          });
+        }
+      }
     }
   }
 
   async stopLocationUpdates(): Promise<void> {
+    this.isTrackingRequested = false;
     this.hasStartedLocationUpdates = false;
 
-    if (this.locationSubscription) {
-      await this.locationSubscription.remove();
-      this.locationSubscription = null;
-    }
+    // Through the generation bump, so a start still in flight discards its watcher too.
+    this.removeForegroundSubscription();
+
+    // A fix held for the outgoing user must never be posted under the next one.
+    resetLocationUploadState();
 
     await this.stopBackgroundUpdates();
 
@@ -529,4 +458,4 @@ class LocationService {
 export const locationService = LocationService.getInstance();
 
 // Export for testing
-export { sendLocationToAPI };
+export { resetLocationUploadState, sendLocationToAPI };
