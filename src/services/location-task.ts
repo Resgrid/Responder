@@ -74,6 +74,14 @@ let pendingLocationTimer: ReturnType<typeof setTimeout> | null = null;
 // Newest fix accepted for posting, whether or not it was posted: what the heartbeat reports.
 let latestLocation: Location.LocationObject | null = null;
 let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+// One post at a time. The request timeout matches the send interval and a token refresh comes on top
+// of it, so a held fix could otherwise go out alongside a post still in flight and land before it --
+// leaving the older fix as the last one the server received and the one this uploader measures from.
+let isPostInFlight = false;
+// Bumped by every reset. A post still in flight across one -- a sign-out, most often -- belongs to the
+// session that ended, and must not leave its fix behind as the last one sent: the next user's first
+// fix nearby would be skipped as a responder who has not moved.
+let uploadGeneration = 0;
 
 /**
  * Whether a fix may be posted right now. A foreground fix always goes out -- the open app reports
@@ -182,7 +190,7 @@ const clearPendingLocation = (): void => {
   }
 };
 
-const postLocation = async (location: Location.LocationObject): Promise<void> => {
+const postLocation = async (location: Location.LocationObject, isTransmissionEnabled: boolean): Promise<void> => {
   // A post supersedes anything still waiting: it is at least as new.
   clearPendingLocation();
 
@@ -191,19 +199,33 @@ const postLocation = async (location: Location.LocationObject): Promise<void> =>
   // already refusing us -- but a rejected one never went out and hands the window back.
   const previousAttemptAt = lastSendAttemptAt;
   lastSendAttemptAt = Date.now();
+  const generation = uploadGeneration;
+  isPostInFlight = true;
 
-  const result = await sendLocationToAPI(location, true);
-  if (result === 'rejected') {
-    lastSendAttemptAt = previousAttemptAt;
-    return;
+  try {
+    const result = await sendLocationToAPI(location, isTransmissionEnabled);
+    if (generation !== uploadGeneration) {
+      return;
+    }
+
+    if (result === 'rejected') {
+      lastSendAttemptAt = previousAttemptAt;
+      return;
+    }
+
+    if (result === 'sent') {
+      lastSentLocation = { latitude: location.coords.latitude, longitude: location.coords.longitude, sentAt: lastSendAttemptAt };
+    }
+
+    // Every post restarts the countdown, so the heartbeat only ever fires after a quiet stretch.
+    scheduleHeartbeat();
+  } finally {
+    isPostInFlight = false;
+    // A fix that came due while this post was in flight was held for it, and goes out now.
+    if (pendingLocation && !pendingLocationTimer) {
+      void flushPendingLocation();
+    }
   }
-
-  if (result === 'sent') {
-    lastSentLocation = { latitude: location.coords.latitude, longitude: location.coords.longitude, sentAt: lastSendAttemptAt };
-  }
-
-  // Every post restarts the countdown, so the heartbeat only ever fires after a quiet stretch.
-  scheduleHeartbeat();
 };
 
 const scheduleHeartbeat = (): void => {
@@ -218,7 +240,8 @@ const scheduleHeartbeat = (): void => {
 
 const sendHeartbeat = async (): Promise<void> => {
   const location = latestLocation;
-  if (!location) {
+  // A post still in flight restarts the countdown itself when it completes.
+  if (!location || isPostInFlight) {
     return;
   }
 
@@ -226,7 +249,8 @@ const sendHeartbeat = async (): Promise<void> => {
   // timer -- alive in the background for audio and VoIP as well as for background location, so the
   // setting that governs a background post is read again now. Not rescheduled when refused: the
   // next post that is allowed restarts it.
-  if (!(await isTransmissionAllowedNow())) {
+  const isTransmissionEnabled = await isTransmissionAllowedNow();
+  if (!isTransmissionEnabled) {
     logger.debug({ message: 'Skipping location heartbeat, transmission is not allowed in the current app state' });
     return;
   }
@@ -235,15 +259,25 @@ const sendHeartbeat = async (): Promise<void> => {
   // can no longer get one at all. Either way the latest fix is still the best known position, and
   // the map ages markers by timestamp, so it is reported as current.
   logger.info({ message: 'Posting location heartbeat for a responder who has not moved' });
-  await postLocation({ ...location, timestamp: Date.now() });
+  await postLocation({ ...location, timestamp: Date.now() }, isTransmissionEnabled);
 };
 
-const flushPendingLocation = (): void => {
+const flushPendingLocation = async (): Promise<void> => {
   pendingLocationTimer = null;
+
+  // Held since before the interval ended, which may have been before the app was backgrounded, so
+  // -- as for the heartbeat -- the setting that governs a background post is read again now.
+  const isTransmissionEnabled = await isTransmissionAllowedNow();
+
+  // Left held for the post in flight, which sends it when it completes.
+  if (isPostInFlight) {
+    return;
+  }
+
   const location = pendingLocation;
   pendingLocation = null;
   if (location) {
-    void postLocation(location);
+    await postLocation(location, isTransmissionEnabled);
   }
 };
 
@@ -278,12 +312,18 @@ export const submitLocationUpdate = async (location: Location.LocationObject, is
   if (sinceLastAttempt < LOCATION_SEND_INTERVAL_MS) {
     pendingLocation = location;
     if (!pendingLocationTimer) {
-      pendingLocationTimer = setTimeout(flushPendingLocation, LOCATION_SEND_INTERVAL_MS - sinceLastAttempt);
+      pendingLocationTimer = setTimeout(() => void flushPendingLocation(), LOCATION_SEND_INTERVAL_MS - sinceLastAttempt);
     }
     return;
   }
 
-  await postLocation(location);
+  if (isPostInFlight) {
+    // The interval is up but the last post has not come back; this goes out the moment it does.
+    pendingLocation = location;
+    return;
+  }
+
+  await postLocation(location, isTransmissionEnabled);
 };
 
 /**
@@ -291,6 +331,7 @@ export const submitLocationUpdate = async (location: Location.LocationObject, is
  * never posted under the next one, and whenever transmission is switched off.
  */
 export const resetLocationUploadState = (): void => {
+  uploadGeneration += 1;
   clearPendingLocation();
   if (heartbeatTimer) {
     clearTimeout(heartbeatTimer);

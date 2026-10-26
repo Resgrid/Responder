@@ -70,6 +70,19 @@ const fixAt = (latitude: number, timestamp: number = Date.now(), accuracy: numbe
 
 const postedLatitudes = (): string[] => mockSetPersonLocation.mock.calls.map(([input]) => input.Latitude);
 
+type PersonLocationResult = Awaited<ReturnType<typeof setPersonLocation>>;
+
+/** A post the test completes itself, to hold it in flight. */
+const holdNextPost = (): { complete: () => void } => {
+  let resolvePost: (result: PersonLocationResult) => void = () => undefined;
+  mockSetPersonLocation.mockReturnValueOnce(
+    new Promise<PersonLocationResult>((resolve) => {
+      resolvePost = resolve;
+    })
+  );
+  return { complete: () => resolvePost({ Id: 'location-1' } as PersonLocationResult) };
+};
+
 describe('location uploader', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -177,6 +190,76 @@ describe('location uploader', () => {
     await jest.advanceTimersByTimeAsync(LOCATION_SEND_INTERVAL_MS);
 
     expect(mockSetPersonLocation).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds a fix that comes due while a post is in flight, and posts it once that post completes', async () => {
+    const firstPost = holdNextPost();
+    const firstSubmit = submitLocationUpdate(fixAt(BASE_LATITUDE), true);
+
+    await jest.advanceTimersByTimeAsync(5000);
+    await submitLocationUpdate(fixAt(BASE_LATITUDE + 0.001), true);
+    await jest.advanceTimersByTimeAsync(LOCATION_SEND_INTERVAL_MS);
+    expect(mockSetPersonLocation).toHaveBeenCalledTimes(1);
+
+    firstPost.complete();
+    await firstSubmit;
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(postedLatitudes()).toEqual([String(BASE_LATITUDE), String(BASE_LATITUDE + 0.001)]);
+  });
+
+  it('holds a fix submitted after the interval while the last post is still in flight', async () => {
+    const firstPost = holdNextPost();
+    const firstSubmit = submitLocationUpdate(fixAt(BASE_LATITUDE), true);
+
+    await jest.advanceTimersByTimeAsync(LOCATION_SEND_INTERVAL_MS + 5000);
+    await submitLocationUpdate(fixAt(BASE_LATITUDE + 0.001), true);
+    expect(mockSetPersonLocation).toHaveBeenCalledTimes(1);
+
+    firstPost.complete();
+    await firstSubmit;
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(postedLatitudes()).toEqual([String(BASE_LATITUDE), String(BASE_LATITUDE + 0.001)]);
+  });
+
+  it('records nothing from a post that was in flight across a reset', async () => {
+    const firstPost = holdNextPost();
+    const firstSubmit = submitLocationUpdate(fixAt(BASE_LATITUDE), true);
+
+    resetLocationUploadState();
+    firstPost.complete();
+    await firstSubmit;
+
+    // No heartbeat for the session that ended...
+    expect(jest.getTimerCount()).toBe(0);
+
+    // ...and the next session's first fix from the same spot is not taken for one already sent.
+    await submitLocationUpdate(fixAt(BASE_LATITUDE), true);
+    expect(mockSetPersonLocation).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not post a held fix once the app is backgrounded without Background Geolocation', async () => {
+    await submitLocationUpdate(fixAt(BASE_LATITUDE), true);
+    await jest.advanceTimersByTimeAsync(5000);
+    await submitLocationUpdate(fixAt(BASE_LATITUDE + 0.001), true);
+
+    (AppState as { currentState: string }).currentState = 'background';
+    await jest.advanceTimersByTimeAsync(LOCATION_SEND_INTERVAL_MS);
+
+    expect(mockSetPersonLocation).toHaveBeenCalledTimes(1);
+  });
+
+  it('posts a held fix once the app is backgrounded under Background Geolocation', async () => {
+    await submitLocationUpdate(fixAt(BASE_LATITUDE), true);
+    await jest.advanceTimersByTimeAsync(5000);
+    await submitLocationUpdate(fixAt(BASE_LATITUDE + 0.001), true);
+
+    (AppState as { currentState: string }).currentState = 'background';
+    mockLoadBackgroundGeolocationState.mockResolvedValue(true);
+    await jest.advanceTimersByTimeAsync(LOCATION_SEND_INTERVAL_MS);
+
+    expect(postedLatitudes()).toEqual([String(BASE_LATITUDE), String(BASE_LATITUDE + 0.001)]);
   });
 });
 
