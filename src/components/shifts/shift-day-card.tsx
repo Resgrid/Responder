@@ -1,4 +1,4 @@
-import { Clock, Repeat, Users } from 'lucide-react-native';
+import { Clock, Repeat, Truck, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { formatShiftDate, formatShiftTime, isOvernightShift } from '@/lib/shift-utils';
+import { formatShiftDate, formatShiftTime, isOvernightShift, isWorkshiftDay } from '@/lib/shift-utils';
 import { type ShiftDayResultData } from '@/models/v4/shifts/shiftDayResultData';
 
 import { getAssignmentTypeKey, getMyStatusLabel } from './shift-labels';
@@ -33,10 +33,12 @@ const ShiftDayCardComponent: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress,
   const date = formatShiftDate(shiftDay.ShiftDay || shiftDay.Start);
   const overnight = isOvernightShift(shiftDay.Start, shiftDay.End);
   const timeRange = `${formatShiftTime(shiftDay.Start)} – ${formatShiftTime(shiftDay.End)}${overnight ? ` ${t('shifts.overnight')}` : ''}`;
-  const staffing = shiftDay.Filled ? t('shifts.status.filled') : t('shifts.status.open_slots', { count: shiftDay.OpenSlots });
+  // A static shift (workshift) day is crewed by its units, so it has no open slots; show the caller's unit instead.
+  const isWorkshift = isWorkshiftDay(shiftDay);
+  const staffing = isWorkshift ? (shiftDay.MyUnitName ?? '') : shiftDay.Filled ? t('shifts.status.filled') : t('shifts.status.open_slots', { count: shiftDay.OpenSlots });
 
   const accessibilityLabel = useMemo(() => {
-    const parts = [shiftDay.ShiftName, date, timeRange, staffing];
+    const parts = [shiftDay.ShiftName, date, timeRange, staffing].filter((part) => !!part);
     if (shiftDay.IsActive) parts.push(t('shifts.status.active_now'));
     if (myStatus) parts.push(t(myStatus.key));
     if (shiftDay.MyTradeId) parts.push(t('shifts.status.trade_requested'));
@@ -71,10 +73,19 @@ const ShiftDayCardComponent: React.FC<ShiftDayCardProps> = ({ shiftDay, onPress,
             <Text className="text-sm text-gray-700 dark:text-gray-300">{timeRange}</Text>
           </HStack>
 
-          <HStack space="sm" className="items-center">
-            <Users size={16} color={shiftDay.Filled ? '#059669' : '#d97706'} />
-            <Text className={`text-sm ${shiftDay.Filled ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}>{staffing}</Text>
-          </HStack>
+          {isWorkshift ? (
+            staffing ? (
+              <HStack space="sm" className="items-center">
+                <Truck size={16} color={mutedIconColor} />
+                <Text className="text-sm text-gray-700 dark:text-gray-300">{staffing}</Text>
+              </HStack>
+            ) : null
+          ) : (
+            <HStack space="sm" className="items-center">
+              <Users size={16} color={shiftDay.Filled ? '#059669' : '#d97706'} />
+              <Text className={`text-sm ${shiftDay.Filled ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}>{staffing}</Text>
+            </HStack>
+          )}
 
           <HStack space="xs" className="flex-wrap">
             {myStatus ? (

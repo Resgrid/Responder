@@ -2142,6 +2142,20 @@
     "logout_confirm_title": "Confirmar cierre de sesión",
     "logout_confirm_yes": "Sí, cerrar sesión",
     "more": "Más",
+    "navigation_app": {
+      "apple_maps": "Mapas de Apple",
+      "default": "Predeterminada del dispositivo",
+      "description": "La aplicación que abre este dispositivo cuando inicia la navegación hacia una llamada, un destino o un marcador del mapa. Algunas aplicaciones solo muestran la ubicación en lugar de iniciar una ruta.",
+      "gaia_gps": "Gaia GPS",
+      "google_maps": "Google Maps",
+      "here_wego": "HERE WeGo",
+      "mapquest": "MapQuest",
+      "onx_offroad": "onX Offroad",
+      "organic_maps": "Organic Maps",
+      "osmand": "OsmAnd",
+      "title": "Aplicación de navegación",
+      "waze": "Waze"
+    },
     "no_units_available": "No hay unidades disponibles",
     "none_selected": "Ninguna seleccionada",
     "notifications": "Notificaciones Push",
@@ -2186,7 +2200,9 @@
     "actions": {
       "accept": "Aceptar",
       "add_person": "Agregar persona",
+      "apply": "Postularse para tomarlo",
       "approve": "Aprobar",
+      "cancel_request_admin": "Cancelar solicitud",
       "cancel_trade": "Cancelar solicitud de cambio",
       "confirm": "Confirmar",
       "confirm_signup": "Confirmar inscripción",
@@ -2194,7 +2210,8 @@
       "deny": "Denegar",
       "remove": "Quitar",
       "request_trade": "Solicitar cambio",
-      "send_request": "Enviar solicitud"
+      "send_request": "Enviar solicitud",
+      "withdraw_application": "Retirar postulación"
     },
     "add_panel": {
       "group": "Grupo",
@@ -2214,11 +2231,27 @@
     "assigned": "Asignado",
     "assignment_type": {
       "assigned": "Asignado",
-      "signup": "Inscripción"
+      "signup": "Inscripción",
+      "workshift": "Turno de trabajo"
     },
     "automatic": "Automático",
     "available": "Disponible",
     "calendar": "Calendario",
+    "calendar_export": {
+      "add_all": "Agregar mis turnos al calendario ({{count}})",
+      "add_all_hint": "Agrega al calendario de su dispositivo todos los turnos que trabaja en los próximos 30 días",
+      "add_hint": "Agrega este turno al calendario de su dispositivo o lo actualiza si ya está allí",
+      "add_one": "Agregar al calendario",
+      "added_many": "Turnos en su calendario: {{count}}",
+      "added_one": "Agregado a su calendario",
+      "event_footer": "Agregado desde Resgrid",
+      "event_place": "Con: {{place}}",
+      "event_title": "Turno {{name}}",
+      "failed": "No se pudo agregar el turno a su calendario.",
+      "nothing_to_add": "Solo se pueden agregar a su calendario los turnos que trabaja.",
+      "permission_denied": "El acceso al calendario está desactivado. Permítalo en Configuración para agregar turnos.",
+      "updated_one": "Actualizado en su calendario"
+    },
     "calendar_view": {
       "day_a11y": "{{date}}: turnos {{count}}, plazas abiertas {{open}}",
       "filter_a11y": "Filtrar el calendario por turno",
@@ -2256,6 +2289,10 @@
       "mine_title": "No hay próximos turnos",
       "on_duty_description": "Nadie está en un turno activo en este momento.",
       "on_duty_title": "Nadie de servicio",
+      "open_trades_description": "Cuando alguien pide ceder un turno, la solicitud aparece aquí para cualquier persona que pueda tomarlo.",
+      "open_trades_title": "No hay solicitudes de cambio abiertas",
+      "signup_description": "Aquí aparecen los días de turno con inscripción que tienen lugar para usted en los próximos 30 días.",
+      "signup_title": "Nada en lo que inscribirse",
       "trades_description": "Aquí aparecen las solicitudes de cambio que envía o recibe.",
       "trades_title": "No hay cambios de turno"
     },
@@ -2270,6 +2307,7 @@
       "network": "Parece que no tiene conexión. Inténtelo de nuevo.",
       "no_users": "Seleccione al menos una persona.",
       "not_allowed": "No tiene permiso para hacer eso.",
+      "not_eligible": "No tiene los roles que requiere este puesto.",
       "not_found": "Este turno, inscripción o cambio ya no existe.",
       "not_on_shift": "No está en este día de turno.",
       "not_pending": "Esta solicitud ya no está pendiente.",
@@ -2285,6 +2323,11 @@
     "loading_details": "Cargando detalles del turno...",
     "loading_signup": "Procesando...",
     "manual": "Manual",
+    "mine_sections": {
+      "active": "De servicio ahora",
+      "pending": "Esperando aprobación",
+      "upcoming": "Próximos"
+    },
     "my_standing_shifts": "Turnos en los que estoy",
     "my_upcoming_days": "Próximos días",
     "needed": "Necesario",
@@ -2345,6 +2388,7 @@
       "calendar": "Calendario",
       "mine": "Mis turnos",
       "on_duty": "De servicio",
+      "signup": "Inscribirse",
       "today": "Hoy",
       "trades": "Cambios",
       "with_count": "{{label}}, {{count}} pendientes"
@@ -2372,6 +2416,11 @@
     },
     "signup_status": "Estado de Inscripción",
     "signup_success": "Se inscribió exitosamente en el turno",
+    "signup_view": {
+      "description": "Días de turno en los que puede inscribirse en los próximos 30 días. Toque un día para elegir su equipo.",
+      "filter_all": "Todos los días",
+      "filter_needed": "Faltan personas"
+    },
     "signups": "Inscripciones",
     "start_time": "Hora de Inicio",
     "status": {
@@ -2391,21 +2440,35 @@
       "person_removed": "Persona quitada del turno",
       "signup_pending": "Inscrito. En espera de la aprobación de un supervisor.",
       "trade_accepted": "Su oferta fue enviada",
+      "trade_application_withdrawn": "Su postulación fue retirada",
+      "trade_applied": "Postulación enviada",
       "trade_cancelled": "Solicitud de cambio cancelada",
       "trade_declined": "Cambio rechazado",
       "trade_finished": "Cambio completado",
       "trade_finished_pending": "Cambio enviado para aprobación",
-      "trade_requested": "Solicitud de cambio enviada"
+      "trade_requested": "Solicitud de cambio enviada",
+      "trade_requested_open": "Solicitud de cambio enviada a todas las personas que pueden tomarlo"
     },
     "today": "Hoy",
     "todays_shifts": "Turnos de Hoy",
     "trade": {
       "accept_description": "Puede ofrecer a cambio uno de sus próximos turnos o simplemente tomar este.",
       "accept_title": "¿Aceptar este cambio?",
+      "applicant_conflict": "Ya trabaja en {{name}} a esta hora",
+      "applicant_count": "Postulantes: {{count}}",
+      "applicants": "Postulantes",
+      "applied_at": "Se postuló el {{date}}",
+      "apply_description": "{{name}} y las personas que deciden los cambios verán su postulación. Puede ofrecer uno de sus turnos a cambio.",
+      "apply_title": "¿Postularse para tomar este turno?",
       "cancel_description": "Se descartarán las ofertas que haya recibido.",
+      "cancel_description_open": "Se avisará a todas las personas que se postularon que la solicitud fue cancelada.",
       "cancel_title": "¿Cancelar esta solicitud de cambio?",
       "decline_description": "La persona solicitante verá que usted rechazó.",
       "decline_title": "¿Rechazar este cambio?",
+      "details_a11y": "Cambio de {{shift}} el {{date}}",
+      "details_hint": "Abre el cambio con sus postulantes",
+      "filter_mine": "Mías ({{count}})",
+      "filter_open": "Solicitudes abiertas ({{count}})",
       "finish_give_description": "{{name}} tomará este turno.",
       "finish_pending_note": "Un supervisor debe aprobar este cambio antes de que entre en vigor.",
       "finish_swap_description": "{{name}} toma este turno y usted toma su turno de {{shift}} el {{date}}.",
@@ -2413,6 +2476,11 @@
       "from": "De {{name}}",
       "give_to": "Ceder a {{name}}",
       "incoming": "Recibido",
+      "ineligible": {
+        "already_on_day": "Ya trabaja este día.",
+        "missing_roles": "No tiene los roles que requiere este puesto.",
+        "not_allowed": "No puede tomar este turno."
+      },
       "my_state": {
         "accepted": "Usted cubre este turno",
         "declined": "Usted rechazó",
@@ -2422,15 +2490,27 @@
         "pending_approval": "Esperando la aprobación de un supervisor",
         "proposed": "Usted hizo una oferta"
       },
+      "nearby_workload": "En la semana alrededor de este día: turnos {{count}}, {{hours}} h",
+      "no_applicants": "Nadie se ha postulado todavía",
+      "no_certifications": "Sin certificaciones vigentes",
       "no_offers": "Todavía no hay respuestas",
       "no_swap": "No ofrecer un turno a cambio",
       "offer_back": "Ofrecer un turno a cambio",
       "offers": "Respuestas",
+      "open_request": "Abierto a todos",
       "outgoing": "Enviado",
+      "pick_as_approver_note": "Usted decide este cambio como aprobador: su elección se aplica de inmediato.",
+      "pick_note": "Elija quién toma este turno.",
+      "requested_at": "Solicitado el {{date}}",
+      "requested_by": "Solicitado por {{name}}",
       "reviewed_by": "Revisado por {{name}}",
       "section_active": "En curso",
+      "section_applied": "Sus postulaciones",
       "section_attention": "Requiere su atención",
+      "section_can_apply": "Puede tomar estos",
+      "section_other_requests": "Otras solicitudes",
       "section_recent": "Recientes",
+      "select_applicant": "Ceder a {{name}}",
       "status": {
         "cancelled": "Cancelado",
         "completed": "Completado",
@@ -2443,11 +2523,20 @@
       "taken_by": "Tomado por {{name}}",
       "user_declined": "Rechazó",
       "user_offered": "Ofreció",
-      "user_waiting": "Sin respuesta aún"
+      "user_waiting": "Sin respuesta aún",
+      "user_withdrew": "Se retiró",
+      "withdraw_description": "La persona solicitante verá que ya no está disponible.",
+      "withdraw_title": "¿Retirar su postulación?"
     },
     "trade_panel": {
       "description": "Elija quién quiere que tome este turno. Se preguntará a todas las personas que elija y luego usted escogerá entre sus ofertas.",
+      "mode_open": "Todas las personas que pueden tomarlo",
+      "mode_open_hint": "Personas que recibirán aviso: {{count}}",
+      "mode_specific": "Solo las personas que elija",
+      "mode_specific_hint": "Pedirlo a compañeros concretos",
       "no_candidates": "No hay nadie disponible para tomar este turno.",
+      "open_description": "Todas las personas libres ese día que tengan los roles que requiere su puesto reciben un correo electrónico y una notificación push, y pueden postularse. Luego usted elige quién lo toma, o lo hace su supervisor.",
+      "open_description_workshift": "Todas las personas libres ese día reciben un correo electrónico y una notificación push, y pueden postularse para ocupar su lugar en la unidad.",
       "selected_count": "Seleccionados: {{count}}",
       "title": "Solicitar un cambio"
     },

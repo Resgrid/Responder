@@ -2142,6 +2142,20 @@
     "logout_confirm_title": "Confirm Logout",
     "logout_confirm_yes": "Yes, Logout",
     "more": "More",
+    "navigation_app": {
+      "apple_maps": "Apple Maps",
+      "default": "Device default",
+      "description": "The app this device opens when you start navigation to a call, destination or map pin. Some apps only show the location instead of starting a route.",
+      "gaia_gps": "Gaia GPS",
+      "google_maps": "Google Maps",
+      "here_wego": "HERE WeGo",
+      "mapquest": "MapQuest",
+      "onx_offroad": "onX Offroad",
+      "organic_maps": "Organic Maps",
+      "osmand": "OsmAnd",
+      "title": "Navigation App",
+      "waze": "Waze"
+    },
     "no_units_available": "No units available",
     "none_selected": "None Selected",
     "notifications": "Push Notifications",
@@ -2186,7 +2200,9 @@
     "actions": {
       "accept": "Accept",
       "add_person": "Add person",
+      "apply": "Apply to take it",
       "approve": "Approve",
+      "cancel_request_admin": "Cancel request",
       "cancel_trade": "Cancel trade request",
       "confirm": "Confirm",
       "confirm_signup": "Confirm sign-up",
@@ -2194,7 +2210,8 @@
       "deny": "Deny",
       "remove": "Remove",
       "request_trade": "Request trade",
-      "send_request": "Send request"
+      "send_request": "Send request",
+      "withdraw_application": "Withdraw application"
     },
     "add_panel": {
       "group": "Group",
@@ -2214,11 +2231,27 @@
     "assigned": "Assigned",
     "assignment_type": {
       "assigned": "Assigned",
-      "signup": "Sign-up"
+      "signup": "Sign-up",
+      "workshift": "Workshift"
     },
     "automatic": "Automatic",
     "available": "Available",
     "calendar": "Calendar",
+    "calendar_export": {
+      "add_all": "Add my shifts to calendar ({{count}})",
+      "add_all_hint": "Adds every shift you are working in the next 30 days to your device calendar",
+      "add_hint": "Adds this shift to your device calendar, or updates it if it is already there",
+      "add_one": "Add to calendar",
+      "added_many": "Shifts in your calendar: {{count}}",
+      "added_one": "Added to your calendar",
+      "event_footer": "Added from Resgrid",
+      "event_place": "With: {{place}}",
+      "event_title": "{{name}} shift",
+      "failed": "The shift could not be added to your calendar.",
+      "nothing_to_add": "Only shifts you are working can be added to your calendar.",
+      "permission_denied": "Calendar access is off. Allow it in Settings to add shifts.",
+      "updated_one": "Updated in your calendar"
+    },
     "calendar_view": {
       "day_a11y": "{{date}}: shifts {{count}}, open slots {{open}}",
       "filter_a11y": "Filter the calendar by shift",
@@ -2256,6 +2289,10 @@
       "mine_title": "No upcoming shifts",
       "on_duty_description": "Nobody is on an active shift right now.",
       "on_duty_title": "No one on duty",
+      "open_trades_description": "When someone asks to trade out of a shift, the request appears here for anyone who can take it.",
+      "open_trades_title": "No open trade requests",
+      "signup_description": "Sign-up shift days with room for you in the next 30 days appear here.",
+      "signup_title": "Nothing to sign up for",
       "trades_description": "Trade requests you send or receive appear here.",
       "trades_title": "No shift trades"
     },
@@ -2270,6 +2307,7 @@
       "network": "You appear to be offline. Please try again.",
       "no_users": "Pick at least one person.",
       "not_allowed": "You do not have permission to do that.",
+      "not_eligible": "You do not have the roles this slot needs.",
       "not_found": "This shift, sign-up or trade no longer exists.",
       "not_on_shift": "You are not on this shift day.",
       "not_pending": "This request is no longer pending.",
@@ -2285,6 +2323,11 @@
     "loading_details": "Loading shift details...",
     "loading_signup": "Processing...",
     "manual": "Manual",
+    "mine_sections": {
+      "active": "On duty now",
+      "pending": "Waiting for approval",
+      "upcoming": "Upcoming"
+    },
     "my_standing_shifts": "Shifts I am on",
     "my_upcoming_days": "Upcoming days",
     "needed": "Needed",
@@ -2345,6 +2388,7 @@
       "calendar": "Calendar",
       "mine": "My Shifts",
       "on_duty": "On Duty",
+      "signup": "Sign Up",
       "today": "Today",
       "trades": "Trades",
       "with_count": "{{label}}, {{count}} pending"
@@ -2372,6 +2416,11 @@
     },
     "signup_status": "Sign-up Status",
     "signup_success": "Successfully signed up for shift",
+    "signup_view": {
+      "description": "Shift days you can sign up for in the next 30 days. Tap a day to choose your team.",
+      "filter_all": "All days",
+      "filter_needed": "Needs people"
+    },
     "signups": "Sign-ups",
     "start_time": "Start Time",
     "status": {
@@ -2391,21 +2440,35 @@
       "person_removed": "Person removed from the shift",
       "signup_pending": "Signed up. Waiting for supervisor approval.",
       "trade_accepted": "Your offer was sent",
+      "trade_application_withdrawn": "Your application was withdrawn",
+      "trade_applied": "Application sent",
       "trade_cancelled": "Trade request cancelled",
       "trade_declined": "Trade declined",
       "trade_finished": "Trade completed",
       "trade_finished_pending": "Trade sent for supervisor approval",
-      "trade_requested": "Trade request sent"
+      "trade_requested": "Trade request sent",
+      "trade_requested_open": "Trade request sent to everyone who can take it"
     },
     "today": "Today",
     "todays_shifts": "Today's Shifts",
     "trade": {
       "accept_description": "You can offer one of your upcoming shifts in return, or simply take this one.",
       "accept_title": "Accept this trade?",
+      "applicant_conflict": "Already working {{name}} at this time",
+      "applicant_count": "Applicants: {{count}}",
+      "applicants": "Applicants",
+      "applied_at": "Applied {{date}}",
+      "apply_description": "{{name}} and the people who decide trades will see your application. You can offer one of your shifts in return.",
+      "apply_title": "Apply to take this shift?",
       "cancel_description": "Any offers you have received will be discarded.",
+      "cancel_description_open": "Everyone who applied will be told the request was cancelled.",
       "cancel_title": "Cancel this trade request?",
       "decline_description": "The requester will see that you declined.",
       "decline_title": "Decline this trade?",
+      "details_a11y": "Trade for {{shift}} on {{date}}",
+      "details_hint": "Opens the trade with its applicants",
+      "filter_mine": "Mine ({{count}})",
+      "filter_open": "Open requests ({{count}})",
       "finish_give_description": "{{name}} will take this shift.",
       "finish_pending_note": "A supervisor must approve this trade before it takes effect.",
       "finish_swap_description": "{{name}} takes this shift and you take their {{shift}} on {{date}}.",
@@ -2413,6 +2476,11 @@
       "from": "From {{name}}",
       "give_to": "Give to {{name}}",
       "incoming": "Incoming",
+      "ineligible": {
+        "already_on_day": "You are already working this day.",
+        "missing_roles": "You do not have the roles this slot needs.",
+        "not_allowed": "You cannot take this shift."
+      },
       "my_state": {
         "accepted": "You are taking this shift",
         "declined": "You declined",
@@ -2422,15 +2490,27 @@
         "pending_approval": "Waiting for supervisor approval",
         "proposed": "You made an offer"
       },
+      "nearby_workload": "Within a week of this day: {{count}} shifts, {{hours}} h",
+      "no_applicants": "No one has applied yet",
+      "no_certifications": "No current certifications",
       "no_offers": "No responses yet",
       "no_swap": "Do not offer a shift back",
       "offer_back": "Offer a shift in return",
       "offers": "Responses",
+      "open_request": "Open to all",
       "outgoing": "Outgoing",
+      "pick_as_approver_note": "You decide this trade as an approver: your pick takes effect right away.",
+      "pick_note": "Pick who takes this shift.",
+      "requested_at": "Requested {{date}}",
+      "requested_by": "Requested by {{name}}",
       "reviewed_by": "Reviewed by {{name}}",
       "section_active": "In progress",
+      "section_applied": "You applied",
       "section_attention": "Needs your attention",
+      "section_can_apply": "You can take these",
+      "section_other_requests": "Other requests",
       "section_recent": "Recent",
+      "select_applicant": "Give to {{name}}",
       "status": {
         "cancelled": "Cancelled",
         "completed": "Completed",
@@ -2443,11 +2523,20 @@
       "taken_by": "Taken by {{name}}",
       "user_declined": "Declined",
       "user_offered": "Offered",
-      "user_waiting": "No reply yet"
+      "user_waiting": "No reply yet",
+      "user_withdrew": "Withdrew",
+      "withdraw_description": "The requester will see that you are no longer available.",
+      "withdraw_title": "Withdraw your application?"
     },
     "trade_panel": {
       "description": "Choose who you would like to take this shift. Everyone you pick is asked, then you choose from their offers.",
+      "mode_open": "Everyone who can take it",
+      "mode_open_hint": "People who will be notified: {{count}}",
+      "mode_specific": "Only people I choose",
+      "mode_specific_hint": "Ask specific colleagues instead",
       "no_candidates": "No one is available to take this shift.",
+      "open_description": "Everyone who is free that day and holds the roles your slot needs gets an email and a push notification and can apply. You then choose who takes it, or your supervisor does.",
+      "open_description_workshift": "Everyone who is free that day gets an email and a push notification and can apply to take your place on the unit.",
       "selected_count": "Selected: {{count}}",
       "title": "Request a trade"
     },

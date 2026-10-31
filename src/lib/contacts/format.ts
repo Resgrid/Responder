@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 import { type ContactResultData } from '@/models/v4/contacts/contactResultData';
 
 // Pure presentation helpers for a contact (the shared detail sheet in every field app). Nothing here decides
@@ -53,19 +51,6 @@ export const parseCoordinates = (value: string | null | undefined): { latitude: 
   const latitude = Number(match[1]);
   const longitude = Number(match[2]);
   return Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180 ? { latitude, longitude } : null;
-};
-
-/** The platform maps app for an address or a coordinate pair, with a web map as the fallback. */
-export const mapsUrls = (query: string) => {
-  const coordinates = parseCoordinates(query);
-  const encoded = encodeURIComponent(coordinates ? `${coordinates.latitude},${coordinates.longitude}` : query);
-  const web = `https://maps.google.com/?q=${encoded}`;
-  const app = Platform.select({
-    ios: coordinates ? `maps:?ll=${coordinates.latitude},${coordinates.longitude}&q=${encoded}` : `maps:0,0?q=${encoded}`,
-    android: coordinates ? `geo:${coordinates.latitude},${coordinates.longitude}?q=${encoded}` : `geo:0,0?q=${encoded}`,
-    default: web,
-  });
-  return { app, web };
 };
 
 const REDACTED = 'REDACTED';

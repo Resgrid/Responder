@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 
 import { LocationHistoryPanel } from '@/components/calls/location-history-panel';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/lucide-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { withoutRedacted } from '@/lib/contacts/format';
+import { openMapsWithAddress } from '@/lib/navigation';
 import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
@@ -94,6 +95,16 @@ const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink,
     if (!actionType) return;
 
     try {
+      if (actionType === 'address') {
+        const addressParts = addressData ? [addressData.address, addressData.city, addressData.state, addressData.zip].filter(Boolean).join(', ') : value;
+        // The navigation app chosen in Settings; the helper owns the per-platform URLs and fallbacks.
+        const opened = await openMapsWithAddress(addressParts?.toString() || '');
+        if (!opened) {
+          Alert.alert(t('contacts.errorTitle'), t('contacts.openAppError', { action: actionType }));
+        }
+        return;
+      }
+
       let url = '';
 
       switch (actionType) {
@@ -103,17 +114,6 @@ const ContactField: React.FC<ContactFieldProps> = ({ label, value, icon, isLink,
         case 'phone':
           url = `tel:${value}`;
           break;
-        case 'address': {
-          const addressParts = addressData ? [addressData.address, addressData.city, addressData.state, addressData.zip].filter(Boolean).join(', ') : value;
-          const encodedAddress = encodeURIComponent(addressParts?.toString() || '');
-
-          if (Platform.OS === 'ios') {
-            url = `maps:?q=${encodedAddress}`;
-          } else {
-            url = `geo:0,0?q=${encodedAddress}`;
-          }
-          break;
-        }
       }
 
       const canOpen = await Linking.canOpenURL(url);

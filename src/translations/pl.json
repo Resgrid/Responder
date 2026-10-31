@@ -2142,6 +2142,20 @@
     "logout_confirm_title": "Potwierdź wylogowanie",
     "logout_confirm_yes": "Tak, wyloguj się",
     "more": "Więcej",
+    "navigation_app": {
+      "apple_maps": "Mapy Apple",
+      "default": "Domyślna urządzenia",
+      "description": "Aplikacja, którą to urządzenie otwiera po rozpoczęciu nawigacji do zgłoszenia, celu lub pinezki na mapie. Niektóre aplikacje pokazują tylko lokalizację zamiast wyznaczać trasę.",
+      "gaia_gps": "Gaia GPS",
+      "google_maps": "Mapy Google",
+      "here_wego": "HERE WeGo",
+      "mapquest": "MapQuest",
+      "onx_offroad": "onX Offroad",
+      "organic_maps": "Organic Maps",
+      "osmand": "OsmAnd",
+      "title": "Aplikacja nawigacyjna",
+      "waze": "Waze"
+    },
     "no_units_available": "Brak dostępnych jednostek",
     "none_selected": "Nie wybrano",
     "notifications": "Powiadomienia push",
@@ -2186,7 +2200,9 @@
     "actions": {
       "accept": "Akceptuj",
       "add_person": "Dodaj osobę",
+      "apply": "Zgłoś się, aby przejąć",
       "approve": "Zatwierdź",
+      "cancel_request_admin": "Anuluj prośbę",
       "cancel_trade": "Anuluj prośbę o zamianę",
       "confirm": "Potwierdź",
       "confirm_signup": "Potwierdź zapis",
@@ -2194,7 +2210,8 @@
       "deny": "Odmów",
       "remove": "Usuń",
       "request_trade": "Poproś o zamianę",
-      "send_request": "Wyślij prośbę"
+      "send_request": "Wyślij prośbę",
+      "withdraw_application": "Wycofaj zgłoszenie"
     },
     "add_panel": {
       "group": "Grupa",
@@ -2214,11 +2231,27 @@
     "assigned": "Przypisano",
     "assignment_type": {
       "assigned": "Przydzielona",
-      "signup": "Zapisy"
+      "signup": "Zapisy",
+      "workshift": "Zmiana służbowa"
     },
     "automatic": "Automatyczne",
     "available": "Dostępne",
     "calendar": "Kalendarz",
+    "calendar_export": {
+      "add_all": "Dodaj moje zmiany do kalendarza ({{count}})",
+      "add_all_hint": "Dodaje do kalendarza urządzenia wszystkie zmiany, na których pracujesz w ciągu najbliższych 30 dni",
+      "add_hint": "Dodaje tę zmianę do kalendarza urządzenia lub aktualizuje ją, jeśli już tam jest",
+      "add_one": "Dodaj do kalendarza",
+      "added_many": "Zmiany w kalendarzu: {{count}}",
+      "added_one": "Dodano do kalendarza",
+      "event_footer": "Dodano z Resgrid",
+      "event_place": "W składzie: {{place}}",
+      "event_title": "Zmiana {{name}}",
+      "failed": "Nie udało się dodać zmiany do kalendarza.",
+      "nothing_to_add": "Do kalendarza można dodać tylko zmiany, na których pracujesz.",
+      "permission_denied": "Dostęp do kalendarza jest wyłączony. Zezwól na niego w Ustawieniach, aby dodać zmiany.",
+      "updated_one": "Zaktualizowano w kalendarzu"
+    },
     "calendar_view": {
       "day_a11y": "{{date}}: zmiany {{count}}, wolne miejsca {{open}}",
       "filter_a11y": "Filtruj kalendarz według zmiany",
@@ -2256,6 +2289,10 @@
       "mine_title": "Brak nadchodzących zmian",
       "on_duty_description": "Nikt nie jest teraz na aktywnej zmianie.",
       "on_duty_title": "Nikt nie jest na służbie",
+      "open_trades_description": "Gdy ktoś poprosi o oddanie swojej zmiany, prośba pojawi się tutaj dla każdego, kto może ją przejąć.",
+      "open_trades_title": "Brak otwartych próśb o zamianę",
+      "signup_description": "Tutaj pojawiają się dni zmian z zapisami, na które jest dla Ciebie miejsce w ciągu najbliższych 30 dni.",
+      "signup_title": "Nie ma na co się zapisać",
       "trades_description": "Tutaj pojawiają się wysłane i otrzymane prośby o zamianę.",
       "trades_title": "Brak zamian zmian"
     },
@@ -2270,6 +2307,7 @@
       "network": "Wygląda na to, że jesteś offline. Spróbuj ponownie.",
       "no_users": "Wybierz co najmniej jedną osobę.",
       "not_allowed": "Nie masz uprawnień, aby to zrobić.",
+      "not_eligible": "Nie masz ról wymaganych na tym miejscu.",
       "not_found": "Ta zmiana, zapis lub zamiana już nie istnieje.",
       "not_on_shift": "Nie jesteś na tej zmianie w tym dniu.",
       "not_pending": "Ta prośba nie oczekuje już na decyzję.",
@@ -2285,6 +2323,11 @@
     "loading_details": "Ładowanie szczegółów zmiany...",
     "loading_signup": "Przetwarzanie...",
     "manual": "Ręczne",
+    "mine_sections": {
+      "active": "Teraz na służbie",
+      "pending": "Czeka na zatwierdzenie",
+      "upcoming": "Nadchodzące"
+    },
     "my_standing_shifts": "Moje stałe zmiany",
     "my_upcoming_days": "Nadchodzące dni",
     "needed": "Potrzebne",
@@ -2345,6 +2388,7 @@
       "calendar": "Kalendarz",
       "mine": "Moje zmiany",
       "on_duty": "Na służbie",
+      "signup": "Zapisy",
       "today": "Dzisiaj",
       "trades": "Zamiany",
       "with_count": "{{label}}, oczekujące: {{count}}"
@@ -2372,6 +2416,11 @@
     },
     "signup_status": "Status zapisu",
     "signup_success": "Pomyślnie zapisano na zmianę",
+    "signup_view": {
+      "description": "Dni zmian, na które możesz się zapisać w ciągu najbliższych 30 dni. Dotknij dnia, aby wybrać swój zespół.",
+      "filter_all": "Wszystkie dni",
+      "filter_needed": "Brakuje ludzi"
+    },
     "signups": "Zapisy",
     "start_time": "Godzina rozpoczęcia",
     "status": {
@@ -2391,21 +2440,35 @@
       "person_removed": "Usunięto osobę ze zmiany",
       "signup_pending": "Zapisano. Czeka na zatwierdzenie przez przełożonego.",
       "trade_accepted": "Twoja oferta została wysłana",
+      "trade_application_withdrawn": "Twoje zgłoszenie zostało wycofane",
+      "trade_applied": "Wysłano zgłoszenie",
       "trade_cancelled": "Anulowano prośbę o zamianę",
       "trade_declined": "Odrzucono zamianę",
       "trade_finished": "Zamiana zakończona",
       "trade_finished_pending": "Zamianę wysłano do zatwierdzenia",
-      "trade_requested": "Wysłano prośbę o zamianę"
+      "trade_requested": "Wysłano prośbę o zamianę",
+      "trade_requested_open": "Wysłano prośbę o zamianę do wszystkich, którzy mogą przejąć zmianę"
     },
     "today": "Dziś",
     "todays_shifts": "Dzisiejsze zmiany",
     "trade": {
       "accept_description": "Możesz zaoferować w zamian jedną ze swoich nadchodzących zmian albo po prostu przejąć tę.",
       "accept_title": "Zaakceptować tę zamianę?",
+      "applicant_conflict": "W tym czasie pracuje już na zmianie {{name}}",
+      "applicant_count": "Zgłoszenia: {{count}}",
+      "applicants": "Zgłoszeni",
+      "applied_at": "Data zgłoszenia: {{date}}",
+      "apply_description": "{{name}} oraz osoby decydujące o zamianach zobaczą Twoje zgłoszenie. Możesz zaoferować w zamian jedną ze swoich zmian.",
+      "apply_title": "Zgłosić się do przejęcia tej zmiany?",
       "cancel_description": "Otrzymane oferty zostaną odrzucone.",
+      "cancel_description_open": "Wszyscy zgłoszeni zostaną powiadomieni, że prośba została anulowana.",
       "cancel_title": "Anulować tę prośbę o zamianę?",
       "decline_description": "Osoba prosząca zobaczy, że odmówiłeś.",
       "decline_title": "Odrzucić tę zamianę?",
+      "details_a11y": "Zamiana zmiany {{shift}} w dniu {{date}}",
+      "details_hint": "Otwiera zamianę wraz ze zgłoszonymi osobami",
+      "filter_mine": "Moje ({{count}})",
+      "filter_open": "Otwarte prośby ({{count}})",
       "finish_give_description": "{{name}} przejmie tę zmianę.",
       "finish_pending_note": "Przełożony musi zatwierdzić tę zamianę, zanim zacznie obowiązywać.",
       "finish_swap_description": "{{name}} przejmuje tę zmianę, a Ty przejmujesz zmianę {{shift}} w dniu {{date}}.",
@@ -2413,6 +2476,11 @@
       "from": "Od: {{name}}",
       "give_to": "Przekaż: {{name}}",
       "incoming": "Otrzymane",
+      "ineligible": {
+        "already_on_day": "Pracujesz już w tym dniu.",
+        "missing_roles": "Nie masz ról wymaganych na tym miejscu.",
+        "not_allowed": "Nie możesz przejąć tej zmiany."
+      },
       "my_state": {
         "accepted": "Przejmujesz tę zmianę",
         "declined": "Odmówiłeś",
@@ -2422,15 +2490,27 @@
         "pending_approval": "Czeka na zatwierdzenie przez przełożonego",
         "proposed": "Złożyłeś ofertę"
       },
+      "nearby_workload": "W ciągu tygodnia od tego dnia: zmiany {{count}}, {{hours}} godz.",
+      "no_applicants": "Nikt się jeszcze nie zgłosił",
+      "no_certifications": "Brak aktualnych uprawnień",
       "no_offers": "Brak odpowiedzi",
       "no_swap": "Nie oferuj zmiany w zamian",
       "offer_back": "Zaoferuj zmianę w zamian",
       "offers": "Odpowiedzi",
+      "open_request": "Otwarta dla wszystkich",
       "outgoing": "Wysłane",
+      "pick_as_approver_note": "Decydujesz o tej zamianie jako zatwierdzający: Twój wybór obowiązuje od razu.",
+      "pick_note": "Wybierz, kto przejmie tę zmianę.",
+      "requested_at": "Data prośby: {{date}}",
+      "requested_by": "Prośba od: {{name}}",
       "reviewed_by": "Rozpatrzone przez: {{name}}",
       "section_active": "W toku",
+      "section_applied": "Twoje zgłoszenia",
       "section_attention": "Wymaga Twojej uwagi",
+      "section_can_apply": "Możesz przejąć",
+      "section_other_requests": "Inne prośby",
       "section_recent": "Ostatnie",
+      "select_applicant": "Przekaż: {{name}}",
       "status": {
         "cancelled": "Anulowana",
         "completed": "Zakończona",
@@ -2443,11 +2523,20 @@
       "taken_by": "Przejęta przez: {{name}}",
       "user_declined": "Odmówił",
       "user_offered": "Zaoferował",
-      "user_waiting": "Brak odpowiedzi"
+      "user_waiting": "Brak odpowiedzi",
+      "user_withdrew": "Wycofał się",
+      "withdraw_description": "Osoba prosząca zobaczy, że nie jesteś już dostępny.",
+      "withdraw_title": "Wycofać zgłoszenie?"
     },
     "trade_panel": {
       "description": "Wybierz, kto ma przejąć tę zmianę. Każda wybrana osoba otrzyma prośbę, a Ty wybierzesz spośród ofert.",
+      "mode_open": "Wszyscy, którzy mogą ją przejąć",
+      "mode_open_hint": "Osoby do powiadomienia: {{count}}",
+      "mode_specific": "Tylko wybrane przeze mnie osoby",
+      "mode_specific_hint": "Zamiast tego zapytaj konkretnych współpracowników",
       "no_candidates": "Nikt nie może przejąć tej zmiany.",
+      "open_description": "Każdy, kto jest wolny w tym dniu i ma role wymagane na Twoim miejscu, otrzyma e-mail i powiadomienie push i może się zgłosić. Następnie Ty albo Twój przełożony wybierze, kto przejmie zmianę.",
+      "open_description_workshift": "Każdy, kto jest wolny w tym dniu, otrzyma e-mail i powiadomienie push i może się zgłosić, aby zająć Twoje miejsce w załodze jednostki.",
       "selected_count": "Wybrano: {{count}}",
       "title": "Poproś o zamianę"
     },

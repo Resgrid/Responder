@@ -15,6 +15,8 @@ export const getAssignmentTypeKey = (assignmentType: number): string => {
       return 'shifts.assignment_type.assigned';
     case ShiftAssignmentType.Signup:
       return 'shifts.assignment_type.signup';
+    case ShiftAssignmentType.Workshift:
+      return 'shifts.assignment_type.workshift';
     default:
       return 'shifts.unknown';
   }
@@ -136,5 +138,36 @@ export const canWithdrawFromDay = (day: ShiftDayResultData, userId: string | nul
   return day.ShiftType === ShiftAssignmentType.Signup;
 };
 
-/** On the roster (approved), no trade already open, and the day is not over. */
-export const canRequestTradeForDay = (day: ShiftDayResultData): boolean => day.MyStatus === ShiftDayMyStatus.OnRoster && !day.MyTradeId && !isShiftDayOver(day);
+/**
+ * On the roster (approved), no trade already open, and the day is not over. Newer servers decide it
+ * (`CanTrade`, which also refuses a slot someone traded to you); older ones leave it to this check.
+ */
+export const canRequestTradeForDay = (day: ShiftDayResultData): boolean => {
+  if (day.MyStatus !== ShiftDayMyStatus.OnRoster || !!day.MyTradeId || isShiftDayOver(day)) {
+    return false;
+  }
+  return day.CanTrade ?? true;
+};
+
+/**
+ * The caller works this day and can put it in their device calendar: on a static shift's roster, a
+ * static shift (workshift) day's staffing, or an approved sign-up. A sign-up waiting for approval does
+ * not count until it is approved.
+ */
+export const canAddDayToCalendar = (day: Pick<ShiftDayResultData, 'MyStatus' | 'End' | 'IsActive'>): boolean => day.MyStatus === ShiftDayMyStatus.OnRoster && !isShiftDayOver(day);
+
+/** Key for an applicant's eligibility problem (`IneligibleReason`), or null when they qualify. */
+export const getIneligibleReasonKey = (reason: string | null | undefined): string | null => {
+  switch (reason) {
+    case '':
+    case null:
+    case undefined:
+      return null;
+    case 'already_on_roster':
+      return 'shifts.trade.ineligible.already_on_day';
+    case 'not_eligible':
+      return 'shifts.trade.ineligible.missing_roles';
+    default:
+      return 'shifts.trade.ineligible.not_allowed';
+  }
+};

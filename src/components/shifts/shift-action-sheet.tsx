@@ -11,7 +11,7 @@ import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { formatShiftDate, formatShiftTime, getShiftErrorTranslationKey } from '@/lib/shift-utils';
 import { type PendingShiftSignupResultData } from '@/models/v4/shifts/pendingShiftSignupResultData';
-import { ShiftDayMyStatus } from '@/models/v4/shifts/shiftEnums';
+import { ShiftAssignmentType, ShiftDayMyStatus } from '@/models/v4/shifts/shiftEnums';
 import { type ShiftActionOutcome, useShiftsStore } from '@/stores/shifts/store';
 import { useToastStore } from '@/stores/toast/store';
 
@@ -57,11 +57,13 @@ export const ShiftActionSheet: React.FC<ShiftActionSheetProps> = ({ action, onCl
     setOfferedSignupId(NO_SWAP);
   }, [action]);
 
-  // An accepted trade may offer one of the caller's own approved, upcoming sign-ups back.
+  // Accepting or applying may offer one of the caller's own approved, upcoming sign-ups back. A static
+  // shift (workshift) day has no sign-up to swap against, so applicants just take it.
+  const offersSwap = (action?.kind === 'accept-trade' || action?.kind === 'apply-trade') && action.trade.ShiftType !== ShiftAssignmentType.Workshift;
   const swapOptions = useMemo(() => {
-    if (action?.kind !== 'accept-trade') return [];
-    return myShiftDays.filter((day) => !!day.MySignupId && day.MyStatus === ShiftDayMyStatus.OnRoster && !day.MyTradeId && day.ShiftDayId !== action.trade.ShiftDayId);
-  }, [action, myShiftDays]);
+    if (!offersSwap || !action || !('trade' in action)) return [];
+    return myShiftDays.filter((day) => !!day.MySignupId && day.MyStatus === ShiftDayMyStatus.OnRoster && !day.MyTradeId && day.ShiftDayId !== action.trade.ShiftDayId && day.ShiftType !== ShiftAssignmentType.Workshift);
+  }, [action, myShiftDays, offersSwap]);
 
   const copy: SheetCopy | null = useMemo(() => {
     if (!action) return null;
@@ -70,8 +72,18 @@ export const ShiftActionSheet: React.FC<ShiftActionSheetProps> = ({ action, onCl
         return { title: t('shifts.trade.accept_title'), description: t('shifts.trade.accept_description'), confirm: t('shifts.actions.accept'), tone: 'positive', withNote: true };
       case 'decline-trade':
         return { title: t('shifts.trade.decline_title'), description: t('shifts.trade.decline_description'), confirm: t('shifts.actions.decline'), tone: 'negative', withNote: true };
+      case 'apply-trade':
+        return { title: t('shifts.trade.apply_title'), description: t('shifts.trade.apply_description', { name: action.trade.SourceUserName }), confirm: t('shifts.actions.apply'), tone: 'positive', withNote: true };
+      case 'withdraw-application':
+        return { title: t('shifts.trade.withdraw_title'), description: t('shifts.trade.withdraw_description'), confirm: t('shifts.actions.withdraw_application'), tone: 'negative', withNote: false };
       case 'cancel-trade':
-        return { title: t('shifts.trade.cancel_title'), description: t('shifts.trade.cancel_description'), confirm: t('shifts.actions.cancel_trade'), tone: 'negative', withNote: false };
+        return {
+          title: t('shifts.trade.cancel_title'),
+          description: action.trade.IsOpen ? t('shifts.trade.cancel_description_open') : t('shifts.trade.cancel_description'),
+          confirm: t('shifts.actions.cancel_trade'),
+          tone: 'negative',
+          withNote: false,
+        };
       case 'finish-trade':
         return {
           title: t('shifts.trade.finish_title'),
@@ -126,6 +138,14 @@ export const ShiftActionSheet: React.FC<ShiftActionSheetProps> = ({ action, onCl
         outcome = await respondToTrade(action.trade.ShiftSignupTradeId, false, trimmed, []);
         successKey = 'shifts.toast.trade_declined';
         break;
+      case 'apply-trade':
+        outcome = await respondToTrade(action.trade.ShiftSignupTradeId, true, trimmed, offeredSignupId ? [offeredSignupId] : []);
+        successKey = 'shifts.toast.trade_applied';
+        break;
+      case 'withdraw-application':
+        outcome = await respondToTrade(action.trade.ShiftSignupTradeId, false, '', []);
+        successKey = 'shifts.toast.trade_application_withdrawn';
+        break;
       case 'cancel-trade':
         outcome = await cancelTrade(action.trade.ShiftSignupTradeId);
         successKey = 'shifts.toast.trade_cancelled';
@@ -170,7 +190,7 @@ export const ShiftActionSheet: React.FC<ShiftActionSheetProps> = ({ action, onCl
             <Text className="text-sm font-medium text-gray-800 dark:text-gray-200">{subject}</Text>
             <Text className="text-sm text-gray-600 dark:text-gray-400">{copy.description}</Text>
 
-            {action.kind === 'accept-trade' ? (
+            {offersSwap ? (
               <VStack space="sm" testID="shift-action-swap-options">
                 <Text className="text-sm font-semibold text-gray-900 dark:text-white">{t('shifts.trade.offer_back')}</Text>
                 <ShiftSelectRow id={NO_SWAP} mode="radio" title={t('shifts.trade.no_swap')} selected={offeredSignupId === NO_SWAP} onToggle={setOfferedSignupId} testID="swap-option-none" />
@@ -189,7 +209,10 @@ export const ShiftActionSheet: React.FC<ShiftActionSheetProps> = ({ action, onCl
               </VStack>
             ) : null}
 
-            {action.kind === 'finish-trade' && action.trade.RequireApproval ? <Text className="text-sm text-amber-700 dark:text-amber-400">{t('shifts.trade.finish_pending_note')}</Text> : null}
+            {action.kind === 'finish-trade' && action.trade.PickIsApproval ? <Text className="text-sm text-gray-600 dark:text-gray-400">{t('shifts.trade.pick_as_approver_note')}</Text> : null}
+            {action.kind === 'finish-trade' && action.trade.RequireApproval && !action.trade.PickIsApproval ? (
+              <Text className="text-sm text-amber-700 dark:text-amber-400">{t('shifts.trade.finish_pending_note')}</Text>
+            ) : null}
 
             {copy.withNote ? (
               <VStack space="xs">

@@ -1,7 +1,12 @@
-/** Server `ShiftAssignmentTypes`; a shift day's `ShiftType` carries the same values. */
+/**
+ * Server `ShiftAssignmentTypes`; a shift day's `ShiftType` carries the same values. `Workshift` (a static
+ * shift: a set period of unit crews, server `StaffedShiftTypes.Workshift`) only appears as a day's or a
+ * trade's `ShiftType`.
+ */
 export enum ShiftAssignmentType {
   Assigned = 0,
   Signup = 1,
+  Workshift = 2,
 }
 
 /** Server `ShiftScheduleTypes`. */
@@ -68,6 +73,7 @@ export const SHIFT_SERVER_ERROR_CODES = [
   'not_pending',
   'already_on_roster',
   'invalid_request',
+  'not_eligible',
 ] as const;
 
 export type ShiftServerErrorCode = (typeof SHIFT_SERVER_ERROR_CODES)[number];

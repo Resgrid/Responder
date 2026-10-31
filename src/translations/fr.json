@@ -2142,6 +2142,20 @@
     "logout_confirm_title": "Confirmer la déconnexion",
     "logout_confirm_yes": "Oui, se déconnecter",
     "more": "Plus",
+    "navigation_app": {
+      "apple_maps": "Plans d'Apple",
+      "default": "Par défaut de l'appareil",
+      "description": "L'application que cet appareil ouvre lorsque vous lancez la navigation vers un appel, une destination ou un repère de la carte. Certaines applications affichent seulement l'emplacement au lieu de lancer un itinéraire.",
+      "gaia_gps": "Gaia GPS",
+      "google_maps": "Google Maps",
+      "here_wego": "HERE WeGo",
+      "mapquest": "MapQuest",
+      "onx_offroad": "onX Offroad",
+      "organic_maps": "Organic Maps",
+      "osmand": "OsmAnd",
+      "title": "Application de navigation",
+      "waze": "Waze"
+    },
     "no_units_available": "Aucune unité disponible",
     "none_selected": "Aucun sélectionné",
     "notifications": "Notifications push",
@@ -2186,7 +2200,9 @@
     "actions": {
       "accept": "Accepter",
       "add_person": "Ajouter une personne",
+      "apply": "Postuler pour le reprendre",
       "approve": "Approuver",
+      "cancel_request_admin": "Annuler la demande",
       "cancel_trade": "Annuler la demande d'échange",
       "confirm": "Confirmer",
       "confirm_signup": "Confirmer l'inscription",
@@ -2194,7 +2210,8 @@
       "deny": "Rejeter",
       "remove": "Retirer",
       "request_trade": "Demander un échange",
-      "send_request": "Envoyer la demande"
+      "send_request": "Envoyer la demande",
+      "withdraw_application": "Retirer la candidature"
     },
     "add_panel": {
       "group": "Groupe",
@@ -2214,11 +2231,27 @@
     "assigned": "Attribué",
     "assignment_type": {
       "assigned": "Assigné",
-      "signup": "Inscription"
+      "signup": "Inscription",
+      "workshift": "Vacation"
     },
     "automatic": "Automatique",
     "available": "Disponible",
     "calendar": "Calendrier",
+    "calendar_export": {
+      "add_all": "Ajouter mes quarts au calendrier ({{count}})",
+      "add_all_hint": "Ajoute au calendrier de votre appareil tous les quarts où vous travaillez dans les 30 prochains jours",
+      "add_hint": "Ajoute ce quart au calendrier de votre appareil, ou le met à jour s'il y figure déjà",
+      "add_one": "Ajouter au calendrier",
+      "added_many": "Quarts dans votre calendrier : {{count}}",
+      "added_one": "Ajouté à votre calendrier",
+      "event_footer": "Ajouté depuis Resgrid",
+      "event_place": "Avec : {{place}}",
+      "event_title": "Quart {{name}}",
+      "failed": "Le quart n'a pas pu être ajouté à votre calendrier.",
+      "nothing_to_add": "Seuls les quarts où vous travaillez peuvent être ajoutés à votre calendrier.",
+      "permission_denied": "L'accès au calendrier est désactivé. Autorisez-le dans les Paramètres pour ajouter des quarts.",
+      "updated_one": "Mis à jour dans votre calendrier"
+    },
     "calendar_view": {
       "day_a11y": "{{date}} : quarts {{count}}, places libres {{open}}",
       "filter_a11y": "Filtrer le calendrier par quart",
@@ -2256,6 +2289,10 @@
       "mine_title": "Aucun quart à venir",
       "on_duty_description": "Personne n'est actuellement sur un quart actif.",
       "on_duty_title": "Personne en service",
+      "open_trades_description": "Lorsqu'une personne demande à céder un quart, la demande apparaît ici pour toute personne pouvant le reprendre.",
+      "open_trades_title": "Aucune demande d'échange ouverte",
+      "signup_description": "Les jours de quart ouverts aux inscriptions où il reste de la place pour vous dans les 30 prochains jours apparaissent ici.",
+      "signup_title": "Aucune inscription possible",
       "trades_description": "Les demandes d'échange que vous envoyez ou recevez apparaissent ici.",
       "trades_title": "Aucun échange de quart"
     },
@@ -2270,6 +2307,7 @@
       "network": "Vous semblez hors ligne. Veuillez réessayer.",
       "no_users": "Choisissez au moins une personne.",
       "not_allowed": "Vous n'avez pas l'autorisation de faire cela.",
+      "not_eligible": "Vous n'avez pas les rôles requis pour cette place.",
       "not_found": "Ce quart, cette inscription ou cet échange n'existe plus.",
       "not_on_shift": "Vous n'êtes pas inscrit à ce jour de quart.",
       "not_pending": "Cette demande n'est plus en attente.",
@@ -2285,6 +2323,11 @@
     "loading_details": "Chargement des détails du quart...",
     "loading_signup": "Traitement...",
     "manual": "Manuel",
+    "mine_sections": {
+      "active": "En service maintenant",
+      "pending": "En attente d'approbation",
+      "upcoming": "À venir"
+    },
     "my_standing_shifts": "Mes quarts réguliers",
     "my_upcoming_days": "Prochains jours",
     "needed": "Nécessaire",
@@ -2345,6 +2388,7 @@
       "calendar": "Calendrier",
       "mine": "Mes quarts",
       "on_duty": "En service",
+      "signup": "Inscriptions",
       "today": "Aujourd'hui",
       "trades": "Échanges",
       "with_count": "{{label}}, {{count}} en attente"
@@ -2372,6 +2416,11 @@
     },
     "signup_status": "Statut d'inscription",
     "signup_success": "Inscription au quart réussie",
+    "signup_view": {
+      "description": "Jours de quart auxquels vous pouvez vous inscrire dans les 30 prochains jours. Touchez un jour pour choisir votre équipe.",
+      "filter_all": "Tous les jours",
+      "filter_needed": "Besoin de personnel"
+    },
     "signups": "Inscriptions",
     "start_time": "Heure de début",
     "status": {
@@ -2391,21 +2440,35 @@
       "person_removed": "Personne retirée du quart",
       "signup_pending": "Inscrit. En attente de l'approbation d'un superviseur.",
       "trade_accepted": "Votre offre a été envoyée",
+      "trade_application_withdrawn": "Votre candidature a été retirée",
+      "trade_applied": "Candidature envoyée",
       "trade_cancelled": "Demande d'échange annulée",
       "trade_declined": "Échange refusé",
       "trade_finished": "Échange effectué",
       "trade_finished_pending": "Échange envoyé pour approbation",
-      "trade_requested": "Demande d'échange envoyée"
+      "trade_requested": "Demande d'échange envoyée",
+      "trade_requested_open": "Demande d'échange envoyée à toutes les personnes pouvant reprendre le quart"
     },
     "today": "Aujourd'hui",
     "todays_shifts": "Quarts d'aujourd'hui",
     "trade": {
       "accept_description": "Vous pouvez proposer en retour l'un de vos prochains quarts, ou simplement reprendre celui-ci.",
       "accept_title": "Accepter cet échange ?",
+      "applicant_conflict": "Déjà affecté à {{name}} à ce moment-là",
+      "applicant_count": "Candidats : {{count}}",
+      "applicants": "Candidats",
+      "applied_at": "Candidature du {{date}}",
+      "apply_description": "{{name}} et les personnes qui décident des échanges verront votre candidature. Vous pouvez proposer l'un de vos quarts en retour.",
+      "apply_title": "Postuler pour reprendre ce quart ?",
       "cancel_description": "Les offres reçues seront abandonnées.",
+      "cancel_description_open": "Toutes les personnes qui ont postulé seront informées de l'annulation de la demande.",
       "cancel_title": "Annuler cette demande d'échange ?",
       "decline_description": "Le demandeur verra que vous avez refusé.",
       "decline_title": "Refuser cet échange ?",
+      "details_a11y": "Échange pour {{shift}} le {{date}}",
+      "details_hint": "Ouvre l'échange et ses candidats",
+      "filter_mine": "Les miennes ({{count}})",
+      "filter_open": "Demandes ouvertes ({{count}})",
       "finish_give_description": "{{name}} reprendra ce quart.",
       "finish_pending_note": "Un superviseur doit approuver cet échange avant qu'il ne prenne effet.",
       "finish_swap_description": "{{name}} reprend ce quart et vous reprenez son quart {{shift}} le {{date}}.",
@@ -2413,6 +2476,11 @@
       "from": "De {{name}}",
       "give_to": "Céder à {{name}}",
       "incoming": "Reçu",
+      "ineligible": {
+        "already_on_day": "Vous travaillez déjà ce jour-là.",
+        "missing_roles": "Vous n'avez pas les rôles requis pour cette place.",
+        "not_allowed": "Vous ne pouvez pas reprendre ce quart."
+      },
       "my_state": {
         "accepted": "Vous reprenez ce quart",
         "declined": "Vous avez refusé",
@@ -2422,15 +2490,27 @@
         "pending_approval": "En attente de l'approbation d'un superviseur",
         "proposed": "Vous avez fait une offre"
       },
+      "nearby_workload": "Dans la semaine autour de ce jour : quarts {{count}}, {{hours}} h",
+      "no_applicants": "Personne n'a encore postulé",
+      "no_certifications": "Aucune certification valide",
       "no_offers": "Aucune réponse pour le moment",
       "no_swap": "Ne pas proposer de quart en retour",
       "offer_back": "Proposer un quart en retour",
       "offers": "Réponses",
+      "open_request": "Ouvert à tous",
       "outgoing": "Envoyé",
+      "pick_as_approver_note": "Vous décidez de cet échange en tant qu'approbateur : votre choix prend effet immédiatement.",
+      "pick_note": "Choisissez qui reprend ce quart.",
+      "requested_at": "Demandé le {{date}}",
+      "requested_by": "Demandé par {{name}}",
       "reviewed_by": "Examiné par {{name}}",
       "section_active": "En cours",
+      "section_applied": "Vos candidatures",
       "section_attention": "Requiert votre attention",
+      "section_can_apply": "Vous pouvez les reprendre",
+      "section_other_requests": "Autres demandes",
       "section_recent": "Récents",
+      "select_applicant": "Céder à {{name}}",
       "status": {
         "cancelled": "Annulé",
         "completed": "Effectué",
@@ -2443,11 +2523,20 @@
       "taken_by": "Repris par {{name}}",
       "user_declined": "A refusé",
       "user_offered": "A proposé",
-      "user_waiting": "Pas encore de réponse"
+      "user_waiting": "Pas encore de réponse",
+      "user_withdrew": "S'est retiré",
+      "withdraw_description": "Le demandeur verra que vous n'êtes plus disponible.",
+      "withdraw_title": "Retirer votre candidature ?"
     },
     "trade_panel": {
       "description": "Choisissez qui vous souhaitez voir reprendre ce quart. Chaque personne choisie est sollicitée, puis vous choisissez parmi les offres.",
+      "mode_open": "Toute personne pouvant le reprendre",
+      "mode_open_hint": "Personnes qui seront notifiées : {{count}}",
+      "mode_specific": "Seulement les personnes que je choisis",
+      "mode_specific_hint": "Solliciter plutôt des collègues précis",
       "no_candidates": "Personne n'est disponible pour reprendre ce quart.",
+      "open_description": "Toute personne libre ce jour-là et ayant les rôles requis pour votre place reçoit un e-mail et une notification push, et peut postuler. Vous choisissez ensuite qui reprend le quart, ou votre superviseur le fait.",
+      "open_description_workshift": "Toute personne libre ce jour-là reçoit un e-mail et une notification push, et peut postuler pour prendre votre place dans l'unité.",
       "selected_count": "Sélectionnés : {{count}}",
       "title": "Demander un échange"
     },

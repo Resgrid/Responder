@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Clock, Repeat, UserMinus, UserPlus } from 'lucide-react-native';
+import { AlertCircle, CalendarPlus, CheckCircle, Clock, Repeat, Truck, UserMinus, UserPlus } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,14 +17,15 @@ import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/lib/auth';
-import { canManageRosterEntry, formatShiftLongDate, formatShiftTime, getGroupOpenSlots, getManageableGroups, getShiftErrorTranslationKey, isOvernightShift } from '@/lib/shift-utils';
+import { canManageRosterEntry, formatShiftLongDate, formatShiftTime, getGroupOpenSlots, getManageableGroups, getShiftErrorTranslationKey, isOvernightShift, isWorkshiftDay } from '@/lib/shift-utils';
 import { type ShiftDayGroupNeedsResultData, type ShiftDayResultData, type ShiftDayRosterResultData } from '@/models/v4/shifts/shiftDayResultData';
 import { ShiftDayMyStatus } from '@/models/v4/shifts/shiftEnums';
 import { type ShiftActionOutcome, type ShiftMutationKind, useShiftsStore } from '@/stores/shifts/store';
 import { useToastStore } from '@/stores/toast/store';
 
-import { canRequestTradeForDay, canWithdrawFromDay, getAssignmentTypeKey, getMyStatusLabel, getRosterSourceLabel } from './shift-labels';
+import { canAddDayToCalendar, canRequestTradeForDay, canWithdrawFromDay, getAssignmentTypeKey, getMyStatusLabel, getRosterSourceLabel } from './shift-labels';
 import { ShiftSelectRow } from './shift-select-row';
+import { useShiftCalendarExport } from './use-shift-calendar-export';
 
 interface ShiftDayDetailsSheetProps {
   isOpen: boolean;
@@ -33,17 +34,22 @@ interface ShiftDayDetailsSheetProps {
 
 type DayPanel = 'details' | 'signup' | 'withdraw' | 'trade' | 'cancel-trade' | 'add' | 'remove' | 'review';
 
+/** An open request goes to everyone eligible for the slot; a targeted one only to the people picked. */
+type TradeMode = 'open' | 'specific';
+
 interface RosterGroup {
   key: string;
   name: string;
   entries: ShiftDayRosterResultData[];
 }
 
-const groupRoster = (roster: ShiftDayRosterResultData[], noGroupLabel: string): RosterGroup[] => {
+/** Shift days group their roster by team; static shift (workshift) days by the unit each person crews. */
+const groupRoster = (roster: ShiftDayRosterResultData[], noGroupLabel: string, byUnit: boolean): RosterGroup[] => {
   const groups = new Map<string, RosterGroup>();
   roster.forEach((entry) => {
-    const key = entry.GroupId || '';
-    const existing = groups.get(key) ?? { key, name: entry.GroupName || noGroupLabel, entries: [] };
+    const key = (byUnit ? entry.UnitId : entry.GroupId) || '';
+    const name = (byUnit ? entry.UnitName : entry.GroupName) || noGroupLabel;
+    const existing = groups.get(key) ?? { key, name, entries: [] };
     existing.entries.push(entry);
     groups.set(key, existing);
   });
@@ -177,8 +183,10 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   const removeFromShiftDay = useShiftsStore((state) => state.removeFromShiftDay);
   const fetchTradeCandidates = useShiftsStore((state) => state.fetchTradeCandidates);
   const fetchPersonnelOptions = useShiftsStore((state) => state.fetchPersonnelOptions);
+  const { addToCalendar, isExporting } = useShiftCalendarExport();
 
   const [panel, setPanel] = useState<DayPanel>('details');
+  const [tradeMode, setTradeMode] = useState<TradeMode>('open');
   const [signupGroupId, setSignupGroupId] = useState<string>('');
   const [candidateIds, setCandidateIds] = useState<string[]>([]);
   const [note, setNote] = useState('');
@@ -252,7 +260,8 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   );
 
   const manageableGroups = useMemo(() => (selectedShiftDay ? getManageableGroups(selectedShiftDay) : []), [selectedShiftDay]);
-  const rosterGroups = useMemo(() => groupRoster(selectedShiftDay?.Roster ?? [], t('shifts.day.no_group')), [selectedShiftDay, t]);
+  const isWorkshift = isWorkshiftDay(selectedShiftDay);
+  const rosterGroups = useMemo(() => groupRoster(selectedShiftDay?.Roster ?? [], t('shifts.day.no_group'), isWorkshiftDay(selectedShiftDay)), [selectedShiftDay, t]);
 
   const filteredPersonnel = useMemo(() => {
     const query = personSearch.trim().toLowerCase();
@@ -280,9 +289,22 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
     if (!selectedShiftDay) return;
     setCandidateIds([]);
     setNote('');
+    setTradeMode('open');
     setPanel('trade');
-    void fetchTradeCandidates(selectedShiftDay.ShiftDayId);
+    // Candidates show how many people an open request reaches, and who can be picked for a targeted one.
+    // Static shift days are always open requests and have no candidate list.
+    if (!isWorkshiftDay(selectedShiftDay)) {
+      void fetchTradeCandidates(selectedShiftDay.ShiftDayId);
+    }
   }, [selectedShiftDay, fetchTradeCandidates]);
+
+  const selectTradeMode = useCallback((mode: string) => setTradeMode(mode === 'specific' ? 'specific' : 'open'), []);
+
+  const handleAddToCalendar = useCallback(() => {
+    if (selectedShiftDay) {
+      void addToCalendar([selectedShiftDay]);
+    }
+  }, [selectedShiftDay, addToCalendar]);
 
   const openAdd = useCallback(() => {
     if (!selectedShiftDay) return;
@@ -330,10 +352,16 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   }, [selectedShiftDay, withdrawFromShift, notify]);
 
   const submitTrade = useCallback(async () => {
-    if (!selectedShiftDay || candidateIds.length === 0) return;
-    const outcome = await requestTrade(selectedShiftDay.ShiftDayId, candidateIds, note.trim());
-    notify(outcome, 'shifts.toast.trade_requested', { success: 'shift_day_trade_request_success', failed: 'shift_day_trade_request_failed' });
-  }, [selectedShiftDay, candidateIds, note, requestTrade, notify]);
+    if (!selectedShiftDay) return;
+    const workshift = isWorkshiftDay(selectedShiftDay);
+    const userIds = tradeMode === 'specific' && !workshift ? candidateIds : [];
+    if (tradeMode === 'specific' && !workshift && userIds.length === 0) return;
+    const outcome = await requestTrade(selectedShiftDay.ShiftDayId, userIds, note.trim(), { workshift });
+    notify(outcome, userIds.length > 0 ? 'shifts.toast.trade_requested' : 'shifts.toast.trade_requested_open', {
+      success: 'shift_day_trade_request_success',
+      failed: 'shift_day_trade_request_failed',
+    });
+  }, [selectedShiftDay, tradeMode, candidateIds, note, requestTrade, notify]);
 
   const submitCancelTrade = useCallback(async () => {
     if (!selectedShiftDay?.MyTradeId) return;
@@ -373,8 +401,11 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   const myStatus = getMyStatusLabel(day.MyStatus);
   const overnight = isOvernightShift(day.Start, day.End);
   const iconColor = colorScheme === 'dark' ? '#60a5fa' : '#2563eb';
-  const canWithdraw = canWithdrawFromDay(day, userId);
+  // Static shift days are staffed from unit crews: no sign-ups, withdrawals or per-day roster edits here.
+  const canWithdraw = !isWorkshift && canWithdrawFromDay(day, userId);
   const canTrade = canRequestTradeForDay(day);
+  const canManageDay = day.CanManage && !isWorkshift;
+  const canAddToCalendar = canAddDayToCalendar(day);
   const isRosterLoading = isShiftDayLoading && (day.Roster ?? []).length === 0;
 
   const renderNoteField = (placeholderKey: string, testID: string) => (
@@ -434,6 +465,12 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
             <ButtonText>{t('shifts.signup')}</ButtonText>
           </Button>
         ) : null}
+        {canAddToCalendar ? (
+          <Button variant="outline" action="primary" onPress={handleAddToCalendar} isDisabled={isExporting} accessibilityHint={t('shifts.calendar_export.add_hint')} testID="shift-day-add-calendar-button">
+            {isExporting ? <ButtonSpinner /> : <CalendarPlus size={16} color={iconColor} />}
+            <ButtonText>{t('shifts.calendar_export.add_one')}</ButtonText>
+          </Button>
+        ) : null}
         {canTrade ? (
           <Button variant="outline" action="primary" onPress={openTrade} isDisabled={anyBusy} testID="shift-day-trade-button">
             <Repeat size={16} color={iconColor} />
@@ -450,7 +487,7 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
             <ButtonText>{t('shifts.withdraw')}</ButtonText>
           </Button>
         ) : null}
-        {day.CanManage ? (
+        {canManageDay ? (
           <Button variant="outline" action="secondary" onPress={openAdd} isDisabled={anyBusy || isShiftDayLoading} testID="shift-day-add-person-button">
             <UserPlus size={16} color={iconColor} />
             <ButtonText>{t('shifts.actions.add_person')}</ButtonText>
@@ -485,7 +522,14 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
             <VStack key={group.key || 'no-group'} space="xs" testID={`roster-group-${group.key || 'none'}`}>
               <Text className="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400">{group.name}</Text>
               {group.entries.map((entry) => (
-                <RosterRow key={`${entry.UserId}-${entry.ShiftSignupId}`} entry={entry} isMe={entry.UserId === userId} canManage={canManageRosterEntry(day, entry)} onReview={openReview} onRemove={openRemove} />
+                <RosterRow
+                  key={`${entry.UserId}-${entry.ShiftSignupId}-${entry.UnitId ?? ''}`}
+                  entry={entry}
+                  isMe={entry.UserId === userId}
+                  canManage={!isWorkshift && canManageRosterEntry(day, entry)}
+                  onReview={openReview}
+                  onRemove={openRemove}
+                />
               ))}
             </VStack>
           ))
@@ -536,8 +580,30 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
   const renderTrade = () => (
     <VStack space="md" testID="shift-day-trade-panel">
       <Text className="text-lg font-semibold text-gray-900 dark:text-white">{t('shifts.trade_panel.title')}</Text>
-      <Text className="text-sm text-gray-600 dark:text-gray-400">{t('shifts.trade_panel.description')}</Text>
-      {isCandidatesLoading ? (
+      <Text className="text-sm text-gray-600 dark:text-gray-400">{isWorkshift ? t('shifts.trade_panel.open_description_workshift') : t('shifts.trade_panel.open_description')}</Text>
+      {isWorkshift ? null : (
+        <VStack space="sm" accessibilityRole="radiogroup">
+          <ShiftSelectRow
+            id="open"
+            mode="radio"
+            title={t('shifts.trade_panel.mode_open')}
+            subtitle={isCandidatesLoading ? t('shifts.loading') : t('shifts.trade_panel.mode_open_hint', { count: tradeCandidates.length })}
+            selected={tradeMode === 'open'}
+            onToggle={selectTradeMode}
+            testID="trade-mode-open"
+          />
+          <ShiftSelectRow
+            id="specific"
+            mode="radio"
+            title={t('shifts.trade_panel.mode_specific')}
+            subtitle={t('shifts.trade_panel.mode_specific_hint')}
+            selected={tradeMode === 'specific'}
+            onToggle={selectTradeMode}
+            testID="trade-mode-specific"
+          />
+        </VStack>
+      )}
+      {tradeMode !== 'specific' || isWorkshift ? null : isCandidatesLoading ? (
         <HStack space="sm" className="items-center py-2">
           <Spinner size="small" />
           <Text className="text-sm text-gray-500 dark:text-gray-400">{t('shifts.loading')}</Text>
@@ -560,9 +626,9 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
           ))}
         </VStack>
       )}
-      {candidateIds.length > 0 ? <Text className="text-sm text-gray-600 dark:text-gray-400">{t('shifts.trade_panel.selected_count', { count: candidateIds.length })}</Text> : null}
+      {tradeMode === 'specific' && candidateIds.length > 0 ? <Text className="text-sm text-gray-600 dark:text-gray-400">{t('shifts.trade_panel.selected_count', { count: candidateIds.length })}</Text> : null}
       {renderNoteField('shifts.note_optional_placeholder', 'shift-day-trade-note')}
-      {renderPanelFooter(t('shifts.actions.send_request'), submitTrade, isBusy('request-trade'), candidateIds.length === 0, 'primary', 'shift-day-trade-confirm')}
+      {renderPanelFooter(t('shifts.actions.send_request'), submitTrade, isBusy('request-trade'), tradeMode === 'specific' && !isWorkshift && candidateIds.length === 0, 'primary', 'shift-day-trade-confirm')}
     </VStack>
   );
 
@@ -701,9 +767,18 @@ export const ShiftDayDetailsSheet: React.FC<ShiftDayDetailsSheetProps> = ({ isOp
                 <Badge action="muted" size="sm">
                   <BadgeText>{t(getAssignmentTypeKey(day.ShiftType))}</BadgeText>
                 </Badge>
-                <Text className={`text-xs font-medium ${day.Filled ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                  {day.Filled ? t('shifts.status.filled') : t('shifts.status.open_slots', { count: day.OpenSlots })}
-                </Text>
+                {isWorkshift ? (
+                  day.MyUnitName ? (
+                    <HStack space="xs" className="items-center">
+                      <Truck size={12} color={iconColor} />
+                      <Text className="text-xs font-medium text-blue-800 dark:text-blue-200">{day.MyUnitName}</Text>
+                    </HStack>
+                  ) : null
+                ) : (
+                  <Text className={`text-xs font-medium ${day.Filled ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                    {day.Filled ? t('shifts.status.filled') : t('shifts.status.open_slots', { count: day.OpenSlots })}
+                  </Text>
+                )}
               </VStack>
             </HStack>
           </Box>

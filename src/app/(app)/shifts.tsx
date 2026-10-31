@@ -1,5 +1,5 @@
 import { Stack, useFocusEffect } from 'expo-router';
-import { Info, Search, X } from 'lucide-react-native';
+import { CalendarPlus, Info, Search, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,12 +13,15 @@ import { ShiftCard } from '@/components/shifts/shift-card';
 import { ShiftDayCard } from '@/components/shifts/shift-day-card';
 import { ShiftDayDetailsSheet } from '@/components/shifts/shift-day-details-sheet';
 import { ShiftDetailsSheet } from '@/components/shifts/shift-details-sheet';
+import { canAddDayToCalendar } from '@/components/shifts/shift-labels';
 import { ShiftOnDutyList } from '@/components/shifts/shift-on-duty-list';
 import { type ShiftSegment, ShiftSegmentBar } from '@/components/shifts/shift-segment-bar';
 import { type ShiftTradeAction } from '@/components/shifts/shift-trade-card';
+import { ShiftTradeDetailsSheet } from '@/components/shifts/shift-trade-details-sheet';
 import { ShiftTradesList } from '@/components/shifts/shift-trades-list';
+import { useShiftCalendarExport } from '@/components/shifts/use-shift-calendar-export';
 import { View } from '@/components/ui';
-import { Button, ButtonText } from '@/components/ui/button';
+import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { FlatList } from '@/components/ui/flat-list';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
@@ -31,8 +34,10 @@ import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { formatShiftLongDate, getDateKey, getMonthRange, parseWallClock, toDateParam } from '@/lib/shift-utils';
 import { type ShiftDayResultData } from '@/models/v4/shifts/shiftDayResultData';
+import { ShiftDayMyStatus } from '@/models/v4/shifts/shiftEnums';
 import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
-import { type ShiftViewMode, useShiftsStore } from '@/stores/shifts/store';
+import { type ShiftTradeResultData } from '@/models/v4/shifts/shiftTradeResultData';
+import { type ShiftSignupFilter, type ShiftTradesFilter, type ShiftViewMode, useShiftsStore } from '@/stores/shifts/store';
 import { TermKeys, useTerm } from '@/stores/terminology/store';
 
 const SUPERVISOR_VIEWS: ShiftViewMode[] = ['approvals'];
@@ -41,6 +46,27 @@ const TRADE_MUTATIONS = new Set(['respond-trade', 'finish-trade', 'cancel-trade'
 const shiftDayKeyExtractor = (item: ShiftDayResultData) => item.ShiftDayId;
 
 const matchesQuery = (day: ShiftDayResultData, query: string) => day.ShiftName.toLowerCase().includes(query);
+
+type DayListItem = { type: 'header'; key: string; title: string } | { type: 'day'; key: string; day: ShiftDayResultData };
+
+const dayListKeyExtractor = (item: DayListItem) => item.key;
+
+/** My Shifts in the order someone checks them: what I am on now, what still waits on a supervisor, then what is coming. */
+const buildMineSections = (days: ShiftDayResultData[], titles: { active: string; pending: string; upcoming: string }): DayListItem[] => {
+  const active = days.filter((day) => day.IsActive);
+  const pending = days.filter((day) => !day.IsActive && day.MyStatus === ShiftDayMyStatus.PendingApproval);
+  const upcoming = days.filter((day) => !day.IsActive && day.MyStatus !== ShiftDayMyStatus.PendingApproval);
+  const items: DayListItem[] = [];
+  const addSection = (key: string, title: string, section: ShiftDayResultData[]) => {
+    if (section.length === 0) return;
+    items.push({ type: 'header', key: `header-${key}`, title });
+    section.forEach((day) => items.push({ type: 'day', key: `${key}-${day.ShiftType}-${day.ShiftDayId}`, day }));
+  };
+  addSection('active', titles.active, active);
+  addSection('pending', titles.pending, pending);
+  addSection('upcoming', titles.upcoming, upcoming);
+  return items;
+};
 
 interface CalendarFilterChipProps {
   id: string | null;
@@ -80,6 +106,13 @@ const ShiftsScreen: React.FC = () => {
   const calendarShiftId = useShiftsStore((state) => state.calendarShiftId);
   const selectedDate = useShiftsStore((state) => state.selectedDate);
   const trades = useShiftsStore((state) => state.trades);
+  const openTrades = useShiftsStore((state) => state.openTrades);
+  const tradesFilter = useShiftsStore((state) => state.tradesFilter);
+  const signupDays = useShiftsStore((state) => state.signupDays);
+  const signupFilter = useShiftsStore((state) => state.signupFilter);
+  const isTradeDetailsOpen = useShiftsStore((state) => state.isTradeDetailsOpen);
+  const isOpenTradesLoading = useShiftsStore((state) => state.isOpenTradesLoading);
+  const isSignupDaysLoading = useShiftsStore((state) => state.isSignupDaysLoading);
   const pendingSignups = useShiftsStore((state) => state.pendingSignups);
   const pendingTrades = useShiftsStore((state) => state.pendingTrades);
   const isSupervisor = useShiftsStore((state) => state.isSupervisor);
@@ -107,7 +140,12 @@ const ShiftsScreen: React.FC = () => {
   const selectShiftDay = useShiftsStore((state) => state.selectShiftDay);
   const closeShiftDetails = useShiftsStore((state) => state.closeShiftDetails);
   const closeShiftDayDetails = useShiftsStore((state) => state.closeShiftDayDetails);
+  const openTradeDetails = useShiftsStore((state) => state.openTradeDetails);
+  const closeTradeDetails = useShiftsStore((state) => state.closeTradeDetails);
+  const setTradesFilter = useShiftsStore((state) => state.setTradesFilter);
+  const setSignupFilter = useShiftsStore((state) => state.setSignupFilter);
   const clearError = useShiftsStore((state) => state.clearError);
+  const { addToCalendar, isExporting } = useShiftCalendarExport();
 
   const [sheetAction, setSheetAction] = useState<ShiftSheetAction | null>(null);
 
@@ -147,15 +185,16 @@ const ShiftsScreen: React.FC = () => {
     const list: ShiftSegment[] = [
       { key: 'today', label: t('shifts.segments.today') },
       { key: 'mine', label: t('shifts.segments.mine') },
+      { key: 'signup', label: t('shifts.segments.signup') },
       { key: 'calendar', label: t('shifts.segments.calendar') },
-      { key: 'trades', label: t('shifts.segments.trades') },
+      { key: 'trades', label: t('shifts.segments.trades'), badge: openTrades.filter((trade) => trade.CanApply).length },
       { key: 'onduty', label: t('shifts.segments.on_duty') },
     ];
     if (isSupervisor) {
       list.push({ key: 'approvals', label: t('shifts.segments.approvals'), badge: pendingSignups.length + pendingTrades.length });
     }
     return list;
-  }, [t, isSupervisor, pendingSignups.length, pendingTrades.length]);
+  }, [t, isSupervisor, pendingSignups.length, pendingTrades.length, openTrades]);
 
   const handleSegmentChange = useCallback(
     (view: ShiftViewMode) => {
@@ -233,11 +272,51 @@ const ShiftsScreen: React.FC = () => {
     [closeShiftDetails, setCalendarShiftFilter, setCurrentView, setSelectedDate]
   );
 
-  const handleTradeAction = useCallback((action: ShiftTradeAction) => setSheetAction(action), []);
+  // The trade sheet closes before the confirmation opens, so two bottom sheets are never stacked.
+  const handleTradeAction = useCallback(
+    (action: ShiftTradeAction) => {
+      if (useShiftsStore.getState().isTradeDetailsOpen) {
+        closeTradeDetails();
+      }
+      setSheetAction(action);
+    },
+    [closeTradeDetails]
+  );
+
+  const handleOpenTradeDetails = useCallback(
+    (trade: ShiftTradeResultData) => {
+      trackEvent('shift_trade_details_opened', { timestamp: new Date().toISOString(), tradeId: trade.ShiftSignupTradeId, isOpen: !!trade.IsOpen });
+      openTradeDetails(trade);
+    },
+    [openTradeDetails, trackEvent]
+  );
+
+  const handleTradesFilter = useCallback(
+    (filter: ShiftTradesFilter) => {
+      trackEvent('shift_trades_filter_changed', { timestamp: new Date().toISOString(), filter });
+      setTradesFilter(filter);
+    },
+    [setTradesFilter, trackEvent]
+  );
+
+  const handleSignupFilterNeeded = useCallback(() => setSignupFilter('needed'), [setSignupFilter]);
+  const handleSignupFilterAll = useCallback(() => setSignupFilter('all'), [setSignupFilter]);
   const handleSheetAction = useCallback((action: ShiftSheetAction) => setSheetAction(action), []);
   const handleCloseActionSheet = useCallback(() => setSheetAction(null), []);
 
   const renderShiftDayItem = useCallback(({ item }: { item: ShiftDayResultData }) => <ShiftDayCard shiftDay={item} onPress={handleShiftDayPress} />, [handleShiftDayPress]);
+
+  const renderDayListItem = useCallback(
+    ({ item }: { item: DayListItem }) =>
+      item.type === 'header' ? (
+        <Text className="mb-2 mt-2 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400" accessibilityRole="header">
+          {item.title}
+        </Text>
+      ) : (
+        <ShiftDayCard shiftDay={item.day} onPress={handleShiftDayPress} />
+      ),
+    [handleShiftDayPress]
+  );
 
   // The calendar list runs edge to edge (the month grid carries its own gutter), so its cards add one.
   const renderCalendarDayItem = useCallback(
@@ -253,6 +332,19 @@ const ShiftsScreen: React.FC = () => {
   const filteredToday = useMemo(() => (query ? todaysShiftDays.filter((day) => matchesQuery(day, query)) : todaysShiftDays), [todaysShiftDays, query]);
   const filteredMine = useMemo(() => (query ? myShiftDays.filter((day) => matchesQuery(day, query)) : myShiftDays), [myShiftDays, query]);
   const myStandingShifts = useMemo(() => shifts.filter((shift) => shift.InShift), [shifts]);
+  const mineItems = useMemo(
+    () => buildMineSections(filteredMine, { active: t('shifts.mine_sections.active'), pending: t('shifts.mine_sections.pending'), upcoming: t('shifts.mine_sections.upcoming') }),
+    [filteredMine, t]
+  );
+  const calendarReadyDays = useMemo(() => myShiftDays.filter(canAddDayToCalendar), [myShiftDays]);
+  const visibleSignupDays = useMemo(() => {
+    const days = signupFilter === 'needed' ? signupDays.filter((day) => !day.Filled) : signupDays;
+    return query ? days.filter((day) => matchesQuery(day, query)) : days;
+  }, [signupDays, signupFilter, query]);
+
+  const handleAddAllToCalendar = useCallback(() => {
+    void addToCalendar(useShiftsStore.getState().myShiftDays);
+  }, [addToCalendar]);
   const daysForSelectedDate = useMemo(() => (selectedDate ? calendarDays.filter((day) => getDateKey(day.ShiftDay || day.Start) === selectedDate) : []), [calendarDays, selectedDate]);
 
   const busyTradeId = activeMutation && TRADE_MUTATIONS.has(activeMutation) ? activeMutationTargetId : null;
@@ -310,29 +402,60 @@ const ShiftsScreen: React.FC = () => {
     if (error && myShiftDays.length === 0) return renderError();
     return (
       <FlatList
-        data={filteredMine}
-        keyExtractor={shiftDayKeyExtractor}
-        renderItem={renderShiftDayItem}
+        data={mineItems}
+        keyExtractor={dayListKeyExtractor}
+        renderItem={renderDayListItem}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={isMyShiftsLoading} onRefresh={handleRefresh} />}
         ListHeaderComponent={
-          myStandingShifts.length > 0 ? (
-            <VStack className="mb-2">
-              <Text className="mb-2 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400" accessibilityRole="header">
-                {t('shifts.my_standing_shifts')}
-              </Text>
-              {myStandingShifts.map((shift) => (
-                <ShiftCard key={shift.ShiftId} shift={shift} onPress={handleShiftPress} />
-              ))}
-              <Text className="mb-2 mt-2 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400" accessibilityRole="header">
-                {t('shifts.my_upcoming_days')}
-              </Text>
-            </VStack>
-          ) : null
+          <VStack className="mb-2" space="sm">
+            {calendarReadyDays.length > 0 ? (
+              <Button variant="outline" action="primary" onPress={handleAddAllToCalendar} isDisabled={isExporting} accessibilityHint={t('shifts.calendar_export.add_all_hint')} testID="shifts-add-all-calendar">
+                {isExporting ? <ButtonSpinner /> : <CalendarPlus size={16} color={colorScheme === 'dark' ? '#93c5fd' : '#2563eb'} />}
+                <ButtonText>{t('shifts.calendar_export.add_all', { count: calendarReadyDays.length })}</ButtonText>
+              </Button>
+            ) : null}
+            {myStandingShifts.length > 0 ? (
+              <VStack>
+                <Text className="mb-2 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400" accessibilityRole="header">
+                  {t('shifts.my_standing_shifts')}
+                </Text>
+                {myStandingShifts.map((shift) => (
+                  <ShiftCard key={shift.ShiftId} shift={shift} onPress={handleShiftPress} />
+                ))}
+              </VStack>
+            ) : null}
+          </VStack>
         }
         ListEmptyComponent={<ZeroState heading={t('shifts.empty.mine_title')} description={t('shifts.empty.mine_description')} />}
         removeClippedSubviews={true}
         testID="shifts-mine-list"
+      />
+    );
+  };
+
+  const renderSignup = () => {
+    if (isSignupDaysLoading && signupDays.length === 0) return renderLoading();
+    if (error && signupDays.length === 0) return renderError();
+    return (
+      <FlatList
+        data={visibleSignupDays}
+        keyExtractor={shiftDayKeyExtractor}
+        renderItem={renderShiftDayItem}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={isSignupDaysLoading} onRefresh={handleRefresh} />}
+        ListHeaderComponent={
+          <VStack space="xs" className="mb-2">
+            <Text className="text-sm text-gray-600 dark:text-gray-400">{t('shifts.signup_view.description')}</Text>
+            <HStack className="pt-1" accessibilityRole="tablist">
+              <CalendarFilterChip id="needed" label={t('shifts.signup_view.filter_needed')} isActive={signupFilter === 'needed'} onSelect={handleSignupFilterNeeded} />
+              <CalendarFilterChip id="all" label={t('shifts.signup_view.filter_all')} isActive={signupFilter === 'all'} onSelect={handleSignupFilterAll} />
+            </HStack>
+          </VStack>
+        }
+        ListEmptyComponent={<ZeroState heading={t('shifts.empty.signup_title')} description={t('shifts.empty.signup_description')} />}
+        removeClippedSubviews={true}
+        testID="shifts-signup-list"
       />
     );
   };
@@ -380,15 +503,31 @@ const ShiftsScreen: React.FC = () => {
     switch (activeView) {
       case 'mine':
         return renderMine();
+      case 'signup':
+        return renderSignup();
       case 'calendar':
         return renderCalendar();
       case 'trades':
-        return isTradesLoading && trades.length === 0 ? renderLoading() : <ShiftTradesList trades={trades} isLoading={isTradesLoading} busyTradeId={busyTradeId} onRefresh={handleRefresh} onAction={handleTradeAction} />;
+        return (isTradesLoading || isOpenTradesLoading) && trades.length === 0 && openTrades.length === 0 ? (
+          renderLoading()
+        ) : (
+          <ShiftTradesList
+            trades={trades}
+            openTrades={openTrades}
+            filter={tradesFilter}
+            onFilterChange={handleTradesFilter}
+            isLoading={isTradesLoading || isOpenTradesLoading}
+            busyTradeId={busyTradeId}
+            onRefresh={handleRefresh}
+            onAction={handleTradeAction}
+            onOpenDetails={handleOpenTradeDetails}
+          />
+        );
       case 'approvals':
         return isApprovalsLoading && pendingSignups.length + pendingTrades.length === 0 ? (
           renderLoading()
         ) : (
-          <ShiftApprovalsList signups={pendingSignups} trades={pendingTrades} isLoading={isApprovalsLoading} onRefresh={handleRefresh} onAction={handleSheetAction} />
+          <ShiftApprovalsList signups={pendingSignups} trades={pendingTrades} isLoading={isApprovalsLoading} onRefresh={handleRefresh} onAction={handleSheetAction} onOpenTradeDetails={handleOpenTradeDetails} />
         );
       case 'onduty':
         return isOnDutyLoading && onDutyPersonnel.length === 0 ? renderLoading() : <ShiftOnDutyList personnel={onDutyPersonnel} isLoading={isOnDutyLoading} onRefresh={handleRefresh} />;
@@ -398,7 +537,7 @@ const ShiftsScreen: React.FC = () => {
     }
   };
 
-  const showSearch = activeView === 'today' || activeView === 'mine';
+  const showSearch = activeView === 'today' || activeView === 'mine' || activeView === 'signup';
 
   return (
     <>
@@ -411,6 +550,7 @@ const ShiftsScreen: React.FC = () => {
 
         <ShiftDetailsSheet isOpen={isShiftDetailsOpen} onClose={closeShiftDetails} onViewCalendar={handleViewCalendar} />
         <ShiftDayDetailsSheet isOpen={isShiftDayDetailsOpen} onClose={closeShiftDayDetails} />
+        <ShiftTradeDetailsSheet isOpen={isTradeDetailsOpen} onClose={closeTradeDetails} onAction={handleTradeAction} />
         <ShiftActionSheet action={sheetAction} onClose={handleCloseActionSheet} />
       </View>
     </>

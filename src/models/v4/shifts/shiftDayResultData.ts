@@ -39,6 +39,9 @@ export class ShiftDayRosterResultData {
   public ApprovalPending: boolean = false;
   public TradedFromUserId: string = '';
   public TradedFromName: string = '';
+  /** Static shift (workshift) days: the unit the person crews. */
+  public UnitId?: string = '';
+  public UnitName?: string = '';
 }
 
 /**
@@ -68,6 +71,16 @@ export class ShiftDayResultData {
   public MySignupId: string = '';
   public MyGroupId: string = '';
   public MyTradeId: string = '';
+  /** UTC instants of Start / End, for device calendars. Missing on older servers. */
+  public StartUtc?: string = '';
+  public EndUtc?: string = '';
+  /** Static shift (workshift) days (`ShiftType` 2): ShiftId / ShiftDayId carry the same ids. */
+  public WorkshiftId?: string = '';
+  public WorkshiftDayId?: string = '';
+  public MyUnitId?: string = '';
+  public MyUnitName?: string = '';
+  /** Server-decided: the caller can ask to trade out of this day. Missing on older servers. */
+  public CanTrade?: boolean;
 
   public Signups: ShiftDaySignupResultData[] = [];
   public Needs: ShiftDayGroupNeedsResultData[] = [];

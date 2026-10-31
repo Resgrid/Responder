@@ -23,6 +23,8 @@ interface ShiftApprovalsListProps {
   isLoading: boolean;
   onRefresh: () => void;
   onAction: (action: ShiftSheetAction) => void;
+  /** Opens a trade with its applicants' qualifications, for picking who takes it. */
+  onOpenTradeDetails?: (trade: ShiftTradeResultData) => void;
 }
 
 type ApprovalItem = { type: 'header'; key: string; title: string } | { type: 'signup'; key: string; signup: PendingShiftSignupResultData } | { type: 'trade'; key: string; trade: ShiftTradeResultData };
@@ -72,7 +74,7 @@ PendingSignupCard.displayName = 'PendingSignupCard';
 
 const keyExtractor = (item: ApprovalItem) => item.key;
 
-export const ShiftApprovalsList: React.FC<ShiftApprovalsListProps> = ({ signups, trades, isLoading, onRefresh, onAction }) => {
+export const ShiftApprovalsList: React.FC<ShiftApprovalsListProps> = ({ signups, trades, isLoading, onRefresh, onAction, onOpenTradeDetails }) => {
   const { t } = useTranslation();
 
   const items = useMemo<ApprovalItem[]>(() => {
@@ -102,9 +104,9 @@ export const ShiftApprovalsList: React.FC<ShiftApprovalsListProps> = ({ signups,
       if (item.type === 'signup') {
         return <PendingSignupCard signup={item.signup} onAction={onAction} />;
       }
-      return <ShiftTradeCard trade={item.trade} onAction={handleTradeAction} />;
+      return <ShiftTradeCard trade={item.trade} onAction={handleTradeAction} onOpenDetails={onOpenTradeDetails} />;
     },
-    [onAction, handleTradeAction]
+    [onAction, handleTradeAction, onOpenTradeDetails]
   );
 
   return (

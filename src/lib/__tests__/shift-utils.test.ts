@@ -12,12 +12,36 @@ import {
   getShiftRequestErrorCode,
   getShiftResponseErrorCode,
   isOvernightShift,
+  isWorkshiftDay,
+  mergeShiftDays,
   parseWallClock,
 } from '../shift-utils';
 
 const makeDay = (overrides: Partial<ShiftDayResultData> = {}): ShiftDayResultData => ({ ...new ShiftDayResultData(), ...overrides });
 
 describe('shift-utils', () => {
+  describe('static shift days', () => {
+    it('recognises a static shift (workshift) day by its type', () => {
+      expect(isWorkshiftDay(makeDay({ ShiftType: 2 }))).toBe(true);
+      expect(isWorkshiftDay(makeDay({ ShiftType: 0 }))).toBe(false);
+      expect(isWorkshiftDay(null)).toBe(false);
+    });
+
+    it('merges static shift days into shift days in start order', () => {
+      const shiftDays = [makeDay({ ShiftDayId: 'a', Start: '2026-09-24T19:00:00' }), makeDay({ ShiftDayId: 'b', Start: '2026-09-26T07:00:00' })];
+      const workshiftDays = [makeDay({ ShiftDayId: 'w', ShiftType: 2, Start: '2026-09-25T07:00:00' })];
+
+      expect(mergeShiftDays(shiftDays, workshiftDays).map((day) => day.ShiftDayId)).toEqual(['a', 'w', 'b']);
+      // Nothing to merge keeps the server's own list.
+      expect(mergeShiftDays(shiftDays, [])).toBe(shiftDays);
+    });
+
+    it('translates the not_eligible error', () => {
+      expect(getShiftErrorTranslationKey('not_eligible')).toBe('shifts.errors.not_eligible');
+      expect(getShiftResponseErrorCode({ Status: 'failure', ErrorCode: 'not_eligible' })).toBe('not_eligible');
+    });
+  });
+
   describe('wall-clock times', () => {
     it('displays department-local times as-is', () => {
       expect(formatShiftTime('2026-09-24T19:00:00')).toBe('7:00 PM');

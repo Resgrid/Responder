@@ -58,3 +58,7 @@ export const ArrowLeft = mockIcon;
 export const Calendar = mockIcon;
 export const Check = mockIcon;
 export const Fingerprint = mockIcon;
+export const Truck = mockIcon;
+export const CalendarPlus = mockIcon;
+export const Award = mockIcon;
+export const Briefcase = mockIcon;

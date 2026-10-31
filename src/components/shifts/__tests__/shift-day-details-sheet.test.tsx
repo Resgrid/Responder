@@ -11,6 +11,8 @@ jest.mock('@/api/shifts/shifts', () => new Proxy({}, { get: () => jest.fn().mock
 jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }));
 jest.mock('@/lib/storage/clear-all-data', () => ({ registerStoreReset: jest.fn() }));
 jest.mock('@/hooks/use-analytics', () => ({ useAnalytics: () => ({ trackEvent: jest.fn() }) }));
+const mockAddToCalendar = jest.fn();
+jest.mock('../use-shift-calendar-export', () => ({ useShiftCalendarExport: () => ({ addToCalendar: mockAddToCalendar, isExporting: false }) }));
 jest.mock('@/lib/auth', () => ({ useAuthStore: (selector: (state: { userId: string }) => unknown) => selector({ userId: 'me' }) }));
 
 const mockShowToast = jest.fn();
@@ -78,6 +80,56 @@ describe('ShiftDayDetailsSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Object.values(actions).forEach((fn) => fn.mockResolvedValue(success()));
+  });
+
+  describe('device calendar and static shifts', () => {
+    it('adds a day I work to the calendar, but not one still waiting for approval', () => {
+      const day = makeDay({ MyStatus: ShiftDayMyStatus.OnRoster, SignedUp: true });
+      const { unmount } = renderSheet(day);
+
+      fireEvent.press(screen.getByTestId('shift-day-add-calendar-button'));
+      expect(mockAddToCalendar).toHaveBeenCalledWith([day]);
+      unmount();
+
+      renderSheet(makeDay({ MyStatus: ShiftDayMyStatus.PendingApproval, SignedUp: true }));
+      expect(screen.queryByTestId('shift-day-add-calendar-button')).toBeNull();
+    });
+
+    it('shows a static shift day by unit, without roster edits, and trades it as an open request', async () => {
+      const day = makeDay({
+        ShiftDayId: 'wd-1',
+        ShiftType: 2,
+        CanManage: true,
+        MyStatus: ShiftDayMyStatus.OnRoster,
+        MyUnitName: 'Engine 1',
+        Needs: [],
+        Roster: [
+          rosterEntry({ UserId: 'me', Name: 'Me', GroupId: '7', GroupName: 'Station 1', UnitId: '11', UnitName: 'Engine 1' }),
+          rosterEntry({ UserId: 'u5', Name: 'Pat Doe', GroupId: '7', GroupName: 'Station 1', UnitId: '12', UnitName: 'Ladder 1' }),
+        ],
+      });
+      renderSheet(day);
+
+      expect(screen.getByTestId('roster-group-11')).toBeTruthy();
+      expect(screen.getByTestId('roster-group-12')).toBeTruthy();
+      expect(screen.queryByTestId('shift-day-add-person-button')).toBeNull();
+      expect(screen.queryByTestId('roster-remove-u5')).toBeNull();
+
+      fireEvent.press(screen.getByTestId('shift-day-trade-button'));
+      expect(actions.fetchTradeCandidates).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('trade-mode-specific')).toBeNull();
+
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('shift-day-trade-confirm'));
+      });
+
+      expect(actions.requestTrade).toHaveBeenCalledWith('wd-1', [], '', { workshift: true });
+    });
+
+    it('does not offer a trade the server says is not mine to give', () => {
+      renderSheet(makeDay({ MyStatus: ShiftDayMyStatus.OnRoster, SignedUp: true, CanTrade: false }));
+      expect(screen.queryByTestId('shift-day-trade-button')).toBeNull();
+    });
   });
 
   describe('overview', () => {
@@ -202,12 +254,34 @@ describe('ShiftDayDetailsSheet', () => {
   });
 
   describe('trade request', () => {
+    it('sends an open request to everyone eligible by default', async () => {
+      renderSheet(makeDay({ MyStatus: ShiftDayMyStatus.OnRoster, SignedUp: true }));
+
+      fireEvent.press(screen.getByTestId('shift-day-trade-button'));
+      act(() => {
+        useShiftsStore.setState({ tradeCandidates: [{ UserId: 'c1', Name: 'Casey', GroupId: '3', GroupName: 'North Team', Roles: [], RoleIds: [] }] });
+      });
+
+      expect(screen.getByTestId('trade-mode-open')).toBeTruthy();
+      expect(screen.queryByTestId('trade-candidate-c1')).toBeNull();
+      expect(screen.getByTestId('shift-day-trade-confirm').props.isDisabled).toBe(false);
+      fireEvent.changeText(screen.getByTestId('shift-day-trade-note'), ' vacation ');
+
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('shift-day-trade-confirm'));
+      });
+
+      expect(actions.requestTrade).toHaveBeenCalledWith('100', [], 'vacation', { workshift: false });
+      expect(mockShowToast).toHaveBeenCalledWith('success', 'shifts.toast.trade_requested_open');
+    });
+
     it('loads candidates, lets me pick several, and sends the request with a note', async () => {
       const day = makeDay({ MyStatus: ShiftDayMyStatus.OnRoster, SignedUp: true });
       renderSheet(day);
 
       fireEvent.press(screen.getByTestId('shift-day-trade-button'));
       expect(actions.fetchTradeCandidates).toHaveBeenCalledWith('100');
+      fireEvent.press(screen.getByTestId('trade-mode-specific'));
 
       act(() => {
         useShiftsStore.setState({
@@ -227,7 +301,7 @@ describe('ShiftDayDetailsSheet', () => {
         fireEvent.press(screen.getByTestId('shift-day-trade-confirm'));
       });
 
-      expect(actions.requestTrade).toHaveBeenCalledWith('100', ['c1', 'c2'], 'family event');
+      expect(actions.requestTrade).toHaveBeenCalledWith('100', ['c1', 'c2'], 'family event', { workshift: false });
       expect(mockShowToast).toHaveBeenCalledWith('success', 'shifts.toast.trade_requested');
     });
 

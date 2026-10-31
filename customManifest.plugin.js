@@ -2,6 +2,33 @@ const { withAndroidManifest, AndroidConfig } = require('@expo/config-plugins');
 
 const SERVICE_NAME = 'app.notifee.core.ForegroundService';
 
+// Schemes src/lib/navigation.ts probes with Linking.canOpenURL before handing directions to a navigation
+// app. Android 11+ answers false for any scheme the manifest does not declare in <queries>, even when the
+// app is installed. (iOS declares the same schemes in LSApplicationQueriesSchemes in app.config.ts.)
+const NAVIGATION_QUERY_SCHEMES = ['waze'];
+
+/** Adds a VIEW-intent <queries> entry for each navigation scheme the manifest does not declare yet. */
+const addNavigationAppQueries = (manifest) => {
+  manifest.manifest.queries = manifest.manifest.queries || [];
+  if (manifest.manifest.queries.length === 0) {
+    manifest.manifest.queries.push({});
+  }
+
+  const declaresScheme = (scheme) => manifest.manifest.queries.some((query) => (query.intent || []).some((intent) => (intent.data || []).some((data) => data?.$?.['android:scheme'] === scheme)));
+
+  const queries = manifest.manifest.queries[0];
+  queries.intent = queries.intent || [];
+  for (const scheme of NAVIGATION_QUERY_SCHEMES) {
+    if (!declaresScheme(scheme)) {
+      queries.intent.push({
+        action: [{ $: { 'android:name': 'android.intent.action.VIEW' } }],
+        data: [{ $: { 'android:scheme': scheme } }],
+      });
+    }
+  }
+  return manifest;
+};
+
 const withForegroundService = (config) => {
   return withAndroidManifest(config, async (config) => {
     const manifest = config.modResults;
@@ -9,6 +36,8 @@ const withForegroundService = (config) => {
     if (!manifest.manifest.$['xmlns:tools']) {
       manifest.manifest.$['xmlns:tools'] = 'http://schemas.android.com/tools';
     }
+
+    addNavigationAppQueries(manifest);
 
     const mainApplication = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
 
@@ -41,3 +70,4 @@ const withForegroundService = (config) => {
 };
 
 module.exports = withForegroundService;
+module.exports.addNavigationAppQueries = addNavigationAppQueries;
