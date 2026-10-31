@@ -7,7 +7,7 @@ import { applyClientHeaders } from '@/lib/mfa/client-app';
 import { type MfaChallenge, parseMethods } from '@/lib/mfa/types';
 
 import { getBaseApiUrl } from '../storage/app';
-import { classifyLoginFailure } from './login-errors';
+import { classifyLoginFailure, isServerLoginReason } from './login-errors';
 import type { AuthResponse, ExternalTokenCredentials, LoginCredentials, LoginResponse } from './types';
 
 // Extract only non-sensitive fields from an axios error. Never log error.config, config.data or response bodies for the
@@ -19,8 +19,8 @@ const sanitizeAuthError = (error: unknown): Record<string, unknown> => {
     const data = (typeof candidate.response?.data === 'object' && candidate.response.data !== null ? candidate.response.data : {}) as Record<string, unknown>;
     const oauthErrors = ['invalid_request', 'invalid_client', 'invalid_grant', 'unauthorized_client', 'unsupported_grant_type', 'invalid_scope', 'server_error', 'temporarily_unavailable'];
     const oauthError = typeof data.error === 'string' && oauthErrors.includes(data.error) ? data.error : undefined;
-    // The server's login_error is a fixed set of reason codes, never free text.
-    const loginError = typeof data.login_error === 'string' && /^[a-z_]{1,40}$/.test(data.login_error) ? data.login_error : undefined;
+    // Only a login_error the server is known to send; anything else is response text and is never logged.
+    const loginError = isServerLoginReason(data.login_error) ? data.login_error : undefined;
     return {
       message: candidate.message,
       status: candidate.response?.status,

@@ -199,4 +199,36 @@ describe('Auth Store - Logout Functionality', () => {
       });
     });
   });
+  describe('Sign-in failure state', () => {
+    it('drops the last failed sign-in on sign-out', async () => {
+      useAuthStore.setState({ loginFailure: { code: 'account_locked_out', lockoutMinutes: 9 } });
+
+      await useAuthStore.getState().logout();
+
+      expect(useAuthStore.getState().loginFailure).toBeNull();
+    });
+
+    it('never stores a failed sign-in, whose reason is not kept', () => {
+      useAuthStore.setState({ status: 'error', error: 'account_locked_out', loginFailure: { code: 'account_locked_out', lockoutMinutes: 9 } });
+
+      const saved = useAuthStore.persist.getOptions().partialize!(useAuthStore.getState()) as Record<string, unknown>;
+
+      expect(saved.status).toBe('signedOut');
+      expect(saved).not.toHaveProperty('error');
+      expect(saved).not.toHaveProperty('loginFailure');
+      expect(saved.accessToken).toBe('test-token');
+    });
+
+    it('restores a failed sign-in an older build stored as signed out, without its error', () => {
+      const merged = useAuthStore.persist.getOptions().merge!({ status: 'error', error: 'account_locked_out', userId: 'u1' }, useAuthStore.getState());
+
+      expect(merged).toMatchObject({ status: 'signedOut', error: null, userId: 'u1' });
+    });
+
+    it('keeps a signed-in status as it was', () => {
+      const merged = useAuthStore.persist.getOptions().merge!({ status: 'signedIn', userId: 'u1' }, useAuthStore.getState());
+
+      expect(merged).toMatchObject({ status: 'signedIn', error: null });
+    });
+  });
 });

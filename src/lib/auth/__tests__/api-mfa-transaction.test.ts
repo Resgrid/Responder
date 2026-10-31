@@ -117,4 +117,12 @@ describe('a refused password sign-in', () => {
       },
     });
   });
+
+  it('never logs a login_error the server does not send', async () => {
+    mockPost.mockRejectedValueOnce(axiosRefusal(400, { error: 'invalid_grant', login_error: 'mysecretpassword' }));
+    await loginRequest({ username: 'user1', password: 'pw' });
+    const context = (logger.error as jest.Mock).mock.calls[0][0].context;
+    expect(context).not.toHaveProperty('loginError');
+    expect(JSON.stringify(context)).not.toContain('mysecretpassword');
+  });
 });

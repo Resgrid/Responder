@@ -501,6 +501,7 @@ const useAuthStore = create<AuthState>()(
           refreshTokenObtainedAt: null,
           status: 'signedOut',
           error: null,
+          loginFailure: null,
           profile: null,
           isFirstTime: false,
           userId: null,
@@ -797,11 +798,27 @@ const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => zustandStorage),
-      // A pending sign-in, recovery codes shown once and the last sign-in failure are never written to storage.
-      partialize: ({ mfaChallenge: _mfaChallenge, pendingRecoveryCodes: _pendingRecoveryCodes, loginFailure: _loginFailure, ...persisted }) => persisted,
+      // A pending sign-in, recovery codes shown once and the last sign-in failure (its error and reason) are never written
+      // to storage; a failed sign-in restarts signed out.
+      partialize: ({ mfaChallenge: _mfaChallenge, pendingRecoveryCodes: _pendingRecoveryCodes, loginFailure: _loginFailure, error: _error, ...persisted }) => ({
+        ...persisted,
+        status: persisted.status === 'error' ? 'signedOut' : persisted.status,
+      }),
       // The pending SSO exchange and the login transaction live in module memory and die with the process, so a
-      // rehydrated pending state would open a prompt with nothing to finish. Force them back.
-      merge: (persisted, current) => ({ ...current, ...(persisted as Partial<AuthState>), isSsoMfaPending: false, mfaChallenge: null, pendingRecoveryCodes: null }),
+      // rehydrated pending state would open a prompt with nothing to finish. Force them back, and drop a failed sign-in an
+      // older build stored without its reason.
+      merge: (persisted, current) => {
+        const restored = persisted as Partial<AuthState>;
+        return {
+          ...current,
+          ...restored,
+          ...(restored?.status === 'error' ? { status: 'signedOut' as const } : {}),
+          error: null,
+          isSsoMfaPending: false,
+          mfaChallenge: null,
+          pendingRecoveryCodes: null,
+        };
+      },
     }
   )
 );
