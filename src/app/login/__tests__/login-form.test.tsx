@@ -150,6 +150,16 @@ jest.mock('@/constants/colors', () => ({
   },
 }));
 
+// The server badge has its own tests; here it is a marker that says whether it can open the selector.
+jest.mock('@/components/auth/login-server-badge', () => {
+  const React = jest.requireActual('react');
+  const { Pressable, Text } = require('react-native');
+  return {
+    LoginServerBadge: ({ onPress }: { onPress?: () => void }) =>
+      React.createElement(Pressable, { onPress, testID: 'login-server-badge' }, React.createElement(Text, null, onPress ? 'server badge button' : 'server badge label')),
+  };
+});
+
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
@@ -193,6 +203,23 @@ describe('LoginForm Server URL Integration', () => {
     });
 
     expect(mockOnServerUrlPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('should open the server selector from the server badge the same way as the server URL button', () => {
+    render(<LoginForm onSubmit={mockOnSubmit} onServerUrlPress={mockOnServerUrlPress} />);
+
+    fireEvent.press(screen.getByTestId('login-server-badge'));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('login_server_url_pressed', {
+      timestamp: expect.any(String),
+    });
+    expect(mockOnServerUrlPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('should show the server badge as a plain label without a server selector', () => {
+    render(<LoginForm onSubmit={mockOnSubmit} />);
+
+    expect(screen.getByText('server badge label')).toBeTruthy();
   });
 
   it('should render with loading state', () => {

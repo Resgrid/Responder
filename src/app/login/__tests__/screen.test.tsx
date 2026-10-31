@@ -26,11 +26,12 @@ jest.mock('@/hooks/use-analytics', () => ({
 }));
 
 const mockAuthStatus = { current: 'idle' };
+const mockAuthError: { current: string | undefined } = { current: undefined };
 jest.mock('@/lib/auth', () => ({
   useAuth: () => ({
     login: mockLogin,
     status: mockAuthStatus.current,
-    error: undefined,
+    error: mockAuthError.current,
     isAuthenticated: false,
   }),
 }));
@@ -81,7 +82,8 @@ jest.mock('@/components/ui/modal', () => ({
 
 jest.mock('@/components/ui/text', () => {
   const ReactActual = jest.requireActual('react');
-  const { Text } = jest.requireActual('react-native');
+  // The setup's react-native Text, so text queries find what the screen says.
+  const { Text } = require('react-native');
 
   return {
     Text: ({ children }: { children: React.ReactNode }) => <Text>{children}</Text>,
@@ -96,14 +98,17 @@ jest.mock('@/components/settings/server-url-bottom-sheet', () => ({
 }));
 
 jest.mock('../login-form', () => ({
-  LoginForm: ({ onServerUrlPress }: { onServerUrlPress?: () => void }) => {
+  LoginForm: ({ onServerUrlPress, error }: { onServerUrlPress?: () => void; error?: string }) => {
     const ReactActual = require('react');
     const { Pressable, Text } = require('react-native');
 
     return (
-      <Pressable onPress={onServerUrlPress} testID="open-server-url-sheet">
-        <Text>open server url</Text>
-      </Pressable>
+      <>
+        <Pressable onPress={onServerUrlPress} testID="open-server-url-sheet">
+          <Text>open server url</Text>
+        </Pressable>
+        {error ? <Text testID="login-form-error">{error}</Text> : null}
+      </>
     );
   },
 }));
@@ -149,5 +154,45 @@ describe('the second-factor sheet on the login screen', () => {
     useAuthStore.setState({ mfaChallenge: verify('sso') });
     render(<Login />);
     expect(screen.queryByTestId('login-mfa-sheet-open')).toBeNull();
+  });
+});
+
+describe('a failed password sign-in on the login screen', () => {
+  const { default: useAuthStore } = jest.requireActual('@/stores/auth/store') as typeof import('@/stores/auth/store');
+
+  beforeEach(() => {
+    mockAuthStatus.current = 'error';
+  });
+  afterEach(() => {
+    mockAuthStatus.current = 'idle';
+    mockAuthError.current = undefined;
+    useAuthStore.setState({ loginFailure: null });
+  });
+
+  it('says why it failed and what to do, never the raw code', () => {
+    mockAuthError.current = 'account_locked_out';
+    useAuthStore.setState({ loginFailure: { code: 'account_locked_out', lockoutMinutes: 7 } });
+    render(<Login />);
+
+    expect(screen.getByText('login.errors.account_locked_out.title')).toBeTruthy();
+    expect(screen.getByTestId('login-form-error').props.children).toBe('login.errors.account_locked_out.message');
+    expect(screen.queryByText('login.errorModal.message')).toBeNull();
+    expect(screen.queryByText('account_locked_out')).toBeNull();
+  });
+
+  it('sends a lockout with no end to the administrator', () => {
+    mockAuthError.current = 'account_locked_out';
+    render(<Login />);
+
+    expect(screen.getByText('login.errors.account_locked.title')).toBeTruthy();
+  });
+
+  it('keeps the general message for an error that is not a sign-in failure', () => {
+    mockAuthError.current = 'Something else';
+    render(<Login />);
+
+    expect(screen.getByText('login.errorModal.title')).toBeTruthy();
+    expect(screen.getByText('login.errorModal.message')).toBeTruthy();
+    expect(screen.getByTestId('login-form-error').props.children).toBe('Something else');
   });
 });
