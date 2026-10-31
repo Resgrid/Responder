@@ -358,6 +358,21 @@ describe('useShiftsStore', () => {
       expect(useShiftsStore.getState().trades[0]?.MyState).toBe(ShiftTradeUserState.Declined);
     });
 
+    it('declining a trade asked of me does not offer to apply to it', async () => {
+      const trade = makeTrade({ Direction: 1, IsOpen: false, CanApply: false });
+      useShiftsStore.setState({ trades: [trade], selectedTrade: trade });
+      api.respondToShiftTrade.mockResolvedValue(action({ Status: 'updated' }));
+      api.getShiftTrades.mockImplementation(never);
+      api.getShiftTrade.mockImplementation(never);
+
+      void useShiftsStore.getState().respondToTrade('5', false, '');
+      await flush();
+
+      expect(useShiftsStore.getState().trades[0]?.CanApply).toBe(false);
+      expect(useShiftsStore.getState().selectedTrade?.CanApply).toBe(false);
+      expect(useShiftsStore.getState().selectedTrade?.MyState).toBe(ShiftTradeUserState.Declined);
+    });
+
     it('respondToTrade surfaces invalid_offer', async () => {
       api.respondToShiftTrade.mockResolvedValue(action({ Status: 'failure', ErrorCode: 'invalid_offer' }));
       const outcome = await useShiftsStore.getState().respondToTrade('5', true, '', ['70']);
@@ -487,6 +502,21 @@ describe('useShiftsStore', () => {
       expect(trade.MyState).toBe(ShiftTradeUserState.Proposed);
       expect(trade.CanApply).toBe(false);
       expect(trade.ApplicantCount).toBe(2);
+    });
+
+    it('withdrawing an application offers to apply again and counts me out', async () => {
+      useShiftsStore.setState({ openTrades: [makeTrade({ ShiftSignupTradeId: '8', IsOpen: true, CanApply: false, MyState: ShiftTradeUserState.Proposed, ApplicantCount: 2 })] });
+      api.respondToShiftTrade.mockResolvedValue(action({ Id: '8', Status: 'updated' }));
+      api.getOpenShiftTrades.mockResolvedValue(never());
+      api.getShiftTrades.mockResolvedValue(never());
+
+      void useShiftsStore.getState().respondToTrade('8', false, '', []);
+      await flush();
+
+      const trade = useShiftsStore.getState().openTrades[0];
+      expect(trade.MyState).toBe(ShiftTradeUserState.Declined);
+      expect(trade.CanApply).toBe(true);
+      expect(trade.ApplicantCount).toBe(1);
     });
 
     it('opening a trade shows the list copy and loads the detail with applicant information', async () => {

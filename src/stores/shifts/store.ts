@@ -710,11 +710,13 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         () => respondToShiftTrade(tradeId, accept, note, offeredShiftSignupIds),
         ['trades', 'trade'],
         () => {
-          const patch: Partial<ShiftTradeResultData> = { MyState: accept ? ShiftTradeUserState.Proposed : ShiftTradeUserState.Declined, CanApply: !accept };
+          const myState = accept ? ShiftTradeUserState.Proposed : ShiftTradeUserState.Declined;
+          // Only an open request takes applicants; declining a targeted trade must not offer Apply.
+          const respond = (trade: ShiftTradeResultData): ShiftTradeResultData => ({ ...trade, MyState: myState, CanApply: trade.IsOpen ? !accept : trade.CanApply });
           set((state) => ({
-            trades: replaceTrade(state.trades, tradeId, patch),
-            openTrades: state.openTrades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? { ...trade, ...patch, ApplicantCount: Math.max(0, (trade.ApplicantCount ?? 0) + (accept ? 1 : -1)) } : trade)),
-            selectedTrade: state.selectedTrade?.ShiftSignupTradeId === tradeId ? { ...state.selectedTrade, ...patch } : state.selectedTrade,
+            trades: state.trades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? respond(trade) : trade)),
+            openTrades: state.openTrades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? { ...respond(trade), ApplicantCount: Math.max(0, (trade.ApplicantCount ?? 0) + (accept ? 1 : -1)) } : trade)),
+            selectedTrade: state.selectedTrade?.ShiftSignupTradeId === tradeId ? respond(state.selectedTrade) : state.selectedTrade,
           }));
         }
       ),
