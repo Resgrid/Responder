@@ -1,3 +1,4 @@
+import type { LoginFailure } from '@/lib/auth/login-errors';
 import type { MfaChallenge } from '@/lib/mfa/types';
 
 export interface AuthTokens {
@@ -51,6 +52,8 @@ export interface LoginResponse {
   mfaTransaction?: { secret: string; challenge: MfaChallenge };
   /** The department requires MFA the account does not have, and this server cannot set it up in the app. */
   enrollmentRequired?: boolean;
+  /** Why an unsuccessful sign-in failed, for the login screen's guidance. */
+  failure?: LoginFailure;
 }
 export interface ProfileModel {
   sub: string;

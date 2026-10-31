@@ -74,6 +74,7 @@ describe('Auth Store - Login and Hydration', () => {
       refreshTokenObtainedAt: null,
       status: 'idle',
       error: null,
+      loginFailure: null,
       profile: null,
       isFirstTime: true,
       userId: null,
@@ -174,26 +175,58 @@ describe('Auth Store - Login and Hydration', () => {
     it('should handle login failure', async () => {
       const mockResponse = {
         successful: false,
-        message: 'Invalid credentials',
+        message: 'account_locked_out',
         authResponse: null,
+        failure: { code: 'account_locked_out' as const, lockoutMinutes: 12 },
       };
 
       mockedLoginRequest.mockResolvedValueOnce(mockResponse);
 
       await useAuthStore.getState().login(mockCredentials);
 
-      // Verify error state
+      // Verify error state: the failure's code, with the lockout minutes the guidance needs
       const state = useAuthStore.getState();
       expect(state.status).toBe('error');
-      expect(state.error).toBe('Invalid credentials');
+      expect(state.error).toBe('account_locked_out');
+      expect(state.loginFailure).toEqual({ code: 'account_locked_out', lockoutMinutes: 12 });
       expect(state.accessToken).toBeNull();
       expect(state.refreshToken).toBeNull();
 
       // Verify error logging
       expect(mockedLogger.error).toHaveBeenCalledWith({
         message: 'Login failed - unsuccessful response',
-        context: { username: 'testuser', message: 'Invalid credentials' },
+        context: { username: 'testuser', message: 'account_locked_out' },
       });
+    });
+
+    it('should report an unsuccessful response without a reason as a general failure', async () => {
+      mockedLoginRequest.mockResolvedValueOnce({ successful: false, message: 'login_failed', authResponse: null });
+
+      await useAuthStore.getState().login(mockCredentials);
+
+      const state = useAuthStore.getState();
+      expect(state.status).toBe('error');
+      expect(state.error).toBe('login_failed');
+      expect(state.loginFailure).toEqual({ code: 'login_failed' });
+    });
+
+    it('should drop the last sign-in failure when a new attempt starts, but keep a rejected code for its prompt', async () => {
+      const mfaRequired = { successful: false, message: 'Two-factor authentication required', authResponse: null, mfaRequired: true, invalidOtp: true };
+      let statusWhileLoading: object = {};
+      const recordState = async () => {
+        const { status, error, loginFailure } = useAuthStore.getState();
+        statusWhileLoading = { status, error, loginFailure };
+        return mfaRequired;
+      };
+      mockedLoginRequest.mockImplementationOnce(recordState).mockImplementationOnce(recordState);
+
+      useAuthStore.setState({ status: 'error', error: 'invalid_credentials', loginFailure: { code: 'invalid_credentials' } });
+      await useAuthStore.getState().login(mockCredentials);
+      expect(statusWhileLoading).toEqual({ status: 'loading', error: null, loginFailure: null });
+
+      useAuthStore.setState({ status: 'mfaRequired', error: 'invalid_totp' });
+      await useAuthStore.getState().login({ ...mockCredentials, otpCode: '123456' });
+      expect(statusWhileLoading).toEqual({ status: 'loading', error: 'invalid_totp', loginFailure: null });
     });
 
     it('should handle missing ID token', async () => {
@@ -217,7 +250,8 @@ describe('Auth Store - Login and Hydration', () => {
       // Verify error state
       const state = useAuthStore.getState();
       expect(state.status).toBe('error');
-      expect(state.error).toBe('No ID token received');
+      expect(state.error).toBe('login_failed');
+      expect(state.loginFailure).toEqual({ code: 'login_failed' });
 
       // Verify error logging
       expect(mockedLogger.error).toHaveBeenCalledWith({
@@ -247,7 +281,7 @@ describe('Auth Store - Login and Hydration', () => {
       // Verify error state
       const state = useAuthStore.getState();
       expect(state.status).toBe('error');
-      expect(state.error).toBe('Invalid ID token format');
+      expect(state.error).toBe('login_failed');
 
       // Verify error logging
       expect(mockedLogger.error).toHaveBeenCalledWith({
@@ -264,8 +298,9 @@ describe('Auth Store - Login and Hydration', () => {
 
       // Verify error state
       const state = useAuthStore.getState();
+      // The detail stays in the log; the screen shows the general failure
       expect(state.status).toBe('error');
-      expect(state.error).toBe('Network error');
+      expect(state.error).toBe('login_failed');
 
       // Verify error logging
       expect(mockedLogger.error).toHaveBeenCalledWith({

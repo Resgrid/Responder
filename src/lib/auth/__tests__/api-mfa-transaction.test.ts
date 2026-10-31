@@ -75,3 +75,46 @@ describe('login on the transaction flow (passkey workbook section 7.1)', () => {
     expect(sentBody()).toEqual({ grant_type: 'urn:resgrid:params:oauth:grant-type:mfa_completion', transaction: 'secret', completion_code: 'code-1' });
   });
 });
+
+describe('a refused password sign-in', () => {
+  const { logger } = require('@/lib/logging') as typeof import('@/lib/logging');
+  const axiosRefusal = (status: number, data: Record<string, unknown>) =>
+    Object.assign(new Error(`Request failed with status code ${status}`), { isAxiosError: true, response: { status, data }, config: { url: '/connect/token', data: 'username=user1&password=pw' } });
+
+  beforeEach(() => {
+    mockPost.mockReset();
+    (logger.error as jest.Mock).mockClear();
+  });
+
+  it('returns the reason the server gives instead of throwing', async () => {
+    mockPost.mockRejectedValueOnce(axiosRefusal(400, { error: 'invalid_grant', login_error: 'account_locked_out', lockout_minutes_remaining: 4.2 }));
+    expect(await loginRequest({ username: 'user1', password: 'pw' })).toEqual({
+      successful: false,
+      message: 'account_locked_out',
+      authResponse: null,
+      failure: { code: 'account_locked_out', lockoutMinutes: 5 },
+    });
+  });
+
+  it('reports a request that never got an answer as an unreachable server', async () => {
+    mockPost.mockRejectedValueOnce(Object.assign(new Error('Network Error'), { isAxiosError: true }));
+    expect(await loginRequest({ username: 'user1', password: 'pw' })).toMatchObject({ successful: false, failure: { code: 'server_unreachable' } });
+  });
+
+  it('never logs the request that carried the password', async () => {
+    mockPost.mockRejectedValueOnce(axiosRefusal(400, { error: 'invalid_grant', error_description: 'The username or password is invalid.', login_error: 'invalid_credentials' }));
+    await loginRequest({ username: 'user1', password: 'pw' });
+    expect(logger.error).toHaveBeenCalledWith({
+      message: 'Login failed',
+      context: {
+        message: 'Request failed with status code 400',
+        status: 400,
+        url: '/connect/token',
+        oauthError: 'invalid_grant',
+        loginError: 'invalid_credentials',
+        loginFailure: 'invalid_credentials',
+        username: 'user1',
+      },
+    });
+  });
+});
