@@ -7,7 +7,31 @@ import { applyClientHeaders } from '@/lib/mfa/client-app';
 import { type MfaChallenge, parseMethods } from '@/lib/mfa/types';
 
 import { getBaseApiUrl } from '../storage/app';
+import { classifyLoginFailure, isServerLoginReason } from './login-errors';
 import type { AuthResponse, ExternalTokenCredentials, LoginCredentials, LoginResponse } from './types';
+
+// Extract only non-sensitive fields from an axios error. Never log error.config, config.data or response bodies for the
+// token endpoint - they contain credentials.
+const sanitizeAuthError = (error: unknown): Record<string, unknown> => {
+  const candidate = error as { isAxiosError?: boolean; message?: string; response?: { status?: number; data?: unknown }; config?: { url?: string } } | null;
+  if (candidate?.isAxiosError) {
+    // Keep only known OAuth diagnostics. Arbitrary response text can contain secrets.
+    const data = (typeof candidate.response?.data === 'object' && candidate.response.data !== null ? candidate.response.data : {}) as Record<string, unknown>;
+    const oauthErrors = ['invalid_request', 'invalid_client', 'invalid_grant', 'unauthorized_client', 'unsupported_grant_type', 'invalid_scope', 'server_error', 'temporarily_unavailable'];
+    const oauthError = typeof data.error === 'string' && oauthErrors.includes(data.error) ? data.error : undefined;
+    // Only a login_error the server is known to send; anything else is response text and is never logged.
+    const loginError = isServerLoginReason(data.login_error) ? data.login_error : undefined;
+    return {
+      message: candidate.message,
+      status: candidate.response?.status,
+      // Strip any query string so tokens/credentials in params are never logged.
+      url: candidate.config?.url?.split('?')[0],
+      ...(oauthError ? { oauthError } : {}),
+      ...(loginError ? { loginError } : {}),
+    };
+  }
+  return { message: error instanceof Error ? error.message : String(error) };
+};
 
 // Without a timeout a hung socket on flaky cellular never rejects, so the login spinner
 // (and every token refresh behind it) would sit there for minutes.
@@ -86,15 +110,17 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
         authResponse: response.data,
       };
     } else {
+      // Only the status: the response carries the request config, and with it the password.
       logger.error({
         message: 'Login failed',
-        context: { response, username: credentials.username },
+        context: { status: response.status, username: credentials.username },
       });
 
       return {
         successful: false,
-        message: 'Login failed',
+        message: 'login_failed',
         authResponse: null,
+        failure: { code: 'login_failed' },
       };
     }
   } catch (error) {
@@ -129,11 +155,19 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
       };
     }
 
+    const failure = classifyLoginFailure(error);
     logger.error({
       message: 'Login failed',
-      context: { error, username: credentials.username },
+      context: { ...sanitizeAuthError(error), loginFailure: failure.code, username: credentials.username },
     });
-    throw error;
+
+    // Return a failed response instead of throwing; the code carries the reason the login screen explains.
+    return {
+      successful: false,
+      message: failure.code,
+      authResponse: null,
+      failure,
+    };
   }
 };
 
@@ -168,9 +202,10 @@ export const refreshTokenRequest = async (refreshToken: string): Promise<AuthRes
 
     return response.data;
   } catch (error) {
+    // The request body holds the refresh token, so the raw error is never logged.
     logger.error({
       message: 'Token refresh failed',
-      context: { error },
+      context: sanitizeAuthError(error),
     });
     throw error;
   }
@@ -202,9 +237,10 @@ export const externalTokenRequest = async (credentials: ExternalTokenCredentials
       };
     }
 
+    // Only the status: the response carries the request config, and with it the IdP token.
     logger.error({
       message: 'External token exchange failed',
-      context: { response, provider: credentials.provider },
+      context: { status: response.status, provider: credentials.provider },
     });
 
     return {
@@ -233,7 +269,7 @@ export const externalTokenRequest = async (credentials: ExternalTokenCredentials
 
     logger.error({
       message: 'External token exchange error',
-      context: { error, provider: credentials.provider },
+      context: { ...sanitizeAuthError(error), provider: credentials.provider },
     });
     throw error;
   }

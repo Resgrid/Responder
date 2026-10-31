@@ -13,7 +13,9 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useLoginServer } from '@/hooks/use-login-server';
 import { useAuth } from '@/lib/auth';
+import { describeLoginFailure, isLoginErrorCode } from '@/lib/auth/login-errors';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { isMfaErrorCode, mfaErrorKey } from '@/lib/mfa/messages';
@@ -32,9 +34,13 @@ export default function Login() {
   const router = useRouter();
   const { login, status, error, isAuthenticated } = useAuth();
   const mfaChallenge = useAuthStore((s) => s.mfaChallenge);
+  const loginFailure = useAuthStore((s) => s.loginFailure);
+  const { name: serverName } = useLoginServer();
   const { trackEvent } = useAnalytics();
+  // A failed password sign-in says why and what to do next.
+  const loginError = isLoginErrorCode(error) ? describeLoginFailure(t, loginFailure?.code === error ? loginFailure : { code: error }, serverName) : null;
   // A sign-in that ended (expired, too many attempts, policy changed) says why in the member's language.
-  const displayError = isMfaErrorCode(error) ? t(mfaErrorKey(error)) : error;
+  const displayError = loginError ? loginError.message : isMfaErrorCode(error) ? t(mfaErrorKey(error)) : error;
 
   // Track analytics when view becomes visible
   useFocusEffect(
@@ -65,7 +71,9 @@ export default function Login() {
         const timestamp = new Date().toISOString();
         const rawMessage = error ?? '';
         let errorCode = 'unknown_error';
-        if (rawMessage.includes('TypeError')) {
+        if (isLoginErrorCode(error)) {
+          errorCode = error;
+        } else if (rawMessage.includes('TypeError')) {
           errorCode = 'type_error';
         } else if (rawMessage.toLowerCase().includes('network')) {
           errorCode = 'network_error';
@@ -151,11 +159,17 @@ export default function Login() {
           <ModalBackdrop />
           <ModalContent className="m-4 w-full max-w-3xl rounded-2xl">
             <ModalHeader>
-              <Text className="text-xl font-semibold">{t('login.errorModal.title')}</Text>
+              <Text className="text-xl font-semibold">{loginError?.title ?? t('login.errorModal.title')}</Text>
             </ModalHeader>
             <ModalBody>
-              <Text>{t('login.errorModal.message')}</Text>
-              {displayError ? <Text className="mt-2 text-sm text-gray-500">{displayError}</Text> : null}
+              {loginError ? (
+                <Text>{loginError.message}</Text>
+              ) : (
+                <>
+                  <Text>{t('login.errorModal.message')}</Text>
+                  {displayError ? <Text className="mt-2 text-sm text-gray-500">{displayError}</Text> : null}
+                </>
+              )}
             </ModalBody>
             <ModalFooter>
               <Button

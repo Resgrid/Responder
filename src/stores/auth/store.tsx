@@ -12,6 +12,7 @@ import type { ApprovalRequestData, MfaChallenge, TotpSetupData } from '@/lib/mfa
 import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/clear-all-data';
 
 import { externalTokenRequest, loginRequest, refreshTokenRequest } from '../../lib/auth/api';
+import { isLoginErrorCode, type LoginFailure } from '../../lib/auth/login-errors';
 import { runSignOutHooks } from '../../lib/auth/sign-out-hooks';
 import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
@@ -78,6 +79,8 @@ interface AuthState {
   refreshTokenObtainedAt: number | null;
   status: AuthStatus;
   error: string | null;
+  /** The last failed password sign-in, with what the guidance needs beyond its code (a lockout's minutes). Never persisted. */
+  loginFailure: LoginFailure | null;
   profile: ProfileModel | null;
   userId: string | null;
   isFirstTime: boolean;
@@ -172,6 +175,7 @@ const useAuthStore = create<AuthState>()(
       refreshTokenObtainedAt: null,
       status: 'idle',
       error: null,
+      loginFailure: null,
       profile: null,
       userId: null,
       isFirstTime: true,
@@ -180,7 +184,9 @@ const useAuthStore = create<AuthState>()(
       pendingRecoveryCodes: null,
       login: async (credentials: LoginCredentials) => {
         try {
-          set({ status: 'loading' });
+          // A new attempt drops the last password failure; a second-factor error (invalid_totp) stays for the prompt
+          // that shows it while the code is checked.
+          set({ status: 'loading', loginFailure: null, ...(isLoginErrorCode(get().error) ? { error: null } : {}) });
           const response = await loginRequest(credentials);
 
           if (response.successful) {
@@ -257,9 +263,11 @@ const useAuthStore = create<AuthState>()(
               message: 'Login failed - unsuccessful response',
               context: { username: credentials.username, message: response.message },
             });
+            const failure = response.failure ?? { code: 'login_failed' };
             set({
               status: 'error',
-              error: response.message,
+              error: failure.code,
+              loginFailure: failure,
             });
           }
         } catch (error) {
@@ -270,9 +278,11 @@ const useAuthStore = create<AuthState>()(
               error: error instanceof Error ? error.message : 'Unknown error',
             },
           });
+          // An unreadable token response is the server's fault, not the member's; the detail stays in the log.
           set({
             status: 'error',
-            error: error instanceof Error ? error.message : 'Login failed',
+            error: 'login_failed',
+            loginFailure: { code: 'login_failed' },
           });
         }
       },
@@ -491,6 +501,7 @@ const useAuthStore = create<AuthState>()(
           refreshTokenObtainedAt: null,
           status: 'signedOut',
           error: null,
+          loginFailure: null,
           profile: null,
           isFirstTime: false,
           userId: null,
@@ -787,11 +798,27 @@ const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => zustandStorage),
-      // A pending sign-in and recovery codes shown once are never written to storage.
-      partialize: ({ mfaChallenge: _mfaChallenge, pendingRecoveryCodes: _pendingRecoveryCodes, ...persisted }) => persisted,
+      // A pending sign-in, recovery codes shown once and the last sign-in failure (its error and reason) are never written
+      // to storage; a failed sign-in restarts signed out.
+      partialize: ({ mfaChallenge: _mfaChallenge, pendingRecoveryCodes: _pendingRecoveryCodes, loginFailure: _loginFailure, error: _error, ...persisted }) => ({
+        ...persisted,
+        status: persisted.status === 'error' ? 'signedOut' : persisted.status,
+      }),
       // The pending SSO exchange and the login transaction live in module memory and die with the process, so a
-      // rehydrated pending state would open a prompt with nothing to finish. Force them back.
-      merge: (persisted, current) => ({ ...current, ...(persisted as Partial<AuthState>), isSsoMfaPending: false, mfaChallenge: null, pendingRecoveryCodes: null }),
+      // rehydrated pending state would open a prompt with nothing to finish. Force them back, and drop a failed sign-in an
+      // older build stored without its reason.
+      merge: (persisted, current) => {
+        const restored = persisted as Partial<AuthState>;
+        return {
+          ...current,
+          ...restored,
+          ...(restored?.status === 'error' ? { status: 'signedOut' as const } : {}),
+          error: null,
+          isSsoMfaPending: false,
+          mfaChallenge: null,
+          pendingRecoveryCodes: null,
+        };
+      },
     }
   )
 );
