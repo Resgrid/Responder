@@ -113,7 +113,6 @@ describe('a refused password sign-in', () => {
         oauthError: 'invalid_grant',
         loginError: 'invalid_credentials',
         loginFailure: 'invalid_credentials',
-        username: 'user1',
       },
     });
   });

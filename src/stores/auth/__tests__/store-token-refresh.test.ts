@@ -242,6 +242,7 @@ describe('Auth Store - Token Refresh Functionality', () => {
     it('should logout when refresh API call fails with permanent error', async () => {
       // Create a mock axios error with 401 status (permanent auth failure)
       const mockError = Object.assign(new Error('Unauthorized'), {
+        isAxiosError: true,
         response: { status: 401 },
       });
       mockedRefreshTokenRequest.mockRejectedValueOnce(mockError);
@@ -261,6 +262,21 @@ describe('Auth Store - Token Refresh Functionality', () => {
           error: 'Unauthorized',
         },
       });
+    });
+
+    it('should not logout when the token endpoint fails with a server error', async () => {
+      // A 500 from the token endpoint is an outage, not a rejected refresh token: keep the session.
+      const mockError = Object.assign(new Error('Internal Server Error'), {
+        isAxiosError: true,
+        response: { status: 500 },
+      });
+      mockedRefreshTokenRequest.mockRejectedValueOnce(mockError);
+
+      const logoutSpy = jest.spyOn(useAuthStore.getState(), 'logout');
+
+      await expect(useAuthStore.getState().refreshAccessToken()).rejects.toThrow('Internal Server Error');
+
+      expect(logoutSpy).not.toHaveBeenCalled();
     });
 
     it('should not logout when refresh API call fails with transient error', async () => {
