@@ -119,6 +119,13 @@ jest.mock('@/components/settings/language-item', () => ({
   },
 }));
 
+jest.mock('@/components/settings/navigation-app-item', () => ({
+  NavigationAppItem: () => {
+    const { View } = require('react-native');
+    return <View testID="navigation-app-item" />;
+  },
+}));
+
 jest.mock('@/components/settings/login-info-bottom-sheet', () => ({
   LoginInfoBottomSheet: ({ isOpen, onClose, onSubmit }: any) => {
     const { View, TouchableOpacity, Text } = require('react-native');

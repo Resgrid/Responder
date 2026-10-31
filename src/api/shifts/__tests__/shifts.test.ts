@@ -24,16 +24,21 @@ import {
   getAllShifts,
   getMyShifts,
   getOnDutyPersonnel,
+  getOpenShiftTrades,
   getPendingApprovals,
   getShift,
   getShiftDay,
   getShiftDayPersonnelOptions,
   getShiftDaysForDateRange,
+  getShiftTrade,
   getShiftTrades,
   getTodaysShifts,
   getTradeCandidates,
+  getWorkshiftDay,
+  getWorkshiftDays,
   removeFromShiftDay,
   requestShiftTrade,
+  requestWorkshiftTrade,
   respondToShiftTrade,
   reviewShiftSignup,
   reviewShiftTrade,
@@ -68,17 +73,22 @@ describe('shifts api', () => {
         '/Shifts/FinishShiftTrade',
         '/Shifts/GetMyShifts',
         '/Shifts/GetOnDutyPersonnel',
+        '/Shifts/GetOpenShiftTrades',
         '/Shifts/GetPendingApprovals',
         '/Shifts/GetShift',
         '/Shifts/GetShiftDay',
         '/Shifts/GetShiftDayPersonnelOptions',
         '/Shifts/GetShiftDaysForDateRange',
+        '/Shifts/GetShiftTrade',
         '/Shifts/GetShiftTrades',
         '/Shifts/GetShifts',
         '/Shifts/GetTodaysShifts',
         '/Shifts/GetTradeCandidates',
+        '/Shifts/GetWorkshiftDay',
+        '/Shifts/GetWorkshiftDays',
         '/Shifts/RemoveFromShiftDay',
         '/Shifts/RequestShiftTrade',
+        '/Shifts/RequestWorkshiftTrade',
         '/Shifts/RespondToShiftTrade',
         '/Shifts/ReviewShiftSignup',
         '/Shifts/ReviewShiftTrade',
@@ -219,6 +229,47 @@ describe('shifts api', () => {
     it('returns a failure body unchanged so the store can read ErrorCode', async () => {
       endpoint('/Shifts/SignupForShiftDay').post.mockResolvedValue(ok({ Id: '', ApprovalPending: false, ErrorCode: 'invalid_group', Status: 'failure' }));
       await expect(signupForShiftDay('10', '999')).resolves.toMatchObject({ ErrorCode: 'invalid_group', Status: 'failure' });
+    });
+  });
+
+  describe('open trades and static shifts', () => {
+    it('getOpenShiftTrades takes no params and getShiftTrade sends id=', async () => {
+      endpoint('/Shifts/GetOpenShiftTrades').get.mockResolvedValue(ok({ Data: [] }));
+      endpoint('/Shifts/GetShiftTrade').get.mockResolvedValue(ok({ Data: null }));
+
+      await getOpenShiftTrades();
+      await getShiftTrade('9');
+
+      expect(endpoint('/Shifts/GetOpenShiftTrades').get).toHaveBeenCalledWith();
+      expect(endpoint('/Shifts/GetShiftTrade').get).toHaveBeenCalledWith({ id: '9' });
+    });
+
+    it('getWorkshiftDays leaves the window to the server and only sends mine when asked', async () => {
+      const api = endpoint('/Shifts/GetWorkshiftDays');
+      api.get.mockResolvedValue(ok({ Data: [] }));
+
+      await getWorkshiftDays();
+      expect(api.get).toHaveBeenLastCalledWith(undefined);
+
+      await getWorkshiftDays('2026-11-01', '2026-11-30', true);
+      expect(api.get).toHaveBeenLastCalledWith({ start: '2026-11-01', end: '2026-11-30', mine: true });
+    });
+
+    it('getWorkshiftDay sends the GUID id unchanged', async () => {
+      endpoint('/Shifts/GetWorkshiftDay').get.mockResolvedValue(ok({ Data: {} }));
+      await getWorkshiftDay('3f2a-guid');
+      expect(endpoint('/Shifts/GetWorkshiftDay').get).toHaveBeenCalledWith({ id: '3f2a-guid' });
+    });
+
+    it('an open trade request posts no user ids, and a static shift request posts the day id string', async () => {
+      endpoint('/Shifts/RequestShiftTrade').post.mockResolvedValue(ok({ Id: '1', Status: 'created' }));
+      endpoint('/Shifts/RequestWorkshiftTrade').post.mockResolvedValue(ok({ Id: '2', Status: 'created' }));
+
+      await requestShiftTrade('10', [], 'vacation');
+      await requestWorkshiftTrade('3f2a-guid', 'family');
+
+      expect(endpoint('/Shifts/RequestShiftTrade').post).toHaveBeenCalledWith({ ShiftDayId: 10, UserIds: [], Note: 'vacation' });
+      expect(endpoint('/Shifts/RequestWorkshiftTrade').post).toHaveBeenCalledWith({ WorkshiftDayId: '3f2a-guid', Note: 'family' });
     });
   });
 

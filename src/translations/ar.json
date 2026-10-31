@@ -2142,6 +2142,20 @@
     "logout_confirm_title": "تأكيد تسجيل الخروج",
     "logout_confirm_yes": "نعم، تسجيل الخروج",
     "more": "المزيد",
+    "navigation_app": {
+      "apple_maps": "خرائط Apple",
+      "default": "الافتراضي للجهاز",
+      "description": "التطبيق الذي يفتحه هذا الجهاز عند بدء الملاحة إلى موقع مكالمة أو وجهة أو دبوس على الخريطة. بعض التطبيقات تعرض الموقع فقط بدلاً من بدء مسار.",
+      "gaia_gps": "Gaia GPS",
+      "google_maps": "خرائط Google",
+      "here_wego": "HERE WeGo",
+      "mapquest": "MapQuest",
+      "onx_offroad": "onX Offroad",
+      "organic_maps": "Organic Maps",
+      "osmand": "OsmAnd",
+      "title": "تطبيق الملاحة",
+      "waze": "Waze"
+    },
     "no_units_available": "لا توجد وحدات متاحة",
     "none_selected": "لم يتم اختيار أي شيء",
     "notifications": "الإشعارات",
@@ -2186,7 +2200,9 @@
     "actions": {
       "accept": "قبول",
       "add_person": "إضافة شخص",
+      "apply": "التقدم لتوليها",
       "approve": "موافقة",
+      "cancel_request_admin": "إلغاء الطلب",
       "cancel_trade": "إلغاء طلب التبديل",
       "confirm": "تأكيد",
       "confirm_signup": "تأكيد التسجيل",
@@ -2194,7 +2210,8 @@
       "deny": "رفض الطلب",
       "remove": "إزالة",
       "request_trade": "طلب تبديل",
-      "send_request": "إرسال الطلب"
+      "send_request": "إرسال الطلب",
+      "withdraw_application": "سحب طلب التقدم"
     },
     "add_panel": {
       "group": "المجموعة",
@@ -2214,11 +2231,27 @@
     "assigned": "مُعيَّن",
     "assignment_type": {
       "assigned": "بالتعيين",
-      "signup": "بالتسجيل"
+      "signup": "بالتسجيل",
+      "workshift": "وردية العمل"
     },
     "automatic": "تلقائي",
     "available": "متاح",
     "calendar": "التقويم",
+    "calendar_export": {
+      "add_all": "إضافة نوباتي إلى التقويم ({{count}})",
+      "add_all_hint": "يضيف إلى تقويم جهازك كل النوبات التي تعمل فيها خلال الثلاثين يومًا القادمة",
+      "add_hint": "يضيف هذه النوبة إلى تقويم جهازك، أو يحدّثها إن كانت موجودة بالفعل",
+      "add_one": "إضافة إلى التقويم",
+      "added_many": "النوبات في تقويمك: {{count}}",
+      "added_one": "تمت الإضافة إلى تقويمك",
+      "event_footer": "أُضيفت من Resgrid",
+      "event_place": "مع: {{place}}",
+      "event_title": "نوبة {{name}}",
+      "failed": "تعذّرت إضافة النوبة إلى تقويمك.",
+      "nothing_to_add": "لا يمكن أن تُضاف إلى تقويمك إلا النوبات التي تعمل فيها.",
+      "permission_denied": "الوصول إلى التقويم متوقف. اسمح به من الإعدادات لإضافة النوبات.",
+      "updated_one": "تم التحديث في تقويمك"
+    },
     "calendar_view": {
       "day_a11y": "{{date}}: النوبات {{count}}، الأماكن الشاغرة {{open}}",
       "filter_a11y": "تصفية التقويم حسب النوبة",
@@ -2256,6 +2289,10 @@
       "mine_title": "لا توجد نوبات قادمة",
       "on_duty_description": "لا يوجد أحد في نوبة نشطة الآن.",
       "on_duty_title": "لا أحد في الخدمة",
+      "open_trades_description": "عندما يطلب أحدهم التخلي عن نوبة، يظهر الطلب هنا لكل من يمكنه توليها.",
+      "open_trades_title": "لا توجد طلبات تبديل مفتوحة",
+      "signup_description": "تظهر هنا أيام النوبات المفتوحة للتسجيل التي فيها مكان لك خلال الثلاثين يومًا القادمة.",
+      "signup_title": "لا يوجد ما يمكن التسجيل فيه",
       "trades_description": "تظهر هنا طلبات التبديل التي ترسلها أو تتلقاها.",
       "trades_title": "لا توجد تبديلات نوبات"
     },
@@ -2270,6 +2307,7 @@
       "network": "يبدو أنك غير متصل. يرجى المحاولة مرة أخرى.",
       "no_users": "اختر شخصًا واحدًا على الأقل.",
       "not_allowed": "ليست لديك صلاحية للقيام بذلك.",
+      "not_eligible": "ليست لديك الأدوار التي يتطلبها هذا الموقع.",
       "not_found": "هذه النوبة أو التسجيل أو التبديل لم يعد موجودًا.",
       "not_on_shift": "أنت لست ضمن يوم النوبة هذا.",
       "not_pending": "هذا الطلب لم يعد معلقًا.",
@@ -2285,6 +2323,11 @@
     "loading_details": "جاري تحميل تفاصيل النوبة...",
     "loading_signup": "جاري المعالجة...",
     "manual": "يدوي",
+    "mine_sections": {
+      "active": "في الخدمة الآن",
+      "pending": "بانتظار الموافقة",
+      "upcoming": "القادمة"
+    },
     "my_standing_shifts": "النوبات التي أنتمي إليها",
     "my_upcoming_days": "الأيام القادمة",
     "needed": "مطلوب",
@@ -2345,6 +2388,7 @@
       "calendar": "التقويم",
       "mine": "نوباتي",
       "on_duty": "في الخدمة",
+      "signup": "التسجيل",
       "today": "اليوم",
       "trades": "التبديلات",
       "with_count": "{{label}}، المعلقة {{count}}"
@@ -2372,6 +2416,11 @@
     },
     "signup_status": "حالة التسجيل",
     "signup_success": "تم التسجيل بنجاح للنوبة",
+    "signup_view": {
+      "description": "أيام النوبات التي يمكنك التسجيل فيها خلال الثلاثين يومًا القادمة. اضغط على يوم لاختيار فريقك.",
+      "filter_all": "كل الأيام",
+      "filter_needed": "بحاجة إلى أفراد"
+    },
     "signups": "التسجيلات",
     "start_time": "وقت البداية",
     "status": {
@@ -2391,21 +2440,35 @@
       "person_removed": "تمت إزالة الشخص من النوبة",
       "signup_pending": "تم التسجيل. بانتظار موافقة المشرف.",
       "trade_accepted": "تم إرسال عرضك",
+      "trade_application_withdrawn": "تم سحب طلب تقدمك",
+      "trade_applied": "تم إرسال طلب التقدم",
       "trade_cancelled": "تم إلغاء طلب التبديل",
       "trade_declined": "تم رفض التبديل",
       "trade_finished": "اكتمل التبديل",
       "trade_finished_pending": "تم إرسال التبديل للموافقة",
-      "trade_requested": "تم إرسال طلب التبديل"
+      "trade_requested": "تم إرسال طلب التبديل",
+      "trade_requested_open": "تم إرسال طلب التبديل إلى كل من يمكنه تولي النوبة"
     },
     "today": "اليوم",
     "todays_shifts": "نوبات اليوم",
     "trade": {
       "accept_description": "يمكنك أن تعرض إحدى نوباتك القادمة في المقابل، أو ببساطة تتولى هذه النوبة.",
       "accept_title": "قبول هذا التبديل؟",
+      "applicant_conflict": "يعمل بالفعل في {{name}} في هذا الوقت",
+      "applicant_count": "المتقدمون: {{count}}",
+      "applicants": "المتقدمون",
+      "applied_at": "تقدّم في {{date}}",
+      "apply_description": "سيرى {{name}} والأشخاص الذين يقررون في التبديلات طلب تقدمك. يمكنك أن تعرض إحدى نوباتك في المقابل.",
+      "apply_title": "التقدم لتولي هذه النوبة؟",
       "cancel_description": "سيتم تجاهل العروض التي تلقيتها.",
+      "cancel_description_open": "سيتم إبلاغ كل من تقدّم بأن الطلب قد أُلغي.",
       "cancel_title": "إلغاء طلب التبديل هذا؟",
       "decline_description": "سيرى صاحب الطلب أنك رفضت.",
       "decline_title": "رفض هذا التبديل؟",
+      "details_a11y": "تبديل {{shift}} في {{date}}",
+      "details_hint": "يفتح التبديل مع المتقدمين إليه",
+      "filter_mine": "طلباتي ({{count}})",
+      "filter_open": "الطلبات المفتوحة ({{count}})",
       "finish_give_description": "سيتولى {{name}} هذه النوبة.",
       "finish_pending_note": "يجب أن يوافق المشرف على هذا التبديل قبل أن يسري.",
       "finish_swap_description": "يتولى {{name}} هذه النوبة وتتولى أنت نوبته {{shift}} في {{date}}.",
@@ -2413,6 +2476,11 @@
       "from": "من {{name}}",
       "give_to": "التسليم إلى {{name}}",
       "incoming": "وارد",
+      "ineligible": {
+        "already_on_day": "أنت تعمل بالفعل في هذا اليوم.",
+        "missing_roles": "ليست لديك الأدوار التي يتطلبها هذا الموقع.",
+        "not_allowed": "لا يمكنك تولي هذه النوبة."
+      },
       "my_state": {
         "accepted": "ستتولى هذه النوبة",
         "declined": "لقد رفضت",
@@ -2422,15 +2490,27 @@
         "pending_approval": "بانتظار موافقة المشرف",
         "proposed": "لقد قدمت عرضًا"
       },
+      "nearby_workload": "خلال أسبوع من هذا اليوم: النوبات {{count}}، الساعات {{hours}}",
+      "no_applicants": "لم يتقدم أحد بعد",
+      "no_certifications": "لا توجد شهادات سارية",
       "no_offers": "لا توجد ردود بعد",
       "no_swap": "عدم عرض نوبة في المقابل",
       "offer_back": "عرض نوبة في المقابل",
       "offers": "الردود",
+      "open_request": "مفتوح للجميع",
       "outgoing": "صادر",
+      "pick_as_approver_note": "أنت تقرر في هذا التبديل بصفتك معتمِدًا: يسري اختيارك فورًا.",
+      "pick_note": "اختر من سيتولى هذه النوبة.",
+      "requested_at": "تم الطلب في {{date}}",
+      "requested_by": "طلبه {{name}}",
       "reviewed_by": "راجعه {{name}}",
       "section_active": "قيد التنفيذ",
+      "section_applied": "تقدمت إليها",
       "section_attention": "تحتاج إلى انتباهك",
+      "section_can_apply": "يمكنك توليها",
+      "section_other_requests": "طلبات أخرى",
       "section_recent": "الأخيرة",
+      "select_applicant": "التسليم إلى {{name}}",
       "status": {
         "cancelled": "ملغى",
         "completed": "مكتمل",
@@ -2443,11 +2523,20 @@
       "taken_by": "تولاها {{name}}",
       "user_declined": "رفض",
       "user_offered": "قدّم عرضًا",
-      "user_waiting": "لا يوجد رد بعد"
+      "user_waiting": "لا يوجد رد بعد",
+      "user_withdrew": "انسحب",
+      "withdraw_description": "سيرى صاحب الطلب أنك لم تعد متاحًا.",
+      "withdraw_title": "سحب طلب تقدمك؟"
     },
     "trade_panel": {
       "description": "اختر من تريد أن يتولى هذه النوبة. سيُسأل كل من تختاره، ثم تختار من بين عروضهم.",
+      "mode_open": "كل من يمكنه توليها",
+      "mode_open_hint": "الأشخاص الذين سيتم إشعارهم: {{count}}",
+      "mode_specific": "الأشخاص الذين أختارهم فقط",
+      "mode_specific_hint": "اطلب من زملاء محددين بدلًا من ذلك",
       "no_candidates": "لا يوجد أحد متاح لتولي هذه النوبة.",
+      "open_description": "كل من يكون متفرغًا في ذلك اليوم ولديه الأدوار التي يتطلبها موقعك يتلقى بريدًا إلكترونيًا وإشعارًا فوريًا ويمكنه التقدم. بعد ذلك تختار أنت من يتولاها، أو يختار مشرفك.",
+      "open_description_workshift": "كل من يكون متفرغًا في ذلك اليوم يتلقى بريدًا إلكترونيًا وإشعارًا فوريًا ويمكنه التقدم ليحل محلك في الوحدة.",
       "selected_count": "المحدد: {{count}}",
       "title": "طلب تبديل"
     },

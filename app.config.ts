@@ -66,7 +66,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         'Resgrid Responder uses Bluetooth to connect to wireless headsets and speaker-microphone accessories for Push-to-Talk audio. For example, when you pair a Bluetooth speaker-mic, pressing its talk button transmits your voice to your department audio channel.',
       NSMicrophoneUsageDescription:
         'Resgrid Responder uses the microphone to capture your voice for Push-to-Talk and voice communication with your department. For example, when you press and hold the talk button, your voice is transmitted live to dispatchers and other responders on the channel.',
-      LSApplicationQueriesSchemes: ['resgrid'],
+      // The navigation apps the Navigation App setting can hand directions to are detected with
+      // canOpenURL, which only answers for declared schemes (src/lib/navigation.ts).
+      LSApplicationQueriesSchemes: ['resgrid', 'waze', 'comgooglemaps'],
     },
     entitlements: {
       ...((Env.APP_ENV === 'production' || Env.APP_ENV === 'internal') && {
@@ -305,6 +307,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-document-picker',
       {
         iCloudContainerEnvironment: 'Production',
+      },
+    ],
+    [
+      // Full access (not write-only) so a shift already added to the calendar is updated, not duplicated.
+      'expo-calendar',
+      {
+        calendarPermission:
+          'Resgrid Responder adds the shifts you work to your calendar. For example, when you tap Add to calendar on a shift, it appears in your device calendar with its start and end times, and is updated if you add it again.',
+        remindersPermission: false,
       },
     ],
     [

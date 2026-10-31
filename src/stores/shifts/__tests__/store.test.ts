@@ -20,6 +20,11 @@ jest.mock('@/api/shifts/shifts', () => ({
   assignToShiftDay: jest.fn(),
   removeFromShiftDay: jest.fn(),
   getOnDutyPersonnel: jest.fn(),
+  getOpenShiftTrades: jest.fn(),
+  getShiftTrade: jest.fn(),
+  getWorkshiftDays: jest.fn(),
+  getWorkshiftDay: jest.fn(),
+  requestWorkshiftTrade: jest.fn(),
 }));
 jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }));
 jest.mock('@/lib/storage/clear-all-data', () => ({ registerStoreReset: jest.fn() }));
@@ -80,6 +85,8 @@ describe('useShiftsStore', () => {
     api.getOnDutyPersonnel.mockResolvedValue(list([]));
     api.getAllShifts.mockResolvedValue(list([]));
     api.getShiftDay.mockResolvedValue(single(makeDay()));
+    api.getOpenShiftTrades.mockResolvedValue(list([]));
+    api.getWorkshiftDays.mockResolvedValue(list([]));
   });
 
   it('registers a reset so signing out clears shift data', () => {
@@ -395,6 +402,152 @@ describe('useShiftsStore', () => {
       expect(state.trades[0]?.Status).toBe(ShiftTradeStatus.Cancelled);
       expect(state.myShiftDays[0]?.MyTradeId).toBe('');
       expect(state.selectedShiftDay?.MyTradeId).toBe('');
+    });
+  });
+
+  describe('static shifts (workshifts)', () => {
+    const workshiftDay = (overrides: Partial<ShiftDayResultData> = {}) =>
+      makeDay({ ShiftId: 'ws-1', ShiftDayId: 'wd-1', WorkshiftDayId: 'wd-1', ShiftName: 'Engine 1 Static', ShiftType: 2, Start: '2026-09-24T07:00:00', End: '2026-09-24T19:00:00', MyStatus: 1, ...overrides });
+
+    it('merges my static shift days into My Shifts in start order', async () => {
+      api.getMyShifts.mockResolvedValue(list([makeDay({ ShiftDayId: '100', Start: '2026-09-24T19:00:00' })]));
+      api.getWorkshiftDays.mockResolvedValue(list([workshiftDay()]));
+
+      await useShiftsStore.getState().fetchMyShifts();
+
+      expect(api.getWorkshiftDays).toHaveBeenCalledWith(undefined, undefined, true);
+      expect(useShiftsStore.getState().myShiftDays.map((day) => day.ShiftDayId)).toEqual(['wd-1', '100']);
+    });
+
+    it('still shows shift days when the server has no static shift endpoint', async () => {
+      api.getMyShifts.mockResolvedValue(list([makeDay()]));
+      api.getWorkshiftDays.mockRejectedValue({ response: { status: 404 } });
+
+      await useShiftsStore.getState().fetchMyShifts();
+
+      expect(useShiftsStore.getState().myShiftDays).toHaveLength(1);
+      expect(useShiftsStore.getState().error).toBeNull();
+    });
+
+    it('leaves static shifts out of a calendar filtered to one shift', async () => {
+      api.getWorkshiftDays.mockResolvedValue(list([workshiftDay()]));
+
+      await useShiftsStore.getState().fetchShiftDaysForDateRange('2026-09-01', '2026-09-30', '7');
+      expect(api.getWorkshiftDays).not.toHaveBeenCalled();
+
+      await useShiftsStore.getState().fetchShiftDaysForDateRange('2026-09-01', '2026-09-30', null);
+      expect(api.getWorkshiftDays).toHaveBeenCalledWith('2026-09-01', '2026-09-30', false);
+      expect(useShiftsStore.getState().calendarDays.map((day) => day.ShiftDayId)).toEqual(['wd-1']);
+    });
+
+    it('opens a static shift day from its own endpoint', async () => {
+      api.getWorkshiftDay.mockResolvedValue(single(workshiftDay({ MyUnitName: 'Engine 1' })));
+
+      useShiftsStore.getState().selectShiftDay(workshiftDay());
+      await flush();
+
+      expect(api.getWorkshiftDay).toHaveBeenCalledWith('wd-1');
+      expect(api.getShiftDay).not.toHaveBeenCalled();
+      expect(useShiftsStore.getState().selectedShiftDay?.MyUnitName).toBe('Engine 1');
+    });
+
+    it('requests a static shift trade through its own endpoint', async () => {
+      api.requestWorkshiftTrade.mockResolvedValue(action({ Id: '9', Status: 'created' }));
+
+      const outcome = await useShiftsStore.getState().requestTrade('wd-1', [], 'family', { workshift: true });
+
+      expect(outcome.success).toBe(true);
+      expect(api.requestWorkshiftTrade).toHaveBeenCalledWith('wd-1', 'family');
+      expect(api.requestShiftTrade).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('open trade requests', () => {
+    it('loads the department open requests with the Trades view', async () => {
+      api.getOpenShiftTrades.mockResolvedValue(list([makeTrade({ ShiftSignupTradeId: '8', IsOpen: true, CanApply: true })]));
+
+      await useShiftsStore.getState().refreshView('trades');
+
+      expect(api.getOpenShiftTrades).toHaveBeenCalled();
+      expect(useShiftsStore.getState().openTrades.map((trade) => trade.ShiftSignupTradeId)).toEqual(['8']);
+    });
+
+    it('applying marks the request as offered and counts me in at once', async () => {
+      useShiftsStore.setState({ openTrades: [makeTrade({ ShiftSignupTradeId: '8', IsOpen: true, CanApply: true, ApplicantCount: 1 })] });
+      api.respondToShiftTrade.mockResolvedValue(action({ Id: '8', Status: 'updated' }));
+      api.getOpenShiftTrades.mockResolvedValue(never());
+      api.getShiftTrades.mockResolvedValue(never());
+
+      // The refetch never answers here, so what shows is the change made in place.
+      void useShiftsStore.getState().respondToTrade('8', true, 'happy to', []);
+      await flush();
+
+      expect(api.respondToShiftTrade).toHaveBeenCalledWith('8', true, 'happy to', []);
+      const trade = useShiftsStore.getState().openTrades[0];
+      expect(trade.MyState).toBe(ShiftTradeUserState.Proposed);
+      expect(trade.CanApply).toBe(false);
+      expect(trade.ApplicantCount).toBe(2);
+    });
+
+    it('opening a trade shows the list copy and loads the detail with applicant information', async () => {
+      const listed = makeTrade({ ShiftSignupTradeId: '8', IsOpen: true });
+      api.getShiftTrade.mockResolvedValue(single(makeTrade({ ShiftSignupTradeId: '8', IsOpen: true, ApplicantCount: 3 })));
+
+      useShiftsStore.getState().openTradeDetails(listed);
+      expect(useShiftsStore.getState().isTradeDetailsOpen).toBe(true);
+      expect(useShiftsStore.getState().selectedTrade).toBe(listed);
+      await flush();
+
+      expect(api.getShiftTrade).toHaveBeenCalledWith('8');
+      expect(useShiftsStore.getState().selectedTrade?.ApplicantCount).toBe(3);
+    });
+
+    it('cancelling removes the request from open requests and closes its sheet', async () => {
+      const trade = makeTrade({ ShiftSignupTradeId: '8', IsOpen: true });
+      useShiftsStore.setState({ openTrades: [trade], selectedTrade: trade, isTradeDetailsOpen: true });
+      api.cancelShiftTrade.mockResolvedValue(action({ Id: '8', Status: 'deleted' }));
+
+      await useShiftsStore.getState().cancelTrade('8');
+
+      expect(useShiftsStore.getState().openTrades).toEqual([]);
+      expect(useShiftsStore.getState().isTradeDetailsOpen).toBe(false);
+      expect(useShiftsStore.getState().selectedTrade).toBeNull();
+    });
+
+    it('an approver pick takes the request off the open list', async () => {
+      useShiftsStore.setState({ openTrades: [makeTrade({ ShiftSignupTradeId: '8', IsOpen: true, CanPick: true })], pendingTrades: [makeTrade({ ShiftSignupTradeId: '8' })] });
+      api.finishShiftTrade.mockResolvedValue(action({ Id: '8', Status: 'updated', ApprovalPending: false }));
+
+      await useShiftsStore.getState().finishTrade('8', 'bob', null);
+
+      expect(useShiftsStore.getState().openTrades).toEqual([]);
+      expect(useShiftsStore.getState().pendingTrades).toEqual([]);
+    });
+  });
+
+  describe('sign-up days', () => {
+    it('keeps only days I can sign up for and am not on yet', async () => {
+      api.getShiftDaysForDateRange.mockResolvedValue(
+        list([
+          makeDay({ ShiftDayId: '1', CanSignup: true, MyStatus: ShiftDayMyStatus.None }),
+          makeDay({ ShiftDayId: '2', CanSignup: false }),
+          makeDay({ ShiftDayId: '3', CanSignup: true, MyStatus: ShiftDayMyStatus.Denied }),
+        ])
+      );
+
+      await useShiftsStore.getState().fetchSignupDays();
+
+      expect(api.getShiftDaysForDateRange).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+      expect(useShiftsStore.getState().signupDays.map((day) => day.ShiftDayId)).toEqual(['1']);
+    });
+
+    it('signing up takes the day off the sign-up list', async () => {
+      useShiftsStore.setState({ signupDays: [makeDay({ ShiftDayId: '100' })] });
+      api.signupForShiftDay.mockResolvedValue(action({ Id: '44', Status: 'created' }));
+
+      await useShiftsStore.getState().signupForShift('100', '3');
+
+      expect(useShiftsStore.getState().signupDays).toEqual([]);
     });
   });
 

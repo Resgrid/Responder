@@ -603,8 +603,11 @@ export default function CallDetail() {
       const latitude = coordinates.latitude ?? (call?.Latitude ? parseFloat(call.Latitude) : undefined);
       const longitude = coordinates.longitude ?? (call?.Longitude ? parseFloat(call.Longitude) : undefined);
 
-      // Guard against invalid or missing coordinates
-      if (!isValidCoordinates(latitude, longitude)) {
+      // A withheld address must not leave the app in a navigation URL; coordinates still route.
+      const routableAddress = call?.Address && !isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callAddress, call.Address) ? call.Address.trim() : '';
+
+      // Guard against invalid or missing coordinates when there is no address to navigate to instead
+      if (!isValidCoordinates(latitude, longitude) && !routableAddress) {
         const reason = latitude === undefined || longitude === undefined ? 'missing_coordinates' : latitude === 0 && longitude === 0 ? 'zeroed_coordinates' : 'invalid_coordinates';
 
         logger.warn({
@@ -625,8 +628,9 @@ export default function CallDetail() {
         return;
       }
 
-      const destinationName = call?.Address || t('call_detail.call_location');
-      const success = await openMapsWithDirections(latitude as number, longitude as number, destinationName, userLatitude ?? undefined, userLongitude ?? undefined);
+      const destinationName = routableAddress || t('call_detail.call_location');
+      // Without usable coordinates (missing, NaN or the (0,0) sentinel) the helper navigates to the address instead.
+      const success = await openMapsWithDirections(latitude, longitude, destinationName, userLatitude ?? undefined, userLongitude ?? undefined, routableAddress);
 
       if (!success) {
         showToast('error', t('call_detail.failed_to_open_maps'));

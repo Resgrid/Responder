@@ -14,6 +14,7 @@ import { logger } from '@/lib/logging';
 import { clearMapboxToken } from '@/lib/mapbox-token';
 import { IS_FIRST_TIME, storage } from '@/lib/storage';
 import { BASE_API_URL_STORAGE_KEY, DEVICE_UUID_STORAGE_KEY } from '@/lib/storage/app';
+import { NAVIGATION_APP_STORAGE_KEY } from '@/lib/storage/navigation-app';
 
 import { clearPersonnelFilterOptions } from './personnel-filter';
 import { clearSecureKeys } from './secure-storage';
@@ -213,7 +214,8 @@ export const clearAllAppData = async (
 
 // The device id names this install, not the session: it is only minted at app start, so clearing it here sent every
 // push registration after a sign-out (and so after every server switch) without one until the app was restarted.
-export const LOGOUT_PRESERVED_STORAGE_KEYS = [BASE_API_URL_STORAGE_KEY, IS_FIRST_TIME, DEVICE_UUID_STORAGE_KEY] as const;
+// The navigation app names an app installed on this device, not a session preference.
+export const LOGOUT_PRESERVED_STORAGE_KEYS = [BASE_API_URL_STORAGE_KEY, IS_FIRST_TIME, DEVICE_UUID_STORAGE_KEY, NAVIGATION_APP_STORAGE_KEY] as const;
 
 /**
  * Get the count of registered stores

@@ -7,16 +7,21 @@ import {
   getAllShifts,
   getMyShifts,
   getOnDutyPersonnel,
+  getOpenShiftTrades,
   getPendingApprovals,
   getShift,
   getShiftDay,
   getShiftDayPersonnelOptions,
   getShiftDaysForDateRange,
+  getShiftTrade,
   getShiftTrades,
   getTodaysShifts,
   getTradeCandidates,
+  getWorkshiftDay,
+  getWorkshiftDays,
   removeFromShiftDay,
   requestShiftTrade,
+  requestWorkshiftTrade,
   respondToShiftTrade,
   reviewShiftSignup,
   reviewShiftTrade,
@@ -24,18 +29,27 @@ import {
   withdrawFromShiftDay,
 } from '@/api/shifts/shifts';
 import { logger } from '@/lib/logging';
-import { getMonthRange, getShiftRequestErrorCode, getShiftResponseErrorCode } from '@/lib/shift-utils';
+import { getMonthRange, getShiftRequestErrorCode, getShiftResponseErrorCode, isWorkshiftDay, mergeShiftDays, toDateParam } from '@/lib/shift-utils';
 import { registerStoreReset } from '@/lib/storage/clear-all-data';
 import { type OnDutyPersonResultData } from '@/models/v4/shifts/onDutyPersonResultData';
 import { type PendingShiftSignupResultData } from '@/models/v4/shifts/pendingShiftSignupResultData';
 import { type ShiftActionResult } from '@/models/v4/shifts/shiftActionResult';
 import { type ShiftDayResultData } from '@/models/v4/shifts/shiftDayResultData';
-import { ShiftDayMyStatus, type ShiftErrorCode, ShiftTradeStatus, ShiftTradeUserState } from '@/models/v4/shifts/shiftEnums';
+import { ShiftAssignmentType, ShiftDayMyStatus, type ShiftErrorCode, ShiftTradeStatus, ShiftTradeUserState } from '@/models/v4/shifts/shiftEnums';
 import { type ShiftPersonOptionResultData } from '@/models/v4/shifts/shiftPersonOptionResultData';
 import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
 import { type ShiftTradeResultData } from '@/models/v4/shifts/shiftTradeResultData';
 
-export type ShiftViewMode = 'today' | 'mine' | 'calendar' | 'trades' | 'approvals' | 'onduty';
+export type ShiftViewMode = 'today' | 'mine' | 'signup' | 'calendar' | 'trades' | 'approvals' | 'onduty';
+
+/** The Trades view: every open request in the department, or the caller's own (outgoing and incoming). */
+export type ShiftTradesFilter = 'open' | 'mine';
+
+/** The Sign up view: only days still short of people, or every day the caller can sign up for. */
+export type ShiftSignupFilter = 'needed' | 'all';
+
+/** How far ahead the Sign up view looks. */
+export const SIGNUP_WINDOW_DAYS = 30;
 
 export type ShiftMutationKind = 'signup' | 'withdraw' | 'request-trade' | 'respond-trade' | 'finish-trade' | 'cancel-trade' | 'review-signup' | 'review-trade' | 'assign' | 'remove';
 
@@ -59,7 +73,12 @@ export interface ShiftFetchOptions {
 }
 
 /** Lists a mutation can change; each is refetched after it succeeds. */
-export type ShiftRefreshScope = 'today' | 'mine' | 'calendar' | 'trades' | 'approvals' | 'day' | 'onduty';
+export type ShiftRefreshScope = 'today' | 'mine' | 'signup' | 'calendar' | 'trades' | 'approvals' | 'day' | 'onduty' | 'trade';
+
+export interface RequestTradeOptions {
+  /** The day is a static shift (workshift) day, traded through its own endpoint. */
+  workshift?: boolean;
+}
 
 interface ShiftsDataState {
   shifts: ShiftResultData[];
@@ -68,6 +87,12 @@ interface ShiftsDataState {
   calendarDays: ShiftDayResultData[];
   calendarRange: ShiftCalendarRange | null;
   trades: ShiftTradeResultData[];
+  /** Open requests in the department still taking applicants. */
+  openTrades: ShiftTradeResultData[];
+  /** Upcoming days the caller can sign up for. */
+  signupDays: ShiftDayResultData[];
+  /** The trade open in the details sheet (applicants, qualifications, decisions). */
+  selectedTrade: ShiftTradeResultData | null;
   pendingSignups: PendingShiftSignupResultData[];
   pendingTrades: ShiftTradeResultData[];
   /** Server-decided: the caller supervises at least one shift group. */
@@ -79,17 +104,23 @@ interface ShiftsDataState {
   selectedShiftDay: ShiftDayResultData | null;
 
   currentView: ShiftViewMode;
+  tradesFilter: ShiftTradesFilter;
+  signupFilter: ShiftSignupFilter;
   searchQuery: string;
   calendarShiftId: string | null;
   selectedDate: string | null;
   isShiftDetailsOpen: boolean;
   isShiftDayDetailsOpen: boolean;
+  isTradeDetailsOpen: boolean;
 
   isLoading: boolean;
   isTodaysLoading: boolean;
   isMyShiftsLoading: boolean;
   isCalendarLoading: boolean;
   isTradesLoading: boolean;
+  isOpenTradesLoading: boolean;
+  isSignupDaysLoading: boolean;
+  isTradeDetailLoading: boolean;
   isApprovalsLoading: boolean;
   isOnDutyLoading: boolean;
   isShiftLoading: boolean;
@@ -110,9 +141,12 @@ interface ShiftsActions {
   fetchShift: (shiftId: string) => Promise<void>;
   fetchTodaysShifts: (options?: ShiftFetchOptions) => Promise<void>;
   fetchMyShifts: (options?: ShiftFetchOptions) => Promise<void>;
-  fetchShiftDay: (shiftDayId: string, options?: ShiftFetchOptions) => Promise<void>;
+  fetchShiftDay: (shiftDayId: string, options?: ShiftFetchOptions & { workshift?: boolean }) => Promise<void>;
   fetchShiftDaysForDateRange: (start: string, end: string, shiftId?: string | null, options?: ShiftFetchOptions) => Promise<void>;
   fetchShiftTrades: (options?: ShiftFetchOptions) => Promise<void>;
+  fetchOpenTrades: (options?: ShiftFetchOptions) => Promise<void>;
+  fetchSignupDays: (options?: ShiftFetchOptions) => Promise<void>;
+  fetchTradeDetail: (tradeId: string, options?: ShiftFetchOptions) => Promise<void>;
   fetchPendingApprovals: (options?: ShiftFetchOptions) => Promise<void>;
   fetchOnDutyPersonnel: (options?: ShiftFetchOptions) => Promise<void>;
   fetchTradeCandidates: (shiftDayId: string) => Promise<void>;
@@ -122,7 +156,7 @@ interface ShiftsActions {
 
   signupForShift: (shiftDayId: string, groupId: string) => Promise<ShiftActionOutcome>;
   withdrawFromShift: (shiftDayId: string, shiftSignupId: string) => Promise<ShiftActionOutcome>;
-  requestTrade: (shiftDayId: string, userIds: string[], note: string) => Promise<ShiftActionOutcome>;
+  requestTrade: (shiftDayId: string, userIds: string[], note: string, options?: RequestTradeOptions) => Promise<ShiftActionOutcome>;
   respondToTrade: (tradeId: string, accept: boolean, note: string, offeredShiftSignupIds?: string[]) => Promise<ShiftActionOutcome>;
   finishTrade: (tradeId: string, acceptedUserId: string, targetShiftSignupId: string | null) => Promise<ShiftActionOutcome>;
   cancelTrade: (tradeId: string) => Promise<ShiftActionOutcome>;
@@ -132,14 +166,18 @@ interface ShiftsActions {
   removeFromShiftDay: (shiftDayId: string, userId: string, note: string) => Promise<ShiftActionOutcome>;
 
   setCurrentView: (view: ShiftViewMode) => void;
+  setTradesFilter: (filter: ShiftTradesFilter) => void;
+  setSignupFilter: (filter: ShiftSignupFilter) => void;
   setSearchQuery: (query: string) => void;
   setCalendarShiftFilter: (shiftId: string | null) => Promise<void>;
   setSelectedDate: (date: string | null) => void;
   selectShift: (shift: ShiftResultData) => void;
   selectShiftDay: (shiftDay: ShiftDayResultData) => void;
-  openShiftDay: (shiftDayId: string) => void;
+  openShiftDay: (shiftDayId: string, options?: { workshift?: boolean }) => void;
+  openTradeDetails: (trade: ShiftTradeResultData) => void;
   closeShiftDetails: () => void;
   closeShiftDayDetails: () => void;
+  closeTradeDetails: () => void;
   clearTradeCandidates: () => void;
   clearPersonnelOptions: () => void;
   clearError: () => void;
@@ -157,6 +195,9 @@ const initialState: ShiftsDataState = {
   calendarDays: [],
   calendarRange: null,
   trades: [],
+  openTrades: [],
+  signupDays: [],
+  selectedTrade: null,
   pendingSignups: [],
   pendingTrades: [],
   isSupervisor: false,
@@ -167,17 +208,23 @@ const initialState: ShiftsDataState = {
   selectedShiftDay: null,
 
   currentView: 'today',
+  tradesFilter: 'open',
+  signupFilter: 'needed',
   searchQuery: '',
   calendarShiftId: null,
   selectedDate: null,
   isShiftDetailsOpen: false,
   isShiftDayDetailsOpen: false,
+  isTradeDetailsOpen: false,
 
   isLoading: false,
   isTodaysLoading: false,
   isMyShiftsLoading: false,
   isCalendarLoading: false,
   isTradesLoading: false,
+  isOpenTradesLoading: false,
+  isSignupDaysLoading: false,
+  isTradeDetailLoading: false,
   isApprovalsLoading: false,
   isOnDutyLoading: false,
   isShiftLoading: false,
@@ -200,11 +247,31 @@ const patchDays = (days: ShiftDayResultData[], shiftDayId: string, patch: DayPat
 
 const replaceDay = (days: ShiftDayResultData[], fresh: ShiftDayResultData): ShiftDayResultData[] => days.map((day) => (day.ShiftDayId === fresh.ShiftDayId ? fresh : day));
 
+const replaceTrade = (trades: ShiftTradeResultData[], tradeId: string, patch: Partial<ShiftTradeResultData>): ShiftTradeResultData[] =>
+  trades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? { ...trade, ...patch } : trade));
+
+/**
+ * Static shift (workshift) days come from their own endpoint. Older servers do not have it, and a
+ * department without static shifts answers `not_found`; either way the shift days still show.
+ */
+const loadWorkshiftDays = async (start?: string, end?: string, mine: boolean = false): Promise<ShiftDayResultData[]> => {
+  try {
+    const response = await getWorkshiftDays(start, end, mine);
+    return asArray(response?.Data).filter(isWorkshiftDay);
+  } catch (error) {
+    logger.warn({ message: 'Static shift days unavailable', context: { error, start, end, mine } });
+    return [];
+  }
+};
+
+const isSignupCandidate = (day: ShiftDayResultData): boolean => day.CanSignup && day.MyStatus === ShiftDayMyStatus.None && day.ShiftType !== ShiftAssignmentType.Workshift;
+
 // Monotonic tokens: a slow response for a range, day or candidate list the user has already
 // moved away from must not overwrite the one they are looking at.
 let calendarRequestToken = 0;
 let candidatesRequestToken = 0;
 let personnelOptionsRequestToken = 0;
+let tradeDetailRequestToken = 0;
 
 export const useShiftsStore = create<ShiftsState>((set, get) => {
   /** Apply the same change to every list (and the open day) that shows this shift day. */
@@ -304,8 +371,9 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         set({ isTodaysLoading: true, error: null });
       }
       try {
-        const response = await getTodaysShifts();
-        set({ todaysShiftDays: asArray(response?.Data) });
+        const today = toDateParam(new Date());
+        const [response, workshiftDays] = await Promise.all([getTodaysShifts(), loadWorkshiftDays(today, today)]);
+        set({ todaysShiftDays: mergeShiftDays(asArray(response?.Data), workshiftDays) });
       } catch (error) {
         set({ error: "Failed to fetch today's shifts" });
         logger.error({ message: "Failed to fetch today's shifts", context: { error } });
@@ -322,8 +390,8 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
       }
       try {
         // Server defaults (today .. +30 days) are the window the requirement asks for.
-        const response = await getMyShifts();
-        set({ myShiftDays: asArray(response?.Data) });
+        const [response, workshiftDays] = await Promise.all([getMyShifts(), loadWorkshiftDays(undefined, undefined, true)]);
+        set({ myShiftDays: mergeShiftDays(asArray(response?.Data), workshiftDays) });
       } catch (error) {
         set({ error: 'Failed to fetch your shifts' });
         logger.error({ message: 'Failed to fetch my shifts', context: { error } });
@@ -339,7 +407,8 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         set({ isShiftDayLoading: true, error: null });
       }
       try {
-        const response = await getShiftDay(shiftDayId);
+        const isWorkshift = options?.workshift ?? get().selectedShiftDay?.ShiftType === ShiftAssignmentType.Workshift;
+        const response = isWorkshift ? await getWorkshiftDay(shiftDayId) : await getShiftDay(shiftDayId);
         const fresh = response?.Data;
         if (fresh && fresh.ShiftDayId) {
           set((state) => {
@@ -349,6 +418,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
               todaysShiftDays: replaceDay(state.todaysShiftDays, fresh),
               myShiftDays: replaceDay(state.myShiftDays, fresh),
               calendarDays: replaceDay(state.calendarDays, fresh),
+              signupDays: replaceDay(state.signupDays, fresh),
               selectedShiftDay: isOpenDay ? fresh : state.selectedShiftDay,
             };
           });
@@ -368,9 +438,10 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
       const range: ShiftCalendarRange = { start, end, shiftId: shiftId || null };
       set(options?.silent ? { calendarRange: range } : { calendarRange: range, isCalendarLoading: true, error: null });
       try {
-        const response = await getShiftDaysForDateRange(start, end, range.shiftId ?? undefined);
+        // A shift filter shows that shift alone; static shifts are not shifts, so they drop out.
+        const [response, workshiftDays] = await Promise.all([getShiftDaysForDateRange(start, end, range.shiftId ?? undefined), range.shiftId ? Promise.resolve([]) : loadWorkshiftDays(start, end)]);
         if (token === calendarRequestToken) {
-          set({ calendarDays: asArray(response?.Data) });
+          set({ calendarDays: mergeShiftDays(asArray(response?.Data), workshiftDays) });
         }
       } catch (error) {
         if (token === calendarRequestToken) {
@@ -397,6 +468,62 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
       } finally {
         if (!options?.silent) {
           set({ isTradesLoading: false });
+        }
+      }
+    },
+
+    fetchOpenTrades: async (options) => {
+      if (!options?.silent) {
+        set({ isOpenTradesLoading: true, error: null });
+      }
+      try {
+        const response = await getOpenShiftTrades();
+        set({ openTrades: asArray(response?.Data) });
+      } catch (error) {
+        set({ error: 'Failed to fetch open trade requests' });
+        logger.error({ message: 'Failed to fetch open shift trades', context: { error } });
+      } finally {
+        if (!options?.silent) {
+          set({ isOpenTradesLoading: false });
+        }
+      }
+    },
+
+    fetchSignupDays: async (options) => {
+      if (!options?.silent) {
+        set({ isSignupDaysLoading: true, error: null });
+      }
+      try {
+        const start = new Date();
+        const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + SIGNUP_WINDOW_DAYS);
+        const response = await getShiftDaysForDateRange(toDateParam(start), toDateParam(end));
+        set({ signupDays: asArray(response?.Data).filter(isSignupCandidate) });
+      } catch (error) {
+        set({ error: 'Failed to fetch shift days to sign up for' });
+        logger.error({ message: 'Failed to fetch sign-up shift days', context: { error } });
+      } finally {
+        if (!options?.silent) {
+          set({ isSignupDaysLoading: false });
+        }
+      }
+    },
+
+    fetchTradeDetail: async (tradeId, options) => {
+      const token = ++tradeDetailRequestToken;
+      if (!options?.silent) {
+        set({ isTradeDetailLoading: true });
+      }
+      try {
+        const response = await getShiftTrade(tradeId);
+        const fresh = response?.Data;
+        if (token === tradeDetailRequestToken && fresh && fresh.ShiftSignupTradeId && get().selectedTrade?.ShiftSignupTradeId === tradeId) {
+          set({ selectedTrade: fresh });
+        }
+      } catch (error) {
+        logger.error({ message: 'Failed to fetch shift trade', context: { error, tradeId } });
+      } finally {
+        if (token === tradeDetailRequestToken) {
+          set({ isTradeDetailLoading: false });
         }
       }
     },
@@ -484,6 +611,9 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         case 'mine':
           await state.fetchMyShifts(options);
           break;
+        case 'signup':
+          await state.fetchSignupDays(options);
+          break;
         case 'calendar': {
           // First visit loads the current month; after that, the month the user is looking at.
           const range = state.calendarRange ?? { ...getMonthRange(new Date()), shiftId: state.calendarShiftId };
@@ -496,7 +626,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         }
         case 'trades':
           // My upcoming sign-ups are what an accepted trade can offer back.
-          await Promise.all([state.fetchShiftTrades(options), state.fetchMyShifts({ silent: true })]);
+          await Promise.all([state.fetchShiftTrades(options), state.fetchOpenTrades(options), state.fetchMyShifts({ silent: true })]);
           break;
         case 'approvals':
           await state.fetchPendingApprovals(options);
@@ -515,11 +645,13 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
 
       if (wants('today')) tasks.push(state.fetchTodaysShifts(silent));
       if (wants('mine')) tasks.push(state.fetchMyShifts(silent));
+      if (wants('signup') && (state.signupDays.length > 0 || state.currentView === 'signup')) tasks.push(state.fetchSignupDays(silent));
       if (wants('calendar') && state.calendarRange) tasks.push(state.fetchShiftDaysForDateRange(state.calendarRange.start, state.calendarRange.end, state.calendarRange.shiftId, silent));
-      if (wants('trades')) tasks.push(state.fetchShiftTrades(silent));
+      if (wants('trades')) tasks.push(state.fetchShiftTrades(silent), state.fetchOpenTrades(silent));
+      if (wants('trade') && state.isTradeDetailsOpen && state.selectedTrade) tasks.push(state.fetchTradeDetail(state.selectedTrade.ShiftSignupTradeId, silent));
       if (wants('approvals') && state.isSupervisor) tasks.push(state.fetchPendingApprovals(silent));
       if (wants('onduty') && state.isSupervisor) tasks.push(state.fetchOnDutyPersonnel(silent));
-      if (wants('day') && state.isShiftDayDetailsOpen && state.selectedShiftDay) tasks.push(state.fetchShiftDay(state.selectedShiftDay.ShiftDayId, silent));
+      if (wants('day') && state.isShiftDayDetailsOpen && state.selectedShiftDay) tasks.push(state.fetchShiftDay(state.selectedShiftDay.ShiftDayId, { ...silent, workshift: isWorkshiftDay(state.selectedShiftDay) }));
 
       await Promise.all(tasks);
     },
@@ -529,7 +661,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         'signup',
         shiftDayId,
         () => signupForShiftDay(shiftDayId, groupId),
-        ['today', 'mine', 'calendar', 'day', 'approvals', 'onduty'],
+        ['today', 'mine', 'signup', 'calendar', 'day', 'approvals', 'onduty'],
         (outcome) => {
           patchDayEverywhere(shiftDayId, {
             SignedUp: true,
@@ -538,6 +670,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
             MyGroupId: groupId,
             CanSignup: false,
           });
+          set((state) => ({ signupDays: state.signupDays.filter((day) => day.ShiftDayId !== shiftDayId) }));
         }
       ),
 
@@ -546,7 +679,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         'withdraw',
         shiftSignupId,
         () => withdrawFromShiftDay(shiftSignupId),
-        ['today', 'mine', 'calendar', 'day', 'approvals', 'onduty', 'trades'],
+        ['today', 'mine', 'signup', 'calendar', 'day', 'approvals', 'onduty', 'trades'],
         () => {
           patchDayEverywhere(shiftDayId, { SignedUp: false, MyStatus: ShiftDayMyStatus.None, MySignupId: '', MyGroupId: '', MyTradeId: '' });
           set((state) => ({
@@ -559,12 +692,12 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         }
       ),
 
-    requestTrade: (shiftDayId, userIds, note) =>
+    requestTrade: (shiftDayId, userIds, note, options) =>
       runMutation(
         'request-trade',
         shiftDayId,
-        () => requestShiftTrade(shiftDayId, userIds, note),
-        ['trades', 'mine', 'day'],
+        () => (options?.workshift ? requestWorkshiftTrade(shiftDayId, note) : requestShiftTrade(shiftDayId, userIds, note)),
+        ['trades', 'mine', 'today', 'day'],
         (outcome) => {
           patchDayEverywhere(shiftDayId, { MyTradeId: outcome.id });
         }
@@ -575,10 +708,13 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         'respond-trade',
         tradeId,
         () => respondToShiftTrade(tradeId, accept, note, offeredShiftSignupIds),
-        ['trades'],
+        ['trades', 'trade'],
         () => {
+          const patch: Partial<ShiftTradeResultData> = { MyState: accept ? ShiftTradeUserState.Proposed : ShiftTradeUserState.Declined, CanApply: !accept };
           set((state) => ({
-            trades: state.trades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? { ...trade, MyState: accept ? ShiftTradeUserState.Proposed : ShiftTradeUserState.Declined } : trade)),
+            trades: replaceTrade(state.trades, tradeId, patch),
+            openTrades: state.openTrades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? { ...trade, ...patch, ApplicantCount: Math.max(0, (trade.ApplicantCount ?? 0) + (accept ? 1 : -1)) } : trade)),
+            selectedTrade: state.selectedTrade?.ShiftSignupTradeId === tradeId ? { ...state.selectedTrade, ...patch } : state.selectedTrade,
           }));
         }
       ),
@@ -588,14 +724,21 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         'finish-trade',
         tradeId,
         () => finishShiftTrade(tradeId, acceptedUserId, targetShiftSignupId),
-        ['trades', 'today', 'mine', 'calendar', 'day', 'approvals', 'onduty'],
+        ['trades', 'trade', 'today', 'mine', 'calendar', 'day', 'approvals', 'onduty'],
         (outcome) => {
+          const patch: Partial<ShiftTradeResultData> = {
+            Status: outcome.approvalPending ? ShiftTradeStatus.PendingApproval : ShiftTradeStatus.Completed,
+            AcceptedUserId: acceptedUserId,
+            TargetShiftSignupId: targetShiftSignupId ?? '',
+            CanPick: false,
+            CanApply: false,
+          };
           set((state) => ({
-            trades: state.trades.map((trade) =>
-              trade.ShiftSignupTradeId === tradeId
-                ? { ...trade, Status: outcome.approvalPending ? ShiftTradeStatus.PendingApproval : ShiftTradeStatus.Completed, AcceptedUserId: acceptedUserId, TargetShiftSignupId: targetShiftSignupId ?? '' }
-                : trade
-            ),
+            trades: replaceTrade(state.trades, tradeId, patch),
+            // A picked request no longer takes applicants, and an approver's pick leaves nothing to approve.
+            openTrades: state.openTrades.filter((trade) => trade.ShiftSignupTradeId !== tradeId),
+            pendingTrades: outcome.approvalPending ? state.pendingTrades : state.pendingTrades.filter((trade) => trade.ShiftSignupTradeId !== tradeId),
+            selectedTrade: state.selectedTrade?.ShiftSignupTradeId === tradeId ? { ...state.selectedTrade, ...patch } : state.selectedTrade,
           }));
         }
       ),
@@ -605,11 +748,16 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         'cancel-trade',
         tradeId,
         () => cancelShiftTrade(tradeId),
-        ['trades', 'mine', 'day', 'approvals'],
+        ['trades', 'mine', 'today', 'day', 'approvals'],
         () => {
           const clearTrade = (days: ShiftDayResultData[]) => days.map((day) => (day.MyTradeId === tradeId ? { ...day, MyTradeId: '' } : day));
           set((state) => ({
-            trades: state.trades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? { ...trade, Status: ShiftTradeStatus.Cancelled } : trade)),
+            trades: state.trades.map((trade) => (trade.ShiftSignupTradeId === tradeId ? { ...trade, Status: ShiftTradeStatus.Cancelled, CanCancel: false, CanPick: false, CanApply: false } : trade)),
+            openTrades: state.openTrades.filter((trade) => trade.ShiftSignupTradeId !== tradeId),
+            pendingTrades: state.pendingTrades.filter((trade) => trade.ShiftSignupTradeId !== tradeId),
+            // The trade is gone on the server; nothing is left to show in its sheet.
+            selectedTrade: state.selectedTrade?.ShiftSignupTradeId === tradeId ? null : state.selectedTrade,
+            isTradeDetailsOpen: state.selectedTrade?.ShiftSignupTradeId === tradeId ? false : state.isTradeDetailsOpen,
             todaysShiftDays: clearTrade(state.todaysShiftDays),
             myShiftDays: clearTrade(state.myShiftDays),
             calendarDays: clearTrade(state.calendarDays),
@@ -642,7 +790,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
         'review-trade',
         tradeId,
         () => reviewShiftTrade(tradeId, approve, note),
-        ['approvals', 'trades', 'today', 'mine', 'calendar', 'day', 'onduty'],
+        ['approvals', 'trades', 'trade', 'today', 'mine', 'calendar', 'day', 'onduty'],
         () => {
           const nextStatus = approve ? ShiftTradeStatus.Completed : ShiftTradeStatus.Denied;
           set((state) => ({
@@ -678,6 +826,8 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
       ),
 
     setCurrentView: (view) => set({ currentView: view }),
+    setTradesFilter: (filter) => set({ tradesFilter: filter }),
+    setSignupFilter: (filter) => set({ signupFilter: filter }),
     setSearchQuery: (query) => set({ searchQuery: query }),
 
     setCalendarShiftFilter: async (shiftId) => {
@@ -693,13 +843,24 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
     selectShiftDay: (shiftDay) => {
       // Light entries (calendar, my shifts) have no roster; show what we have and load the rest.
       // The shift sheet closes first so two bottom sheets are never stacked.
-      set({ selectedShiftDay: shiftDay, isShiftDayDetailsOpen: true, isShiftDetailsOpen: false, tradeCandidates: [], personnelOptions: [] });
-      void get().fetchShiftDay(shiftDay.ShiftDayId);
+      set({ selectedShiftDay: shiftDay, isShiftDayDetailsOpen: true, isShiftDetailsOpen: false, isTradeDetailsOpen: false, tradeCandidates: [], personnelOptions: [] });
+      void get().fetchShiftDay(shiftDay.ShiftDayId, { workshift: isWorkshiftDay(shiftDay) });
     },
 
-    openShiftDay: (shiftDayId) => {
-      set({ selectedShiftDay: null, isShiftDayDetailsOpen: true, isShiftDetailsOpen: false, tradeCandidates: [], personnelOptions: [] });
-      void get().fetchShiftDay(shiftDayId);
+    openShiftDay: (shiftDayId, options) => {
+      set({ selectedShiftDay: null, isShiftDayDetailsOpen: true, isShiftDetailsOpen: false, isTradeDetailsOpen: false, tradeCandidates: [], personnelOptions: [] });
+      void get().fetchShiftDay(shiftDayId, { workshift: !!options?.workshift });
+    },
+
+    openTradeDetails: (trade) => {
+      // Show the list copy at once; the detail adds applicant qualifications for the people who decide.
+      set({ selectedTrade: trade, isTradeDetailsOpen: true, isShiftDayDetailsOpen: false, isShiftDetailsOpen: false });
+      void get().fetchTradeDetail(trade.ShiftSignupTradeId);
+    },
+
+    closeTradeDetails: () => {
+      tradeDetailRequestToken++;
+      set({ isTradeDetailsOpen: false, selectedTrade: null, isTradeDetailLoading: false });
     },
 
     closeShiftDetails: () => set({ isShiftDetailsOpen: false, selectedShift: null }),
@@ -722,6 +883,7 @@ export const useShiftsStore = create<ShiftsState>((set, get) => {
       calendarRequestToken++;
       candidatesRequestToken++;
       personnelOptionsRequestToken++;
+      tradeDetailRequestToken++;
       set({ ...initialState });
     },
 

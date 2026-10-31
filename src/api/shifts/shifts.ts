@@ -6,6 +6,7 @@ import { type ShiftDaysResult } from '@/models/v4/shifts/shiftDaysResult';
 import { type ShiftPersonOptionsResult } from '@/models/v4/shifts/shiftPersonOptionsResult';
 import { type ShiftResult } from '@/models/v4/shifts/shiftResult';
 import { type ShiftsResult } from '@/models/v4/shifts/shiftsResult';
+import { type ShiftTradeResult } from '@/models/v4/shifts/shiftTradeResult';
 import { type ShiftTradesResult } from '@/models/v4/shifts/shiftTradesResult';
 import { type SignupShiftDayResult } from '@/models/v4/shifts/signupShiftDayResult';
 
@@ -34,6 +35,11 @@ const getShiftDayPersonnelOptionsApi = createApiEndpoint('/Shifts/GetShiftDayPer
 const assignToShiftDayApi = createApiEndpoint('/Shifts/AssignToShiftDay');
 const removeFromShiftDayApi = createApiEndpoint('/Shifts/RemoveFromShiftDay');
 const getOnDutyPersonnelApi = createApiEndpoint('/Shifts/GetOnDutyPersonnel');
+const getOpenShiftTradesApi = createApiEndpoint('/Shifts/GetOpenShiftTrades');
+const getShiftTradeApi = createApiEndpoint('/Shifts/GetShiftTrade');
+const getWorkshiftDaysApi = createApiEndpoint('/Shifts/GetWorkshiftDays');
+const getWorkshiftDayApi = createApiEndpoint('/Shifts/GetWorkshiftDay');
+const requestWorkshiftTradeApi = createApiEndpoint('/Shifts/RequestWorkshiftTrade');
 
 /**
  * Result ids are strings, but the POST inputs bind numeric ids (user ids stay GUID strings).
@@ -120,7 +126,10 @@ export const getTradeCandidates = async (shiftDayId: string) => {
   return response.data;
 };
 
-/** POST /Shifts/RequestShiftTrade */
+/**
+ * POST /Shifts/RequestShiftTrade — with no `userIds` the request is open: everyone eligible for the
+ * slot is notified and may apply. With `userIds` only those people are asked.
+ */
 export const requestShiftTrade = async (shiftDayId: string, userIds: string[], note: string) => {
   const response = await requestShiftTradeApi.post<ShiftActionResult>({
     ShiftDayId: toNumericId(shiftDayId),
@@ -154,7 +163,7 @@ export const finishShiftTrade = async (shiftSignupTradeId: string, acceptedUserI
   return response.data;
 };
 
-/** POST /Shifts/CancelShiftTrade — requester only, not after completion. */
+/** POST /Shifts/CancelShiftTrade — the requester, or a supervisor of the slot; not after completion. */
 export const cancelShiftTrade = async (shiftSignupTradeId: string) => {
   const response = await cancelShiftTradeApi.post<ShiftActionResult>({
     ShiftSignupTradeId: toNumericId(shiftSignupTradeId),
@@ -217,5 +226,54 @@ export const removeFromShiftDay = async (shiftDayId: string, userId: string, not
 /** GET /Shifts/GetOnDutyPersonnel — everyone on an active shift day right now. */
 export const getOnDutyPersonnel = async () => {
   const response = await getOnDutyPersonnelApi.get<OnDutyPersonnelResult>();
+  return response.data;
+};
+
+/** GET /Shifts/GetOpenShiftTrades — open requests still taking applicants, with `CanApply` for the caller. */
+export const getOpenShiftTrades = async () => {
+  const response = await getOpenShiftTradesApi.get<ShiftTradesResult>();
+  return response.data;
+};
+
+/**
+ * GET /Shifts/GetShiftTrade?id= — one trade. The requester and the people who decide it also get each
+ * applicant's qualifications, workload around the day and any overlapping shift.
+ */
+export const getShiftTrade = async (shiftSignupTradeId: string) => {
+  const response = await getShiftTradeApi.get<ShiftTradeResult>({ id: shiftSignupTradeId });
+  return response.data;
+};
+
+/**
+ * GET /Shifts/GetWorkshiftDays — static shift (workshift) days in the same shape as shift days, with
+ * `ShiftType` 2. `start` / `end` are department-local `YYYY-MM-DD`; the server defaults to today .. +30.
+ */
+export const getWorkshiftDays = async (start?: string, end?: string, mine: boolean = false) => {
+  const params: Record<string, unknown> = {};
+  if (start) {
+    params.start = start;
+  }
+  if (end) {
+    params.end = end;
+  }
+  if (mine) {
+    params.mine = true;
+  }
+  const response = await getWorkshiftDaysApi.get<ShiftDaysResult>(Object.keys(params).length > 0 ? params : undefined);
+  return response.data;
+};
+
+/** GET /Shifts/GetWorkshiftDay?id= — one static shift day with who is staffing it. */
+export const getWorkshiftDay = async (workshiftDayId: string) => {
+  const response = await getWorkshiftDayApi.get<ShiftDayResult>({ id: workshiftDayId });
+  return response.data;
+};
+
+/** POST /Shifts/RequestWorkshiftTrade — always an open request to everyone eligible. */
+export const requestWorkshiftTrade = async (workshiftDayId: string, note: string) => {
+  const response = await requestWorkshiftTradeApi.post<ShiftActionResult>({
+    WorkshiftDayId: workshiftDayId,
+    Note: note,
+  });
   return response.data;
 };

@@ -121,6 +121,73 @@ describe('ShiftTradeCard', () => {
   });
 });
 
+describe('ShiftTradeCard open requests', () => {
+  const onAction = jest.fn();
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('lets an eligible colleague apply to an open request', () => {
+    const trade = makeTrade({ Direction: ShiftTradeDirection.Incoming, IsOpen: true, CanApply: true, ApplicantCount: 2 });
+    render(<ShiftTradeCard trade={trade} onAction={onAction} />);
+
+    expect(screen.getByTestId('trade-open-request-5')).toBeTruthy();
+    expect(screen.getByText('shifts.trade.applicant_count:2')).toBeTruthy();
+    // An open request is not answered with accept / decline.
+    expect(screen.queryByTestId('trade-accept-5')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('trade-apply-5'));
+    expect(onAction).toHaveBeenLastCalledWith({ kind: 'apply-trade', trade });
+  });
+
+  it('tells someone why they cannot apply', () => {
+    render(<ShiftTradeCard trade={makeTrade({ Direction: ShiftTradeDirection.Incoming, IsOpen: true, CanApply: false, IneligibleReason: 'not_eligible' })} onAction={onAction} />);
+
+    expect(screen.queryByTestId('trade-apply-5')).toBeNull();
+    expect(screen.getByText('shifts.trade.ineligible.missing_roles')).toBeTruthy();
+  });
+
+  it('lets an applicant withdraw their offer while the request is open', () => {
+    const trade = makeTrade({ Direction: ShiftTradeDirection.Incoming, IsOpen: true, MyState: ShiftTradeUserState.Proposed });
+    render(<ShiftTradeCard trade={trade} onAction={onAction} />);
+
+    fireEvent.press(screen.getByTestId('trade-withdraw-5'));
+    expect(onAction).toHaveBeenLastCalledWith({ kind: 'withdraw-application', trade });
+  });
+
+  it('lets an approver pick an applicant on someone else\'s request and cancel it', () => {
+    const applicant = user({ UserId: 'a1', Name: 'Avery', Offered: true, GroupName: 'Station 2', Roles: ['Engineer'] });
+    const trade = makeTrade({ Direction: ShiftTradeDirection.Incoming, IsOpen: true, CanPick: true, PickIsApproval: true, CanCancel: true, Users: [applicant] });
+    render(<ShiftTradeCard trade={trade} onAction={onAction} />);
+
+    expect(screen.getByText('Station 2 · Engineer')).toBeTruthy();
+    expect(screen.getByText('shifts.trade.pick_as_approver_note')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('trade-pick-5-a1'));
+    expect(onAction).toHaveBeenLastCalledWith({ kind: 'finish-trade', trade, user: applicant, offeredShift: null });
+
+    fireEvent.press(screen.getByTestId('trade-cancel-5'));
+    expect(onAction).toHaveBeenLastCalledWith({ kind: 'cancel-trade', trade });
+  });
+
+  it('keeps the requester from picking when the department leaves it to approvers', () => {
+    const trade = makeTrade({ Direction: ShiftTradeDirection.Outgoing, IsOpen: true, CanPick: false, CanCancel: true, Users: [user({ UserId: 'a1', Name: 'Avery', Offered: true })] });
+    render(<ShiftTradeCard trade={trade} onAction={onAction} />);
+
+    expect(screen.getByText('Avery')).toBeTruthy();
+    expect(screen.queryByTestId('trade-pick-5-a1')).toBeNull();
+    expect(screen.getByTestId('trade-cancel-5')).toBeTruthy();
+  });
+
+  it('opens the details when the header is pressed', () => {
+    const onOpenDetails = jest.fn();
+    const trade = makeTrade({ IsOpen: true });
+    render(<ShiftTradeCard trade={trade} onAction={onAction} onOpenDetails={onOpenDetails} />);
+
+    fireEvent.press(screen.getByTestId('trade-open-5'));
+    expect(onOpenDetails).toHaveBeenCalledWith(trade);
+  });
+});
+
 describe('ShiftTradesList', () => {
   it('shows the empty state', () => {
     render(<ShiftTradesList trades={[]} isLoading={false} busyTradeId={null} onRefresh={jest.fn()} onAction={jest.fn()} />);

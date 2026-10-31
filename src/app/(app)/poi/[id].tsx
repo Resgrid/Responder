@@ -73,7 +73,7 @@ export default function PoiDetail() {
       return;
     }
 
-    const success = await openMapsWithDirections(poi.Latitude, poi.Longitude, getPoiDisplayName(poi), userLatitude ?? undefined, userLongitude ?? undefined);
+    const success = await openMapsWithDirections(poi.Latitude, poi.Longitude, getPoiDisplayName(poi), userLatitude ?? undefined, userLongitude ?? undefined, poi.Address);
 
     if (!success) {
       showToast('error', t('poi.route_error'));

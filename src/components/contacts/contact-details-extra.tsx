@@ -1,7 +1,7 @@
 import { LockIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ProtectedRevealBar } from '@/components/data-protection/protected-reveal-bar';
 import { HStack } from '@/components/ui/hstack';
@@ -9,8 +9,8 @@ import { HomeIcon, MapPinIcon, SettingsIcon } from '@/components/ui/lucide-icons
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { mapsUrls } from '@/lib/contacts/format';
-import { logger } from '@/lib/logging';
+import { parseCoordinates } from '@/lib/contacts/format';
+import { openMapsWithAddress, openMapsWithDirections } from '@/lib/navigation';
 import { type ContactAddressData, type ContactResultData } from '@/models/v4/contacts/contactResultData';
 import { useContactsStore } from '@/stores/contacts/store';
 
@@ -20,17 +20,14 @@ interface ContactDetailsExtraProps {
   showCustomFields?: boolean;
 }
 
+// Opens the navigation app chosen in Settings, which also logs a failure. A "lat,lng" value routes to the point.
 const openMaps = async (query: string) => {
-  const { app, web } = mapsUrls(query);
-  try {
-    if (app && (await Linking.canOpenURL(app))) {
-      await Linking.openURL(app);
-      return;
-    }
-    await Linking.openURL(web);
-  } catch (error) {
-    logger.warn({ message: 'Could not open maps for contact address', context: { error } });
+  const coordinates = parseCoordinates(query);
+  if (coordinates) {
+    await openMapsWithDirections(coordinates.latitude, coordinates.longitude, undefined, undefined, undefined, query);
+    return;
   }
+  await openMapsWithAddress(query);
 };
 
 const AddressRow = ({ label, address }: { label: string; address: ContactAddressData }) => {

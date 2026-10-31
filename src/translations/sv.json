@@ -2142,6 +2142,20 @@
     "logout_confirm_title": "Bekräfta utloggning",
     "logout_confirm_yes": "Ja, logga ut",
     "more": "Mer",
+    "navigation_app": {
+      "apple_maps": "Apple Kartor",
+      "default": "Enhetens standard",
+      "description": "Appen som den här enheten öppnar när du startar navigering till ett larm, en destination eller en kartnål. Vissa appar visar bara platsen i stället för att starta en rutt.",
+      "gaia_gps": "Gaia GPS",
+      "google_maps": "Google Maps",
+      "here_wego": "HERE WeGo",
+      "mapquest": "MapQuest",
+      "onx_offroad": "onX Offroad",
+      "organic_maps": "Organic Maps",
+      "osmand": "OsmAnd",
+      "title": "Navigeringsapp",
+      "waze": "Waze"
+    },
     "no_units_available": "Inga enheter tillgängliga",
     "none_selected": "Inget valt",
     "notifications": "Push-aviseringar",
@@ -2186,7 +2200,9 @@
     "actions": {
       "accept": "Acceptera",
       "add_person": "Lägg till person",
+      "apply": "Ansök om att ta det",
       "approve": "Godkänn",
+      "cancel_request_admin": "Avbryt förfrågan",
       "cancel_trade": "Avbryt bytesförfrågan",
       "confirm": "Bekräfta",
       "confirm_signup": "Bekräfta anmälan",
@@ -2194,7 +2210,8 @@
       "deny": "Neka",
       "remove": "Ta bort",
       "request_trade": "Begär byte",
-      "send_request": "Skicka förfrågan"
+      "send_request": "Skicka förfrågan",
+      "withdraw_application": "Dra tillbaka ansökan"
     },
     "add_panel": {
       "group": "Grupp",
@@ -2214,11 +2231,27 @@
     "assigned": "Tilldelad",
     "assignment_type": {
       "assigned": "Tilldelat",
-      "signup": "Anmälan"
+      "signup": "Anmälan",
+      "workshift": "Arbetspass"
     },
     "automatic": "Automatisk",
     "available": "Tillgänglig",
     "calendar": "Kalender",
+    "calendar_export": {
+      "add_all": "Lägg till mina skift i kalendern ({{count}})",
+      "add_all_hint": "Lägger till alla skift du arbetar de kommande 30 dagarna i telefonens kalender",
+      "add_hint": "Lägger till det här skiftet i telefonens kalender, eller uppdaterar det om det redan finns där",
+      "add_one": "Lägg till i kalendern",
+      "added_many": "Skift i din kalender: {{count}}",
+      "added_one": "Tillagt i din kalender",
+      "event_footer": "Tillagt från Resgrid",
+      "event_place": "Med: {{place}}",
+      "event_title": "Skift {{name}}",
+      "failed": "Skiftet kunde inte läggas till i din kalender.",
+      "nothing_to_add": "Endast skift som du arbetar kan läggas till i din kalender.",
+      "permission_denied": "Kalenderåtkomst är avstängd. Tillåt den i Inställningar för att lägga till skift.",
+      "updated_one": "Uppdaterat i din kalender"
+    },
     "calendar_view": {
       "day_a11y": "{{date}}: skift {{count}}, lediga platser {{open}}",
       "filter_a11y": "Filtrera kalendern efter skift",
@@ -2256,6 +2289,10 @@
       "mine_title": "Inga kommande skift",
       "on_duty_description": "Ingen är på ett aktivt skift just nu.",
       "on_duty_title": "Ingen i tjänst",
+      "open_trades_description": "När någon vill byta bort ett skift visas förfrågan här för alla som kan ta det.",
+      "open_trades_title": "Inga öppna bytesförfrågningar",
+      "signup_description": "Skiftdagar med anmälan där det finns plats för dig de kommande 30 dagarna visas här.",
+      "signup_title": "Inget att anmäla sig till",
       "trades_description": "Bytesförfrågningar som du skickar eller tar emot visas här.",
       "trades_title": "Inga skiftbyten"
     },
@@ -2270,6 +2307,7 @@
       "network": "Du verkar vara offline. Försök igen.",
       "no_users": "Välj minst en person.",
       "not_allowed": "Du har inte behörighet att göra det.",
+      "not_eligible": "Du har inte de roller som den här platsen kräver.",
       "not_found": "Skiftet, anmälan eller bytet finns inte längre.",
       "not_on_shift": "Du är inte schemalagd den här skiftdagen.",
       "not_pending": "Förfrågan väntar inte längre på beslut.",
@@ -2285,6 +2323,11 @@
     "loading_details": "Läser in skiftdetaljer...",
     "loading_signup": "Behandlar...",
     "manual": "Manuell",
+    "mine_sections": {
+      "active": "I tjänst nu",
+      "pending": "Väntar på godkännande",
+      "upcoming": "Kommande"
+    },
     "my_standing_shifts": "Skift jag ingår i",
     "my_upcoming_days": "Kommande dagar",
     "needed": "Behövs",
@@ -2345,6 +2388,7 @@
       "calendar": "Kalender",
       "mine": "Mina skift",
       "on_duty": "I tjänst",
+      "signup": "Anmälan",
       "today": "Idag",
       "trades": "Byten",
       "with_count": "{{label}}, {{count}} väntar"
@@ -2372,6 +2416,11 @@
     },
     "signup_status": "Anmälningsstatus",
     "signup_success": "Anmälan till skiftet lyckades",
+    "signup_view": {
+      "description": "Skiftdagar som du kan anmäla dig till de kommande 30 dagarna. Tryck på en dag för att välja ditt team.",
+      "filter_all": "Alla dagar",
+      "filter_needed": "Behöver folk"
+    },
     "signups": "Anmälningar",
     "start_time": "Starttid",
     "status": {
@@ -2391,21 +2440,35 @@
       "person_removed": "Personen har tagits bort från skiftet",
       "signup_pending": "Anmäld. Väntar på godkännande av en arbetsledare.",
       "trade_accepted": "Ditt erbjudande har skickats",
+      "trade_application_withdrawn": "Din ansökan har dragits tillbaka",
+      "trade_applied": "Ansökan skickad",
       "trade_cancelled": "Bytesförfrågan avbröts",
       "trade_declined": "Bytet avböjdes",
       "trade_finished": "Bytet är klart",
       "trade_finished_pending": "Bytet har skickats för godkännande",
-      "trade_requested": "Bytesförfrågan skickad"
+      "trade_requested": "Bytesförfrågan skickad",
+      "trade_requested_open": "Bytesförfrågan skickad till alla som kan ta skiftet"
     },
     "today": "Idag",
     "todays_shifts": "Dagens skift",
     "trade": {
       "accept_description": "Du kan erbjuda ett av dina kommande skift i utbyte, eller bara ta det här.",
       "accept_title": "Acceptera det här bytet?",
+      "applicant_conflict": "Arbetar redan {{name}} vid den här tiden",
+      "applicant_count": "Sökande: {{count}}",
+      "applicants": "Sökande",
+      "applied_at": "Ansökte {{date}}",
+      "apply_description": "{{name}} och de som beslutar om byten ser din ansökan. Du kan erbjuda ett av dina skift i utbyte.",
+      "apply_title": "Ansöka om att ta det här skiftet?",
       "cancel_description": "Erbjudanden du har fått kastas.",
+      "cancel_description_open": "Alla som har ansökt får besked om att förfrågan har avbrutits.",
       "cancel_title": "Avbryta den här bytesförfrågan?",
       "decline_description": "Den som frågade ser att du tackade nej.",
       "decline_title": "Tacka nej till det här bytet?",
+      "details_a11y": "Byte för {{shift}} den {{date}}",
+      "details_hint": "Öppnar bytet med dess sökande",
+      "filter_mine": "Mina ({{count}})",
+      "filter_open": "Öppna förfrågningar ({{count}})",
       "finish_give_description": "{{name}} tar över det här skiftet.",
       "finish_pending_note": "En arbetsledare måste godkänna bytet innan det gäller.",
       "finish_swap_description": "{{name}} tar det här skiftet och du tar deras {{shift}} den {{date}}.",
@@ -2413,6 +2476,11 @@
       "from": "Från {{name}}",
       "give_to": "Lämna till {{name}}",
       "incoming": "Inkommande",
+      "ineligible": {
+        "already_on_day": "Du arbetar redan den här dagen.",
+        "missing_roles": "Du har inte de roller som den här platsen kräver.",
+        "not_allowed": "Du kan inte ta det här skiftet."
+      },
       "my_state": {
         "accepted": "Du tar det här skiftet",
         "declined": "Du tackade nej",
@@ -2422,15 +2490,27 @@
         "pending_approval": "Väntar på godkännande av en arbetsledare",
         "proposed": "Du har lämnat ett erbjudande"
       },
+      "nearby_workload": "Inom en vecka från den här dagen: skift {{count}}, {{hours}} h",
+      "no_applicants": "Ingen har ansökt än",
+      "no_certifications": "Inga giltiga behörigheter",
       "no_offers": "Inga svar än",
       "no_swap": "Erbjud inget skift i utbyte",
       "offer_back": "Erbjud ett skift i utbyte",
       "offers": "Svar",
+      "open_request": "Öppen för alla",
       "outgoing": "Utgående",
+      "pick_as_approver_note": "Du beslutar om det här bytet som godkännare: ditt val gäller direkt.",
+      "pick_note": "Välj vem som tar det här skiftet.",
+      "requested_at": "Begärt {{date}}",
+      "requested_by": "Begärt av {{name}}",
       "reviewed_by": "Granskat av {{name}}",
       "section_active": "Pågående",
+      "section_applied": "Dina ansökningar",
       "section_attention": "Kräver din uppmärksamhet",
+      "section_can_apply": "Du kan ta dessa",
+      "section_other_requests": "Andra förfrågningar",
       "section_recent": "Senaste",
+      "select_applicant": "Lämna till {{name}}",
       "status": {
         "cancelled": "Avbrutet",
         "completed": "Klart",
@@ -2443,11 +2523,20 @@
       "taken_by": "Tagit av {{name}}",
       "user_declined": "Tackade nej",
       "user_offered": "Erbjöd",
-      "user_waiting": "Inget svar än"
+      "user_waiting": "Inget svar än",
+      "user_withdrew": "Drog tillbaka",
+      "withdraw_description": "Den som frågade ser att du inte längre är tillgänglig.",
+      "withdraw_title": "Dra tillbaka din ansökan?"
     },
     "trade_panel": {
       "description": "Välj vem du vill ska ta över det här skiftet. Alla du väljer tillfrågas, sedan väljer du bland deras erbjudanden.",
+      "mode_open": "Alla som kan ta det",
+      "mode_open_hint": "Personer som aviseras: {{count}}",
+      "mode_specific": "Bara personer jag väljer",
+      "mode_specific_hint": "Fråga utvalda kollegor i stället",
       "no_candidates": "Ingen är tillgänglig för att ta det här skiftet.",
+      "open_description": "Alla som är lediga den dagen och har de roller din plats kräver får ett e-postmeddelande och en pushavisering och kan ansöka. Sedan väljer du, eller din arbetsledare, vem som tar skiftet.",
+      "open_description_workshift": "Alla som är lediga den dagen får ett e-postmeddelande och en pushavisering och kan ansöka om att ta din plats i enhetens besättning.",
       "selected_count": "Valda: {{count}}",
       "title": "Begär ett byte"
     },

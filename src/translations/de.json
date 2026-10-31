@@ -2142,6 +2142,20 @@
     "logout_confirm_title": "Abmeldung bestätigen",
     "logout_confirm_yes": "Ja, abmelden",
     "more": "Mehr",
+    "navigation_app": {
+      "apple_maps": "Apple Karten",
+      "default": "Gerätestandard",
+      "description": "Die App, die dieses Gerät öffnet, wenn Sie die Navigation zu einem Einsatz, Ziel oder Kartenpunkt starten. Einige Apps zeigen nur den Standort an, statt eine Route zu starten.",
+      "gaia_gps": "Gaia GPS",
+      "google_maps": "Google Maps",
+      "here_wego": "HERE WeGo",
+      "mapquest": "MapQuest",
+      "onx_offroad": "onX Offroad",
+      "organic_maps": "Organic Maps",
+      "osmand": "OsmAnd",
+      "title": "Navigations-App",
+      "waze": "Waze"
+    },
     "no_units_available": "Keine Einheiten verfügbar",
     "none_selected": "Nichts ausgewählt",
     "notifications": "Push-Benachrichtigungen",
@@ -2186,7 +2200,9 @@
     "actions": {
       "accept": "Annehmen",
       "add_person": "Person hinzufügen",
+      "apply": "Zur Übernahme bewerben",
       "approve": "Genehmigen",
+      "cancel_request_admin": "Anfrage abbrechen",
       "cancel_trade": "Tauschanfrage zurückziehen",
       "confirm": "Bestätigen",
       "confirm_signup": "Anmeldung bestätigen",
@@ -2194,7 +2210,8 @@
       "deny": "Verweigern",
       "remove": "Entfernen",
       "request_trade": "Tausch anfragen",
-      "send_request": "Anfrage senden"
+      "send_request": "Anfrage senden",
+      "withdraw_application": "Bewerbung zurückziehen"
     },
     "add_panel": {
       "group": "Gruppe",
@@ -2214,11 +2231,27 @@
     "assigned": "Zugewiesen",
     "assignment_type": {
       "assigned": "Zugewiesen",
-      "signup": "Anmeldung"
+      "signup": "Anmeldung",
+      "workshift": "Dienstschicht"
     },
     "automatic": "Automatisch",
     "available": "Verfügbar",
     "calendar": "Kalender",
+    "calendar_export": {
+      "add_all": "Meine Schichten zum Kalender hinzufügen ({{count}})",
+      "add_all_hint": "Fügt alle Schichten, in denen Sie in den nächsten 30 Tagen Dienst haben, Ihrem Gerätekalender hinzu",
+      "add_hint": "Fügt diese Schicht Ihrem Gerätekalender hinzu oder aktualisiert sie, falls sie bereits vorhanden ist",
+      "add_one": "Zum Kalender hinzufügen",
+      "added_many": "Schichten in Ihrem Kalender: {{count}}",
+      "added_one": "Zu Ihrem Kalender hinzugefügt",
+      "event_footer": "Aus Resgrid hinzugefügt",
+      "event_place": "Mit: {{place}}",
+      "event_title": "Schicht {{name}}",
+      "failed": "Die Schicht konnte nicht zu Ihrem Kalender hinzugefügt werden.",
+      "nothing_to_add": "Nur Schichten, in denen Sie Dienst haben, können Ihrem Kalender hinzugefügt werden.",
+      "permission_denied": "Der Kalenderzugriff ist deaktiviert. Erlauben Sie ihn in den Einstellungen, um Schichten hinzuzufügen.",
+      "updated_one": "In Ihrem Kalender aktualisiert"
+    },
     "calendar_view": {
       "day_a11y": "{{date}}: Schichten {{count}}, offene Plätze {{open}}",
       "filter_a11y": "Kalender nach Schicht filtern",
@@ -2256,6 +2289,10 @@
       "mine_title": "Keine anstehenden Schichten",
       "on_duty_description": "Derzeit ist niemand in einer aktiven Schicht.",
       "on_duty_title": "Niemand im Dienst",
+      "open_trades_description": "Wenn jemand eine Schicht abgeben möchte, erscheint die Anfrage hier für alle, die sie übernehmen können.",
+      "open_trades_title": "Keine offenen Tauschanfragen",
+      "signup_description": "Schichttage zur Anmeldung, an denen in den nächsten 30 Tagen noch Platz für Sie ist, erscheinen hier.",
+      "signup_title": "Nichts zum Anmelden",
       "trades_description": "Tauschanfragen, die Sie senden oder erhalten, erscheinen hier.",
       "trades_title": "Keine Schichttausche"
     },
@@ -2270,6 +2307,7 @@
       "network": "Sie scheinen offline zu sein. Bitte versuchen Sie es erneut.",
       "no_users": "Wählen Sie mindestens eine Person aus.",
       "not_allowed": "Sie haben keine Berechtigung dafür.",
+      "not_eligible": "Sie haben nicht die Rollen, die dieser Platz erfordert.",
       "not_found": "Diese Schicht, Anmeldung oder dieser Tausch existiert nicht mehr.",
       "not_on_shift": "Sie sind an diesem Schichttag nicht eingeteilt.",
       "not_pending": "Diese Anfrage ist nicht mehr offen.",
@@ -2285,6 +2323,11 @@
     "loading_details": "Schichtdetails werden geladen...",
     "loading_signup": "Wird verarbeitet...",
     "manual": "Manuell",
+    "mine_sections": {
+      "active": "Jetzt im Dienst",
+      "pending": "Wartet auf Genehmigung",
+      "upcoming": "Anstehend"
+    },
     "my_standing_shifts": "Meine festen Schichten",
     "my_upcoming_days": "Anstehende Tage",
     "needed": "Benötigt",
@@ -2345,6 +2388,7 @@
       "calendar": "Kalender",
       "mine": "Meine Schichten",
       "on_duty": "Im Dienst",
+      "signup": "Anmelden",
       "today": "Heute",
       "trades": "Tausche",
       "with_count": "{{label}}, {{count}} offen"
@@ -2372,6 +2416,11 @@
     },
     "signup_status": "Anmeldestatus",
     "signup_success": "Erfolgreich für die Schicht angemeldet",
+    "signup_view": {
+      "description": "Schichttage, für die Sie sich in den nächsten 30 Tagen anmelden können. Tippen Sie auf einen Tag, um Ihr Team zu wählen.",
+      "filter_all": "Alle Tage",
+      "filter_needed": "Personal benötigt"
+    },
     "signups": "Anmeldungen",
     "start_time": "Startzeit",
     "status": {
@@ -2391,21 +2440,35 @@
       "person_removed": "Person aus der Schicht entfernt",
       "signup_pending": "Angemeldet. Wartet auf Genehmigung durch eine Aufsicht.",
       "trade_accepted": "Ihr Angebot wurde gesendet",
+      "trade_application_withdrawn": "Ihre Bewerbung wurde zurückgezogen",
+      "trade_applied": "Bewerbung gesendet",
       "trade_cancelled": "Tauschanfrage zurückgezogen",
       "trade_declined": "Tausch abgelehnt",
       "trade_finished": "Tausch abgeschlossen",
       "trade_finished_pending": "Tausch zur Genehmigung gesendet",
-      "trade_requested": "Tauschanfrage gesendet"
+      "trade_requested": "Tauschanfrage gesendet",
+      "trade_requested_open": "Tauschanfrage an alle gesendet, die sie übernehmen können"
     },
     "today": "Heute",
     "todays_shifts": "Heutige Schichten",
     "trade": {
       "accept_description": "Sie können im Gegenzug eine Ihrer anstehenden Schichten anbieten oder diese einfach übernehmen.",
       "accept_title": "Diesen Tausch annehmen?",
+      "applicant_conflict": "Zu dieser Zeit bereits in {{name}} eingeteilt",
+      "applicant_count": "Bewerber: {{count}}",
+      "applicants": "Bewerber",
+      "applied_at": "Beworben am {{date}}",
+      "apply_description": "{{name}} und die Personen, die über Tausche entscheiden, sehen Ihre Bewerbung. Sie können im Gegenzug eine Ihrer Schichten anbieten.",
+      "apply_title": "Für die Übernahme dieser Schicht bewerben?",
       "cancel_description": "Bereits erhaltene Angebote werden verworfen.",
+      "cancel_description_open": "Alle, die sich beworben haben, erfahren, dass die Anfrage zurückgezogen wurde.",
       "cancel_title": "Diese Tauschanfrage zurückziehen?",
       "decline_description": "Die anfragende Person sieht, dass Sie abgelehnt haben.",
       "decline_title": "Diesen Tausch ablehnen?",
+      "details_a11y": "Tausch für {{shift}} am {{date}}",
+      "details_hint": "Öffnet den Tausch mit seinen Bewerbern",
+      "filter_mine": "Meine ({{count}})",
+      "filter_open": "Offene Anfragen ({{count}})",
       "finish_give_description": "{{name}} übernimmt diese Schicht.",
       "finish_pending_note": "Eine Aufsicht muss diesen Tausch genehmigen, bevor er wirksam wird.",
       "finish_swap_description": "{{name}} übernimmt diese Schicht und Sie übernehmen dafür {{shift}} am {{date}}.",
@@ -2413,6 +2476,11 @@
       "from": "Von {{name}}",
       "give_to": "An {{name}} abgeben",
       "incoming": "Eingehend",
+      "ineligible": {
+        "already_on_day": "Sie haben an diesem Tag bereits Dienst.",
+        "missing_roles": "Sie haben nicht die Rollen, die dieser Platz erfordert.",
+        "not_allowed": "Sie können diese Schicht nicht übernehmen."
+      },
       "my_state": {
         "accepted": "Sie übernehmen diese Schicht",
         "declined": "Sie haben abgelehnt",
@@ -2422,15 +2490,27 @@
         "pending_approval": "Wartet auf Genehmigung",
         "proposed": "Sie haben ein Angebot gemacht"
       },
+      "nearby_workload": "Innerhalb einer Woche um diesen Tag: Schichten {{count}}, {{hours}} h",
+      "no_applicants": "Noch keine Bewerbungen",
+      "no_certifications": "Keine aktuellen Qualifikationen",
       "no_offers": "Noch keine Antworten",
       "no_swap": "Keine Schicht im Gegenzug anbieten",
       "offer_back": "Schicht im Gegenzug anbieten",
       "offers": "Antworten",
+      "open_request": "Offen für alle",
       "outgoing": "Ausgehend",
+      "pick_as_approver_note": "Sie entscheiden als genehmigende Person über diesen Tausch: Ihre Auswahl wird sofort wirksam.",
+      "pick_note": "Wählen Sie, wer diese Schicht übernimmt.",
+      "requested_at": "Angefragt am {{date}}",
+      "requested_by": "Angefragt von {{name}}",
       "reviewed_by": "Geprüft von {{name}}",
       "section_active": "In Bearbeitung",
+      "section_applied": "Ihre Bewerbungen",
       "section_attention": "Erfordert Ihre Aufmerksamkeit",
+      "section_can_apply": "Können Sie übernehmen",
+      "section_other_requests": "Weitere Anfragen",
       "section_recent": "Kürzlich",
+      "select_applicant": "An {{name}} abgeben",
       "status": {
         "cancelled": "Zurückgezogen",
         "completed": "Abgeschlossen",
@@ -2443,11 +2523,20 @@
       "taken_by": "Übernommen von {{name}}",
       "user_declined": "Abgelehnt",
       "user_offered": "Angeboten",
-      "user_waiting": "Noch keine Antwort"
+      "user_waiting": "Noch keine Antwort",
+      "user_withdrew": "Zurückgezogen",
+      "withdraw_description": "Die anfragende Person sieht, dass Sie nicht mehr verfügbar sind.",
+      "withdraw_title": "Ihre Bewerbung zurückziehen?"
     },
     "trade_panel": {
       "description": "Wählen Sie, wer diese Schicht übernehmen soll. Alle Ausgewählten werden gefragt, danach wählen Sie aus den Angeboten.",
+      "mode_open": "Alle, die sie übernehmen können",
+      "mode_open_hint": "Personen, die benachrichtigt werden: {{count}}",
+      "mode_specific": "Nur von mir gewählte Personen",
+      "mode_specific_hint": "Stattdessen gezielt Kollegen fragen",
       "no_candidates": "Niemand ist verfügbar, um diese Schicht zu übernehmen.",
+      "open_description": "Alle, die an diesem Tag frei sind und die Rollen für Ihren Platz haben, erhalten eine E-Mail und eine Push-Benachrichtigung und können sich bewerben. Danach wählen Sie oder Ihre Aufsicht, wer die Schicht übernimmt.",
+      "open_description_workshift": "Alle, die an diesem Tag frei sind, erhalten eine E-Mail und eine Push-Benachrichtigung und können sich bewerben, um Ihren Platz in der Fahrzeugbesatzung zu übernehmen.",
       "selected_count": "Ausgewählt: {{count}}",
       "title": "Tausch anfragen"
     },

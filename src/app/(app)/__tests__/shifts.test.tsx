@@ -32,6 +32,11 @@ jest.mock('@/api/shifts/shifts', () => ({
   assignToShiftDay: jest.fn(),
   removeFromShiftDay: jest.fn(),
   getOnDutyPersonnel: jest.fn(),
+  getOpenShiftTrades: jest.fn(),
+  getShiftTrade: jest.fn(),
+  getWorkshiftDays: jest.fn(),
+  getWorkshiftDay: jest.fn(),
+  requestWorkshiftTrade: jest.fn(),
 }));
 jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }));
 jest.mock('@/lib/storage/clear-all-data', () => ({ registerStoreReset: jest.fn() }));
@@ -155,6 +160,9 @@ describe('ShiftsScreen', () => {
     api.getOnDutyPersonnel.mockResolvedValue(list([]));
     api.getAllShifts.mockResolvedValue(list([]));
     api.getShiftDay.mockResolvedValue({ ...envelope, Data: makeDay() });
+    api.getOpenShiftTrades.mockResolvedValue(list([]));
+    api.getWorkshiftDays.mockResolvedValue(list([]));
+    api.getShiftTrade.mockResolvedValue({ ...envelope, Data: null });
   });
 
   it('sets the header title', async () => {
@@ -271,8 +279,65 @@ describe('ShiftsScreen', () => {
     await pressAndSettle('shifts-segment-trades');
 
     expect(api.getShiftTrades).toHaveBeenCalled();
+    expect(api.getOpenShiftTrades).toHaveBeenCalled();
+    await pressAndSettle('trades-filter-mine');
     fireEvent.press(await screen.findByTestId('trade-accept-5'));
     expect(screen.getByTestId('action-sheet').props.children).toBe('accept-trade');
+  });
+
+  it('Trades opens on the department open requests and routes an application through the confirmation sheet', async () => {
+    const open: ShiftTradeResultData = {
+      ...new ShiftTradeResultData(),
+      ShiftSignupTradeId: '8',
+      ShiftName: 'PMRT Day',
+      Direction: ShiftTradeDirection.Incoming,
+      MyState: ShiftTradeUserState.Open,
+      IsOpen: true,
+      CanApply: true,
+      ApplicantCount: 2,
+    };
+    api.getOpenShiftTrades.mockResolvedValue(list([open]));
+    await renderScreen();
+
+    await pressAndSettle('shifts-segment-trades');
+
+    expect(await screen.findByText('shifts.trade.section_can_apply')).toBeTruthy();
+    fireEvent.press(await screen.findByTestId('trade-apply-8'));
+    expect(screen.getByTestId('action-sheet').props.children).toBe('apply-trade');
+  });
+
+  it('Sign Up lists upcoming days I can sign up for, hiding full ones until asked', async () => {
+    api.getShiftDaysForDateRange.mockResolvedValue(
+      list([
+        makeDay({ ShiftDayId: '201', ShiftName: 'Needs People', CanSignup: true, Filled: false, OpenSlots: 2 }),
+        makeDay({ ShiftDayId: '202', ShiftName: 'Fully Staffed', CanSignup: true, Filled: true }),
+        makeDay({ ShiftDayId: '203', ShiftName: 'Not For Me', CanSignup: false }),
+      ])
+    );
+    await renderScreen();
+
+    await pressAndSettle('shifts-segment-signup');
+
+    expect(await screen.findByText('Needs People')).toBeTruthy();
+    expect(screen.queryByText('Fully Staffed')).toBeNull();
+    expect(screen.queryByText('Not For Me')).toBeNull();
+
+    await pressAndSettle('shifts-calendar-filter-all');
+    expect(await screen.findByText('Fully Staffed')).toBeTruthy();
+  });
+
+  it('My Shifts includes static shift days and offers to add them all to the calendar', async () => {
+    api.getMyShifts.mockResolvedValue(list([makeDay({ ShiftDayId: '100', ShiftName: 'PMRT Night', MyStatus: 1, IsActive: true })]));
+    api.getWorkshiftDays.mockResolvedValue(list([makeDay({ ShiftDayId: 'w-guid', ShiftName: 'Engine Static', ShiftType: 2, MyStatus: 1, MyUnitName: 'Engine 1', Start: '2099-01-01T07:00:00', End: '2099-01-01T19:00:00' })]));
+    await renderScreen();
+
+    await pressAndSettle('shifts-segment-mine');
+
+    expect(api.getWorkshiftDays).toHaveBeenCalledWith(undefined, undefined, true);
+    expect(await screen.findByText('Engine Static')).toBeTruthy();
+    expect(screen.getByText('shifts.mine_sections.active')).toBeTruthy();
+    expect(screen.getByText('shifts.mine_sections.upcoming')).toBeTruthy();
+    expect(screen.getByTestId('shifts-add-all-calendar')).toBeTruthy();
   });
 
   it('Approvals lets a supervisor review a pending sign-up', async () => {

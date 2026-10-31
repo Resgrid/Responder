@@ -10,6 +10,7 @@ import { CustomBottomSheet } from '@/components/ui/bottom-sheet';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { TypeIcon } from '@/components/units/unit-type-icon';
+import { isFieldRedacted, ProtectedFieldIds } from '@/lib/data-protection/redacted';
 import { openMapsWithAddress, openMapsWithDirections } from '@/lib/navigation';
 import { useActiveCallStore } from '@/stores/calls/active-call-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -75,19 +76,27 @@ export const SidebarCallCard = () => {
 
     const latitude = activeCall.Latitude;
     const longitude = activeCall.Longitude;
-    const address = activeCall.Address;
+    // A withheld address must not leave the app in a navigation URL.
+    const address = isFieldRedacted(activeCall.RedactedFields, ProtectedFieldIds.callAddress, activeCall.Address) ? '' : activeCall.Address;
 
     // Check if we have coordinates
     if (latitude && longitude) {
       try {
-        await openMapsWithDirections(latitude, longitude, address);
+        // The address is the fallback when the coordinates turn out unusable (e.g. the (0,0) sentinel).
+        const opened = await openMapsWithDirections(latitude, longitude, address, undefined, undefined, address);
+        if (!opened) {
+          Alert.alert(t('calls.no_location_title'), t('calls.no_location_message'), [{ text: t('common.ok') }]);
+        }
       } catch (error) {
         Alert.alert(t('calls.no_location_title'), t('calls.no_location_message'), [{ text: t('common.ok') }]);
       }
     } else if (address && address.trim() !== '') {
       // Fall back to address if no coordinates
       try {
-        await openMapsWithAddress(address);
+        const opened = await openMapsWithAddress(address);
+        if (!opened) {
+          Alert.alert(t('calls.no_location_title'), t('calls.no_location_message'), [{ text: t('common.ok') }]);
+        }
       } catch (error) {
         Alert.alert(t('calls.no_location_title'), t('calls.no_location_message'), [{ text: t('common.ok') }]);
       }

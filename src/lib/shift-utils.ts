@@ -2,7 +2,7 @@ import { endOfMonth, format, isValid, parseISO, startOfMonth } from 'date-fns';
 
 import { getResponseStatus } from '@/lib/request-errors';
 import { type ShiftDayGroupNeedsResultData, type ShiftDayResultData, type ShiftDayRosterResultData } from '@/models/v4/shifts/shiftDayResultData';
-import { SHIFT_SERVER_ERROR_CODES, type ShiftErrorCode, type ShiftServerErrorCode } from '@/models/v4/shifts/shiftEnums';
+import { SHIFT_SERVER_ERROR_CODES, ShiftAssignmentType, type ShiftErrorCode, type ShiftServerErrorCode } from '@/models/v4/shifts/shiftEnums';
 
 const OFFSET_SUFFIX = /(Z|[+-]\d{2}:?\d{2})$/i;
 
@@ -49,6 +49,17 @@ export const getMonthRange = (date: Date): DateRange => ({
   start: toDateParam(startOfMonth(date)),
   end: toDateParam(endOfMonth(date)),
 });
+
+/** A static shift (workshift) day: unit crews for a set period, loaded and traded through its own endpoints. */
+export const isWorkshiftDay = (day: Pick<ShiftDayResultData, 'ShiftType'> | null | undefined): boolean => day?.ShiftType === ShiftAssignmentType.Workshift;
+
+/** Shift days and static shift days in one list, in start order (wall-clock strings sort as text). */
+export const mergeShiftDays = (shiftDays: ShiftDayResultData[], workshiftDays: ShiftDayResultData[]): ShiftDayResultData[] => {
+  if (workshiftDays.length === 0) {
+    return shiftDays;
+  }
+  return [...shiftDays, ...workshiftDays].sort((a, b) => (a.Start || a.ShiftDay || '').localeCompare(b.Start || b.ShiftDay || ''));
+};
 
 /** The shift ends on a later calendar day than it starts (19:00 -> 07:00). */
 export const isOvernightShift = (start: string | null | undefined, end: string | null | undefined): boolean => {
@@ -149,6 +160,7 @@ const SHIFT_ERROR_TRANSLATION_KEYS: Record<ShiftErrorCode, string> = {
   not_pending: 'shifts.errors.not_pending',
   already_on_roster: 'shifts.errors.already_on_roster',
   invalid_request: 'shifts.errors.invalid_request',
+  not_eligible: 'shifts.errors.not_eligible',
   network: 'shifts.errors.network',
   unknown: 'shifts.errors.unknown',
 };

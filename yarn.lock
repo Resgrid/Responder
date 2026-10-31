@@ -7799,6 +7799,11 @@ expo-build-properties@~57.0.22:
     resolve-from "^5.0.0"
     semver "^7.6.0"
 
+expo-calendar@~57.0.6:
+  version "57.0.6"
+  resolved "https://registry.yarnpkg.com/expo-calendar/-/expo-calendar-57.0.6.tgz#e83dd1470803636af2a8b1f3cc6bb2c4d970804e"
+  integrity sha512-9eN7mHdCfVvl+6mCWHEsiJz8DTMEFGVHRUVwJm/YKi8a31r0LbBJQCz+lPFjG/fWzSlegnP+PyykM8J89vuJFw==
+
 expo-clipboard@~57.0.2:
   version "57.0.2"
   resolved "https://registry.yarnpkg.com/expo-clipboard/-/expo-clipboard-57.0.2.tgz#639996f99407acd34d37ba3d3b7f0b094ca62d97"
