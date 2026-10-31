@@ -1,4 +1,3 @@
-import type { AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import base64 from 'react-native-base64';
 import { create } from 'zustand';
@@ -14,6 +13,7 @@ import { clearAllAppData, LOGOUT_PRESERVED_STORAGE_KEYS } from '@/lib/storage/cl
 import { externalTokenRequest, loginRequest, refreshTokenRequest } from '../../lib/auth/api';
 import { isLoginErrorCode, type LoginFailure } from '../../lib/auth/login-errors';
 import { runSignOutHooks } from '../../lib/auth/sign-out-hooks';
+import { isRefreshCredentialRejection } from '../../lib/auth/token-refresh';
 import type { AuthResponse, AuthStatus, ExternalTokenCredentials, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
@@ -42,32 +42,10 @@ export const PENDING_SAML_STATE_KEY = 'pending_saml_state';
 // never the persisted store) so the OTP prompt can retry the same IdP token with a code.
 let pendingSsoMfaCredentials: ExternalTokenCredentials | null = null;
 
-// Helper function to determine if a refresh error is transient (network issues, rate limiting, etc.)
-// Transient errors should not force logout as they might resolve on retry
-const isTransientRefreshError = (error: unknown): boolean => {
-  if (error instanceof Error && 'response' in error) {
-    const axiosError = error as AxiosError;
-    const status = axiosError.response?.status;
-
-    // Transient errors that might resolve on retry
-    return (
-      status === 429 || // Rate limited
-      status === 503 || // Service unavailable
-      status === 502 || // Bad gateway
-      status === 504 || // Gateway timeout
-      !status // Network errors (no response)
-    );
-  }
-
-  // Network errors or other non-HTTP errors are typically transient
-  // Check for common network error indicators
-  if (error instanceof Error) {
-    const errorMessage = error.message.toLowerCase();
-    return errorMessage.includes('network') || errorMessage.includes('timeout') || errorMessage.includes('econnrefused') || errorMessage.includes('enotfound') || errorMessage.includes('socket');
-  }
-
-  return false;
-};
+// Log out only when the token endpoint explicitly rejected the refresh token (400 invalid_grant / 401). Everything
+// else — offline, timeouts, 5xx, 429, non-HTTP errors — is transient and keeps the session, so a server outage never
+// signs every responder out at once.
+const isTransientRefreshError = (error: unknown): boolean => !isRefreshCredentialRejection(error);
 
 let refreshAccessTokenInFlight: Promise<void> | null = null;
 
@@ -194,7 +172,6 @@ const useAuthStore = create<AuthState>()(
             if (!idToken) {
               logger.error({
                 message: 'No ID token received during login',
-                context: { username: credentials.username },
               });
               throw new Error('No ID token received');
             }
@@ -202,7 +179,6 @@ const useAuthStore = create<AuthState>()(
             if (tokenParts.length < 3 || !tokenParts[1]) {
               logger.error({
                 message: 'Invalid ID token format during login',
-                context: { username: credentials.username },
               });
               throw new Error('Invalid ID token format');
             }
@@ -251,7 +227,7 @@ const useAuthStore = create<AuthState>()(
             // login() again with otpCode. Credentials are never retained here.
             logger.info({
               message: 'Login requires two-factor verification',
-              context: { username: credentials.username, invalidOtp: !!response.invalidOtp },
+              context: { invalidOtp: !!response.invalidOtp },
             });
             set({
               status: 'mfaRequired',
@@ -261,7 +237,7 @@ const useAuthStore = create<AuthState>()(
           } else {
             logger.error({
               message: 'Login failed - unsuccessful response',
-              context: { username: credentials.username, message: response.message },
+              context: { message: response.message },
             });
             const failure = response.failure ?? { code: 'login_failed' };
             set({

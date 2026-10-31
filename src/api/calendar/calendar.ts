@@ -31,7 +31,7 @@ export const getCalendarItemsForDateRange = async (start: string, end: string) =
  * Fetch a specific calendar item by ID
  */
 export const getCalendarItem = async (calendarItemId: string) => {
-  const response = await getCalendarItemApi.get<CalendarItemResult>({ calendarItemId });
+  const response = await getCalendarItemApi.get<CalendarItemResult>({ id: calendarItemId });
   return response.data;
 };
 

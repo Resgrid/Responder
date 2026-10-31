@@ -7,7 +7,8 @@ import { type PoiTypesResult } from '@/models/v4/mapping/poiTypesResult';
 
 import { createApiEndpoint } from '../common/client';
 
-const getMayLayersApi = createApiEndpoint('/Mapping/GetMapLayers');
+// The server route really is spelled GetMayLayers.
+const getMayLayersApi = createApiEndpoint('/Mapping/GetMayLayers');
 
 const getMapDataAndMarkersApi = createApiEndpoint('/Mapping/GetMapDataAndMarkers');
 const getPoiTypesApi = createApiEndpoint('/Mapping/GetPoiTypes');

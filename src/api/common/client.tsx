@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 
+import { isRefreshCredentialRejection } from '@/lib/auth/token-refresh';
 import { readProtectedGrantHeaders } from '@/lib/data-protection/grant-provider';
 import { logger } from '@/lib/logging';
 import { CLIENT_HEADER, RESGRID_CLIENT } from '@/lib/mfa/client-app';
@@ -40,25 +41,10 @@ const processQueue = (error: Error | null) => {
   failedQueue = [];
 };
 
-// Helper function to determine if a refresh error is transient
-const isTransientRefreshError = (error: unknown): boolean => {
-  if (error instanceof Error && 'response' in error) {
-    const axiosError = error as AxiosError;
-    const status = axiosError.response?.status;
-
-    // Transient errors that might resolve on retry
-    return (
-      status === 429 || // Rate limited
-      status === 503 || // Service unavailable
-      status === 502 || // Bad gateway
-      status === 504 || // Gateway timeout
-      !status // Network errors
-    );
-  }
-
-  // Network errors or other non-HTTP errors are typically transient
-  return true;
-};
+// Log out only when the token endpoint explicitly rejected the refresh token (400 invalid_grant / 401). Everything
+// else — offline, timeouts, 5xx, 429, non-HTTP errors — is transient and keeps the session, so a server outage never
+// signs every responder out at once.
+const isTransientRefreshError = (error: unknown): boolean => !isRefreshCredentialRejection(error);
 
 // Request interceptor for API calls
 axiosInstance.interceptors.request.use(

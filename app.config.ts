@@ -380,7 +380,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     '@config-plugins/react-native-callkeep',
     './customGradle.plugin.js',
-    './customManifest.plugin.js',
+    ['./customManifest.plugin.js', { allowCleartextTraffic: Env.APP_ENV === 'development' }],
     './plugins/withMediaButtonModule.js',
     './plugins/withInCallAudioModule.js',
     './plugins/withResourceBundleDeploymentTarget.js',
