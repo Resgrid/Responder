@@ -29,7 +29,7 @@ const addNavigationAppQueries = (manifest) => {
   return manifest;
 };
 
-const withForegroundService = (config) => {
+const withForegroundService = (config, { allowCleartextTraffic = false } = {}) => {
   return withAndroidManifest(config, async (config) => {
     const manifest = config.modResults;
 
@@ -41,8 +41,11 @@ const withForegroundService = (config) => {
 
     const mainApplication = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
 
-    // Allow cleartext HTTP traffic for dev server connectivity (required for targetSdk 35+)
-    mainApplication.$['android:usesCleartextTraffic'] = 'true';
+    // Cleartext HTTP only in development builds (local API servers). Every other build is https-only so the
+    // password grant and bearer tokens never leave the device unencrypted. Set explicitly, not just omitted, so a
+    // prebuild that reuses an existing android/ dir drops an earlier 'true'. Debug builds still reach Metro: the
+    // debug source-set manifest allows cleartext and overrides this one.
+    mainApplication.$['android:usesCleartextTraffic'] = allowCleartextTraffic ? 'true' : 'false';
 
     // Disable adb/cloud backup of app data (PII, tokens)
     mainApplication.$['android:allowBackup'] = 'false';

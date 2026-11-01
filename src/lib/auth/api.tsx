@@ -101,7 +101,6 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
     if (response.status === 200) {
       logger.info({
         message: 'Login successful',
-        context: { username: credentials.username },
       });
 
       return {
@@ -113,7 +112,7 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
       // Only the status: the response carries the request config, and with it the password.
       logger.error({
         message: 'Login failed',
-        context: { status: response.status, username: credentials.username },
+        context: { status: response.status },
       });
 
       return {
@@ -131,7 +130,7 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
     if (mfaTransaction) {
       logger.info({
         message: 'Login continues on a second-factor transaction',
-        context: { username: credentials.username, kind: mfaTransaction.challenge.kind, methods: mfaTransaction.challenge.methods },
+        context: { kind: mfaTransaction.challenge.kind, methods: mfaTransaction.challenge.methods },
       });
       return { successful: false, message: 'Additional verification is required', authResponse: null, mfaRequired: true, mfaTransaction };
     }
@@ -143,7 +142,7 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
     if (oauthError === 'mfa_required' || oauthError === 'invalid_totp') {
       logger.info({
         message: 'Login requires two-factor code',
-        context: { username: credentials.username, invalidOtp: oauthError === 'invalid_totp' },
+        context: { invalidOtp: oauthError === 'invalid_totp' },
       });
 
       return {
@@ -158,7 +157,7 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
     const failure = classifyLoginFailure(error);
     logger.error({
       message: 'Login failed',
-      context: { ...sanitizeAuthError(error), loginFailure: failure.code, username: credentials.username },
+      context: { ...sanitizeAuthError(error), loginFailure: failure.code },
     });
 
     // Return a failed response instead of throwing; the code carries the reason the login screen explains.

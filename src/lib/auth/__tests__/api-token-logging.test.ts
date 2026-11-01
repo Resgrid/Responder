@@ -79,7 +79,8 @@ describe('token request logging', () => {
 
     expect(await loginRequest({ username: 'user1', password: 'pw-secret' })).toMatchObject({ successful: false, failure: { code: 'login_failed' } });
 
-    expect(logger.error).toHaveBeenCalledWith({ message: 'Login failed', context: { status: 204, username: 'user1' } });
+    expect(logger.error).toHaveBeenCalledWith({ message: 'Login failed', context: { status: 204 } });
+    expect(loggedText()).not.toContain('user1');
     SECRETS.forEach((secret) => expect(loggedText()).not.toContain(secret));
   });
 });

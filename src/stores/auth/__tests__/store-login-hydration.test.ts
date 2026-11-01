@@ -195,7 +195,7 @@ describe('Auth Store - Login and Hydration', () => {
       // Verify error logging
       expect(mockedLogger.error).toHaveBeenCalledWith({
         message: 'Login failed - unsuccessful response',
-        context: { username: 'testuser', message: 'account_locked_out' },
+        context: { message: 'account_locked_out' },
       });
     });
 
@@ -256,7 +256,6 @@ describe('Auth Store - Login and Hydration', () => {
       // Verify error logging
       expect(mockedLogger.error).toHaveBeenCalledWith({
         message: 'No ID token received during login',
-        context: { username: 'testuser' },
       });
     });
 
@@ -286,7 +285,6 @@ describe('Auth Store - Login and Hydration', () => {
       // Verify error logging
       expect(mockedLogger.error).toHaveBeenCalledWith({
         message: 'Invalid ID token format during login',
-        context: { username: 'testuser' },
       });
     });
 
