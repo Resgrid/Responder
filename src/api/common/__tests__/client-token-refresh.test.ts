@@ -148,7 +148,7 @@ describe('API Client - Token Refresh', () => {
       });
 
       // Mock a refresh the token endpoint rejects (400 invalid_grant)
-      mockedRefreshTokenRequest.mockRejectedValueOnce(Object.assign(new Error('Refresh failed'), { isAxiosError: true, response: { status: 400 } }));
+      mockedRefreshTokenRequest.mockRejectedValueOnce(Object.assign(new Error('Refresh failed'), { isAxiosError: true, response: { status: 400, data: { error: 'invalid_grant' } } }));
 
       // Mock the API endpoint to succeed
       mockAxios.onGet('/test-endpoint').reply(200, { success: true });
@@ -232,7 +232,7 @@ describe('API Client - Token Refresh', () => {
       // Mock permanent refresh error (400 Bad Request)
       const permanentError = new Error('Invalid refresh token') as any;
       permanentError.isAxiosError = true;
-      permanentError.response = { status: 400 };
+      permanentError.response = { status: 400, data: { error: 'invalid_grant' } };
       mockedRefreshTokenRequest.mockRejectedValueOnce(permanentError);
 
       // Make API call

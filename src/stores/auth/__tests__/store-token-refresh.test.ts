@@ -240,10 +240,10 @@ describe('Auth Store - Token Refresh Functionality', () => {
     });
 
     it('should logout when refresh API call fails with permanent error', async () => {
-      // Create a mock axios error with 401 status (permanent auth failure)
+      // The token endpoint rejected the refresh token (permanent auth failure)
       const mockError = Object.assign(new Error('Unauthorized'), {
         isAxiosError: true,
-        response: { status: 401 },
+        response: { status: 401, data: { error: 'invalid_grant' } },
       });
       mockedRefreshTokenRequest.mockRejectedValueOnce(mockError);
 

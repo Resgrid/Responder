@@ -42,9 +42,9 @@ export const PENDING_SAML_STATE_KEY = 'pending_saml_state';
 // never the persisted store) so the OTP prompt can retry the same IdP token with a code.
 let pendingSsoMfaCredentials: ExternalTokenCredentials | null = null;
 
-// Log out only when the token endpoint explicitly rejected the refresh token (400 invalid_grant / 401). Everything
-// else — offline, timeouts, 5xx, 429, non-HTTP errors — is transient and keeps the session, so a server outage never
-// signs every responder out at once.
+// Log out only when the token endpoint explicitly rejected the refresh token (a 400/401 invalid_grant). Everything
+// else — offline, timeouts, 5xx, 429, other OAuth errors, non-HTTP errors — is transient and keeps the session, so a
+// server outage never signs every responder out at once.
 const isTransientRefreshError = (error: unknown): boolean => !isRefreshCredentialRejection(error);
 
 let refreshAccessTokenInFlight: Promise<void> | null = null;
